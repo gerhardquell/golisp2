@@ -12,15 +12,16 @@
 
 package lib
 
-import _ "embed"
+import (
+  _ "embed"
 
-//go:embed stdlib.lisp
-var stdlibSrc string
+  "golisp2/embed"
+)
 
 // LoadStdlib lädt die eingebettete Standardbibliothek in env.
 // Einmal pro Env aufrufen (nach BaseEnv). Fehler = Syntaxfehler in
 // stdlib.lisp – sollte zur Compile-Zeit nie passieren.
 func LoadStdlib(env *Env) error {
-  _, err := LoadString(stdlibSrc, env)
+  _, err := LoadString(assets.Stdlib, env)
   return err
 }

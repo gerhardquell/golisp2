@@ -1,24 +1,21 @@
 //**********************************************************************
-//  lib/swank/lisp.go
+//  embed/assets.go
 //  Autor    : Gerhard Quell - gquell@skequell.de
 //  CoAutor  : claude sonnet 4.6
 //  Copyright: 2026 Gerhard Quell - SKEQuell
-//  Erstellt : 20260618
+//  Erstellt : 20260709
 //**********************************************************************
-// Embedded SWANK Lisp handlers.
+// Zentraler Ort für eingebettete Lisp-Quellen.
+// Trennt Assets vom Go-Code und verhindert, dass lib/ und swank/
+// ihre .lisp-Dateien selbst halten müssen.
 //**********************************************************************
 
-package swank
+package assets
 
-import (
-  _ "embed"
+import _ "embed"
 
-  "golisp2/embed"
-  "golisp2/lib"
-)
+//go:embed stdlib.lisp
+var Stdlib string
 
-// LoadSwankLisp loads the embedded SWANK handler library into env.
-func LoadSwankLisp(env *lib.Env) error {
-  _, err := lib.LoadString(assets.Swank, env)
-  return err
-}
+//go:embed swank.lisp
+var Swank string

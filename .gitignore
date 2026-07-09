@@ -11,6 +11,7 @@ __pycache__/
 # Build artifacts
 *.test
 *.out
+build/
 
 # Go workspace
 go.work

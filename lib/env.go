@@ -11,30 +11,58 @@ package lib
 import "fmt"
 
 // Env ist eine verkettete Umgebung: lokaler Scope -> aeusserer Scope.
-// Optimierung: der erste gebundene Name wird inline gespeichert, da die
-// meisten Lambda-Calls nur einen Parameter haben (z.B. fib n). Erst ab
-// dem zweiten Symbol wird die Map alloziert.
+// Root-Env (parent == nil) nutzt eine Hash-Map fuer ~80+ eingebaute Symbole.
+// Frame-Envs (parent != nil) nutzen inline singleName/singleVal fuer den
+// ersten Eintrag und parallele Slices fuer weitere Eintraege. Damit fallen
+// die map-Allokationen pro Lambda-/Let-Frame weg.
 type Env struct {
-  vars       map[string]*Cell
   parent     *Env
+  // Root-Modus: parent == nil
+  vars       map[string]*Cell
+  // Frame-Modus: parent != nil
   singleName string
   singleVal  *Cell
+  names      []string
+  vals       []*Cell
 }
 
+// NewEnv erzeugt ein Root-Env (parent == nil) mit Map, sonst ein Frame-Env
+// mit inline + Slice-Speicher.
 func NewEnv(parent *Env) *Env {
+  if parent == nil {
+    return &Env{vars: make(map[string]*Cell)}
+  }
   return &Env{parent: parent}
 }
 
 // Get sucht einen Namen – erst lokal, dann im aeusseren Scope
 func (e *Env) Get(name string) (*Cell, error) {
-  if e.singleName == name { return e.singleVal, nil }
-  if val, ok := e.vars[name]; ok { return val, nil }
-  if e.parent != nil { return e.parent.Get(name) }
+  if e.parent == nil {
+    if val, ok := e.vars[name]; ok {
+      return val, nil
+    }
+    return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
+  }
+  if e.singleName == name {
+    return e.singleVal, nil
+  }
+  for i, n := range e.names {
+    if n == name {
+      return e.vals[i], nil
+    }
+  }
+  if e.parent != nil {
+    return e.parent.Get(name)
+  }
   return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
 }
 
 // Set legt einen Wert im aktuellen Scope ab
 func (e *Env) Set(name string, val *Cell) {
+  if e.parent == nil {
+    e.vars[name] = val
+    return
+  }
   if e.singleName == "" {
     e.singleName = name
     e.singleVal = val
@@ -44,10 +72,14 @@ func (e *Env) Set(name string, val *Cell) {
     e.singleVal = val
     return
   }
-  if e.vars == nil {
-    e.vars = make(map[string]*Cell)
+  for i, n := range e.names {
+    if n == name {
+      e.vals[i] = val
+      return
+    }
   }
-  e.vars[name] = val
+  e.names = append(e.names, name)
+  e.vals = append(e.vals, val)
 }
 
 // Root liefert die aeusserste Umgebung (Globalenv). Common-Lisp-Semantik
@@ -67,11 +99,20 @@ func (e *Env) Symbols() []string {
   seen := make(map[string]bool)
   var result []string
   for cur := e; cur != nil; cur = cur.parent {
+    if cur.parent == nil {
+      for name := range cur.vars {
+        if !seen[name] {
+          seen[name] = true
+          result = append(result, name)
+        }
+      }
+      continue
+    }
     if cur.singleName != "" && !seen[cur.singleName] {
       seen[cur.singleName] = true
       result = append(result, cur.singleName)
     }
-    for name := range cur.vars {
+    for _, name := range cur.names {
       if !seen[name] {
         seen[name] = true
         result = append(result, name)
@@ -83,14 +124,25 @@ func (e *Env) Symbols() []string {
 
 // Update aendert einen bestehenden Wert (fuer set!)
 func (e *Env) Update(name string, val *Cell) error {
+  if e.parent == nil {
+    if _, ok := e.vars[name]; ok {
+      e.vars[name] = val
+      return nil
+    }
+    return fmt.Errorf("env: set! – Symbol '%s' nicht gefunden", name)
+  }
   if e.singleName == name {
     e.singleVal = val
     return nil
   }
-  if _, ok := e.vars[name]; ok {
-    e.vars[name] = val
-    return nil
+  for i, n := range e.names {
+    if n == name {
+      e.vals[i] = val
+      return nil
+    }
   }
-  if e.parent != nil { return e.parent.Update(name, val) }
+  if e.parent != nil {
+    return e.parent.Update(name, val)
+  }
   return fmt.Errorf("env: set! – Symbol '%s' nicht gefunden", name)
 }

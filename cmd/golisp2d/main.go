@@ -19,20 +19,20 @@ import (
 )
 
 func main() {
-  // Flags parsen
-  var (
-    host = flag.String("host", "localhost", "Host für den Server (default: localhost)")
-    port = flag.String("port", "4321", "Port für den Server (default: 4321)")
-  )
-  flag.Parse()
+  // Env-Variablen dienen als Flag-Default; ein expliziter --host/--port
+  // gewinnt über die Env (Unix-Konvention: Flag > Env > Default).
+  hostDefault := os.Getenv("GOLISP_HOST")
+  if hostDefault == "" {
+    hostDefault = "localhost"
+  }
+  portDefault := os.Getenv("GOLISP_PORT")
+  if portDefault == "" {
+    portDefault = "4321"
+  }
 
-  // Umgebungsvariablen prüfen (haben Vorrang vor Flags)
-  if envHost := os.Getenv("GOLISP_HOST"); envHost != "" {
-    *host = envHost
-  }
-  if envPort := os.Getenv("GOLISP_PORT"); envPort != "" {
-    *port = envPort
-  }
+  host := flag.String("host", hostDefault, "Host für den Server (env: GOLISP_HOST, default: localhost)")
+  port := flag.String("port", portDefault, "Port für den Server (env: GOLISP_PORT, default: 4321)")
+  flag.Parse()
 
   addr := *host + ":" + *port
   if err := swank.RunServer(addr); err != nil {

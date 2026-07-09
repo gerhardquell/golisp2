@@ -19,10 +19,11 @@
       alte Custom-RPC. Map: ping→`connection-info`, eval→`listener-eval`,
       complete→`simple-completions`, load→`load-file`. Nutzt `golisp2/lib` für
       robuste Cell-Verarbeitung statt String-Slicing. Smoke-Test + 126 Tests grün.
-- [ ] **CLAUDE.md-Doku-Drift**: Abschnitt "GoLisp Server (golisp2d)" + 
-      "Protokoll (S-Expression-RPC)" beschreiben noch das alte Custom-RPC
-      (`(:id … :method …)`), obwohl `golisp2d` SWANK spricht und der Client
-      jetzt SWANK nutzt. Doku an SWANK-Realität anpassen.
-- [ ] **UX-Frage (präexistent)**: Env-Vars `GOLISP_HOST/PORT` schlagen
-      explizite `--host`/`--port`-Flags vor (Server wie Client). Ggf. Flag
-      priorisieren über Env — separates Refactor.
+- [x] **CLAUDE.md-Doku-Drift behoben** (20260709, Commit 107fb23): Server-
+      Abschnitt von Custom-RPC auf SWANK-Realität korrigiert, obsolete
+      Methoden-Tabelle entfernt, Pro-Connection-Env dokumentiert.
+- [x] **Env-vs-Flag-Priorität korrigiert** (20260709): `--host`/`--port`
+      gewinnen jetzt über `GOLISP_HOST`/`GOLISP_PORT` (Unix-Konvention:
+      Flag > Env > Default). Env dient als Flag-Default, nicht als
+      Post-Parse-Überschreibung. Env-only-Nutzung bleibt erhalten.
+      `cmd/golisp2d` + `cmd/golisp2-client`.

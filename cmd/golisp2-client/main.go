@@ -311,9 +311,20 @@ func countParens(s string) int {
 }
 
 func main() {
+	// Env-Variablen dienen als Flag-Default; ein expliziter --host/--port
+	// gewinnt über die Env (Unix-Konvention: Flag > Env > Default).
+	hostDefault := os.Getenv("GOLISP_HOST")
+	if hostDefault == "" {
+		hostDefault = "localhost"
+	}
+	portDefault := os.Getenv("GOLISP_PORT")
+	if portDefault == "" {
+		portDefault = "4321"
+	}
+
 	var (
-		host     = flag.String("host", "localhost", "Server-Host")
-		port     = flag.String("port", "4321", "Server-Port")
+		host     = flag.String("host", hostDefault, "Server-Host (env: GOLISP_HOST)")
+		port     = flag.String("port", portDefault, "Server-Port (env: GOLISP_PORT)")
 		evalFlag = flag.String("eval", "", "Expression auswerten")
 		replFlag = flag.Bool("repl", false, "Interaktiver REPL-Modus")
 		compFlag = flag.String("complete", "", "Autocomplete für Prefix")
@@ -321,13 +332,6 @@ func main() {
 		pingFlag = flag.Bool("ping", false, "Server-Ping")
 	)
 	flag.Parse()
-
-	if envHost := os.Getenv("GOLISP_HOST"); envHost != "" {
-		*host = envHost
-	}
-	if envPort := os.Getenv("GOLISP_PORT"); envPort != "" {
-		*port = envPort
-	}
 
 	client := NewClient(*host, *port)
 	if err := client.Connect(); err != nil {

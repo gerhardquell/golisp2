@@ -1,4 +1,4 @@
-# Retrospective: GoLisp Server (golispd)
+# Retrospective: GoLisp Server (golisp2d)
 
 **Datum:** 1. März 2026
 **Autor:** Gerhard Quell & Claude Sonnet 4.6
@@ -10,13 +10,13 @@
 
 Ein vollständiger Client-Server-Stack für GoLisp mit folgenden Komponenten:
 
-### 1. Server (`golispd`)
+### 1. Server (`golisp2d`)
 - TCP-Server auf localhost:4321 (konfigurierbar)
 - S-Expression-RPC Protokoll
 - Konkurrente Verbindungsbehandlung via Goroutines
 - Geteilter Environment für alle Clients
 
-### 2. Client (`golisp-client`)
+### 2. Client (`golisp2-client`)
 - CLI-Client mit Unterbefehlen: `--ping`, `--eval`, `--complete`, `--load`, `--repl`
 - Interaktiver REPL mit Multiline-Support
 - Autocomplete-Integration
@@ -88,7 +88,7 @@ Ein vollständiger Client-Server-Stack für GoLisp mit folgenden Komponenten:
 
 ### ⚠️ Gitignore für neue Binaries
 
-**Problem:** `cmd/golisp-client` wurde ignoriert weil `golisp-client` im Root .gitignore stand.
+**Problem:** `cmd/golisp2-client` wurde ignoriert weil `golisp2-client` im Root .gitignore stand.
 
 **Lösung:** Präfix mit `/` für Root-Only Matches.
 

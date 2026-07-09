@@ -43,7 +43,7 @@ import (
   "strings"
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestWriteFrame(t *testing.T) {
@@ -99,7 +99,7 @@ import (
   "io"
   "strconv"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // readFrame reads one SWANK length-prefixed S-expression.
@@ -173,7 +173,7 @@ package swank
 import (
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestRegisterSwankEnv(t *testing.T) {
@@ -228,7 +228,7 @@ import (
   "fmt"
   "strings"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // RegisterSwankEnv registers connection-bound SWANK primitives.
@@ -323,7 +323,7 @@ package swank
 import (
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestHandleMessage(t *testing.T) {
@@ -373,7 +373,7 @@ package swank
 import (
   "fmt"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // HandleMessage evaluates (swank-dispatch msg) in env and returns the
@@ -460,7 +460,7 @@ git commit -m "feat(swank): dispatch wrapper (swank-dispatch)"
                           :encoding (list :coding-systems (list "utf-8-unix"))
                           :implementation (list :type "GoLisp"
                                                 :version "0.2"
-                                                :program "golisp")
+                                                :program "golisp2")
                           :machine (list :instance "unknown")
                           :package (list :name "USER")
                           :features (list)))
@@ -500,7 +500,7 @@ package swank
 import (
   _ "embed"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 //go:embed swank.lisp
@@ -544,7 +544,7 @@ import (
   "strings"
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestSwankLisp(t *testing.T) {
@@ -600,7 +600,7 @@ git commit -m "feat(swank): Lisp-side handlers (connection-info, create-repl, li
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260301 (refactored 20260618)
 //**********************************************************************
-// SWANK server entry point for `golisp --swank`.
+// SWANK server entry point for `golisp2 --swank`.
 //**********************************************************************
 
 package swank
@@ -610,7 +610,7 @@ import (
   "net"
   "os"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // RunServer starts a SWANK server on the given address.
@@ -712,7 +712,7 @@ swankFlag := flag.String("swank", "", "SWANK-Server starten (Format: host:port, 
 After stdlib loading and before test-mode handling:
 
 ```go
-// SWANK-Server Modus: golisp --swank [host:port]
+// SWANK-Server Modus: golisp2 --swank [host:port]
 if *swankFlag != "" {
   addr := *swankFlag
   if !strings.Contains(addr, ":") {
@@ -726,7 +726,7 @@ if *swankFlag != "" {
 }
 ```
 
-Add import `"golisp/lib/swank"`.
+Add import `"golisp2/lib/swank"`.
 
 - [ ] **Step 3: Build to verify**
 
@@ -764,7 +764,7 @@ import (
   "testing"
   "time"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestSwankServerConnectionInfo(t *testing.T) {

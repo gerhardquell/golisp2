@@ -8,11 +8,11 @@
 
 ## Problem
 
-`sigo`-Aufrufe (KI-Integration) über `golisp-client` gaben nur `\` zurück statt der vollständigen Antwort.
+`sigo`-Aufrufe (KI-Integration) über `golisp2-client` gaben nur `\` zurück statt der vollständigen Antwort.
 
 ### Symptom
 ```bash
-$ ./golisp-client --eval '(sigo "was bedeutet singularität?" "claude-s45")'
+$ ./golisp2-client --eval '(sigo "was bedeutet singularität?" "claude-s45")'
 => \
 ```
 
@@ -88,7 +88,7 @@ if result.Type == lib.STRING {
 }
 ```
 
-### Änderung 3: Client – `cmd/golisp-client/main.go`
+### Änderung 3: Client – `cmd/golisp2-client/main.go`
 
 **`extractResult()`:**
 - Berücksichtigt escaped Quotes (`\"`) beim Parsen
@@ -185,7 +185,7 @@ for i, ch := range remaining {
 |-------|--------|----------|
 | `lib/swank/server.go` | 277-290 | `formatResponse()` + `escapeString()` angepasst |
 | `lib/swank/protocol.go` | 71-78 | `handleEval()` unterscheidet String-Typen |
-| `cmd/golisp-client/main.go` | 161-186 | `extractResult()` mit Escape-Handling |
+| `cmd/golisp2-client/main.go` | 161-186 | `extractResult()` mit Escape-Handling |
 
 ---
 

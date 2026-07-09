@@ -7,14 +7,14 @@ als eingebaute Lisp-Primitiven beherrscht.
 
 **Autor:** Gerhard Quell – gquell@skequell.de
 **CoAutor:** claude sonnet 4.6
-**Modul:** `golisp`
+**Modul:** `golisp2`
 
 ---
 
 ## Dateistruktur
 
 ```
-golisp/
+golisp2/
   main.go              REPL + Testmodus (-t) + Datei-Loader
   lib/
     types.go           Cell-Datenstruktur (LispType, Cons, MakeAtom...)

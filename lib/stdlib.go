@@ -6,7 +6,7 @@
 //  Erstellt : 20260616
 //**********************************************************************
 // Zentrale Einbettung und Ladung der Standardbibliothek.
-// Sowohl die CLI (main.go) als auch der Server (cmd/golispd) nutzen
+// Sowohl die CLI (main.go) als auch der Server (cmd/golisp2d) nutzen
 // LoadStdlib – eine Quelle, keine Drift zwischen inline- und embed-Varianten.
 //**********************************************************************
 

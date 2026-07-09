@@ -147,7 +147,7 @@ Echte Nebenläufigkeit mit Go-Goroutinen:
 
 | Kriterium | Status | Bemerkung |
 |-----------|--------|-----------|
-| Alle Demos laufen | ✅ | `./golisp tests/run-all-demos.lisp` erfolgreich |
+| Alle Demos laufen | ✅ | `./golisp2 tests/run-all-demos.lisp` erfolgreich |
 | Parallelität nutzbar | ✅ | `parfunc` funktioniert mit Simulation |
 | Homoikonizität demonstriert | ✅ | Code als Daten klar gezeigt |
 | GP funktioniert | ✅ | Fitness-Evaluation und Crossover arbeiten |

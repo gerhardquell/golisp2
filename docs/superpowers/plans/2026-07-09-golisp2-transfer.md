@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Aktuellen Stand von `golisp-kimi` nach `/u/lisp-projekte/golisp2` übertragen (einfrieren), Git-Historie erhalten, Layout optimieren und Builds/Tests grün halten.
+**Goal:** Aktuellen Stand von `golisp2-kimi` nach `/u/lisp-projekte/golisp2` übertragen (einfrieren), Git-Historie erhalten, Layout optimieren und Builds/Tests grün halten.
 
-**Architecture:** `golisp2` entsteht als Klon von `golisp-kimi` inklusive Working-Tree (uncommitted Änderungen + untracked Dateien). Danach werden überflüssige Dateien entfernt, eingebettete Lisp-Assets in `embed/` gebündelt, alte TODOs archiviert, das Go-Modul in `golisp2` umbenannt und alle Importpfade angepasst.
+**Architecture:** `golisp2` entsteht als Klon von `golisp2-kimi` inklusive Working-Tree (uncommitted Änderungen + untracked Dateien). Danach werden überflüssige Dateien entfernt, eingebettete Lisp-Assets in `embed/` gebündelt, alte TODOs archiviert, das Go-Modul in `golisp2` umbenannt und alle Importpfade angepasst.
 
 **Tech Stack:** Go 1.26.0, `github.com/elk-language/go-prompt`, git, bash, rsync.
 
@@ -15,8 +15,8 @@
 - Modulname nach Transfer: `golisp2`.
 - Imports interner Pakete: `golisp2/lib`, `golisp2/lib/swank`.
 - Kein manuelles Memory-Management; Go-GC bleibt.
-- Binärnamen bleiben `golisp`, `golispd`, `golisp-client`.
-- Ursprungsrepo `/u/lisp-projekte/golisp-kimi` nach dem Freeze nur noch lesend bearbeiten (Tag `frozen-2026-07-09`).
+- Binärnamen bleiben `golisp2`, `golisp2d`, `golisp2-client`.
+- Ursprungsrepo `/u/lisp-projekte/golisp2-kimi` nach dem Freeze nur noch lesend bearbeiten (Tag `frozen-2026-07-09`).
 
 ## Vorabentscheidung (vor Task 1 vom Menschen zu bestätigen)
 
@@ -31,8 +31,8 @@ golisp2/
   CLAUDE.md
   README.md
   cmd/
-    golispd/main.go
-    golisp-client/main.go
+    golisp2d/main.go
+    golisp2-client/main.go
   lib/                     # Go-Interpreter-Paket
     swank/                 # SWANK-Unterpaket bleibt hier
   embed/                   # Eingebettete Lisp-Dateien
@@ -61,14 +61,14 @@ Wenn ein anderes Layout gewünscht ist: Task 3 anpassen **bevor** Task 1 ausgef�
 
 ---
 
-### Task 1: Klones golisp-kimi mit Working-Tree nach golisp2
+### Task 1: Klones golisp2-kimi mit Working-Tree nach golisp2
 
 **Files:**
 - Create: `/u/lisp-projekte/golisp2/` (gesamtes Repo)
 - Modify: keine
 
 **Interfaces:**
-- Consumes: `/u/lisp-projekte/golisp-kimi/`
+- Consumes: `/u/lisp-projekte/golisp2-kimi/`
 - Produces: `/u/lisp-projekte/golisp2/` mit identischem Working-Tree und vollständiger Git-Historie
 
 - [ ] **Step 1: Leeres Zielverzeichnis prüfen/löschen**
@@ -83,7 +83,7 @@ fi
 - [ ] **Step 2: Git-Klon mit Historie erstellen**
 
 ```bash
-git clone /u/lisp-projekte/golisp-kimi /u/lisp-projekte/golisp2
+git clone /u/lisp-projekte/golisp2-kimi /u/lisp-projekte/golisp2
 ```
 
 Expected: `Cloning into '/u/lisp-projekte/golisp2'... done.`
@@ -91,7 +91,7 @@ Expected: `Cloning into '/u/lisp-projekte/golisp2'... done.`
 - [ ] **Step 3: Working-Tree exakt übertragen (inkl. uncommitted Änderungen und untracked Dateien)**
 
 ```bash
-cd /u/lisp-projekte/golisp-kimi
+cd /u/lisp-projekte/golisp2-kimi
 rsync -av --delete \
   --exclude='.git' \
   --exclude='build/' \
@@ -107,7 +107,7 @@ Expected: Dateien werden kopiert; `.git/`, `build/`, `tmp/` bleiben unberührt.
 - [ ] **Step 4: Unterschiede prüfen**
 
 ```bash
-diff -rq /u/lisp-projekte/golisp-kimi /u/lisp-projekte/golisp2 \
+diff -rq /u/lisp-projekte/golisp2-kimi /u/lisp-projekte/golisp2 \
   -x .git -x build -x tmp -x .codegraph -x .superpowers -x .claude
 ```
 
@@ -118,7 +118,7 @@ Expected: keine Ausgabe (oder nur bekannte Symlinks/Worktrees).
 ```bash
 cd /u/lisp-projekte/golisp2
 git add -A
-git commit -m "chore: freeze golisp-kimi state as golisp2 base
+git commit -m "chore: freeze golisp2-kimi state as golisp2 base
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
@@ -132,12 +132,12 @@ Expected: Commit-Hash wird ausgegeben.
 **Files:**
 - Modify: `/u/lisp-projekte/golisp2/go.mod`
 - Modify: `/u/lisp-projekte/golisp2/main.go`
-- Modify: `/u/lisp-projekte/golisp2/cmd/golispd/main.go`
-- Modify: `/u/lisp-projekte/golisp2/cmd/golisp-client/main.go`
-- Modify: alle `.go` Dateien, die `golisp/lib` importieren
+- Modify: `/u/lisp-projekte/golisp2/cmd/golisp2d/main.go`
+- Modify: `/u/lisp-projekte/golisp2/cmd/golisp2-client/main.go`
+- Modify: alle `.go` Dateien, die `golisp2/lib` importieren
 
 **Interfaces:**
-- Consumes: aktuelle Imports wie `"golisp/lib"`, `"golisp/lib/swank"`
+- Consumes: aktuelle Imports wie `"golisp2/lib"`, `"golisp2/lib/swank"`
 - Produces: Imports werden zu `"golisp2/lib"`, `"golisp2/lib/swank"`
 
 - [ ] **Step 1: go.mod ändern**
@@ -152,13 +152,13 @@ module golisp2
 
 ```bash
 cd /u/lisp-projekte/golisp2
-grep -Rln '"golisp/lib' --include='*.go' . | xargs -I{} sed -i 's/"golisp\/lib/"golisp2\/lib/g' {}
+grep -Rln '"golisp2/lib' --include='*.go' . | xargs -I{} sed -i 's/"golisp2\/lib/"golisp2\/lib/g' {}
 ```
 
 Verify:
 
 ```bash
-grep -Rn '"golisp/lib' --include='*.go' .
+grep -Rn '"golisp2/lib' --include='*.go' .
 ```
 
 Expected: keine Treffer.
@@ -179,7 +179,7 @@ cd /u/lisp-projekte/golisp2
 ./build.sh
 ```
 
-Expected: `golisp`, `golispd`, `golisp-client` in `build/`.
+Expected: `golisp2`, `golisp2d`, `golisp2-client` in `build/`.
 
 - [ ] **Step 5: Commit**
 
@@ -307,19 +307,19 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ---
 
-### Task 4: Ursprungsrepo golisp-kimi als frozen taggen
+### Task 4: Ursprungsrepo golisp2-kimi als frozen taggen
 
 **Files:**
-- Modify: `/u/lisp-projekte/golisp-kimi/.git` (Tag)
+- Modify: `/u/lisp-projekte/golisp2-kimi/.git` (Tag)
 
 **Interfaces:**
-- Consumes: `/u/lisp-projekte/golisp-kimi/`
+- Consumes: `/u/lisp-projekte/golisp2-kimi/`
 - Produces: Tag `frozen-2026-07-09`
 
 - [ ] **Step 1: Tag setzen**
 
 ```bash
-cd /u/lisp-projekte/golisp-kimi
+cd /u/lisp-projekte/golisp2-kimi
 git tag -a frozen-2026-07-09 -m "Freeze point before golisp2 transfer"
 ```
 
@@ -358,7 +358,7 @@ Expected: `ok` für alle Pakete.
 
 ```bash
 cd /u/lisp-projekte/golisp2
-echo '(+ 1 2 3)' | ./build/golisp
+echo '(+ 1 2 3)' | ./build/golisp2
 ```
 
 Expected: `6`.

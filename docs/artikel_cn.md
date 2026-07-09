@@ -106,7 +106,7 @@ CLISP 方法有效。但有局限性。
 REPL 功能通过命令行参数可切换；默认状态是"关闭"。这使 GoLisp 成为一个成熟的 Unix 工具。默认模式：stdin、stdout、stderr 和退出代码（0=OK，1=ERROR），即管道支持：
 
 ```bash
-echo "(+ 1 2)" | ./golisp
+echo "(+ 1 2)" | ./golisp2
 ```
 
 有效。

@@ -5,7 +5,7 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260301 (refactored 20260618)
 //**********************************************************************
-// SWANK server entry point for `golisp --swank`.
+// SWANK server entry point for `golisp2 --swank` / `golisp2d`.
 //**********************************************************************
 
 package swank

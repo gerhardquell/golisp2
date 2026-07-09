@@ -221,13 +221,13 @@ func runREPL(env *lib.Env) int {
 	// Check if stdin is a terminal
 	if !isTerminal(int(os.Stdin.Fd())) {
 		fmt.Fprintln(os.Stderr, "ERR: Interactive mode requires a terminal (TTY)")
-		fmt.Fprintln(os.Stderr, "Hint: Use echo 'expr' | ./golisp for pipe mode, or ./golisp -e 'expr' for expressions")
+		fmt.Fprintln(os.Stderr, "Hint: Use echo 'expr' | ./golisp2 for pipe mode, or ./golisp2 -e 'expr' for expressions")
 		return 1
 	}
 
 	fmt.Println("GoLisp 0.2  –  Ctrl+D oder (exit) zum Beenden")
 	fmt.Println("Multiline: offene Klammern → Fortsetzung mit ..")
-	rl := lib.NewReadline("golisp> ", env.Symbols)
+	rl := lib.NewReadline("golisp2> ", env.Symbols)
 	defer rl.Close()
 
 	for {
@@ -281,7 +281,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// SWANK-Server Modus: golisp --swank [host:port]
+	// SWANK-Server Modus: golisp2 --swank [host:port]
 	if *swankFlag != "" {
 		addr := *swankFlag
 		if !strings.Contains(addr, ":") {
@@ -294,25 +294,25 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Testmodus: golisp -t
+	// Testmodus: golisp2 -t
 	if *testFlag {
 		runTests(env)
 		os.Exit(0)
 	}
 
-	// Expression-Modus: golisp -e "(expr)"
+	// Expression-Modus: golisp2 -e "(expr)"
 	if *exprFlag != "" {
 		exitCode := runExpression(*exprFlag, env)
 		os.Exit(exitCode)
 	}
 
-	// Interaktiver Modus: golisp -i
+	// Interaktiver Modus: golisp2 -i
 	if *interactiveFlag {
 		exitCode := runREPL(env)
 		os.Exit(exitCode)
 	}
 
-	// Datei laden: golisp script.lisp
+	// Datei laden: golisp2 script.lisp
 	if flag.NArg() > 0 {
 		filename := flag.Arg(0)
 		cell, err := lib.Read(`(load "` + filename + `")`)

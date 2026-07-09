@@ -37,7 +37,7 @@ var (
 )
 
 // init liest sigoREST-Konfiguration aus Umgebungsvariablen (analog
-// GOLISP_HOST/GOLISP_PORT für golispd):
+// GOLISP_HOST/GOLISP_PORT für golisp2d):
 //   GOLISP_SIGO_HOST  – sigoREST-Host (default http://127.0.0.1:9080)
 //   GOLISP_SIGO_MODEL – Default-Modell für (sigo "prompt")
 func init() {

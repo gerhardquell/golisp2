@@ -105,20 +105,20 @@ Mögliche Limits auf sigoREST-Seite:
 
 ### Cross-Compile für Linux
 ```bash
-GOOS=linux GOARCH=amd64 go build -o golisp .
+GOOS=linux GOARCH=amd64 go build -o golisp2 .
 ```
 
 ### nginx Konfiguration (Beispiel)
 ```nginx
 # Basic Auth
-location /golisp {
+location /golisp2 {
     auth_basic "GoLisp Demo";
     auth_basic_user_file /etc/nginx/.htpasswd;
     proxy_pass http://localhost:8080;
 }
 
 # Oder: IP-Whitelist
-location /golisp {
+location /golisp2 {
     allow 203.0.113.0/24;  # ModelScope IPs?
     allow 198.51.100.0/24; # Eigene IPs
     deny all;

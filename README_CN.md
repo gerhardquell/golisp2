@@ -71,11 +71,11 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **多行输入**：不完整表达式自动缩进
 - **完整 UTF-8 支持**：全 Unicode 字符串支持
 
-### 服务器模式 (golispd)
+### 服务器模式 (golisp2d)
 - **SWANK 风格 TCP 服务器**：S-表达式 RPC 协议，支持 IDE 集成
 - **持久化环境**：客户端连接间共享状态
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
-- **客户端 REPL**：通过 `golisp-client --repl` 使用交互式 REPL
+- **客户端 REPL**：通过 `golisp2-client --repl` 使用交互式 REPL
 
 ---
 
@@ -85,7 +85,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 
 ```bash
 git clone https://github.com/gerhardquell/golisp.git
-cd golisp
+cd golisp2
 go build .
 ```
 
@@ -95,25 +95,25 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 
 | 模式 | 命令 | 说明 |
 |------|---------|-------------|
-| **标准输入（默认）** | `echo "(+ 1 2)" \| ./golisp` | 从标准输入读取，仅输出结果 |
-| **交互模式** | `./golisp -i` | 带语法高亮的 REPL 环境 |
-| **表达式模式** | `./golisp -e "(+ 1 2)"` | 执行单个表达式 |
-| **脚本模式** | `./golisp script.lisp` | 运行 Lisp 脚本文件 |
-| **测试模式** | `./golisp -t` | 运行内置测试套件 |
+| **标准输入（默认）** | `echo "(+ 1 2)" \| ./golisp2` | 从标准输入读取，仅输出结果 |
+| **交互模式** | `./golisp2 -i` | 带语法高亮的 REPL 环境 |
+| **表达式模式** | `./golisp2 -e "(+ 1 2)"` | 执行单个表达式 |
+| **脚本模式** | `./golisp2 script.lisp` | 运行 Lisp 脚本文件 |
+| **测试模式** | `./golisp2 -t` | 运行内置测试套件 |
 
 **退出码：** `0` = 成功，`1` = 错误
 
 ```bash
 # 管道模式（适合 shell 脚本）
-echo "(factorial 10)" | ./golisp
+echo "(factorial 10)" | ./golisp2
 # => 3628800
 
 # 直接执行表达式
-./golisp -e "(* 6 7)"
+./golisp2 -e "(* 6 7)"
 # => 42
 
 # 通过标准输入执行多行代码
-cat <<'EOF' | ./golisp
+cat <<'EOF' | ./golisp2
 (defun square (x)
   (* x x))
 (square 5)
@@ -121,29 +121,29 @@ EOF
 # => 25
 ```
 
-### 服务器模式 (`golispd` + `golisp-client`)
+### 服务器模式 (`golisp2d` + `golisp2-client`)
 
 GoLisp 可以作为 TCP 服务器运行，支持类似 SWANK 的 S-表达式 RPC 协议：
 
 ```bash
 # 终端 1：启动服务器
-golispd --port 4321
-# => golispd 运行在 localhost:4321
+golisp2d --port 4321
+# => golisp2d 运行在 localhost:4321
 
 # 终端 2：使用客户端
-golisp-client --port 4321 --eval "(+ 1 2 3)"
+golisp2-client --port 4321 --eval "(+ 1 2 3)"
 # => 6
 
-golisp-client --port 4321 --complete "def"
+golisp2-client --port 4321 --complete "def"
 # => ((define . "Define variable") (defun . "Lambda/Closure") ...)
 
 # 通过服务器使用交互式 REPL
-golisp-client --port 4321 --repl
-golisp> (defun square (x) (* x x))
+golisp2-client --port 4321 --repl
+golisp2> (defun square (x) (* x x))
 => square
-golisp> (square 5)
+golisp2> (square 5)
 => 25
-golisp> :quit
+golisp2> :quit
 ```
 
 **服务器特性：**
@@ -159,7 +159,7 @@ golisp> :quit
 ### REPL 交互环境
 
 ```bash
-./golisp -i
+./golisp2 -i
 ```
 
 ```lisp
@@ -186,13 +186,13 @@ factorial
 ### 运行脚本
 
 ```bash
-./golisp script.lisp
+./golisp2 script.lisp
 ```
 
 ### 测试套件
 
 ```bash
-./golisp -t  # 40 个内置测试
+./golisp2 -t  # 40 个内置测试
 ```
 
 ---
@@ -361,9 +361,9 @@ GoLisp 的 `load` 函数通过定义的搜索路径列表查找库，类似于 P
 
 ```bash
 # 添加自定义库目录
-export GOLISP_PATH=/opt/golisp:/home/user/mylisp
+export GOLISP_PATH=/opt/golisp2:/home/user/mylisp
 
-./golisp -e '(load "mylib.lisp")'  ; 也搜索 GOLISP_PATH
+./golisp2 -e '(load "mylib.lisp")'  ; 也搜索 GOLISP_PATH
 ```
 
 ### 项目结构示例

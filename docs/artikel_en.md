@@ -106,7 +106,7 @@ So I suggested to Claude to use this principle for GoLisp as well.
 The REPL function was made switchable via a command line parameter; the default state was "off." This made GoLisp a full-fledged Unix tool. Default mode: stdin, stdout, stderr and exit codes (0=OK, 1=ERROR), i.e., pipe support:
 
 ```bash
-echo "(+ 1 2)" | ./golisp
+echo "(+ 1 2)" | ./golisp2
 ```
 
 works.

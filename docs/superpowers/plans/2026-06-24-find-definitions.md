@@ -990,12 +990,12 @@ Expected: alle PASS, kein Race.
 ```bash
 ./build
 ```
-Expected: `golisp`-Binary gebaut ohne Fehler.
+Expected: `golisp2`-Binary gebaut ohne Fehler.
 
 - [ ] **Step 5: Manuelle Emacs-Verifikation**
 
 ```bash
-./golisp --swank 127.0.0.1:4242 &
+./golisp2 --swank 127.0.0.1:4242 &
 ```
 
 In Emacs (SLIME geladen):

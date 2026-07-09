@@ -1,11 +1,11 @@
 //**********************************************************************
-//  cmd/golispd/main.go
+//  cmd/golisp2d/main.go
 //  Autor    : Gerhard Quell - gquell@skequell.de
 //  CoAutor  : claude sonnet 4.6
 //  Copyright: 2026 Gerhard Quell - SKEQuell
-//  Erstellt : 20260301 (refactored 20260618)
+//  Erstellt : 20260301 (refactored 20260618, renamed 20260709)
 //**********************************************************************
-// GoLisp Server (Daemon) - SWANK TCP-Server
+// GoLisp2 Server (Daemon) - SWANK TCP-Server
 //**********************************************************************
 
 package main

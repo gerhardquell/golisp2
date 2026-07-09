@@ -141,7 +141,7 @@ Für Macro entsprechend `(defmacro ...)`. `swank--value-string` existiert bereit
 **Manuelle Verifikation:**
 
 ```bash
-./build && ./golisp --swank 127.0.0.1:4242
+./build && ./golisp2 --swank 127.0.0.1:4242
 # Emacs: slime-connect, Datei mit defun laden, M-. auf Funktionsnamen → springt zur Zeile
 ```
 
@@ -149,7 +149,7 @@ Für Macro entsprechend `(defmacro ...)`. `swank--value-string` existiert bereit
 
 - `find-definitions` für Built-in-Primitive (Go-Source zugeordnet) — `:error`.
 - Mehrfach-Definitionen pro Symbol (CLOS-Methoden etc.) — eine Location pro Symbol.
-- Filename-Translation / slime-tramp (remote golispd) — lokaler Use-Case, kein TRAMP.
+- Filename-Translation / slime-tramp (remote golisp2d) — lokaler Use-Case, kein TRAMP.
 - Inspector, Debugger/Restarts — separate Specs.
 
 ## Abhängigkeiten / Voraussetzungen

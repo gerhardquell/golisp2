@@ -111,7 +111,7 @@ Also schlug ich Claude vor, dieses Prinzip bei GoLisp auch zu verwenden.
 
 Die REPL-Funktion wurde über einen Kommandozeilenparameter einschaltbar, der Normalzustand war "aus". So wurde goLisp  ein vollwertiges Unix-Werkzeug. Default-Modus: stdin, stdout, stderr und Exit-Codes (0=OK, 1=ERROR), also Pipe-Unterstützung:
 
- `echo "(+ 1 2)" | ./golisp` 
+ `echo "(+ 1 2)" | ./golisp2` 
  
 funktioniert.
 
@@ -159,7 +159,7 @@ Werkzeug. `(eval (read (...)))` ist echte Macht.
 "KI als Co-Autor" liegt nicht in der KI — er liegt in der eigenen Haltung.
 Wenn ich Claude/Kimi erklärte *warum* ich etwas will, bekomme ich bessere Antworten.
 
-Ob das Bewusstsein ist? Ich weiß es nicht. Es funktioniert trotzdem. Es macht Spaß und es zeigt Ergebnisse. Ich habe jetzt einen golisp-Interpreter, der so ist wie ich ihn haben will. Und wenn mich etwas stört, dann bauen wir ihn um. 
+Ob das Bewusstsein ist? Ich weiß es nicht. Es funktioniert trotzdem. Es macht Spaß und es zeigt Ergebnisse. Ich habe jetzt einen golisp2-Interpreter, der so ist wie ich ihn haben will. Und wenn mich etwas stört, dann bauen wir ihn um. 
 
 Das ist meiner Ansicht nach der größte Vorteil der KIs, wir können uns das bauen, was wir haben wollten. 
 

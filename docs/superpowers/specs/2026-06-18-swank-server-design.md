@@ -12,13 +12,13 @@ GoLisp bekommt einen echten SWANK-Server, mit dem sich Emacs über `M-x slime` v
 
 - `lib/swank/server.go` und `lib/swank/protocol.go` existieren bereits, implementieren aber ein eigenes S-Expression-RPC-Protokoll, nicht das echte SWANK-Protokoll.
 - SWANK verwendet length-prefixed UTF-8 S-Expressions (`Hex-Length:S-Expr`) und Nachrichten wie `connection-info`, `create-repl`, `listener-eval`.
-- Der neue Server soll über `golisp --swank [host:port]` starten.
+- Der neue Server soll über `golisp2 --swank [host:port]` starten.
 
 ## Entscheidungen
 
 | Entscheidung | Gewählt | Begründung |
 |--------------|---------|------------|
-| Server-Standort | `golisp --swank` Flag im Hauptbinary | Einfacher Start, kein separates Binary nötig |
+| Server-Standort | `golisp2 --swank` Flag im Hauptbinary | Einfacher Start, kein separates Binary nötig |
 | Architektur | Hybrid: Go TCP/Framing + GoLisp Handler | Balance aus Stabilität und „nativ in GoLisp“ |
 | Env pro Verbindung | Frisches `*Env` pro TCP-Verbindung | Isolation zwischen Emacs-Sitzungen |
 | Async Output | Primitive `swank-send-event` in Go | Erlaubt `write-string` während `listener-eval` |
@@ -28,7 +28,7 @@ GoLisp bekommt einen echten SWANK-Server, mit dem sich Emacs über `M-x slime` v
 
 ```
 ┌─────────┐     SWANK-Frames          ┌──────────────┐
-│  Emacs  │  ───────────────────────► │ golisp --swank│
+│  Emacs  │  ───────────────────────► │ golisp2 --swank│
 │ (SLIME) │  ◄─────────────────────── │              │
 └─────────┘                           │  ┌──────────┐ │
                                       │  │ TCP/     │ │
@@ -112,7 +112,7 @@ Während `listener-eval` läuft, kann `print` Output erzeugen. Der Output-Hook r
 - Go-Unit-Tests für `framing.go` mit bekannten SWANK-Frames.
 - Go-Test für `dispatch.go` Wrapper (Mock-Env, Mock-Message).
 - GoLisp-Tests für `lib/swank.lisp` Handler mit statischen Nachrichten.
-- Integrationstest: `golisp --swank` starten, per TCP `connection-info` senden, Antwort auf Struktur prüfen.
+- Integrationstest: `golisp2 --swank` starten, per TCP `connection-info` senden, Antwort auf Struktur prüfen.
 
 ## Phasen
 
@@ -151,4 +151,4 @@ Während `listener-eval` läuft, kann `print` Output erzeugen. Der Output-Hook r
 ## Abgrenzung
 
 - `slime-tramp` für Emacs (TODO.md Punkt 2) ist ein separater Design-Schritt nach diesem Server.
-- Das alte `golispd`-Binary und das eigene RPC-Protokoll in `lib/swank/` werden durch diesen Design-Schritt nicht entfernt, sondern `lib/swank/` wird auf echtes SWANK umgestellt.
+- Das alte `golisp2d`-Binary und das eigene RPC-Protokoll in `lib/swank/` werden durch diesen Design-Schritt nicht entfernt, sondern `lib/swank/` wird auf echtes SWANK umgestellt.

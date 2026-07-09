@@ -56,7 +56,7 @@ test(env, `(catch (+ 1 2) (lambda (e) "fehler"))`)
 ### Step 2: Verify FAIL
 
 ```bash
-cd /u/lisp-projekte/golisp && go run . -t
+cd /u/lisp-projekte/golisp2 && go run . -t
 ```
 
 Erwartete Ausgabe für neue Tests:
@@ -106,7 +106,7 @@ env.Set("error", makeFn(fnError))
 ### Step 5: Compile-Check
 
 ```bash
-cd /u/lisp-projekte/golisp && go build .
+cd /u/lisp-projekte/golisp2 && go build .
 ```
 
 Erwartete Ausgabe: keine Fehler.
@@ -114,7 +114,7 @@ Erwartete Ausgabe: keine Fehler.
 ### Step 6: Commit
 
 ```bash
-cd /u/lisp-projekte/golisp && git add lib/types.go lib/primitives.go && git commit -m "feat: LispError-Typ und (error msg) Primitiv"
+cd /u/lisp-projekte/golisp2 && git add lib/types.go lib/primitives.go && git commit -m "feat: LispError-Typ und (error msg) Primitiv"
 ```
 
 ---
@@ -169,7 +169,7 @@ case "catch": return evalCatch(expr.Cdr, env)
 ### Step 3: Verify PASS
 
 ```bash
-cd /u/lisp-projekte/golisp && go build . && go run . -t
+cd /u/lisp-projekte/golisp2 && go build . && go run . -t
 ```
 
 Erwartete Ausgabe für neue Tests:
@@ -181,7 +181,7 @@ Erwartete Ausgabe für neue Tests:
 ### Step 4: Commit
 
 ```bash
-cd /u/lisp-projekte/golisp && git add lib/eval.go && git commit -m "feat: (catch body handler) Spezialform für Fehlerbehandlung"
+cd /u/lisp-projekte/golisp2 && git add lib/eval.go && git commit -m "feat: (catch body handler) Spezialform für Fehlerbehandlung"
 ```
 
 ---
@@ -221,7 +221,7 @@ import (
   "errors"
   "fmt"
   "os"
-  "golisp/lib"
+  "golisp2/lib"
 )
 ```
 
@@ -242,7 +242,7 @@ Am Ende von `testlib.lisp` anfügen:
 ### Step 3: Verify
 
 ```bash
-cd /u/lisp-projekte/golisp && go build . && go run . testlib.lisp
+cd /u/lisp-projekte/golisp2 && go build . && go run . testlib.lisp
 ```
 
 Letzte zwei Ausgabe-Zeilen:
@@ -254,7 +254,7 @@ Letzte zwei Ausgabe-Zeilen:
 ### Step 4: Commit
 
 ```bash
-cd /u/lisp-projekte/golisp && git add main.go testlib.lisp && git commit -m "feat: REPL LispError-Ausgabe + safe-div Demo"
+cd /u/lisp-projekte/golisp2 && git add main.go testlib.lisp && git commit -m "feat: REPL LispError-Ausgabe + safe-div Demo"
 ```
 
 ---

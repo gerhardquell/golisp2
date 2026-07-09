@@ -1,5 +1,5 @@
 <!--
-  golisp-tutorial.md
+  golisp2-tutorial.md
   Autor    : Gerhard Quell - gquell@skequell.de
   CoAutor  : claude sonnet 4.6
   Copyright: 2026 Gerhard Quell - SKEQuell
@@ -1240,7 +1240,7 @@ Wandelt ein Symbol in seinen String-Namen um.
 Öffnet eine PostgreSQL-Verbindung. Connection-String z.B. host=... port=... user=... password=... dbname=...
 
 ```lisp
-(define conn (pg-connect "host=localhost user=golisp dbname=test sslmode=disable"))
+(define conn (pg-connect "host=localhost user=golisp2 dbname=test sslmode=disable"))
 ```
 
 ### pg-query

@@ -71,11 +71,11 @@ GoLisp is a modern Lisp interpreter built in Go, featuring **tail-call optimizat
 - **Multi-line input**: Automatic indentation for incomplete expressions
 - **Full UTF-8 support**: Unicode strings throughout
 
-### Server Mode (golispd)
+### Server Mode (golisp2d)
 - **SWANK-like TCP Server**: S-Expression-RPC for IDE integration
 - **Persistent environment**: Shared state across client connections
 - **Protocol methods**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
-- **Client REPL**: Interactive REPL via `golisp-client --repl`
+- **Client REPL**: Interactive REPL via `golisp2-client --repl`
 
 ---
 
@@ -85,7 +85,7 @@ GoLisp is a modern Lisp interpreter built in Go, featuring **tail-call optimizat
 
 ```bash
 git clone https://github.com/gerhardquell/golisp.git
-cd golisp
+cd golisp2
 go build .
 ```
 
@@ -95,25 +95,25 @@ GoLisp works like a standard Unix tool with multiple modes:
 
 | Mode | Command | Description |
 |------|---------|-------------|
-| **Stdin (default)** | `echo "(+ 1 2)" \| ./golisp` | Read from stdin, output result only |
-| **Interactive** | `./golisp -i` | REPL with syntax highlighting |
-| **Expression** | `./golisp -e "(+ 1 2)"` | Execute single expression |
-| **Script** | `./golisp script.lisp` | Run a Lisp file |
-| **Tests** | `./golisp -t` | Run built-in test suite |
+| **Stdin (default)** | `echo "(+ 1 2)" \| ./golisp2` | Read from stdin, output result only |
+| **Interactive** | `./golisp2 -i` | REPL with syntax highlighting |
+| **Expression** | `./golisp2 -e "(+ 1 2)"` | Execute single expression |
+| **Script** | `./golisp2 script.lisp` | Run a Lisp file |
+| **Tests** | `./golisp2 -t` | Run built-in test suite |
 
 **Exit codes:** `0` = success, `1` = error
 
 ```bash
 # Pipe mode (great for shell scripts)
-echo "(factorial 10)" | ./golisp
+echo "(factorial 10)" | ./golisp2
 # => 3628800
 
 # Direct expression
-./golisp -e "(* 6 7)"
+./golisp2 -e "(* 6 7)"
 # => 42
 
 # Multiline via stdin
-cat <<'EOF' | ./golisp
+cat <<'EOF' | ./golisp2
 (defun square (x)
   (* x x))
 (square 5)
@@ -121,29 +121,29 @@ EOF
 # => 25
 ```
 
-### Server Mode (`golispd` + `golisp-client`)
+### Server Mode (`golisp2d` + `golisp2-client`)
 
 GoLisp can run as a TCP server with a SWANK-like S-Expression-RPC protocol:
 
 ```bash
 # Terminal 1: Start the server
-golispd --port 4321
-# => golispd läuft auf localhost:4321
+golisp2d --port 4321
+# => golisp2d läuft auf localhost:4321
 
 # Terminal 2: Use the client
-golisp-client --port 4321 --eval "(+ 1 2 3)"
+golisp2-client --port 4321 --eval "(+ 1 2 3)"
 # => 6
 
-golisp-client --port 4321 --complete "def"
+golisp2-client --port 4321 --complete "def"
 # => ((define . "Define variable") (defun . "Lambda/Closure") ...)
 
 # Interactive REPL via server
-golisp-client --port 4321 --repl
-golisp> (defun square (x) (* x x))
+golisp2-client --port 4321 --repl
+golisp2> (defun square (x) (* x x))
 => square
-golisp> (square 5)
+golisp2> (square 5)
 => 25
-golisp> :quit
+golisp2> :quit
 ```
 
 **Server Features:**
@@ -159,7 +159,7 @@ golisp> :quit
 ### REPL
 
 ```bash
-./golisp -i
+./golisp2 -i
 ```
 
 ```lisp
@@ -186,13 +186,13 @@ factorial
 ### Run a Script
 
 ```bash
-./golisp script.lisp
+./golisp2 script.lisp
 ```
 
 ### Test Suite
 
 ```bash
-./golisp -t  # 40 built-in tests
+./golisp2 -t  # 40 built-in tests
 ```
 
 ---
@@ -376,9 +376,9 @@ When you call `(load "filename.lisp")`, GoLisp searches in this order:
 
 ```bash
 # Add custom library directories
-export GOLISP_PATH=/opt/golisp:/home/user/mylisp
+export GOLISP_PATH=/opt/golisp2:/home/user/mylisp
 
-./golisp -e '(load "mylib.lisp")'  ; Searches GOLISP_PATH too
+./golisp2 -e '(load "mylib.lisp")'  ; Searches GOLISP_PATH too
 ```
 
 ### Project Structure Example

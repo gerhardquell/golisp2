@@ -111,17 +111,17 @@ GoLisp bridges:
 ```bash
 # Clone and build
 git clone https://github.com/gerhardquell/golisp.git
-cd golisp
+cd golisp2
 go build .
 
 # Interactive REPL with syntax highlighting
-./golisp -i
+./golisp2 -i
 
 # Run a script
-./golisp script.lisp
+./golisp2 script.lisp
 
 # Execute expression directly
-./golisp -e "(+ 1 2 3)"
+./golisp2 -e "(+ 1 2 3)"
 ```
 
 ### Server Mode
@@ -130,11 +130,11 @@ GoLisp can also run as a TCP server for IDE integration:
 
 ```bash
 # Terminal 1: Start server
-golispd --port 4321
+golisp2d --port 4321
 
 # Terminal 2: Use client
-golisp-client --port 4321 --eval "(+ 1 2 3)"
-golisp-client --port 4321 --repl
+golisp2-client --port 4321 --eval "(+ 1 2 3)"
+golisp2-client --port 4321 --repl
 ```
 
 ---

@@ -116,17 +116,17 @@ GoLisp 桥接了：
 ```bash
 # 克隆并构建
 git clone https://github.com/gerhardquell/golisp.git
-cd golisp
+cd golisp2
 go build .
 
 # 启动带语法高亮的交互式 REPL
-./golisp -i
+./golisp2 -i
 
 # 运行脚本
-./golisp script.lisp
+./golisp2 script.lisp
 
 # 直接执行表达式
-./golisp -e "(+ 1 2 3)"
+./golisp2 -e "(+ 1 2 3)"
 ```
 
 ### 服务器模式
@@ -135,11 +135,11 @@ GoLisp 还可以作为 TCP 服务器运行，支持 IDE 集成：
 
 ```bash
 # 终端 1：启动服务器
-golispd --port 4321
+golisp2d --port 4321
 
 # 终端 2：使用客户端
-golisp-client --port 4321 --eval "(+ 1 2 3)"
-golisp-client --port 4321 --repl
+golisp2-client --port 4321 --eval "(+ 1 2 3)"
+golisp2-client --port 4321 --repl
 ```
 
 ---

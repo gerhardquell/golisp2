@@ -7,19 +7,19 @@ als eingebaute Lisp-Primitiven beherrscht.
 
 **Autor:** Gerhard Quell – gquell@skequell.de
 **CoAutor:** claude sonnet 4.6
-**Modul:** `golisp`
+**Modul:** `golisp2`
 **Sprache:** deutsch
 ---
 
 ## Dateistruktur
 
 ```
-golisp/
+golisp2/
   main.go              Unix-Style CLI: stdin/-i/-e/-t/Datei + Exit-Codes
   cmd/
-    golispd/           Server-Binary
-      main.go          TCP-Server Entry Point
-    golisp-client/     Client-Binary
+    golisp2d/           Server-Binary
+      main.go          SWANK-Server Entry Point
+    golisp2-client/     Client-Binary
       main.go          CLI-Client mit REPL
   lib/
     types.go           Cell-Datenstruktur (LispType, Cons, MakeAtom...)
@@ -57,7 +57,7 @@ golisp/
 - **Dateigröße:** max 1000 Zeilen, ab 800 sinnvoll aufteilen
 - **Datei-Header:** immer mit Autor, CoAutor, Copyright, Erstellt (YYYYMMDD)
 - **Fehler:** `fmt.Errorf("funktionsname: beschreibung")`
-- **Build:** verwende `./build.sh` (kompiliert golisp/golispd/golisp-client nach `./build/`)
+- **Build:** verwende `./build.sh` (kompiliert golisp2/golisp2d/golisp2-client nach `./build/`)
 - **tmp:** verwende ./tmp als temporäres Verzeichnis - nicht /tmp !!
 
 ### Spezialformen vs. Primitiven
@@ -146,8 +146,8 @@ Einzelner Ausdruck → direkt, kein Overhead.
 **Zeit:** `sleep`
 **Memory:** `memstats`
 
-### REPL (readline.go) – `golisp -i`
-- **Start:** `./golisp -i` (benötigt TTY – im Script/CI kommt Fehlermeldung)
+### REPL (readline.go) – `golisp2 -i`
+- **Start:** `./golisp2 -i` (benötigt TTY – im Script/CI kommt Fehlermeldung)
 - **Syntax-Highlighting:** Klammern nach Tiefe eingefärbt (6 Farben, fett)
   Strings grün · Kommentare grau · Quote-Zeichen gelb
 - **Multi-line:** Enter bei offenem Ausdruck → automatische Einrückung
@@ -162,12 +162,12 @@ GoLisp verhält sich wie ein typisches Unix-Tool:
 
 | Flag | Beschreibung | Beispiel |
 |------|--------------|----------|
-| *(default)* | Liest von stdin, gibt nur Ergebnis aus | `echo "(+ 1 2)" \| ./golisp` |
-| `-i` | Interaktiver REPL mit go-prompt | `./golisp -i` |
-| `-e EXPR` | Expression direkt ausführen | `./golisp -e "(* 6 7)"` |
-| `-t` | Tests ausführen | `./golisp -t` |
-| `--swank HOST:PORT` | SWANK-Server starten (für Emacs/SLIME) | `./golisp --swank 127.0.0.1:4242` |
-| `DATEI` | Lisp-Datei laden | `./golisp script.lisp` |
+| *(default)* | Liest von stdin, gibt nur Ergebnis aus | `echo "(+ 1 2)" \| ./golisp2` |
+| `-i` | Interaktiver REPL mit go-prompt | `./golisp2 -i` |
+| `-e EXPR` | Expression direkt ausführen | `./golisp2 -e "(* 6 7)"` |
+| `-t` | Tests ausführen | `./golisp2 -t` |
+| `--swank HOST:PORT` | SWANK-Server starten (für Emacs/SLIME) | `./golisp2 --swank 127.0.0.1:4242` |
+| `DATEI` | Lisp-Datei laden | `./golisp2 script.lisp` |
 
 ### Exit-Codes
 - **0** – Erfolg
@@ -176,7 +176,7 @@ GoLisp verhält sich wie ein typisches Unix-Tool:
 ### Multiline-Support (stdin)
 Expression wird erst ausgewertet wenn Klammern ausgeglichen sind:
 ```bash
-cat <<'EOF' | ./golisp
+cat <<'EOF' | ./golisp2
 (defun square (x)
   (* x x))
 (square 5)
@@ -191,118 +191,122 @@ EOF
 
 ---
 
-## GoLisp Server (golispd) – SWANK-ähnlicher TCP-Server
+## GoLisp Server (golisp2d) – SWANK-TCP-Server
 
-GoLisp kann als Server laufen, der via TCP S-Expression-RPC mit Clients kommuniziert – ähnlich wie SWANK für Common Lisp.
+`golisp2d` ist der Server-Prozess. Er spricht das **echte SWANK-Protokoll**
+(length-prefixed `:emacs-rex`-RPC) — dieselbe Implementierung, die auch
+`golisp2 --swank` startet (`lib/swank/server.go` → `swank.RunServer`).
+Es gibt kein separates Custom-RPC mehr; `golisp2d` und `golisp2 --swank`
+sind identisch. Der `golisp2-client` nutzt dasselbe SWANK-Protokoll.
 
 ### Architektur
 ```
-┌─────────────┐     TCP Socket      ┌─────────────┐
-│   Client    │ ◄─────────────────► │  golispd    │
-│  (Emacs,    │   S-Expression RPC  │   (Server)  │
-│   VS Code,  │                     └──────┬──────┘
-│   CLI)      │                            │
-└─────────────┘                     ┌──────┴──────┐
-                                    │  GoLisp     │
-                                    │  Runtime    │
-                                    └─────────────┘
+┌─────────────┐     TCP / SWANK       ┌─────────────┐
+│   Client    │ ◄──────────────────► │  golisp2d    │
+│  (golisp2-  │  :emacs-rex Frames   │ (SWANK-Srv) │
+│   client,   │  %06x<sexpr>         └──────┬──────┘
+│   Emacs/    │                             │
+│   SLIME)    │                      ┌──────┴──────┐
+└─────────────┘                      │  GoLisp2    │
+                                     │  Runtime    │
+                                     └─────────────┘
 ```
 
 ### Server starten
 
 ```bash
 # Default (localhost:4321)
-golispd
+golisp2d
 
 # Custom port
-golispd --port 5000
+golisp2d --port 5000
 
-# Umgebungsvariablen
+# Umgebungsvariablen (haben Vorrang vor Flags)
 export GOLISP_HOST=0.0.0.0
 export GOLISP_PORT=5000
-golispd
+golisp2d
+
+# Alternativ: Standalone-Binary mit SWANK-Modus
+./golisp2 --swank 127.0.0.1:4242
 ```
 
-### Client-Befehle
+### Client-Befehle (`golisp2-client`)
+
+Der Client spricht SWANK (`cmd/golisp2-client/main.go`, nutzt `golisp2/lib`
+für robuste Cell-Verarbeitung). Cmd-→-SWANK-Op-Map:
+
+| Client-Flag | SWANK-Op | Antwort |
+|-------------|----------|---------|
+| `--ping` | `swank:connection-info` | `:ok`-Plist |
+| `--eval CODE` | `swank-repl:listener-eval` | `:write-string`-Events pro Ergebnis |
+| `--complete PFX` | `swank:simple-completions` | `:ok ("m1" "m2" ...)` |
+| `--load FILE` | `swank:load-file` | `:ok "result"` |
+| `--repl` | Schleife aus `listener-eval` | s.o. |
 
 ```bash
 # Ping (Health-Check)
-golisp-client --ping
+golisp2-client --ping
+# => Server ist erreichbar: pong (SWANK connection-info ok)
 
 # Expression auswerten
-golisp-client --eval "(+ 1 2 3)"
+golisp2-client --eval "(+ 1 2 3)"
 # => 6
 
 # Autocomplete
-golisp-client --complete "ca"
-# => ((car . "Eingebaute Funktion") (cadr . "Lambda/Closure") ...)
+golisp2-client --complete "ca"
+# => car cadddr cadr caddr caar
 
 # Datei laden
-golisp-client --load myscript.lisp
+golisp2-client --load myscript.lisp
 
 # Interaktiver REPL
-golisp-client --repl
-golisp> (defun square (x) (* x x))
-golisp> (square 5)
+golisp2-client --repl
+golisp2> (defun square (x) (* x x))
+golisp2> (square 5)
 25
-golisp> :quit
+golisp2> :quit
 ```
 
-### Protokoll (S-Expression-RPC)
+### SWANK-Protokoll-Details
 
-**Request:**
-```lisp
-(:id 1 :method "eval" :params ("(+ 1 2)"))
-(:id 2 :method "complete" :params ("def"))
-(:id 3 :method "symbols" :params ())
-```
-
-**Response:**
-```lisp
-(:id 1 :status "ok" :result "3")
-(:id 2 :status "ok" :result (("defun" . "Lambda/Closure")))
-(:id 3 :status "error" :error "unbekanntes Symbol 'x'")
-```
-
-### Unterstützte Methoden
-
-| Methode | Beschreibung | Beispiel |
-|---------|--------------|----------|
-| `ping` | Health-Check | `()` → `"pong"` |
-| `eval` | Code auswerten (String) | `("(+ 1 2)")` → `"3"` |
-| `eval-return` | Code auswerten (Cell) | `("(list 1 2)")` → `(1 2)` |
-| `complete` | Autocomplete | `("ca")` → Symbole mit Prefix |
-| `symbols` | Alle Symbole listen | `()` → Liste aller Namen |
-| `describe` | Dokumentation | `("car")` → Doc-String |
-| `load-file` | Datei laden | `("script.lisp")` → Status |
-| `disconnect` | Verbindung schließen | `()` → `()` |
+- **Framing:** 6-stellige Hex-Länge + S-expression, kein Newline
+  (`lib/swank/framing.go`).
+- **Request:** `(:emacs-rex (op args...) "USER" t ID)`.
+- **Response:** Liste von Frames — pro Zwischenergebnis ein
+  `(:write-string "text" :repl-result)`, abschließend `(:return (:ok val) ID)`
+  bzw. `(:return (:abort "msg") ID)` bei Fehler. Der Client liest Frames,
+  bis das `:return` mit passender ID eintrifft.
+- Implementierte Ops: siehe Tabelle im Abschnitt
+  [SWANK-Server für Emacs/SLIME](#swank-server-für-emacsslime-golisp2---swank).
 
 ### REPL-Modus Features
 
 - **Multiline:** Automatische Fortsetzung bei offenen Klammern
 - **Kommandos:** `:quit`, `:complete prefix`, `:load datei`
-- **Error Recovery:** Fehler brechen REPL nicht ab
-- **Shared Environment:** Alle Clients teilen denselben Zustand
+- **Error Recovery:** Fehler brechen REPL nicht ab (`:abort` → stderr, weiter)
+- **Pro-Connection-Env:** Jede Verbindung erhält ein frisches Environment
+  (`lib.BaseEnv()` + `LoadStdlib` in `handleConn`) — Zustand wird nicht
+  zwischen Verbindungen geteilt.
 
 ### Installation
 
 ```bash
-go build -o /usr/local/bin/golispd ./cmd/golispd/
-go build -o /usr/local/bin/golisp-client ./cmd/golisp-client/
+go build -o /usr/local/bin/golisp2d ./cmd/golisp2d/
+go build -o /usr/local/bin/golisp2-client ./cmd/golisp2-client/
 ```
 
 ---
 
-## SWANK-Server für Emacs/SLIME (`golisp --swank`)
+## SWANK-Server für Emacs/SLIME (`golisp2 --swank` / `golisp2d`)
 
 Echte SWANK-Protokoll-Implementierung in `lib/swank/` — spricht das
 SLIME-Protokoll direkt, so dass `M-x slime-connect` aus Emacs klappt.
-(Unabhängig vom oben beschriebenen `golispd` Custom-RPC.)
+`golisp2 --swank` und `golisp2d` starten denselben Server.
 
 ### Start
 
 ```bash
-./golisp --swank 127.0.0.1:4242
+./golisp2 --swank 127.0.0.1:4242
 ```
 
 Dann in Emacs (SLIME geladen via quicklisp `slime-helper.el`):
@@ -384,7 +388,7 @@ Endpoint: POST /v1/chat/completions
 
 ### Konfiguration via Umgebungsvariablen
 
-Beim Start liest GoLisp (analog `GOLISP_HOST`/`GOLISP_PORT` für `golispd`):
+Beim Start liest GoLisp (analog `GOLISP_HOST`/`GOLISP_PORT` für `golisp2d`):
 
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
@@ -393,8 +397,8 @@ Beim Start liest GoLisp (analog `GOLISP_HOST`/`GOLISP_PORT` für `golispd`):
 
 ```bash
 # Multi-Server-Setup
-GOLISP_SIGO_HOST="http://mammouth:9080" ./golisp -i
-GOLISP_SIGO_MODEL="cl48-o" ./golisp -e '(sigo "Erkläre TCO")'
+GOLISP_SIGO_HOST="http://mammouth:9080" ./golisp2 -i
+GOLISP_SIGO_MODEL="cl48-o" ./golisp2 -e '(sigo "Erkläre TCO")'
 ```
 
 Zur Laufzeit zusätzlich änderbar: `(sigo-host "http://...")` oder als
@@ -624,15 +628,15 @@ Der Vergleich erfolgt mit `equal?` (strukturelle Gleichheit).
 ## Build & Test
 
 ```bash
-go build .                              # kompilieren (golisp)
-go build ./cmd/golispd/                 # Server kompilieren
-go build ./cmd/golisp-client/           # Client kompilieren
+go build .                              # kompilieren (golisp2)
+go build ./cmd/golisp2d/                 # Server kompilieren
+go build ./cmd/golisp2-client/           # Client kompilieren
 go test ./...                           # Go-Unit-Tests
 
 # Installation
-sudo cp golisp golispd golisp-client /usr/local/bin/
+sudo cp golisp2 golisp2d golisp2-client /usr/local/bin/
 
-# CLI-Modi (golisp Hauptbinary)
+# CLI-Modi (golisp2 Hauptbinary)
 go run . -t                             # Testmodus (26 Tests)
 go run . -i                             # Interaktiver REPL (benötigt TTY)
 go run . -e "(+ 1 2)"                   # Expression direkt ausführen
@@ -640,13 +644,13 @@ go run . skript.lisp                    # Datei ausführen
 echo "(+ 1 2)" | go run .              # Stdin-Modus (Default)
 
 # Server/Client-Modus
-golispd --port 4321                     # Server starten
-golisp-client --eval "(+ 1 2)"          # Client: Expression
-golisp-client --repl                    # Client: Interaktiver REPL
+golisp2d --port 4321                     # Server starten
+golisp2-client --eval "(+ 1 2)"          # Client: Expression
+golisp2-client --repl                    # Client: Interaktiver REPL
 
 # Exit-Codes: 0 = Erfolg, 1 = Fehler
-echo "(+ 1 2)" | ./golisp; echo $?      # → 0
-./golisp -e "(error 'x')"; echo $?      # → 1
+echo "(+ 1 2)" | ./golisp2; echo $?      # → 0
+./golisp2 -e "(error 'x')"; echo $?      # → 1
 ```
 
 ---

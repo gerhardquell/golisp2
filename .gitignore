@@ -4,9 +4,9 @@ __pycache__/
 *.pyo
 
 # Go binaries (root level only)
-/golisp
-/golispd
-/golisp-client
+/golisp2
+/golisp2d
+/golisp2-client
 
 # Build artifacts
 *.test

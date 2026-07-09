@@ -1,11 +1,13 @@
-module golisp
+module golisp2
 
 go 1.26.0
 
-require github.com/elk-language/go-prompt v1.3.1
+require (
+	github.com/elk-language/go-prompt v1.3.1
+	github.com/lib/pq v1.11.2
+)
 
 require (
-	github.com/lib/pq v1.11.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect

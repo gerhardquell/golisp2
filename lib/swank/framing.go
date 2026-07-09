@@ -16,7 +16,7 @@ import (
   "io"
   "strconv"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // readFrame reads one SWANK length-prefixed S-expression.

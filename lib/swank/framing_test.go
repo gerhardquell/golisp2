@@ -16,7 +16,7 @@ import (
   "strings"
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestWriteFrame(t *testing.T) {

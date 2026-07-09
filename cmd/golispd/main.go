@@ -15,7 +15,7 @@ import (
   "fmt"
   "os"
 
-  "golisp/lib/swank"
+  "golisp2/lib/swank"
 )
 
 func main() {

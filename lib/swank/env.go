@@ -15,7 +15,7 @@ import (
   "fmt"
   "strings"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 // RegisterSwankEnv registers connection-bound SWANK primitives.

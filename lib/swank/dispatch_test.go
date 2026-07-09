@@ -13,7 +13,7 @@ package swank
 import (
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestHandleMessage(t *testing.T) {

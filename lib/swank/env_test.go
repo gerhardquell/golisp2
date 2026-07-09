@@ -14,7 +14,7 @@ import (
   "strings"
   "testing"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 func TestRegisterSwankEnv(t *testing.T) {

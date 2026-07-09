@@ -13,7 +13,7 @@ package swank
 import (
   _ "embed"
 
-  "golisp/lib"
+  "golisp2/lib"
 )
 
 //go:embed swank.lisp

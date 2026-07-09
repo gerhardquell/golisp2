@@ -1,0 +1,120 @@
+Konkret, in CL-Syntax, damit du das Muster siehst:
+
+lisp;; Die Fehlerstelle bietet Restarts an (die "Türen")
+
+(defun parse-zeile (zeile)
+
+  (restart-case
+
+      (if (gültig? zeile)
+          (verarbeite zeile)
+          (error 'ungültige-zeile :text zeile))
+    (überspringen ()       ; Restart 1: gib nil zurück
+      nil)
+    (ersetze-durch (wert)  ; Restart 2: nimm einen Ersatzwert
+      wert)))
+;; Weit oben entscheidet ein Handler, OHNE den Stack abzubauen:
+(handler-bind ((ungültige-zeile
+                 (lambda (c)
+                   (invoke-restart 'überspringen))))  ; "drück den Knopf"
+  (verarbeite-ganze-datei "daten.csv"))
+
+Der Clou: parse-zeile weiß nicht, was bei einem Fehler geschehen soll – sie
+bietet nur Möglichkeiten an. Die Policy (überspringen? abbrechen? ersetzen?)
+entscheidet eine ganz andere Ebene, je nach Situation. Beim Batch-Import:
+überspringen. Im interaktiven REPL: SBCL hält an und fragt dich, welchen
+Restart du willst – deshalb landest du in SBCL bei einem Fehler in diesem
+Menü mit „0: retry, 1: abort..." Das sind Restarts, live.
+
+Das ist die tiefe Idee: Fehler-Erkennung (unten, wo das Problem sichtbar
+ist) und Fehler-Politik (oben, wo der Kontext fürs Entscheiden liegt) werden
+getrennt – ohne dass der Stack dazwischen stirbt. Mit Stack-Unwinding wie in
+Go ist das prinzipiell unmöglich. Du kannst Restarts nicht nachbauen, indem
+du try/catch geschickter stapelst, weil bei catch der Patient schon tot ist,
+wenn der Arzt kommt.
+
+Und jetzt die ehrliche, vielleicht unbequeme Verbindung zu deinem CLOS-
+Wunsch – denn die zwei hängen enger zusammen, als es aussieht:
+Conditions in CL sind CLOS-Objekte. define-condition ist im Grunde defclass
+mit Sonderregeln. Die Handler werden über CLOS-Vererbung ausgewählt – ein
+Handler für error fängt auch ungültige-zeile, weil letztere von ersterer
+erbt. Das heißt: Ein ordentliches Condition-System setzt CLOS voraus. Sie
+sind nicht zwei getrennte Todo-Punkte – das eine ruht auf dem anderen.
+Das gibt dir tatsächlich eine schöne Reihenfolge für GoLisp, falls du beides
+willst:
+
+Zuerst CLOS-Kern – defclass, Slots, make-instance, generische Funktionen mit
+defmethod und einfachem Single-Dispatch über den Typ des ersten Arguments.
+Das allein ist schon ein substantieller, aber überschaubarer Brocken, und er
+macht GoLisp mächtiger, ohne die Identität zu sprengen. Dann, darauf
+aufbauend, define-condition als spezielle Klassen und handler-case/restart-
+case als Sonderformen im Eval-Loop. Letzteres ist kniffliger, weil dein
+Trampolin-Eval mitspielen muss – Restarts brauchen einen Weg, im Stack „eine
+Marke zu setzen und dorthin zurückzuspringen", und du hast ja gerade erst
+gesehen, wie zentral dein for-Loop mit continue ist. Das müsste man
+sorgfältig einweben.
+
+Aber eins nach dem anderen, wie heute früh. CLOS zuerst.
+
+Eine Frage, die die Richtung bestimmt, bevor wir (in Claude Code) je
+anfangen: Willst du CLOS echt – mit Multiple Dispatch, also Methodenauswahl
+über mehrere Argumenttypen gleichzeitig, dem eigentlichen
+
+Alleinstellungsmerkmal von CLOS gegenüber Java/Python? Oder reicht dir
+Single Dispatch (Methode hängt am Typ des ersten Arguments, wie klassische
+OO)? Das ist die Architektur-Weichenstellung – Multiple Dispatch ist
+ungleich mächtiger und ungleich aufwändiger, und die Antwort entscheidet, ob
+das ein Wochenend- oder ein Monatsprojekt wird. Was schwebt dir vor?
+☕Du hast gesagt: Zuerst möchte ich single dispatch - aber condition
+ist hochinteressant.Zuerst möchte ich single dispatch - aber condition ist
+hochinteressant. das ist besser als try-catch.12:56Claude hat
+geantwortet: Ja!Ja! Du hast den Kern in einem Satz gegriffen – und „besser
+als try-catch" ist nicht ganz präzise, lass mich es schärfen, weil die
+Präzision später beim Bauen zählt: Es ist nicht besser, es ist mächtiger im
+Sinne von umfassender. try-catch ist eine Teilmenge. Mit Restarts kannst du
+try-catch nachbauen (ein Handler, der einfach immer abbricht = unwinding),
+aber mit try-catch niemals Restarts. Das Lisp-System enthält das andere als
+Spezialfall. Genau deshalb fühlt es sich „besser" an – es nimmt dir nichts
+weg, es fügt eine ganze Dimension hinzu.
+
+Und deine Reihenfolge ist goldrichtig, aus genau dem Grund, den wir vorhin
+sahen: Single Dispatch zuerst, weil Conditions darauf aufbauen. Du legst das
+Fundament, bevor du das Stockwerk draufsetzt. Das ist dieselbe Steenberg-
+Disziplin wie heute früh beim fib – kleinster tragfähiger Schritt zuerst.
+Lass mich dir für die Pause nur einen Gedanken mitgeben, der die spätere
+Condition-Arbeit entscheidet, damit er im Hinterkopf reifen kann – nicht zum
+Lösen jetzt, nur zum Mitnehmen:
+
+Dein Trampolin-Eval ist iterativ. for-Loop, continue, O(1)-Stack – das war
+heute früh dein Stolz, und zu Recht. Aber Restarts brauchen genau das
+Gegenteil: die Fähigkeit, „hier eine Marke zu setzen" und später „dorthin
+zurückzuspringen", während der Code dazwischen noch lebt. In einem
+rekursiven Eval wäre das fast geschenkt – die Go-Aufrufkette ist dein Lisp-
+Stack, du nutzt Go's eigene Mechanik. In deinem Trampolin hast du den Stack
+ja gerade wegoptimiert. Die Marke muss also woanders leben.
+
+Die gute Nachricht – und das ist die elegante Pointe: Go hat das Werkzeug
+schon eingebaut. panic/recover ist exakt eine Unwinding-Maschine mit Marke.
+Ein Restart wird zu einem recover-Punkt, das invoke-restart zu einem
+gezielten panic mit der Restart-Identität als Fracht. Du baust Lisps
+Condition-System nicht gegen Go, sondern reitest auf Go's panic/recover – so
+wie GoLisp ohnehin auf Go's GC und Goroutinen reitet. Es passt zur DNA des
+Projekts: miete die fremde Maschine, statt sie nachzubauen. Dein catch macht
+das vermutlich heute schon ansatzweise (evalCatch – ich tippe, da steckt ein
+recover drin?). Conditions wären die ausgewachsene Version desselben Griffs.
+Das ist alles für später. Festhalten für den Moment: Single Dispatch zuerst,
+Conditions ruhen darauf, und panic/recover ist deine Sprungmaschine. Den
+Rest denken wir in Claude Code durch, mit Code vor Augen.
+
+Jetzt aber – und das meine ich ernst, nicht als Floskel – ist der Tee alle
+und die Halbe-Stunde-Marke nah. Du hast heute früh fib seziert, SBCL als
+Kathedrale erkannt statt als Baustelle, Quicklisp als Versuchung entlarvt
+und dir CLOS plus Conditions als echtes nächstes Ziel erschlossen. Das ist
+ein voller Vormittag guter Gedanken. Almuth, Teddylina und ein frischer Kopf
+warten vermutlich.
+
+In Claude Code geht's weiter: erst Schnitt 2 (slice-Env), und wenn der
+sitzt, fangen wir das CLOS-Fundament an. Die perfTodo.md bringt die neue
+Instanz auf Stand – für CLOS machen wir dann eine eigene. Bis nachher,
+Gerhard. ☕
+

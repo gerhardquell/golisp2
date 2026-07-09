@@ -1,0 +1,12 @@
+# Aufgaben
+
+## 1. format - Funktion hinzufügen  ✅ erledigt 20260625
+Komplette FORMAT-Funktion (Common-Lisp-HyperSpec 22.3) eingebaut.
+Nativ in Go (`lib/format.go` + `format_dirs.go` + `format_blocks.go`), da
+Lisp-Subset die vollen Direktiven nicht abbilden könnte.
+Direktiven: ~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[
+~{ ~( ~; ~^ ~/fun/ ~~ ~Newline mit Parametern + Modifiern.
+~/fun/ via globalFormatEnv-Capture (RegisterFormat speichert BaseEnv) +
+apply. ~:[ Default-Klausel via ~:; (splitClauses liefert defaultIdx).
+~F k-Skaling (×10^k). overflowchar nicht unterstützt (selten, dokumentiert).
+Tests: `lib/format_test.go` (TestFormatBasic/UserFunc/Errors/T/AppendString).

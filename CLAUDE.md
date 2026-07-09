@@ -29,6 +29,9 @@ golisp/
     eval.go            Herzstück: Eval, Spezialformen, defmacro, parfunc
     primitives.go      Eingebaute Funktionen + BaseEnv()
     stringfuncs.go     String-Primitiven (RegisterStringFuncs)
+    format.go          FORMAT-Engine (fnFormat, formatRun, Parameter-Parser)
+    format_dirs.go     FORMAT-Direktiven + Helper (~A~S~D~R~F~$~T~* — einfache Direktiven)
+    format_blocks.go   FORMAT-Block-Direktiven (~?~[~{~(~^~/fun/ + findBlock/splitClauses)
     goroutine.go       parfunc, chan-make/send/recv, lock-make
     fileio.go          file-write, file-append, file-read, file-exists?, file-delete
     sigorest.go        sigo, sigo-models, sigo-host (HTTP zu sigoREST)
@@ -54,7 +57,7 @@ golisp/
 - **Dateigröße:** max 1000 Zeilen, ab 800 sinnvoll aufteilen
 - **Datei-Header:** immer mit Autor, CoAutor, Copyright, Erstellt (YYYYMMDD)
 - **Fehler:** `fmt.Errorf("funktionsname: beschreibung")`
-- **Build:** verwende ./build für die builds
+- **Build:** verwende `./build.sh` (kompiliert golisp/golispd/golisp-client nach `./build/`)
 - **tmp:** verwende ./tmp als temporäres Verzeichnis - nicht /tmp !!
 
 ### Spezialformen vs. Primitiven
@@ -131,6 +134,10 @@ Einzelner Ausdruck → direkt, kein Overhead.
 **String:** `string-length` `string-append` `substring`
   `string-upcase` `string-downcase` `string->number` `number->string`
   `string->list` `list->string`
+**Format:** `format` (Common-Lisp-HyperSpec 22.3 — `~A ~S ~D ~B ~O ~X ~R ~P ~C
+  ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~ ~Newline` mit
+  Parametern + Modifiern `:` `@`; dest = `t`→stdout, `nil`→String, String→anhängen;
+  `~/name/` ruft benannte Funktion via globalFormatEnv, `~:;` markiert Default-Klausel)
 **Fehler:** `error` `catch`
 **Makro-Hilfe:** `gensym`
 **Datei:** `file-write` `file-append` `file-read` `file-exists?` `file-delete`

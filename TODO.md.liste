@@ -1,0 +1,31 @@
+# Aufgaben
+
+## 1. Bereinigung
+Ich habe die Dateien:
+- golisp
+- golispd
+- golisp-client
+
+Ich möchte nur noch zwei Dateien
+- golispd
+- golisp-client
+
+golispd ist nichts weiter als die Umbenennung von golisp!
+
+## 2. Konsilidisierung des Datei-Baums
+- erstellen von bin, build und src Verzeichniss
+  - bin : ablauffähige Programme, golispd und golisp-client
+  - src : Quellcodes
+  - build : Build-Umgebung getrennt nach golispd und golisp-client
+
+
+## 3. Überarbeiten von golisp-client
+- golisp-client soll mit golispd zusammenarbeiten.
+- Test: Kann swank für golisp-client genutzt werden?
+- golisp-client soll auch als CLI über stdin, stdout, stderr
+  arbeiten können
+
+## 4. Erstellen eines golisp-Runtime-Moduls
+Mit diesem Runtime-Modul sollen golisp-Programme als eigen-
+ständige Programme laufen:
+ golispr programm.lisp

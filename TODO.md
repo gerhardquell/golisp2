@@ -1,15 +1,11 @@
-# Aufgaben
+# TODO - Aufgabenplanung 20260709
 
-## 1. Vollende den swank-Server 
-- [x] Built-in-Arglisten für operator-arglist/autodoc
-- [x] describe-symbol mit statischer Registry
-- [x] compile-string / compile-file-for-emacs
-- [x] echtes rekursives macroexpand-all
+## Transfer des golisp-kimi-Projektes in ein neues Projekt golisp2
 
-## 2. Beim Aufruf in Lisp erhalte ich:
-  eval>(print "test")
-  "test"()
+- Wir wollen den aktuellen Stand des Projektes golisp-kimi einfrieren.
+  Daher wollen wir das Projekt in das neue Projekt golisp2 übertragen.
+- Gleichzeitig wollen wir die Verzeichnisstruktur optimieren, mache
+  dazu Vorschläge.
+- Altes Verzeichnis golisp-kimi: /u/lisp-projekte/golisp-kimi
+- Neues Verzeichnis golisp2    : /u/lisp-projekte/golisp2
 
-Die Klammern am Ende sind nicht korrekt!
-- [x] print/println geben das letzte Argument zurück; swank-print/swank-println
-  markieren Ausgabe nicht mehr als :repl-result. Damit verschwindet das `()`.

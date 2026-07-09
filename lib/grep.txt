@@ -1,0 +1,87 @@
+# Val
+
+eval_control.go:218:     rest.Car != nil && rest.Car.Val == ":timeout" &&
+eval_lambda.go:112:        if args[ki].Type == ATOM && args[ki].Val == keyword && ki+1 < len(args) {
+eval_quasiquote.go:58:    car.Car != nil && car.Car.Type == ATOM && car.Car.Val == "unquote-splice" {
+format.go:53:     !(dest.Type == ATOM && dest.Val == "t") {
+format.go:67:  case dest.Type == ATOM && dest.Val == "t":
+primitives.go:245:  case ATOM:   return a.Val == b.Val
+primitives.go:246:  case STRING: return a.Val == b.Val
+
+# Num
+
+
+primitives.go:154:  if args[1].Num == 0 { return nil, fmt.Errorf("/: Division durch 0") }
+primitives.go:163:  if args[0].Num == args[1].Num {
+primitives.go:244:  case NUMBER: return a.Num == b.Num
+stringfuncs.go:126:  if args[0].Num == float64(int(args[0].Num)) {
+types.go:59:    if c.Num == float64(int(c.Num)) {
+
+# Type
+
+
+eval_control.go:72:      if step != nil && step.Type == LIST {
+eval_control.go:167:  if args.Cdr != nil && args.Cdr.Type == LIST {
+eval_control.go:217:  if rest != nil && rest.Type == LIST &&
+eval_control.go:219:     rest.Cdr != nil && rest.Cdr.Type == LIST {
+eval_core.go:37:    if expr.Car.Type == ATOM {
+eval_core.go:76:        } else if expr.Cdr.Cdr != nil && expr.Cdr.Cdr.Cdr != nil && expr.Cdr.Cdr.Cdr.Type == LIST {
+eval_core.go:85:        for args != nil && args.Cdr != nil && args.Cdr.Type == LIST {
+eval_core.go:96:        for bindings != nil && bindings.Type == LIST {
+eval_core.go:109:        for body.Cdr != nil && body.Cdr.Type == LIST {
+eval_core.go:123:        for bindings != nil && bindings.Type == LIST {
+eval_core.go:135:        for body.Cdr != nil && body.Cdr.Type == LIST {
+eval_core.go:160:            for body != nil && body.Cdr != nil && body.Cdr.Type == LIST {
+eval_core.go:186:    if fn.Type == MACRO {
+eval_core.go:197:    if fn.Type == LIST {
+eval_core.go:218:  for args != nil && args.Type == LIST {
+eval_lambda.go:35:  return c != nil && c.Type == MACRO
+eval_lambda.go:46:    if p.Type == NIL { break }
+eval_lambda.go:47:    if p.Type == ATOM {
+eval_lambda.go:57:    if param.Type == ATOM {
+eval_lambda.go:84:      if param.Type == LIST {
+eval_lambda.go:86:        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
+eval_lambda.go:103:      if param.Type == LIST {
+eval_lambda.go:105:        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
+eval_lambda.go:112:        if args[ki].Type == ATOM && args[ki].Val == keyword && ki+1 < len(args) {
+eval_load.go:85:    if expr.Type == LIST {
+eval_quasiquote.go:29:  if expr.Car != nil && expr.Car.Type == ATOM {
+eval_quasiquote.go:57:  if car != nil && car.Type == LIST &&
+eval_quasiquote.go:58:    car.Car != nil && car.Car.Type == ATOM && car.Car.Val == "unquote-splice" {
+eval_quasiquote.go:76:  if lst == nil || lst.Type == NIL { return tail }
+eval_specialforms.go:51:  if fn.Type == MACRO {
+eval_specialforms.go:76:  if form.Car != nil && form.Car.Type == ATOM {
+eval_specialforms.go:106:  if fn.Type == MACRO {
+eval_specialforms.go:140:  for args != nil && args.Type == LIST {
+eval_specialforms.go:190:  for lst != nil && lst.Type == LIST {
+eval_specialforms.go:208:  for args != nil && args.Type == LIST {
+eval_specialforms.go:220:  for args != nil && args.Type == LIST {
+eval_specialforms.go:243:  lam.Type = MACRO   // ← einziger Unterschied zu defun!
+eval_specialforms.go:267:    if !isElse && test.Type == LIST {
+eval_specialforms.go:281:      for body.Cdr != nil && body.Cdr.Type == LIST {
+format_blocks.go:413:  for c != nil && c.Type == LIST {
+format_dirs.go:171:  if c.Type == NUMBER {
+format_dirs.go:174:  if c.Type == STRING {
+format_dirs.go:387:  case c.Type == STRING && utf8.RuneCountInString(c.Val) >= 1:
+format_dirs.go:389:  case c.Type == NUMBER:
+format_dirs.go:564:  if c.Type == NUMBER {
+format_dirs.go:567:  if c.Type == STRING {
+format.go:53:     !(dest.Type == ATOM && dest.Val == "t") {
+format.go:67:  case dest.Type == ATOM && dest.Val == "t":
+format.go:70:  case dest.Type == NIL:
+format.go:318:    if c.Type == NUMBER {
+format.go:338:    if c.Type == STRING && utf8.RuneCountInString(c.Val) == 1 {
+format.go:342:    if c.Type == NUMBER {
+primitives.go:276:  if args[0].Type == LIST { return MakeNil(), nil }
+primitives.go:282:  if args[0].Type == NIL { return MakeAtom("t"), nil }
+primitives.go:419:  if args[0].Type == STRING { return MakeAtom("t"), nil }
+primitives.go:425:  if args[0].Type == NUMBER { return MakeAtom("t"), nil }
+primitives.go:431:  if args[0].Type == NIL || args[0].Type == LIST { return MakeAtom("t"), nil }
+primitives.go:437:  if args[0].Type == ATOM { return MakeAtom("t"), nil }
+shellcmd.go:43:  for list != nil && list.Type == LIST {
+shellcmd.go:45:    if pair != nil && (pair.Type == LIST) {
+stringfuncs.go:152:  for lst != nil && lst.Type == LIST {
+types.go:73:  for c != nil && c.Type == LIST {
+types.go:95:  if e.Msg.Type == STRING || e.Msg.Type == ATOM {
+types_helpers.go:25:	if list == nil || list.Type == NIL {
+types_helpers.go:49:	for list != nil && list.Type == LIST {

@@ -337,7 +337,7 @@ Siehe [`docs/retrospectives/2026-02-25-unix-cli.md`](docs/retrospectives/2026-02
 ---
 ---
 
-# Session 5 – GoLisp Server (golispd)
+# Session 5 – GoLisp Server (golisp2d)
 
 **Datum:** 1. März 2026
 **Autoren:** Gerhard Quell & Claude Sonnet 4.6
@@ -350,15 +350,15 @@ Ein vollständiger Client-Server-Stack für professionelle Lisp-Entwicklung:
 
 | Feature | Dateien | Commits |
 |---------|---------|---------|
-| TCP-Server (`golispd`) | `cmd/golispd/main.go`, `lib/swank/server.go` | 1 |
+| TCP-Server (`golisp2d`) | `cmd/golisp2d/main.go`, `lib/swank/server.go` | 1 |
 | Protokoll-Handler | `lib/swank/protocol.go` | 1 |
-| CLI-Client (`golisp-client`) | `cmd/golisp-client/main.go` | 1 |
+| CLI-Client (`golisp2-client`) | `cmd/golisp2-client/main.go` | 1 |
 | Hilfsfunktionen | `lib/types_helpers.go` | 1 |
-| Dokumentation | `CLAUDE.md`, `docs/retrospective-golispd-20250301.md` | 2 |
+| Dokumentation | `CLAUDE.md`, `docs/retrospective-golisp2d-20250301.md` | 2 |
 
 **Gesamt:** 5 neue Dateien, ~900 Zeilen Go-Code, 6 Commits.
 
-**Vorher:** Nur eingebetteter REPL (`./golisp -i`).
+**Vorher:** Nur eingebetteter REPL (`./golisp2 -i`).
 **Nachher:** Vollständiger Server mit TCP-RPC, persistenter Umgebung, IDE-fähigem Autocomplete.
 
 ---
@@ -486,7 +486,7 @@ Siehe [`docs/retrospectives/2026-02-25-unix-cli.md`](docs/retrospectives/2026-02
 | sigoREST context.Timeout | `sigorest.go` | `http.Client.Timeout` → `context.WithTimeout` |
 | sigoREST-Timeout 60→30s | `sigorest.go` | Realistischerer Default |
 
-**Gesamt:** 12 Features/Fixes, 2 Commits golisp + 1 Commit sigoREST, 220+ neue Zeilen.
+**Gesamt:** 12 Features/Fixes, 2 Commits golisp2 + 1 Commit sigoREST, 220+ neue Zeilen.
 
 ---
 
@@ -556,7 +556,7 @@ war aber ungeprüft. Direkter `curl`-Test hätte das früher widerlegt.
 direkt testen, bevor Code-Änderungen gemacht werden.
 
 ### Language-Server Diagnostiken (wieder)
-LSP meldet Fehler für sigoREST-Dateien weil das Modul nicht im golisp-Workspace ist.
+LSP meldet Fehler für sigoREST-Dateien weil das Modul nicht im golisp2-Workspace ist.
 `go build` bleibt die verlässliche Ground Truth.
 
 ---
@@ -662,7 +662,7 @@ Beim Split kein Fehlalarm — bricht ein Test, weiß ich, dass der Split schuld
 ist, nicht ein zufällig mitkommender primitives-Bug.
 
 ### End-to-End-Verifikation, nicht nur Unit-Tests
-lib-Tests grün allein reicht nicht. Smoke-Tests über die echte `golisp`-
+lib-Tests grün allein reicht nicht. Smoke-Tests über die echte `golisp2`-
 Binary haben gezeigt, dass der Macro-Mechanismus wirklich läuft und TCO
 in der Praxis greift (100k tail-rec → `ok`).
 
@@ -718,7 +718,7 @@ sind der Wert — sie zeigen, wo das mentale Modell vom Code abweicht.
 
 ## Offene Punkte (nach dieser Session)
 
-- [ ] **Todo #2 (hoch):** stdlib zentralisieren — `golispd` lädt inline-stdlib
+- [ ] **Todo #2 (hoch):** stdlib zentralisieren — `golisp2d` lädt inline-stdlib
   statt `//go:embed stdlib.lisp`. Drift-Gefahr zwischen zwei stdlib-Versionen.
 - [ ] **Todo #3 Rest:** Primitiven-Tests, Makro-Expansion-Tests,
   parfunc/Channel-Tests.
@@ -751,7 +751,7 @@ Tests gebaut, eval.go gesplittet), ein atomic Commit, sauber dokumentiert.
 
 ## Ziel
 
-Todo #2: `golispd` lud in `lib/swank/server.go` eine eigene inline-stdlib
+Todo #2: `golisp2d` lud in `lib/swank/server.go` eine eigene inline-stdlib
 (abgespeckte 20/52 Funktionen) statt der eingebetteten `stdlib.lisp` →
 Drift. Server-Clients bekamen keine `iota`/`flatten`/`gcd` etc. Eine
 gemeinsame Quelle schaffen.
@@ -785,8 +785,8 @@ eine `stdlib.lisp`. CLI und Server rufen dieselbe Funktion auf. Drift
 strukturell ausgeschlossen, nicht nur behoben.
 
 ### End-to-End über beide Binaries verifiziert
-Nicht nur lib-Tests grün — sondern golispd gebaut, auf freiem Port
-gestartet, und über golisp-client die ehemals fehlenden Funktionen
+Nicht nur lib-Tests grün — sondern golisp2d gebaut, auf freiem Port
+gestartet, und über golisp2-client die ehemals fehlenden Funktionen
 abgefragt: `iota`/`flatten`/`gcd`/`length`/`cadr` liefern korrekte
 Ergebnisse über den Server. Drift wirklich weg, nicht nur syntaktisch.
 
@@ -927,7 +927,7 @@ mit `-count=1` oder `go clean -testcache` verifizieren. Cache lügt nicht,
 aber er täuscht über aktuelle Konsistenz hinweg.
 
 ### CLI-stdin-Multi-Expr zeigte nicht alle Ergebnisse
-Beim manuellen swap-Verifizieren via `printf '...\n' | ./golisp` erschien
+Beim manuellen swap-Verifizieren via `printf '...\n' | ./golisp2` erschien
 nur die `defmacro`-Rückgabe, nicht das `let`-Ergebnis. Mehrere Ausdrücke
 über stdin werden ausgewertet, aber die Ausgabe-Strategie bei mehreren
 Ergebnissen ist unklar/inkonsistent. Hätte mich auf `go test` verlassen
@@ -1680,10 +1680,10 @@ Lösung:
 | Aktion | Ergebnis |
 |--------|----------|
 | Print-Duplikat-Fix | `lib/swank/swank.lisp` + `lib/swank/lisp_test.go` |
-| Build-Backup/Test-Reste entfernt | `golispd_fixed`, `.playwright-mcp/` gelöscht |
+| Build-Backup/Test-Reste entfernt | `golisp2d_fixed`, `.playwright-mcp/` gelöscht |
 | Commit | `71582c8` auf Branch `session-14-swank-complete-print-fix` |
 | Push | Branch auf `origin` gepusht |
-| Emacs-Integration | `(defun golisp () ... (slime-connect ...))` funktioniert |
+| Emacs-Integration | `(defun golisp2 () ... (slime-connect ...))` funktioniert |
 
 ## IST-Funde
 
@@ -1717,8 +1717,8 @@ Vier kleine Schritte, ein abgeschlossener SWANK-Server im vereinbarten Scope. De
 
 TODO.md verlangte Schulungsunterlagen für alle GoLisp-Funktionen:
 
-1. `golisp-tutorial.md` – Beschreibung + 1–3 Beispiele pro Funktion
-2. `golisp-anki.json` – pro Funktion Kurzbeschreibung, 1–3 atomare Fragen, 1–3 MC-Fragen mit ≥5 Optionen
+1. `golisp2-tutorial.md` – Beschreibung + 1–3 Beispiele pro Funktion
+2. `golisp2-anki.json` – pro Funktion Kurzbeschreibung, 1–3 atomare Fragen, 1–3 MC-Fragen mit ≥5 Optionen
 
 Der Scope sollte alle öffentlichen Funktionen umfassen: eingebaute Primitiven, Spezialformen und die Standardbibliothek (`lib/stdlib.lisp`).
 
@@ -1728,8 +1728,8 @@ Der Scope sollte alle öffentlichen Funktionen umfassen: eingebaute Primitiven, 
 
 | Datei | Inhalt |
 |-------|--------|
-| `golisp-tutorial.md` | 149 Funktionen/Spezialformen/Makros, gruppiert in 17 Kategorien, mit Syntax, Beschreibung und lauffähigen Beispielen |
-| `golisp-anki.json` | 149 Karten, je 2 atomare + 1 MC-Frage mit 5 Optionen |
+| `golisp2-tutorial.md` | 149 Funktionen/Spezialformen/Makros, gruppiert in 17 Kategorien, mit Syntax, Beschreibung und lauffähigen Beispielen |
+| `golisp2-anki.json` | 149 Karten, je 2 atomare + 1 MC-Frage mit 5 Optionen |
 | `tools/gen-training/data.py` | Rohdaten für alle Funktionen (Python-Triple-Quotes, damit Lisp-Backticks und doppelte Anführungszeichen keine Escapes erfordern) |
 | `tools/gen-training/generate.py` | Generator, der Markdown + JSON aus `data.py` erzeugt |
 | `.gitignore` | `__pycache__/` und `*.pyc` ausgeschlossen |
@@ -1748,7 +1748,7 @@ Go-String-Literale hätten mit Lisp-Quasiquote-Backticks und eingebetteten doppe
 
 ### Systematische Validierung
 - JSON-Syntax mit `python3 -m json.tool` geprüft
-- Stichprobenartiges Ausführen von Beispielen gegen die `golisp`-Binary (Arithmetik, Listen, Strings, Datei-I/O, stdlib-Helfer)
+- Stichprobenartiges Ausführen von Beispielen gegen die `golisp2`-Binary (Arithmetik, Listen, Strings, Datei-I/O, stdlib-Helfer)
 - `go test ./...` grün
 
 ---
@@ -1901,7 +1901,7 @@ warf die manuellen Bugfixes weg. Neu angewandt, aber eine Erinnerung:
 `git checkout --` verwirft Working-Tree-Änderungen bedingungslos.
 
 ### `pkill -f` traf den eigenen Shell-Prozess
-Beim Server-Neustart killte `pkill -f 'tmp/golisp --swank'` auch die Bash, die
+Beim Server-Neustart killte `pkill -f 'tmp/golisp2 --swank'` auch die Bash, die
 genau diesen Befehl ausführte (exit 144). Sauberer: gezielt nach PID auf dem
 Port suchen statt `-f`-Pattern-Match.
 
@@ -2012,7 +2012,7 @@ Kommas, Vorzeichen) · ~R (Cardinal/Ordinal/Roman/Base) · ~P (Plural) · ~C
 
 **Destination:** `t`→stdout+nil, `nil`→String, String→anhängen (CL-style).
 
-**Verifikation:** `go test ./lib/` grün, `./golisp -t` exit 0, manuell:
+**Verifikation:** `go test ./lib/` grün, `./golisp2 -t` exit 0, manuell:
 `~{~a~^,~}`→"1,2,3", `~@r` 1999→"MCMXCIX", `~r` 42→"forty-two",
 `~:(~a~)` "hello world"→"Hello World", `~[a~;b~;c~]` 2→"c", `~e`→Exp-Notation.
 
@@ -2075,8 +2075,8 @@ ok, aber riskant — Reste hätten Build gebrochen. Besser: Debug-Flag als
 build-tag oder eigene `*_debug_test.go` die nicht committet wird.
 
 ### `-e`-Verifikation durch pre-existing mtest-Konflikt blockiert
-`tmp/mtest*.go` (drei `func main` im `golisp/tmp`-Package) bricht
-`go test ./...` und `go run .`. Binary-Build nur via `go build -o tmp/golisp .`
+`tmp/mtest*.go` (drei `func main` im `golisp2/tmp`-Package) bricht
+`go test ./...` und `go run .`. Binary-Build nur via `go build -o tmp/golisp2 .`
 (root-Package = main.go, tmp/ separiert). Verwirrend beim Debugging —
 anfangs stale Binary suggerierte falsche Fehler. Pre-existing, nicht
 FORMAT-Scope, aber sollte bereinigt werden.
@@ -2184,7 +2184,7 @@ Gerhard's Dateien sind).
 | `~/fun/` | global-env-Capture: `RegisterFormat` speichert BaseEnv in `globalFormatEnv`. `~/name/` lookt die Funktion auf, ruft `apply(fn, [arg])`, schreibt Ergebnis aesthetic. GoLisp hat keine Packages → `~/name/` (kein `package:`-Prefix). |
 | `~:[` Default via `~:;` | `splitClauses` umgeschrieben: trackt colon-Modifier beim `;`, liefert `defaultIdx` = Index der Klausel *nach* `~:;`. `emitConditional` nutzt `defaultIdx` statt `hasDefaultMark`-Stub. Stubs entfernt. |
 | `~F` k-Skaling | `k`-Parameter (params[2]) → `f *= pow10(k)` vor `formatFixed`. `pow10`-Helper ohne math-Import. overflowchar (selten) bewusst nicht umgesetzt. |
-| `./build`-Script | `build/` war ein leeres Verzeichnis, kein Script. `build.sh` angelegt: kompiliert golisp/golispd/golisp-client nach `build/`. CLAUDE.md-Referenz korrigiert (`./build` → `./build.sh`). |
+| `./build`-Script | `build/` war ein leeres Verzeichnis, kein Script. `build.sh` angelegt: kompiliert golisp2/golisp2d/golisp2-client nach `build/`. CLAUDE.md-Referenz korrigiert (`./build` → `./build.sh`). |
 
 **Aufteilung erweitert:** `format_dirs.go` war auf 1021 Zeilen gewachsen
 (nach `~/fun/`-Zugabe) → 3-Wege-Split: `format_dirs.go` (622, einfache
@@ -2423,7 +2423,7 @@ Funktion muss rein sein. Konsistent mit bestehendem `parfunc`-Modell.
 
 - [x] ~~GA in GoLisp integrieren~~ → Session 18
 - [x] ~~Fib-Allokationen optimieren~~ → Session 18
-- [ ] **Env-Locking für parfunc**: pre-existing DATA RACE (Session 16), weiterhin offen.
+- [x] ~~Env-Locking für parfunc~~ → Session 19 (`sync.RWMutex` in `lib/env.go`)
 
 ---
 
@@ -2438,3 +2438,161 @@ naheliegende Optimierungsmuster.
 > "Der schnellste Code ist der, der nicht alloziert. Der zweitschnellste
 >  ist der, der weniger alloziert weil die Datenstruktur schlauer ist."
 > — Gerhard & Claude, 26. Juni 2026
+
+---
+
+## Fazit Session 19 – Fib-Optimierung abgeschlossen (2026-07-09)
+
+**Was kam dazu:**
+
+| Schnitt | Änderung | Dateien |
+|---------|----------|---------|
+| 4 | `sync.Pool` für FUNC-Arg-Slices | `lib/eval_core.go` |
+| 5 | Frame-Env-Pool + Tail-Call-Freigabe | `lib/env.go`, `lib/eval_core.go`, `lib/eval_lambda.go`, `lib/eval_control.go` |
+| 6 | Small-Int-Cache auf int16-Bereich | `lib/types.go` |
+| 7 | Env-Locking für `parfunc` | `lib/env.go` |
+
+**Messung `fib 25`:**
+
+| Stand | allocs/op | B/op | ns/op |
+|-------|-----------|------|-------|
+| Nach Schnitt 4 | 243 851 | 23 MB | 51 ms |
+| Nach Schnitt 5 | 987 | 95 KB | 86 ms |
+| Nach Schnitt 6 | 3 | 641 B | 88 ms |
+
+**Erkenntnisse:**
+
+- `sync.Pool`-Buffer nur freigeben, solange `pooled==true`; der `>8-Args`-Switch hat sonst einen noch aktiven Buffer zurückgegeben und SWANK-Tests flaky gemacht.
+- Debug-Instrumentierung (poison cells, `debug.Stack`) im Hot-Path macht Benchmarks unbrauchbar — sofort wieder entfernen, bevor man die Zahlen liest.
+- Frame-Pooling braucht ein Ownership-Modell: `ownEnv` im Trampolin-Loop, `shared`-Flag für Closures, `defer freeEnv` für `do`/`flet`/`labels`.
+- `MakeNum`-Cache wirkt stärker als erwartet: 987 → 3 allocs/op. Immutable NUMBER-Cells erlauben das ohne semantische Brüche.
+- Env-Locking mit `sync.RWMutex` macht `parfunc` race-frei. `Update` muss den Child-Lock halten, während es den Parent-Chain entlangsucht — sonst könnte ein paralleles `Set` denselben Namen dazwischen im Child erzeugen.
+- Der `fib`-Mikrobenchmark ist ausgeschöpft; weitere Gewinne brauchen andere Workloads oder einen VM/Compiler-Ansatz.
+
+**Noch offen:**
+
+- [x] **Env-Locking für `parfunc`**: erledigt, `go test -race ./...` grün.
+
+---
+
+# Session 20 – 2026-07-09: Rename golisp→golisp2 + golisp2-client auf SWANK
+
+**Autoren:** Gerhard Quell & Claude (zai)
+**Branch:** main (Feature-Branches `rename-golisp2-swank-client` → FF-merge, `fix/flag-over-env-priority` → FF-merge)
+
+---
+
+## Ziel
+
+Drei Aufgaben aus TODO.md (20260709) plus eine präzistente Folgeaufgabe:
+
+1. Ausführbare Programme von `golisp` auf `golisp2` umbenennen, Buildprozess anpassen.
+2. `golisp2d` ist der SWANK-Server, `golisp2` der Standalone, `golisp2-client` der Client.
+3. `golisp2-client` spricht noch altes Custom-RPC, der Server aber SWANK → Client umstellen.
+4. CLAUDE.md-Doku-Drift: Server-Abschnitt beschrieb noch Custom-RPC, obwohl SWANK real ist.
+
+---
+
+## Was haben wir gebaut?
+
+### 1. Rename golisp → golisp2
+
+| Arbeit | Dateien | Ergebnis |
+|--------|---------|----------|
+| cmd-Dirs | `cmd/golisp2d/`, `cmd/golisp2-client/` | via `git mv` (History erhalten, Rename-Detection) |
+| Build | `build.sh` | Outputs `golisp2`/`golisp2d`/`golisp2-client` |
+| Ignore | `.gitignore` | Root-Level-Binaries auf neue Namen |
+| Go-Kommentare | `main.go`, `cmd/*`, `lib/sigorest.go`, `lib/stdlib.go`, `lib/swank/server.go` | Prompt `golisp2>`, Header, Modul-/Binary-Refs |
+| Doku | alle `.md` (12+ Dateien) | `sed` mit Wortgrenze + GitHub-URL-Schutz |
+| Datei-Rename | `docs/retrospective-golisp2d-20250301.md` | inkl. Ref-Update in RETROSPECTIVE |
+
+**Entscheidungen:**
+- Env-Variablen `GOLISP_HOST/PORT/SIGO_*` bewusst beibehalten — kein Breaking-Change für bestehende Setups. Modul heißt `golisp2`, Env-Schlüssel bleiben stabil.
+- Brand `GoLisp` (CamelCase) unangetastet — nur Binary-/Modul-Identifier ändern. Sed case-sensitive, `\b`-Wortgrenze schützt bereits umbenannte Tokens (`golisp2d` nicht nochmal angetastet).
+- GitHub-Repo-URLs `github.com/gerhardquell/golisp` geschützt — Repo-Slug ist separate Entscheidung, nicht Binary-Name. Remote war ohnehin nur lokaler Pfad.
+
+### 2. golisp2-client auf SWANK
+
+| Arbeit | Detail |
+|--------|--------|
+| Protokoll | Custom-RPC `(:id N :method "eval")` → echtes SWANK `:emacs-rex` (length-prefixed `%06x<sexpr>`) |
+| Framing | Eigenes `readFrame`/`writeFrame` im Client (swank-Package-Funktionen unexported) |
+| Cell-Verarbeitung | Import `golisp2/lib` — `lib.Read`/`CellToSlice` statt fragiles String-Slicing |
+| Request-Loop | `request()` sendet `:emacs-rex`, liest Frames bis `:return` mit passender ID, sammelt `:write-string`-Events |
+
+**Cmd-→-SWANK-Op-Map:**
+
+| Client-Flag | SWANK-Op |
+|-------------|----------|
+| `--ping` | `swank:connection-info` |
+| `--eval` | `swank-repl:listener-eval` |
+| `--complete` | `swank:simple-completions` |
+| `--load` | `swank:load-file` |
+| `--repl` | `listener-eval`-Loop |
+
+**Smoke-Test gegen `golisp2d`:** `(+ 1 2)`→3, `(defun sq (x) (* x x)) (sq 9)`→`sq`/`81`, `--complete ca`→`car cadddr cadr caddr caar`, `--load`→50, Error→`server: "..."` exit 1. Build + 126 Tests grün.
+
+### 3. CLAUDE.md an SWANK-Realität
+
+- Abschnitt "GoLisp Server (golisp2d)": Custom-RPC-Beschreibung entfernt, `golisp2d = golisp2 --swank = swank.RunServer` klargestellt.
+- Obsolete Methoden-Tabelle (`:method`/`eval-return`/`disconnect`) gelöscht → ersetzt durch SWANK-Framing-Details + Cmd-→-Op-Tabelle.
+- "Shared Environment" (falsch) → "Pro-Connection-Env" (`handleConn` macht frisches `BaseEnv` pro Verbindung).
+- SWANK-Abschnitt-Intro: "(Unabhängig vom oben beschriebenen Custom-RPC)" entfernt.
+
+### 4. Env-vs-Flag-Priorität (Folgeaufgabe)
+
+| Vorher | Nachher |
+|--------|---------|
+| Env NACH `flag.Parse` angewendet → überschreibt expliziten Flag | Env als Flag-Default VOR Parse → Flag gewinnt |
+| `GOLISP_PORT=9123 golisp2d --port 9128` → bindet 9123 | → bindet 9128 |
+| Unix-Konvention verletzt: Env > Flag > Default | restored: Flag > Env > Default |
+
+Betrifft `cmd/golisp2d` + `cmd/golisp2-client`. Env-only-Nutzung bleibt erhalten.
+
+---
+
+## Was lief gut?
+
+- **Bestand vor Edit:** Erst alle `golispd`/`golisp-client`/`golisp`-Vorkommen grep'd (Go + .md + URLs), bevor sed lief. GitHub-URLs so erkannt und geschützt — ein blinder `\bgolisp\b`→`golisp2` hätte Clone-URLs kaputtgemacht.
+- **Feature-Branch + FF-Merge:** Rename war groß (35 Dateien). Branch隔离 lies den diff sauber reviewen, FF-Merge hielt History linear.
+- **Perf-WIP sauber getrennt:** `lib/env.go`/`eval_*.go`/`PerfTODO.md`/`RETROSPECTIVE.md` waren zu Session-Start schon modifiziert (Session-19-Fib-Arbeit). Wurden aus dem Rename-Commit ausgeschlossen — keine Vermischung von Rename und Perf.
+- **Smoke-Test mit echtem SWANK-Frame:** Handgeschriebener `%06x`-Frame per `nc` gegen `golisp2d` bewies, dass Framing + Dispatch funktionieren — nicht nur Go-Tests.
+
+---
+
+## IST-Funde (Session 20)
+
+- `cmd/golisp2d/main.go` war bereits auf `swank.RunServer` umgestellt (Refactor 20260618), CLAUDE.md aber nie — die "Custom-RPC"-Beschreibung war reine Doku-Drift, kein Code-Realität. Semantischer Konflikt aus TODO ("golisp2d soll SWANK-Server sein") war längst gelöst.
+- `golisp2-client` sprach noch Custom-RPC obwohl der Server SWANK spricht — Client/Server-Protokoll-Mismatch seit 20260618 unentdeckt, weil der Client nie gegen den neuen Server getestet wurde.
+- "Shared Environment" in der alten Doku war faktisch falsch seit SWANK-Umstellung: `handleConn` erzeugt pro TCP-Verbindung ein eigenes `env`. Alte Custom-RPC-Annahme (ein globaler Server-Env) galt nicht mehr.
+- Remote `origin` → `/u/lisp-projekte/golisp-kimi` war ein **Non-Bare-Repo mit ausgechecktem main** plus uncommitteten getrackten Änderungen. Push wurde von Git korrekt abgelehnt; `reset --hard` hätte dort Arbeit zerstört. → `origin` entfernt, `golisp-kimi` als frozen erklärt (Memory `golisp-kimi-frozen`).
+- `define`-curried-Syntax `(define (name args) body)` wird nicht unterstützt — nur `defun`. Präexistent, kein Rename-Bug.
+
+---
+
+## Erkenntnisse
+
+- **Doku-Drift entsteht bei Refactor ohne Doku-Pflege:** Server wurde 20260618 auf SWANK umgestellt, die Custom-RPC-Doku blieb stehen und widersprach der Realität. Zwei Server-Abschnitte (Custom-RPC + SWANK) für denselben `golisp2d` sind ein Symptom — Konsolidierung auf einen einzigen beseitigt den Widerspruch.
+- **Robuste Protokoll-Clients parsen, nicht slicen:** Der alte Client extrahierte `:result`-Felder per `strings.Index` — fragil bei Escaping und verschachtelten S-Expressions. Der neue Client nutzt `lib.Read` + `CellToSlice`: korrekt per Construction. `MakeStr(code)` + `cell.String()` (Go `%q`) liefert SWANK-String-Escaping gratis.
+- **Multi-Frame-Responses brauchen Lese-Loops:** SWANK `listener-eval` sendet N× `:write-string` + final `:return (:ok ())`. Ein einzelnes `ReadString('\n')` (alter Client) würde hängen oder halbe Antworten liefern. Client muss bis zum `:return` mit passender ID lesen.
+- **Non-Bare-Remotes sind keine Backups:** Ein Working-Repo als `origin` bricht beim Push in den ausgecheckten Branch und verleitet zu `reset --hard`-Datenverlust. Backup-Remote muss `--bare` sein.
+
+---
+
+## Fazit Session 20
+
+Rename ist mechanisch durchexerziert, aber die eigentliche Arbeit saß in den
+Folgeaufgaben: der Client/Server-Protokoll-Mismatch (Custom-RPC vs SWANK)
+war seit Wochen unentdeckt, und die CLAUDE.md-Doku erzählte eine Realität,
+die seit 20260618 nicht mehr existierte. Beides kam ans Licht weil der
+Rename die Frage aufwarf, was `golisp2d` eigentlich ist.
+
+Die größte Falle war nicht der Code, sondern das Remote: ein Non-Bare-Repo
+mit ausgechecktem main als `origin`. Git hat das Pushen korrekt verweigert —
+hätte man `receive.denyCurrentBranch=ignore` + `reset --hard` erzwungen,
+wäre im `golisp-kimi`-Working-Repo Arbeit verloren gegangen. `golisp-kimi`
+ist jetzt frozen, `origin` entfernt.
+
+> "Ein Rename ist ein Stresstest für Doku und Annahmen. Was dabei ans Licht
+>  kommt, ist meist älter als der Rename selbst."
+> — Gerhard & Claude, 9. Juli 2026

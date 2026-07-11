@@ -40,10 +40,12 @@ func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
 }
 
 func RegisterShm(env *Env) {
-  env.Set("shm-alloc", makeFn(fnShmAlloc))
-  env.Set("shm-free",  makeFn(fnShmFree))
-  env.Set("shm-write", makeFn(fnShmWrite))
-  env.Set("shm-read",  makeFn(fnShmRead))
+  env.Set("shm-alloc",   makeFn(fnShmAlloc))
+  env.Set("shm-free",    makeFn(fnShmFree))
+  env.Set("shm-write",   makeFn(fnShmWrite))
+  env.Set("shm-read",    makeFn(fnShmRead))
+  env.Set("shm-status",  makeFn(fnShmStatus))
+  env.Set("shm-cleanup", makeFn(fnShmCleanup))
 }
 
 func fnShmAlloc(args []*Cell) (*Cell, error) {
@@ -133,4 +135,22 @@ func fnShmRead(args []*Cell) (*Cell, error) {
   }
 
   return MakeStr(string(data[:n])), nil
+}
+
+func fnShmStatus(args []*Cell) (*Cell, error) {
+  pool, err := shm.GetPool()
+  if err != nil {
+    return nil, fmt.Errorf("shm-status: %v", err)
+  }
+  pool.Status()
+  return cellT, nil
+}
+
+func fnShmCleanup(args []*Cell) (*Cell, error) {
+  pool, err := shm.GetPool()
+  if err != nil {
+    return nil, fmt.Errorf("shm-cleanup: %v", err)
+  }
+  pool.Cleanup()
+  return cellT, nil
 }

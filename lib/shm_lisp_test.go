@@ -12,6 +12,7 @@ package lib
 
 import (
   "testing"
+  "golisp2/lib/shm"
 )
 
 func TestShmAllocFree(t *testing.T) {
@@ -81,5 +82,39 @@ func TestShmReadExplicitLength(t *testing.T) {
   }
   if out.Val != "ABCD" {
     t.Fatalf("erwartet 'ABCD', got %v", out)
+  }
+}
+
+func TestShmStatusCleanup(t *testing.T) {
+  env := BaseEnv()
+  statusFn, _ := env.Get("shm-status")
+  cleanupFn, _ := env.Get("shm-cleanup")
+
+  _, err := statusFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-status fehlgeschlagen: %v", err)
+  }
+  _, err = cleanupFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-cleanup fehlgeschlagen: %v", err)
+  }
+
+  // Pool nach Cleanup wieder initialisieren, damit parallele/sequentielle
+  // Tests nicht auf abgeräumtem SHM weiterarbeiten.
+  pool, err := shm.GetPool()
+  if err != nil {
+    t.Fatalf("pool-reinit fehlgeschlagen: %v", err)
+  }
+  if err := pool.Init(); err != nil {
+    t.Fatalf("pool-reinit fehlgeschlagen: %v", err)
+  }
+}
+
+func TestShmInvalidHandle(t *testing.T) {
+  env := BaseEnv()
+  writeFn, _ := env.Get("shm-write")
+  _, err := writeFn.Fn([]*Cell{MakeNum(42), MakeStr("x")})
+  if err == nil {
+    t.Fatal("erwartet Fehler für ungültigen Handle")
   }
 }

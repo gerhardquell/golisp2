@@ -43,7 +43,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
     }
     keywordCell := rest.Car
     if keywordCell.Type != ATOM {
-      return nil, fmt.Errorf("exec: Keyword erwartet, got %v", keywordCell)
+      return nil, fmt.Errorf("exec: Keyword erwartet, erhalten: %v", keywordCell)
     }
     keyword := keywordCell.Val
 

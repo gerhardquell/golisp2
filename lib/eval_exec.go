@@ -109,6 +109,13 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
   exitCode := 0
   runErr := cmd.Run()
 
+  if ctx.Err() != nil {
+    if exitcdVar != "" {
+      env.Set(exitcdVar, MakeNum(-1))
+    }
+    return MakeNil(), nil
+  }
+
   if runErr != nil {
     if exitErr, ok := runErr.(*exec.ExitError); ok {
       exitCode = exitErr.ExitCode()

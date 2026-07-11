@@ -182,8 +182,12 @@ GoLisp2 verhält sich wie ein typisches Unix-Tool:
 |------|--------------|----------|
 | *(default)* | Liest von stdin, gibt nur Ergebnis aus | `echo "(+ 1 2)" \| ./golisp2` |
 | `-i` | Interaktiver REPL mit go-prompt | `./golisp2 -i` |
-| `-e EXPR` | Expression direkt ausführen | `./golisp2 -e "(* 6 7)"` |
+| `-e EXPR` | Expression(en) direkt ausführen | `./golisp2 -e "(* 6 7)"` |
 | `-t` | Tests ausführen | `./golisp2 -t` |
+
+Hinweis zu `-e`: Eine einzelne Form gibt ihr Ergebnis aus; bei mehreren Formen
+wird das letzte Ergebnis unterdrückt, damit rein seiten-effektbehaftete Skripte
+saubere Ausgabe erzeugen.
 | `--swank HOST:PORT` | SWANK-Server starten (für Emacs/SLIME) | `./golisp2 --swank 127.0.0.1:4242` |
 | `DATEI` | Lisp-Datei laden | `./golisp2 script.lisp` |
 

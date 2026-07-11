@@ -111,13 +111,6 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
   exitCode := 0
   runErr := cmd.Run()
 
-  if stdoutVar != "" {
-    env.Set(stdoutVar, MakeStr(stdoutBuf.String()))
-  }
-  if stderrVar != "" {
-    env.Set(stderrVar, MakeStr(stderrBuf.String()))
-  }
-
   if runErr != nil {
     if exitErr, ok := runErr.(*exec.ExitError); ok {
       exitCode = exitErr.ExitCode()
@@ -129,6 +122,12 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
     }
   }
 
+  if stdoutVar != "" {
+    env.Set(stdoutVar, MakeStr(stdoutBuf.String()))
+  }
+  if stderrVar != "" {
+    env.Set(stderrVar, MakeStr(stderrBuf.String()))
+  }
   if exitcdVar != "" {
     env.Set(exitcdVar, MakeNum(float64(exitCode)))
   }

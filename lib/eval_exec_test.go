@@ -48,3 +48,58 @@ func TestExecBasicStdout(t *testing.T) {
     t.Fatalf("expected exit code 0, got %v", cd)
   }
 }
+
+func TestExecMultipleParams(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("echo"),
+    MakeAtom("param:"),
+    MakeStr("one"),
+    MakeAtom("param:"),
+    MakeStr("two"),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+  )
+  _, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  out, _ := env.Get("out")
+  if out.Type != STRING || out.Val != "one two\n" {
+    t.Fatalf("expected 'one two\\n', got %v", out)
+  }
+}
+
+func TestExecStderr(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("sh"),
+    MakeAtom("param:"),
+    MakeStr("-c"),
+    MakeAtom("param:"),
+    MakeStr("echo err >&2; exit 1"),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+    MakeAtom("stderr:"),
+    MakeAtom("err"),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  result, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  if result == nil || result.Type != ATOM || result.Val != "t" {
+    t.Fatalf("expected t (non-zero exit is not a failure), got %v", result)
+  }
+  errCell, _ := env.Get("err")
+  if errCell.Type != STRING || errCell.Val != "err\n" {
+    t.Fatalf("expected stderr 'err\\n', got %v", errCell)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != 1 {
+    t.Fatalf("expected exit code 1, got %v", cd)
+  }
+}

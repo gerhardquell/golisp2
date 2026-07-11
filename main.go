@@ -98,25 +98,51 @@ func runTests(env *lib.Env) {
 	test(env, `(ga-result ga)`)
 }
 
-// runExpression parses and executes a single expression, prints result
-// Returns exit code 0 on success, 1 on error
+// runExpression parses and executes expressions from -e. A single form's
+// result is printed; for multiple forms only side effects are emitted so
+// scripts like (exec ...) (println out) (println cd) produce clean output.
+// Returns exit code 0 on success, 1 on error.
 func runExpression(expr string, env *lib.Env) int {
-	cell, err := lib.Read(expr)
+	cells, err := lib.ReadAll(expr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERR read: %v\n", err)
 		return 1
 	}
-	result, err := lib.Eval(cell, env)
-	if err != nil {
-		var le *lib.LispError
-		if errors.As(err, &le) {
-			fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
-		} else {
-			fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
-		}
-		return 1
+	if cells == nil || cells.Type == lib.NIL {
+		return 0
 	}
-	fmt.Println(result)
+
+	// Count forms so a single -e expression still prints its value.
+	formCount := 0
+	for c := cells; c != nil && c.Type == lib.LIST; c = c.Cdr {
+		if c.Car != nil {
+			formCount++
+		}
+	}
+
+	var result *lib.Cell
+	cur := cells
+	for cur != nil && cur.Type == lib.LIST {
+		form := cur.Car
+		if form == nil {
+			cur = cur.Cdr
+			continue
+		}
+		result, err = lib.Eval(form, env)
+		if err != nil {
+			var le *lib.LispError
+			if errors.As(err, &le) {
+				fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
+			} else {
+				fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+			}
+			return 1
+		}
+		cur = cur.Cdr
+	}
+	if formCount == 1 {
+		fmt.Println(result)
+	}
 	return 0
 }
 

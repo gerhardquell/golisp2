@@ -380,6 +380,51 @@ Führt die Ausdrücke atomar unter dem angegebenen Mutex aus.
 x
 ```
 
+### exec
+
+**Syntax:**
+
+```lisp
+(exec "programm"
+      param: "arg1"
+      param: "arg2"
+      stdin:  eingabe
+      stdout: ausgabe-var
+      stderr: fehler-var
+      exitcd: code-var)
+```
+
+Führt ein externes Programm direkt aus (ohne Shell). `param:` und `stdin:` werden ausgewertet, `stdout:`, `stderr:` und `exitcd:` sind Namen von Variablen, die im aktuellen Environment gesetzt werden.
+
+- Rückgabe `t`, wenn das Programm gestartet und beendet wurde.
+- Exit-Code ≠ 0 ist kein Fehler; er landet in `exitcd:`.
+- Technischer Fehler (Programm nicht gefunden, Timeout nach 60 s) → Rückgabe `nil`, `exitcd:` wird `-1` (falls angegeben).
+- Nicht angeforderte Streams werden verworfen.
+
+```lisp
+(exec "echo" param: "hallo" stdout: out exitcd: cd)
+out
+; => "hallo\n"
+cd
+; => 0
+
+(exec "sh" param: "-c" param: "echo fehler >&2; exit 1"
+      stdout: out stderr: err exitcd: cd)
+err
+; => "fehler\n"
+cd
+; => 1
+
+(exec "cat" stdin: "Eingabe" stdout: out exitcd: cd)
+out
+; => "Eingabe"
+
+(exec "/kein/solches/programm" stdout: out exitcd: cd)
+; => nil
+cd
+; => -1
+```
+
 ## Arithmetik
 
 ### +
@@ -1194,6 +1239,28 @@ Führt ein Shell-Kommando aus und gibt den Exit-Code zurück (0 = OK).
 ```lisp
 (system "echo hallo")
 (system "test -f ./tmp/demo.txt")
+```
+
+### exec
+
+**Syntax:**
+
+```lisp
+(exec "programm"
+      param: "arg1"
+      param: "arg2"
+      stdin:  eingabe
+      stdout: ausgabe-var
+      stderr: fehler-var
+      exitcd: code-var)
+```
+
+Führt ein externes Programm direkt aus (ohne Shell). Siehe ausführliche Beschreibung unter Spezialformen.
+
+```lisp
+(exec "echo" param: "hallo" stdout: out exitcd: cd)
+(println out)
+(println cd)
 ```
 
 ### file-stat

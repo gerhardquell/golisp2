@@ -38,6 +38,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Hygienic macros**: `defmacro` with `gensym` for safe code generation
 - **Quasiquote**: `` ` `` `,` `,@` for template programming
 - **Structured error handling**: `error` and `catch`
+- **External program execution**: `exec` runs programs directly (no shell) and captures stdout, stderr, and exit code
 
 ### Advanced Features
 - **Scheme-style `do`**: Iterator with parallel step evaluation
@@ -97,11 +98,13 @@ GoLisp works like a standard Unix tool with multiple modes:
 |------|---------|-------------|
 | **Stdin (default)** | `echo "(+ 1 2)" \| ./golisp2` | Read from stdin, output result only |
 | **Interactive** | `./golisp2 -i` | REPL with syntax highlighting |
-| **Expression** | `./golisp2 -e "(+ 1 2)"` | Execute single expression |
+| **Expression** | `./golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
 | **Script** | `./golisp2 script.lisp` | Run a Lisp file |
 | **Tests** | `./golisp2 -t` | Run built-in test suite |
 
 **Exit codes:** `0` = success, `1` = error
+
+**Multi-expression `-e`:** When `-e` contains multiple forms, only side effects are emitted; the final result is suppressed so scripts like `(exec ...) (println out)` produce clean output.
 
 ```bash
 # Pipe mode (great for shell scripts)
@@ -342,7 +345,32 @@ results  ; => (42 123 13)
 ; => "Recovered"
 ```
 
----
+### Running External Programs
+
+```lisp
+; Run a program directly (no shell) and capture output
+(exec "echo" param: "hello" stdout: out exitcd: cd)
+out   ; => "hello\n"
+cd    ; => 0
+
+; Multiple arguments, stderr, and non-zero exits
+(exec "sh" param: "-c" param: "echo err >&2; exit 1"
+      stdout: out stderr: err exitcd: cd)
+err   ; => "err\n"
+cd    ; => 1     ; non-zero exit is not a Lisp error
+
+; Feed stdin to a program
+(exec "cat" stdin: "hello world" stdout: out exitcd: cd)
+out   ; => "hello world"
+
+; Technical failures (program not found, timeout) return nil and set exitcd: -1
+(exec "/no/such/program" stdout: out exitcd: cd)
+; => nil
+cd   ; => -1
+```
+
+Default timeout: 60 seconds.
+
 
 ## 📚 Library Search Path
 
@@ -411,6 +439,7 @@ my-project/
 | `quote`, `quasiquote` | Code as data |
 | `eval` | Dynamic evaluation |
 | `catch` | Error handling |
+| `exec` | Run external program, capture stdout/stderr/exit code |
 | `parfunc` | Parallel execution |
 | `block`, `return-from` | Non-local exits |
 | `flet`, `labels` | Local functions |
@@ -423,7 +452,7 @@ my-project/
 | **Comparison** | `=`, `<`, `>`, `>=`, `<=`, `equal?` |
 | **Lists** | `car`, `cdr`, `cons`, `list`, `atom`, `null`, `apply`, `mapcar` |
 | **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string` |
-| **I/O** | `print`, `println`, `read`, `load` (with search path) |
+| **I/O** | `print`, `println`, `read`, `load` (with search path), `exec` |
 | **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete` |
 | **Concurrency** | `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
 | **AI** | `sigo`, `sigo-models`, `sigo-host` |

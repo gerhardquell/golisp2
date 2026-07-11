@@ -86,7 +86,7 @@ Alle Fehler lösen eine Go-Ausnahme aus (`return nil, fmt.Errorf("shm-xxx: ...")
 
 Mögliche Fehler:
 - Ungültiger Handle → `shm-xxx: kein SHM-Block`
-- Pool erschöpft → `shm-alloc: ERR102: No free SHM blocks`
+- Pool erschöpft → `shm-alloc: Allocate: kein freier SHM-Block verfügbar`
 - Ungültige Block-ID (intern) → wird vom Pool geprüft
 
 ## Testansatz

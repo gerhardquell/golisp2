@@ -43,6 +43,9 @@ func ShmGet(key int, size int, shmFlg int) (shmId int, err error) {
 }
 
 // ##############################################################################
+// ShmAt hängt ein SHM-Segment an. `size` muss exakt der Segmentgröße
+// entsprechen, mit der das Segment erzeugt wurde; sonst entsteht ein
+// ungültiger Slice-Header.
 func ShmAt(shmId int, shmAddr uintptr, shmFlg int, size int) (data []byte, err error) {
   addr, _, errno := syscall.Syscall(sysShmAt, uintptr(int32(shmId)), shmAddr,
                                     uintptr(int32(shmFlg)))

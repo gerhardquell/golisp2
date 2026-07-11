@@ -354,9 +354,12 @@ func ResetForTest() error {
 
   if globalPool != nil {
     globalPool.mutex.Lock()
-    globalPool.cleanupInternal()
+    _, err := globalPool.cleanupInternal()
     globalPool.mutex.Unlock()
     globalPool = nil
+    if err != nil {
+      return fmt.Errorf("ResetForTest: %v", err)
+    }
   }
   return nil
 }

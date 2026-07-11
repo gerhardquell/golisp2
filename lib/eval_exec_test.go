@@ -103,3 +103,52 @@ func TestExecStderr(t *testing.T) {
     t.Fatalf("expected exit code 1, got %v", cd)
   }
 }
+
+func TestExecStdin(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("cat"),
+    MakeAtom("stdin:"),
+    MakeStr("hello world"),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  _, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  out, _ := env.Get("out")
+  if out.Type != STRING || out.Val != "hello world" {
+    t.Fatalf("expected 'hello world', got %v", out)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != 0 {
+    t.Fatalf("expected exit code 0, got %v", cd)
+  }
+}
+
+func TestExecUnknownProgram(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("/no/such/program"),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  result, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec should not error on missing program: %v", err)
+  }
+  if result != nil && result.Type != NIL {
+    t.Fatalf("expected nil on missing program, got %v", result)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != -1 {
+    t.Fatalf("expected exit code -1, got %v", cd)
+  }
+}

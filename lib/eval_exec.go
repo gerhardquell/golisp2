@@ -13,10 +13,14 @@ package lib
 
 import (
   "bytes"
+  "context"
   "fmt"
   "os/exec"
   "strings"
+  "time"
 )
+
+const defaultExecTimeout = 60 * time.Second
 
 func evalExec(args *Cell, env *Env) (*Cell, error) {
   if args == nil || args.Car == nil {
@@ -93,7 +97,10 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
     rest = rest.Cdr.Cdr
   }
 
-  cmd := exec.Command(program, params...)
+  ctx, cancel := context.WithTimeout(context.Background(), defaultExecTimeout)
+  defer cancel()
+
+  cmd := exec.CommandContext(ctx, program, params...)
   var stdoutBuf, stderrBuf bytes.Buffer
   cmd.Stdout = &stdoutBuf
   cmd.Stderr = &stderrBuf
@@ -103,6 +110,14 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
 
   exitCode := 0
   runErr := cmd.Run()
+
+  if stdoutVar != "" {
+    env.Set(stdoutVar, MakeStr(stdoutBuf.String()))
+  }
+  if stderrVar != "" {
+    env.Set(stderrVar, MakeStr(stderrBuf.String()))
+  }
+
   if runErr != nil {
     if exitErr, ok := runErr.(*exec.ExitError); ok {
       exitCode = exitErr.ExitCode()
@@ -114,12 +129,6 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
     }
   }
 
-  if stdoutVar != "" {
-    env.Set(stdoutVar, MakeStr(stdoutBuf.String()))
-  }
-  if stderrVar != "" {
-    env.Set(stderrVar, MakeStr(stderrBuf.String()))
-  }
   if exitcdVar != "" {
     env.Set(exitcdVar, MakeNum(float64(exitCode)))
   }

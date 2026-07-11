@@ -103,47 +103,47 @@ func runTests(env *lib.Env) {
 // scripts like (exec ...) (println out) (println cd) produce clean output.
 // Returns exit code 0 on success, 1 on error.
 func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) int {
-	cells, err := lib.ReadAll(expr)
-	if err != nil {
-		fmt.Fprintf(errOut, "ERR read: %v\n", err)
-		return 1
-	}
-	if cells == nil || cells.Type == lib.NIL {
-		return 0
-	}
+  cells, err := lib.ReadAll(expr)
+  if err != nil {
+    fmt.Fprintf(errOut, "ERR read: %v\n", err)
+    return 1
+  }
+  if cells == nil || cells.Type == lib.NIL {
+    return 0
+  }
 
-	// Count forms so a single -e expression still prints its value.
-	formCount := 0
-	for c := cells; c != nil && c.Type == lib.LIST; c = c.Cdr {
-		if c.Car != nil {
-			formCount++
-		}
-	}
+  // Count forms so a single -e expression still prints its value.
+  formCount := 0
+  for c := cells; c != nil && c.Type == lib.LIST; c = c.Cdr {
+    if c.Car != nil {
+      formCount++
+    }
+  }
 
-	var result *lib.Cell
-	cur := cells
-	for cur != nil && cur.Type == lib.LIST {
-		form := cur.Car
-		if form == nil {
-			cur = cur.Cdr
-			continue
-		}
-		result, err = lib.Eval(form, env)
-		if err != nil {
-			var le *lib.LispError
-			if errors.As(err, &le) {
-				fmt.Fprintf(errOut, "ERR: %s\n", le.Msg)
-			} else {
-				fmt.Fprintf(errOut, "ERR: %v\n", err)
-			}
-			return 1
-		}
-		cur = cur.Cdr
-	}
-	if formCount == 1 {
-		fmt.Fprintln(out, result)
-	}
-	return 0
+  var result *lib.Cell
+  cur := cells
+  for cur != nil && cur.Type == lib.LIST {
+    form := cur.Car
+    if form == nil {
+      cur = cur.Cdr
+      continue
+    }
+    result, err = lib.Eval(form, env)
+    if err != nil {
+      var le *lib.LispError
+      if errors.As(err, &le) {
+        fmt.Fprintf(errOut, "ERR: %s\n", le.Msg)
+      } else {
+        fmt.Fprintf(errOut, "ERR: %v\n", err)
+      }
+      return 1
+    }
+    cur = cur.Cdr
+  }
+  if formCount == 1 {
+    fmt.Fprintln(out, result)
+  }
+  return 0
 }
 
 // countParens counts open parentheses in a string
@@ -326,11 +326,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Expression-Modus: golisp2 -e "(expr)"
-	if *exprFlag != "" {
-		exitCode := runExpression(*exprFlag, env, os.Stdout, os.Stderr)
-		os.Exit(exitCode)
-	}
+  // Expression-Modus: golisp2 -e "(expr)"
+  if *exprFlag != "" {
+    exitCode := runExpression(*exprFlag, env, os.Stdout, os.Stderr)
+    os.Exit(exitCode)
+  }
 
 	// Interaktiver Modus: golisp2 -i
 	if *interactiveFlag {

@@ -8,6 +8,7 @@
 package shm
 
 import (
+  "errors"
   "fmt"
   "sync"
 )
@@ -31,64 +32,75 @@ type ShmBlock struct {
 }
 
 //########################################
+type ShmBlockStatus struct {
+  ID       int
+  Key      int
+  ShmID    int
+  InUse    bool
+  WorkerID int
+}
+
+//########################################
+type ShmPoolStatus struct {
+  Total  int
+  Used   int
+  Free   int
+  Blocks []ShmBlockStatus
+}
+
+//########################################
 type ShmPool struct {
-  blocks   [MAX_POOLS]*ShmBlock
-  mutex    sync.Mutex
-  inited   bool
-  cleanedUp bool
+  blocks [MAX_POOLS]*ShmBlock
+  mutex  sync.Mutex
+  inited bool
 }
 
 //########################################
 var globalPool *ShmPool
-var once sync.Once
-var initErr error
+var poolMutex sync.Mutex
 
 //########################################
 func GetPool() (*ShmPool, error) {
-  once.Do(func() {
-    p := &ShmPool{}
-    if err := p.Init(); err != nil {
-      initErr = err
-      return
-    }
-    globalPool = p
-  })
-  if initErr != nil {
-    return nil, initErr
+  poolMutex.Lock()
+  defer poolMutex.Unlock()
+
+  if globalPool != nil && globalPool.inited {
+    return globalPool, nil
   }
-  if globalPool != nil && globalPool.cleanedUp {
-    return nil, fmt.Errorf("shared memory pool has been cleaned up")
+
+  p := &ShmPool{}
+  if err := p.Init(); err != nil {
+    return nil, fmt.Errorf("GetPool: %v", err)
   }
-  return globalPool, nil
+  globalPool = p
+  return p, nil
 }
 
 //########################################
 func (p *ShmPool) Init() error {
   p.mutex.Lock()
   defer p.mutex.Unlock()
-  
+
   if p.inited {
     return nil
   }
-  
+
   created := make([]*ShmBlock, 0, MAX_POOLS)
 
   for i := 0; i < MAX_POOLS; i++ {
     key := SHM_BASE + i
 
-    // SHM erstellen mit deiner API
-    shmID, err := ShmGet(key, POOL_SIZE, IPC_CREAT|0644)
+    shmID, err := ShmGet(key, POOL_SIZE, IPC_CREAT|0600)
     if err != nil {
       p.rollback(created)
-      return fmt.Errorf("ERR100: SHM create failed pool %d: %v", i, err)
+      return fmt.Errorf("Init: SHM-Segment für Pool %d konnte nicht erzeugt werden: %v", i, err)
     }
 
-    // SHM anhängen
     data, err := ShmAt(shmID, 0, 0, POOL_SIZE)
     if err != nil {
       ShmRm(shmID)
       p.rollback(created)
-      return fmt.Errorf("ERR101: SHM attach failed pool %d: %v", i, err)
+      return fmt.Errorf("Init: SHM-Segment für Pool %d konnte nicht angehängt werden: %v", i, err)
     }
 
     block := &ShmBlock{
@@ -102,8 +114,6 @@ func (p *ShmPool) Init() error {
     }
     p.blocks[i] = block
     created = append(created, block)
-
-    // Block initialisiert, kein stdout-Output im Initialisierungsloop.
   }
 
   p.inited = true
@@ -130,12 +140,8 @@ func (p *ShmPool) Allocate(workerID int) (*ShmBlock, error) {
   p.mutex.Lock()
   defer p.mutex.Unlock()
 
-  if p.cleanedUp {
-    return nil, fmt.Errorf("shared memory pool has been cleaned up")
-  }
-
   if !p.inited {
-    return nil, fmt.Errorf("shared memory pool not initialized")
+    return nil, fmt.Errorf("Allocate: Pool ist nicht initialisiert")
   }
 
   for i := 0; i < MAX_POOLS; i++ {
@@ -146,7 +152,7 @@ func (p *ShmPool) Allocate(workerID int) (*ShmBlock, error) {
     }
   }
 
-  return nil, fmt.Errorf("no free shared-memory blocks")
+  return nil, fmt.Errorf("Allocate: kein freier SHM-Block verfügbar")
 }
 
 //########################################
@@ -154,22 +160,21 @@ func (p *ShmPool) Release(blockID int) error {
   p.mutex.Lock()
   defer p.mutex.Unlock()
 
-  if p.cleanedUp {
-    return fmt.Errorf("shared memory pool has been cleaned up")
+  if !p.inited {
+    return fmt.Errorf("Release: Pool ist nicht initialisiert")
   }
 
   if blockID < 0 || blockID >= MAX_POOLS {
-    return fmt.Errorf("invalid block id %d", blockID)
+    return fmt.Errorf("Release: ungültige Block-ID %d", blockID)
   }
 
   if !p.blocks[blockID].InUse {
-    return fmt.Errorf("block %d not in use", blockID)
+    return fmt.Errorf("Release: Block %d ist nicht alloziert", blockID)
   }
 
   p.blocks[blockID].InUse = false
   p.blocks[blockID].WorkerID = -1
 
-  // SHM nullen
   for i := range p.blocks[blockID].Data {
     p.blocks[blockID].Data[i] = 0
   }
@@ -182,21 +187,21 @@ func (p *ShmPool) WriteData(blockID int, data []byte) error {
   p.mutex.Lock()
   defer p.mutex.Unlock()
 
-  if p.cleanedUp {
-    return fmt.Errorf("shared memory pool has been cleaned up")
+  if !p.inited {
+    return fmt.Errorf("WriteData: Pool ist nicht initialisiert")
   }
 
   if blockID < 0 || blockID >= MAX_POOLS {
-    return fmt.Errorf("invalid block id %d", blockID)
+    return fmt.Errorf("WriteData: ungültige Block-ID %d", blockID)
   }
 
   block := p.blocks[blockID]
   if !block.InUse {
-    return fmt.Errorf("block %d not allocated", blockID)
+    return fmt.Errorf("WriteData: Block %d ist nicht alloziert", blockID)
   }
 
   if len(data) > block.Size {
-    return fmt.Errorf("data too large: %d > %d", len(data), block.Size)
+    return fmt.Errorf("WriteData: Daten zu groß: %d > %d", len(data), block.Size)
   }
 
   copy(block.Data, data)
@@ -211,17 +216,17 @@ func (p *ShmPool) ReadData(blockID int, maxLen int) ([]byte, error) {
   p.mutex.Lock()
   defer p.mutex.Unlock()
 
-  if p.cleanedUp {
-    return nil, fmt.Errorf("shared memory pool has been cleaned up")
+  if !p.inited {
+    return nil, fmt.Errorf("ReadData: Pool ist nicht initialisiert")
   }
 
   if blockID < 0 || blockID >= MAX_POOLS {
-    return nil, fmt.Errorf("invalid block id %d", blockID)
+    return nil, fmt.Errorf("ReadData: ungültige Block-ID %d", blockID)
   }
 
   block := p.blocks[blockID]
   if !block.InUse {
-    return nil, fmt.Errorf("block %d not allocated", blockID)
+    return nil, fmt.Errorf("ReadData: Block %d ist nicht alloziert", blockID)
   }
 
   if maxLen > block.Size {
@@ -234,45 +239,89 @@ func (p *ShmPool) ReadData(blockID int, maxLen int) ([]byte, error) {
 }
 
 //########################################
-func (p *ShmPool) Status() {
+func (p *ShmPool) Status() (*ShmPoolStatus, error) {
   p.mutex.Lock()
   defer p.mutex.Unlock()
 
-  if p.cleanedUp {
-    fmt.Println("=== SHM POOL STATUS (cleaned up) ===")
-    return
+  if !p.inited {
+    return nil, fmt.Errorf("Status: Pool ist nicht initialisiert")
   }
 
-  fmt.Println("=== SHM POOL STATUS ===")
-  for i, block := range p.blocks {
-    status := "FREE"
-    worker := "-"
-    if block.InUse {
-      status = "USED"
-      worker = fmt.Sprintf("%d", block.WorkerID)
-    }
-    fmt.Printf("Pool %d: Key=0x%x, ShmID=%d, Status=%s, Worker=%s\n",
-               i, block.Key, block.ShmID, status, worker)
+  status := &ShmPoolStatus{
+    Total:  MAX_POOLS,
+    Blocks: make([]ShmBlockStatus, 0, MAX_POOLS),
   }
+
+  for _, block := range p.blocks {
+    if block == nil {
+      continue
+    }
+    status.Blocks = append(status.Blocks, ShmBlockStatus{
+      ID:       block.ID,
+      Key:      block.Key,
+      ShmID:    block.ShmID,
+      InUse:    block.InUse,
+      WorkerID: block.WorkerID,
+    })
+    if block.InUse {
+      status.Used++
+    }
+  }
+
+  status.Free = status.Total - status.Used
+  return status, nil
 }
 
 //########################################
-func (p *ShmPool) Cleanup() {
+func (p *ShmPool) Cleanup() (int, error) {
   p.mutex.Lock()
   defer p.mutex.Unlock()
+  return p.cleanupLocked()
+}
+
+//########################################
+func (p *ShmPool) cleanupLocked() (int, error) {
+  if !p.inited {
+    return 0, nil
+  }
+
+  freed := 0
+  var errs []error
 
   for i, block := range p.blocks {
-    if block != nil && block.Data != nil {
-      ShmDt(block.Data)
-      ShmRm(block.ShmID)
-      fmt.Printf("SHM Pool %d cleaned up\n", i)
+    if block == nil {
+      continue
     }
-    if block != nil {
-      block.Data = nil
-      block.InUse = false
-      block.WorkerID = -1
+    if block.Data != nil {
+      if err := ShmDt(block.Data); err != nil {
+        errs = append(errs, fmt.Errorf("Cleanup: ShmDt für Block %d fehlgeschlagen: %v", i, err))
+      }
     }
+    if block.ShmID != 0 {
+      if err := ShmRm(block.ShmID); err != nil {
+        errs = append(errs, fmt.Errorf("Cleanup: ShmRm für Block %d fehlgeschlagen: %v", i, err))
+      }
+    }
+    block.Data = nil
+    block.InUse = false
+    block.WorkerID = -1
+    freed++
   }
+
   p.inited = false
-  p.cleanedUp = true
+  return freed, errors.Join(errs...)
+}
+
+//########################################
+// ResetForTest bereinigt den globalen Pool und setzt ihn zurück.
+// Nur für Tests!
+func ResetForTest() error {
+  poolMutex.Lock()
+  defer poolMutex.Unlock()
+
+  if globalPool != nil {
+    globalPool.cleanupLocked()
+  }
+  globalPool = nil
+  return nil
 }

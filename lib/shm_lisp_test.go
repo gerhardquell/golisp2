@@ -5,16 +5,24 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260711
 //**********************************************************************
-// Tests fuer Shared-Memory Primitiven (Task 1: shm-alloc / shm-free)
+// Tests fuer Shared-Memory Primitiven
 //**********************************************************************
 
 package lib
 
 import (
+  "golisp2/lib/shm"
   "testing"
 )
 
+func resetShm(t *testing.T) {
+  if err := shm.ResetForTest(); err != nil {
+    t.Fatalf("ResetForTest fehlgeschlagen: %v", err)
+  }
+}
+
 func TestShmAllocFree(t *testing.T) {
+  defer resetShm(t)
   env := BaseEnv()
   allocFn, err := env.Get("shm-alloc")
   if err != nil {
@@ -36,6 +44,7 @@ func TestShmAllocFree(t *testing.T) {
 }
 
 func TestShmWriteRead(t *testing.T) {
+  defer resetShm(t)
   env := BaseEnv()
   allocFn, _ := env.Get("shm-alloc")
   handle, _ := allocFn.Fn(nil)
@@ -63,6 +72,7 @@ func TestShmWriteRead(t *testing.T) {
 }
 
 func TestShmReadExplicitLength(t *testing.T) {
+  defer resetShm(t)
   env := BaseEnv()
   allocFn, _ := env.Get("shm-alloc")
   handle, _ := allocFn.Fn(nil)
@@ -85,6 +95,7 @@ func TestShmReadExplicitLength(t *testing.T) {
 }
 
 func TestShmStatusCleanup(t *testing.T) {
+  defer resetShm(t)
   env := BaseEnv()
   statusFn, _ := env.Get("shm-status")
   cleanupFn, _ := env.Get("shm-cleanup")
@@ -94,19 +105,44 @@ func TestShmStatusCleanup(t *testing.T) {
   if err != nil {
     t.Fatalf("shm-status fehlgeschlagen: %v", err)
   }
-  _, err = cleanupFn.Fn(nil)
+
+  // Einen Block allozieren, damit der Status mindestens einen belegten Block zeigt.
+  handle, err := allocFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-alloc fehlgeschlagen: %v", err)
+  }
+  status, err := statusFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-status fehlgeschlagen: %v", err)
+  }
+  if status == nil || status.Type != LIST {
+    t.Fatalf("erwartet Listen-Status, got %v", status)
+  }
+
+  // Handle vor dem Cleanup wieder freigeben, sonst wäre es nach dem Re-Init ungültig.
+  freeFn, _ := env.Get("shm-free")
+  _, err = freeFn.Fn([]*Cell{handle})
+  if err != nil {
+    t.Fatalf("shm-free vor cleanup fehlgeschlagen: %v", err)
+  }
+
+  freed, err := cleanupFn.Fn(nil)
   if err != nil {
     t.Fatalf("shm-cleanup fehlgeschlagen: %v", err)
   }
+  if freed.Type != NUMBER || freed.Num != float64(shm.MAX_POOLS) {
+    t.Fatalf("erwartet %d freigegebene Blöcke, got %v", shm.MAX_POOLS, freed)
+  }
 
-  // Nach Cleanup müssen weitere SHM-Operationen sauber fehlschlagen.
+  // Nach Cleanup muss der Pool neu initialisiert werden können.
   _, err = allocFn.Fn(nil)
-  if err == nil {
-    t.Fatal("erwartet Fehler für shm-alloc nach cleanup")
+  if err != nil {
+    t.Fatalf("shm-alloc nach cleanup fehlgeschlagen: %v", err)
   }
 }
 
 func TestShmInvalidHandle(t *testing.T) {
+  defer resetShm(t)
   env := BaseEnv()
   writeFn, _ := env.Get("shm-write")
   _, err := writeFn.Fn([]*Cell{MakeNum(42), MakeStr("x")})

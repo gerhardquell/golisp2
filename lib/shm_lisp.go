@@ -25,7 +25,7 @@ func makeShmCell(block *shm.ShmBlock) *Cell {
     Type: FUNC,
     Val:  "shm-block",
     Fn: func(_ []*Cell) (*Cell, error) {
-      return nil, fmt.Errorf("shm-block handle is not callable")
+      return nil, fmt.Errorf("shm-block: Handle ist nicht aufrufbar")
     },
     Env:  &shmHandle{block: block},
   }
@@ -33,11 +33,11 @@ func makeShmCell(block *shm.ShmBlock) *Cell {
 
 func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
   if c == nil || c.Type != FUNC || c.Val != "shm-block" {
-    return nil, fmt.Errorf("shm-block: kein SHM-Block")
+    return nil, fmt.Errorf("getShmBlock: kein SHM-Block")
   }
   h, ok := c.Env.(*shmHandle)
   if !ok {
-    return nil, fmt.Errorf("shm-block: kein SHM-Block")
+    return nil, fmt.Errorf("getShmBlock: kein SHM-Block")
   }
   return h.block, nil
 }
@@ -52,11 +52,21 @@ func RegisterShm(env *Env) {
 }
 
 func fnShmAlloc(args []*Cell) (*Cell, error) {
+  workerID := 0
+  if len(args) == 1 {
+    if args[0].Type != NUMBER {
+      return nil, fmt.Errorf("shm-alloc: optionale Worker-ID muss eine Zahl sein")
+    }
+    workerID = int(args[0].Num)
+  } else if len(args) > 1 {
+    return nil, fmt.Errorf("shm-alloc: 0 oder 1 Argumente erwartet")
+  }
+
   pool, err := shm.GetPool()
   if err != nil {
     return nil, fmt.Errorf("shm-alloc: %v", err)
   }
-  block, err := pool.Allocate(0)
+  block, err := pool.Allocate(workerID)
   if err != nil {
     return nil, fmt.Errorf("shm-alloc: %v", err)
   }
@@ -64,8 +74,8 @@ func fnShmAlloc(args []*Cell) (*Cell, error) {
 }
 
 func fnShmFree(args []*Cell) (*Cell, error) {
-  if len(args) < 1 {
-    return nil, fmt.Errorf("shm-free: 1 Argument nötig")
+  if len(args) != 1 {
+    return nil, fmt.Errorf("shm-free: genau 1 Argument erwartet")
   }
   block, err := getShmBlock(args[0])
   if err != nil {
@@ -82,8 +92,8 @@ func fnShmFree(args []*Cell) (*Cell, error) {
 }
 
 func fnShmWrite(args []*Cell) (*Cell, error) {
-  if len(args) < 2 {
-    return nil, fmt.Errorf("shm-write: 2 Argumente nötig")
+  if len(args) != 2 {
+    return nil, fmt.Errorf("shm-write: genau 2 Argumente erwartet")
   }
   if args[1].Type != STRING {
     return nil, fmt.Errorf("shm-write: String erwartet")
@@ -103,8 +113,8 @@ func fnShmWrite(args []*Cell) (*Cell, error) {
 }
 
 func fnShmRead(args []*Cell) (*Cell, error) {
-  if len(args) < 1 {
-    return nil, fmt.Errorf("shm-read: 1 Argument nötig")
+  if len(args) < 1 || len(args) > 2 {
+    return nil, fmt.Errorf("shm-read: 1 oder 2 Argumente erwartet")
   }
   block, err := getShmBlock(args[0])
   if err != nil {
@@ -141,19 +151,37 @@ func fnShmRead(args []*Cell) (*Cell, error) {
 }
 
 func fnShmStatus(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("shm-status: keine Argumente erlaubt")
+  }
   pool, err := shm.GetPool()
   if err != nil {
     return nil, fmt.Errorf("shm-status: %v", err)
   }
-  pool.Status()
-  return cellT, nil
+  status, err := pool.Status()
+  if err != nil {
+    return nil, fmt.Errorf("shm-status: %v", err)
+  }
+
+  entries := []*Cell{
+    Cons(MakeAtom("total"), MakeNum(float64(status.Total))),
+    Cons(MakeAtom("used"),  MakeNum(float64(status.Used))),
+    Cons(MakeAtom("free"),  MakeNum(float64(status.Free))),
+  }
+  return SliceToCell(entries), nil
 }
 
 func fnShmCleanup(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("shm-cleanup: keine Argumente erlaubt")
+  }
   pool, err := shm.GetPool()
   if err != nil {
     return nil, fmt.Errorf("shm-cleanup: %v", err)
   }
-  pool.Cleanup()
-  return cellT, nil
+  freed, err := pool.Cleanup()
+  if err != nil {
+    return nil, fmt.Errorf("shm-cleanup: %v", err)
+  }
+  return MakeNum(float64(freed)), nil
 }

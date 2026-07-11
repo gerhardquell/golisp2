@@ -12,7 +12,6 @@ package lib
 
 import (
   "testing"
-  "golisp2/lib/shm"
 )
 
 func TestShmAllocFree(t *testing.T) {
@@ -89,6 +88,7 @@ func TestShmStatusCleanup(t *testing.T) {
   env := BaseEnv()
   statusFn, _ := env.Get("shm-status")
   cleanupFn, _ := env.Get("shm-cleanup")
+  allocFn, _ := env.Get("shm-alloc")
 
   _, err := statusFn.Fn(nil)
   if err != nil {
@@ -99,14 +99,10 @@ func TestShmStatusCleanup(t *testing.T) {
     t.Fatalf("shm-cleanup fehlgeschlagen: %v", err)
   }
 
-  // Pool nach Cleanup wieder initialisieren, damit parallele/sequentielle
-  // Tests nicht auf abgeräumtem SHM weiterarbeiten.
-  pool, err := shm.GetPool()
-  if err != nil {
-    t.Fatalf("pool-reinit fehlgeschlagen: %v", err)
-  }
-  if err := pool.Init(); err != nil {
-    t.Fatalf("pool-reinit fehlgeschlagen: %v", err)
+  // Nach Cleanup müssen weitere SHM-Operationen sauber fehlschlagen.
+  _, err = allocFn.Fn(nil)
+  if err == nil {
+    t.Fatal("erwartet Fehler für shm-alloc nach cleanup")
   }
 }
 

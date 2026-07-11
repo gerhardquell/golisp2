@@ -24,6 +24,9 @@ func makeShmCell(block *shm.ShmBlock) *Cell {
   return &Cell{
     Type: FUNC,
     Val:  "shm-block",
+    Fn: func(_ []*Cell) (*Cell, error) {
+      return nil, fmt.Errorf("shm-block handle is not callable")
+    },
     Env:  &shmHandle{block: block},
   }
 }

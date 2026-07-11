@@ -29,7 +29,7 @@ func makeShmCell(block *shm.ShmBlock) *Cell {
 }
 
 func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
-  if c == nil || c.Val != "shm-block" {
+  if c == nil || c.Type != FUNC || c.Val != "shm-block" {
     return nil, fmt.Errorf("kein SHM-Block")
   }
   h, ok := c.Env.(*shmHandle)

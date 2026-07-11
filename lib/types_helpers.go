@@ -10,6 +10,11 @@
 
 package lib
 
+// List baut eine Lisp-Liste aus beliebig vielen Cells
+func List(cells ...*Cell) *Cell {
+	return SliceToCell(cells)
+}
+
 // SliceToCell konvertiert einen Go-Slice von Cells in eine Lisp-Liste
 func SliceToCell(slice []*Cell) *Cell {
 	result := MakeNil()

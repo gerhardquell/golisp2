@@ -64,7 +64,7 @@ func GetPool() (*ShmPool, error) {
   poolMutex.Lock()
   defer poolMutex.Unlock()
 
-  if globalPool != nil && globalPool.inited {
+  if globalPool != nil {
     return globalPool, nil
   }
 
@@ -146,9 +146,13 @@ func (p *ShmPool) Allocate(workerID int) (*ShmBlock, error) {
 
   for i := range MAX_POOLS {
     if !p.blocks[i].InUse {
-      p.blocks[i].InUse = true
-      p.blocks[i].WorkerID = workerID
-      return p.blocks[i], nil
+      block := p.blocks[i]
+      block.InUse = true
+      block.WorkerID = workerID
+      for j := range block.Data {
+        block.Data[j] = 0
+      }
+      return block, nil
     }
   }
 
@@ -239,6 +243,27 @@ func (p *ShmPool) ReadData(blockID int, maxLen int) ([]byte, error) {
 }
 
 //########################################
+func (p *ShmPool) GetBlock(blockID int) (*ShmBlock, error) {
+  p.mutex.Lock()
+  defer p.mutex.Unlock()
+
+  if !p.inited {
+    return nil, fmt.Errorf("GetBlock: Pool ist nicht initialisiert")
+  }
+
+  if blockID < 0 || blockID >= MAX_POOLS {
+    return nil, fmt.Errorf("GetBlock: ungültige Block-ID %d", blockID)
+  }
+
+  block := p.blocks[blockID]
+  if block == nil || !block.InUse {
+    return nil, fmt.Errorf("GetBlock: Block %d ist nicht alloziert", blockID)
+  }
+
+  return block, nil
+}
+
+//########################################
 func (p *ShmPool) Status() (*ShmPoolStatus, error) {
   p.mutex.Lock()
   defer p.mutex.Unlock()
@@ -274,13 +299,21 @@ func (p *ShmPool) Status() (*ShmPoolStatus, error) {
 
 //########################################
 func (p *ShmPool) Cleanup() (int, error) {
+  poolMutex.Lock()
+  defer poolMutex.Unlock()
   p.mutex.Lock()
   defer p.mutex.Unlock()
-  return p.cleanupLocked()
+
+  freed, err := p.cleanupInternal()
+  if globalPool == p {
+    globalPool = nil
+  }
+  return freed, err
 }
 
 //########################################
-func (p *ShmPool) cleanupLocked() (int, error) {
+// cleanupInternal erwartet, dass poolMutex UND p.mutex vom Aufrufer gehalten werden.
+func (p *ShmPool) cleanupInternal() (int, error) {
   if !p.inited {
     return 0, nil
   }
@@ -320,8 +353,10 @@ func ResetForTest() error {
   defer poolMutex.Unlock()
 
   if globalPool != nil {
-    globalPool.cleanupLocked()
+    globalPool.mutex.Lock()
+    globalPool.cleanupInternal()
+    globalPool.mutex.Unlock()
+    globalPool = nil
   }
-  globalPool = nil
   return nil
 }

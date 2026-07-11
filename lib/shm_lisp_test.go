@@ -21,6 +21,67 @@ func resetShm(t *testing.T) {
   }
 }
 
+func TestShmAllocWithWorkerID(t *testing.T) {
+  defer resetShm(t)
+  env := BaseEnv()
+  allocFn, _ := env.Get("shm-alloc")
+  handle, err := allocFn.Fn([]*Cell{MakeNum(42)})
+  if err != nil {
+    t.Fatalf("shm-alloc mit Worker-ID fehlgeschlagen: %v", err)
+  }
+  if handle == nil || handle.Val != "shm-block" {
+    t.Fatalf("erwartet shm-block handle, got %v", handle)
+  }
+
+  pool, err := shm.GetPool()
+  if err != nil {
+    t.Fatalf("GetPool fehlgeschlagen: %v", err)
+  }
+  status, err := pool.Status()
+  if err != nil {
+    t.Fatalf("pool.Status fehlgeschlagen: %v", err)
+  }
+
+  found := false
+  for _, block := range status.Blocks {
+    if block.InUse && block.WorkerID == 42 {
+      found = true
+      break
+    }
+  }
+  if !found {
+    t.Fatal("Worker-ID 42 nicht im Pool-Status gefunden")
+  }
+
+  freeFn, _ := env.Get("shm-free")
+  _, err = freeFn.Fn([]*Cell{handle})
+  if err != nil {
+    t.Fatalf("shm-free fehlgeschlagen: %v", err)
+  }
+}
+
+func TestShmStaleHandleAfterCleanup(t *testing.T) {
+  defer resetShm(t)
+  env := BaseEnv()
+  allocFn, _ := env.Get("shm-alloc")
+  handle, err := allocFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-alloc fehlgeschlagen: %v", err)
+  }
+
+  cleanupFn, _ := env.Get("shm-cleanup")
+  _, err = cleanupFn.Fn(nil)
+  if err != nil {
+    t.Fatalf("shm-cleanup fehlgeschlagen: %v", err)
+  }
+
+  writeFn, _ := env.Get("shm-write")
+  _, err = writeFn.Fn([]*Cell{handle, MakeStr("x")})
+  if err == nil {
+    t.Fatal("erwartet Fehler für Handle nach shm-cleanup")
+  }
+}
+
 func TestShmAllocFree(t *testing.T) {
   defer resetShm(t)
   env := BaseEnv()

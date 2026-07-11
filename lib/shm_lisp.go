@@ -15,31 +15,41 @@ import (
   "golisp2/lib/shm"
 )
 
-// shmHandle verpackt einen ShmBlock als opake Lisp-Ressource
+// shmHandle verpackt einen ShmBlock als opake Lisp-Ressource.
+// Zusätzlich zur Pool-Referenz wird die Block-ID gespeichert, damit Handles
+// nach einem shm-cleanup (Pool-Reset) invalidiert werden können.
 type shmHandle struct {
-  block *shm.ShmBlock
+  pool     *shm.ShmPool
+  blockID  int
 }
 
-func makeShmCell(block *shm.ShmBlock) *Cell {
+func makeShmCell(pool *shm.ShmPool, block *shm.ShmBlock) *Cell {
   return &Cell{
     Type: FUNC,
     Val:  "shm-block",
     Fn: func(_ []*Cell) (*Cell, error) {
       return nil, fmt.Errorf("shm-block: Handle ist nicht aufrufbar")
     },
-    Env:  &shmHandle{block: block},
+    Env:  &shmHandle{pool: pool, blockID: block.ID},
   }
 }
 
 func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
   if c == nil || c.Type != FUNC || c.Val != "shm-block" {
-    return nil, fmt.Errorf("getShmBlock: kein SHM-Block")
+    return nil, fmt.Errorf("kein SHM-Block")
   }
   h, ok := c.Env.(*shmHandle)
-  if !ok {
-    return nil, fmt.Errorf("getShmBlock: kein SHM-Block")
+  if !ok || h.pool == nil {
+    return nil, fmt.Errorf("kein SHM-Block")
   }
-  return h.block, nil
+  pool, err := shm.GetPool()
+  if err != nil {
+    return nil, fmt.Errorf("kein SHM-Block")
+  }
+  if h.pool != pool {
+    return nil, fmt.Errorf("kein SHM-Block")
+  }
+  return pool.GetBlock(h.blockID)
 }
 
 func RegisterShm(env *Env) {
@@ -70,7 +80,7 @@ func fnShmAlloc(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("shm-alloc: %v", err)
   }
-  return makeShmCell(block), nil
+  return makeShmCell(pool, block), nil
 }
 
 func fnShmFree(args []*Cell) (*Cell, error) {

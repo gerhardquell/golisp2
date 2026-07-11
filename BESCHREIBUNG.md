@@ -1,6 +1,6 @@
-# GoLisp – Sprachreferenz
+# GoLisp2 – Sprachreferenz
 
-GoLisp ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung.
+GoLisp2 ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung.
 Alle Features sind im interaktiven REPL (`go run .`) und in Skript-Dateien
 (`go run . skript.lisp`) verfügbar.
 
@@ -290,7 +290,7 @@ go run . -t           # Testmodus
 
 ## Server-Modus (golisp2d)
 
-GoLisp kann als SWANK-ähnlicher TCP-Server laufen:
+GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 
 ### Server starten
 
@@ -337,7 +337,7 @@ Alle Clients teilen sich dasselbe Environment (Zustand bleibt erhalten).
 ## Das selbsterweiternde Muster
 
 ```lisp
-; KI schreibt Lisp-Code → GoLisp führt ihn aus
+; KI schreibt Lisp-Code → GoLisp2 führt ihn aus
 (eval (read (sigo
   "Schreibe nur den Lisp-Code, keine Erklärungen: defun fib"
   "claude-h")))
@@ -352,4 +352,4 @@ Alle Clients teilen sich dasselbe Environment (Zustand bleibt erhalten).
 
 ---
 
-*GoLisp – Gerhard Quell & Claude Sonnet 4.6 – Februar 2026*
+*GoLisp2 – Gerhard Quell & Claude Sonnet 4.6 – Februar 2026*

@@ -1,4 +1,4 @@
-# GoLisp 🦎
+# GoLisp2 🦎
 
 > *A Lisp interpreter in Go with native AI integration — code that extends itself.*
 
@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
 
-GoLisp is a modern Lisp interpreter built in Go, featuring **tail-call optimization**, **hygienic macros**, **goroutine-based concurrency**, and **native AI integration** via sigoREST. It combines the elegance of Lisp with the power of Go's runtime and multiple LLM providers.
+GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimization**, **hygienic macros**, **goroutine-based concurrency**, and **native AI integration** via sigoREST. It combines the elegance of Lisp with the power of Go's runtime and multiple LLM providers.
 
 ```lisp
 ; The classic — but with a million iterations, no stack overflow

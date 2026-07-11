@@ -16,6 +16,7 @@ import "fmt"
 
 // makeLambda baut eine Closure-Cell (Type:LIST, Env=Closure).
 func makeLambda(params, body *Cell, env *Env) *Cell {
+  env.shared = true
   return &Cell{Type: LIST, Car: params, Cdr: body, Env: env}
 }
 
@@ -24,6 +25,7 @@ func makeLambda(params, body *Cell, env *Env) *Cell {
 func applyLambda(lambda *Cell, args []*Cell) (*Cell, error) {
   closureEnv := lambda.Env.(*Env)
   localEnv   := NewEnv(closureEnv)
+  defer freeEnv(localEnv)
   if err := bindArgs(lambda.Car, args, closureEnv, localEnv); err != nil {
     return nil, err
   }
@@ -128,4 +130,129 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
     return fmt.Errorf("lambda: zu viele Argumente (%d überzählig)", len(args)-argIdx)
   }
   return nil
+}
+
+// bindEvalArgs bindet Lambda-Parameter direkt aus den unevaluierten
+// Argument-Ausdrücken. Jeder Argument-Wert wird in callerEnv ausgewertet,
+// Default-Ausdrücke für &optional/&key in closureEnv. Damit entfällt der
+// Zwischen-Slice []\*Cell, den evalArgs/bindArgs sonst benötigen.
+func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env) error {
+  section := 0  // 0=regulär, 1=&optional, 2=&key
+  hasKey := false
+
+  for p := params; p != nil; {
+    if p.Type == NIL { break }
+    if p.Type == ATOM {
+      // Dotted rest-Parameter: (lambda (a b . rest) ...)
+      rest, err := evalExprList(argExprs, callerEnv)
+      if err != nil { return err }
+      localEnv.Set(p.Val, SliceToCell(rest))
+      return nil
+    }
+    if p.Type != LIST { break }
+
+    param := p.Car
+    p = p.Cdr
+
+    if param.Type == ATOM {
+      switch param.Val {
+      case "&optional": section = 1; continue
+      case "&key":      section = 2; hasKey = true; continue
+      case "&rest":
+        if p == nil || p.Type != LIST || p.Car == nil {
+          return fmt.Errorf("lambda: &rest braucht Parameter-Namen")
+        }
+        rest, err := evalExprList(argExprs, callerEnv)
+        if err != nil { return err }
+        localEnv.Set(p.Car.Val, SliceToCell(rest))
+        return nil
+      }
+    }
+
+    switch section {
+    case 0:  // reguläre Parameter
+      if param.Type != ATOM {
+        return fmt.Errorf("lambda: Parameter muss Atom sein")
+      }
+      if argExprs == nil || argExprs.Type != LIST {
+        return fmt.Errorf("lambda: zu wenig Argumente (brauche '%s')", param.Val)
+      }
+      val, err := Eval(argExprs.Car, callerEnv)
+      if err != nil { return err }
+      localEnv.Set(param.Val, val)
+      argExprs = argExprs.Cdr
+
+    case 1:  // &optional
+      var name string
+      var def  *Cell
+      if param.Type == LIST {
+        name = param.Car.Val
+        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
+      } else {
+        name = param.Val
+      }
+      if argExprs != nil && argExprs.Type == LIST {
+        val, err := Eval(argExprs.Car, callerEnv)
+        if err != nil { return err }
+        localEnv.Set(name, val)
+        argExprs = argExprs.Cdr
+      } else if def != nil {
+        val, err := Eval(def, closureEnv)
+        if err != nil { return err }
+        localEnv.Set(name, val)
+      } else {
+        localEnv.Set(name, MakeNil())
+      }
+
+    case 2:  // &key
+      var name string
+      var def  *Cell
+      if param.Type == LIST {
+        name = param.Car.Val
+        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
+      } else {
+        name = param.Val
+      }
+      keyword := ":" + name
+      found := false
+      for a := argExprs; a != nil && a.Type == LIST; a = a.Cdr {
+        if a.Car != nil && a.Car.Type == ATOM && a.Car.Val == keyword {
+          if a.Cdr == nil || a.Cdr.Type != LIST {
+            return fmt.Errorf("lambda: Keyword %s ohne Wert", keyword)
+          }
+          val, err := Eval(a.Cdr.Car, callerEnv)
+          if err != nil { return err }
+          localEnv.Set(name, val)
+          found = true
+          break
+        }
+      }
+      if !found {
+        if def != nil {
+          val, err := Eval(def, closureEnv)
+          if err != nil { return err }
+          localEnv.Set(name, val)
+        } else {
+          localEnv.Set(name, MakeNil())
+        }
+      }
+    }
+  }
+
+  if !hasKey && argExprs != nil && argExprs.Type == LIST {
+    return fmt.Errorf("lambda: zu viele Argumente")
+  }
+  return nil
+}
+
+// evalExprList wertet eine Liste von Ausdrücken aus und liefert einen Slice.
+func evalExprList(exprs *Cell, env *Env) ([]*Cell, error) {
+  var result []*Cell
+  for exprs != nil && exprs.Type == LIST {
+    val, err := Eval(exprs.Car, env)
+    if err != nil { return nil, err }
+    result = append(result, val)
+    exprs = exprs.Cdr
+  }
+  return result, nil
 }

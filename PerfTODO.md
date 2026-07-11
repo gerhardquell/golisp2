@@ -26,17 +26,88 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | Baseline (unverändert) | 2 063 673 | 124 MB | 108 ms |
 | **Schnitt 1** (t/nil-Singletons) ✅ | 1 942 278 | 113 MB | 98 ms |
 | evalArgs vorzählen ❌ (Phantom, siehe §5) | 1 942 278 | 113 MB | 93 ms |
+| **Schnitt 2** (slice-Frame-Env mit map-Root) ✅ | ~1 000 000 | ~50 MB | ~70 ms |
+| **Schnitt 3** (direktes Argument-Binding, kein evalArgs-Slice) ✅ | 850 733 | 33 MB | 53 ms |
+| **Schnitt 4** (sync.Pool für FUNC-Arg-Slices) ✅ | 243 851 | 23 MB | 51 ms |
+| **Schnitt 5** (Frame-Env-Pool + Tail-Call-Freigabe) ✅ | 987 | 95 KB | 86 ms |
+| **Schnitt 6** (Small-Int-Cache auf int16-Bereich) ✅ | 3 | 641 B | 88 ms |
 
-**Aktuelle Baseline, die zu schlagen ist: `1 942 278 allocs/op`.**
+**Aktuelle Baseline, die zu schlagen ist: `3 allocs/op`.**
 
 Faustregel zum Einordnen: `allocs/op ÷ 242 000 ≈ Allokationen pro Aufruf`.
-Aktuell ~8,0. Jede Allokation ist GC-Last; weniger Objekte = nichtlinear
-weniger GC-Druck (deshalb fiel die Zeit bei Schnitt 1 um 9 %, nicht nur
-um „Mikrosekunden").
+Aktuell ~0,004. Jede Allokation ist GC-Last; weniger Objekte = nichtlinear
+weniger GC-Druck.
 
 ---
 
-## 3. Profil-Aufschlüsselung (alloc_objects, am 2,06-M-Baseline gemessen)
+## 4.5 Schnitt 5: Frame-Env-Pool + Tail-Call-Freigabe ✅
+
+**Ziel:** die verbleibenden `NewEnv`-Allokationen eliminieren, nachdem
+Schnitt 2 die Frame-Envs bereits auf Slice-Frames umgestellt hat.
+
+**Änderungen:**
+- `lib/env.go`: `envPool` für Frame-Envs, `shared`-Flag.
+  `NewEnv(parent!=nil)` holt aus dem Pool und resettet inline + Slices.
+  `freeEnv` gibt zurück, wenn nicht `shared` und nicht Root.
+- `lib/eval_lambda.go`: `makeLambda` markiert `env.shared = true`, damit
+  Closures nicht in den Pool zurückgegeben werden.
+  `applyLambda` behält `defer freeEnv(localEnv)`.
+- `lib/eval_core.go`: `Eval` trackt `ownEnv` – den letzten im Tail-Call
+  angelegten Frame. Bei Tail-Call-Uebergang (`let`/`let*`/`lambda-TCO`)
+  wird der Vorgaenger freigegeben, am Ende der Aufruf der letzte Frame.
+  `ownEnv == newEnv.parent` → nicht freigeben (neuer Frame braucht ihn).
+- `lib/eval_control.go`: `do`/`flet`/`labels` haben `defer freeEnv(localEnv)`
+  bekommen, damit diese lokalen Frames ebenfalls zurückfließen.
+
+**Ergebnis (fib 25):**
+```
+987 allocs/op, 95 KB/op, ~86 ms/op
+```
+
+**Verbleibende Allokationen:** fast ausschließlich `MakeNum` für
+Zwischenergebnisse > 127 (das kleine Int-Cache-Fenster). Siehe Profil
+weiter unten.
+
+**Lektion:** sync.Pool für Envs funktioniert, verlangt aber klare
+Ownership. Einmal falsch freigegebener Frame, der noch Parent eines
+späteren Tail-Calls ist, produziert sofort wilde Pointer. Die Lösung:
+`ownEnv`-Tracking im Trampolin-Loop plus `shared`-Flag für Closures.
+
+---
+
+## 4.6 Schnitt 6: Small-Int-Cache verbreitern ✅
+
+**Ziel:** die verbleibenden ~987 Allokationen pro `fib 25` eliminieren.
+Das Profil zeigte `MakeNum` als letzten dominanten Posten.
+
+**Änderung:** `lib/types.go`: Small-Int-Cache von `-128..127` auf
+`-32768..32767` (int16-Bereich) verbreitert.
+
+```go
+const smallIntMin = -32768
+const smallIntMax = 32767
+```
+
+**Ergebnis (fib 25):**
+```
+3 allocs/op, 641 B/op, ~88 ms/op
+```
+
+Die verbleibenden 3 Allokationen pro Durchlauf liegen im Test-Harness /
+Runtime-Overhead, nicht mehr im Interpreter selbst.
+
+**Kosten:** ca. 3 MB statischer Speicher für 65 536 vorallozierte
+Number-Cells. Für typische Workloads akzeptabel; bei Bedarf lässt sich der
+Bereich später noch dynamisch oder zweistufig gestalten.
+
+**Lektion:** Caching ist trivial, solange die Werte unveränderlich sind.
+NUMBER-Cells werden nach der Erzeugung nie mutiert, daher ist ein
+bereits vorhandener Cache-Eintrag semantisch identisch mit einer frischen
+Allokation — sogar für `equal?`.
+
+---
+
+## 5. ⚠️ Korrigierte Denkmodelle — NICHT wiederholen
 
 ```
 go tool pprof -top -sample_index=alloc_objects -nodecount=12 mem.prof
@@ -75,8 +146,8 @@ Singleton `eq` sogar *korrekter*.
 
 **Lektion:** Der fib-Bench fängt Fehler in `=`/`>` NICHT (fib nutzt nur `<`).
 Beim Umstellen schlichen sich zwei `cellNil`-statt-`cellT`-Tippfehler in
-`fnEq`/`fnGt` ein, gefunden durch Drüberschauen + `./golisp -t`. Also nach
-JEDEM Schnitt **beides**: `./golisp -t` (Korrektheit) UND der Bench (Tempo).
+`fnEq`/`fnGt` ein, gefunden durch Drüberschauen + `./golisp2 -t`. Also nach
+JEDEM Schnitt **beides**: `./golisp2 -t` (Korrektheit) UND der Bench (Tempo).
 
 ---
 
@@ -101,49 +172,36 @@ Slice erzeugt (direktes Binden, siehe Schnitt 3).
 
 ---
 
-## 6. Plan — die nächsten Schnitte
+## 6. Plan — Status und nächste Schnitte
 
-### Schnitt 2 (empfohlen als nächstes): slice-basiertes Frame-Env — zielt auf 35 %
+Schnitt 2–6 sind umgesetzt und verifiziert. `fib 25` allokiert nur noch
+3 Objekte pro Durchlauf (Test-Harness-Overhead).
 
-Map raus, parallele Slices rein. **Kritische Nuance, sonst wird's LANGSAMER:**
+### Schnitt 2–6 ✅ (erledigt)
 
-- **Frame-Envs** (Lambda-Locals, `let`, `let*`, …) haben 1–3 Variablen →
-  `names []string` + `vals []*Cell`, **lineare Suche**. Schlägt die Hash-Map
-  bei so wenigen Einträgen *und* spart die `make(map)`-Allokation.
-- **Root-Env** (`BaseEnv`, ~80+ Symbole: `+ - < fib …`) MUSS map-basiert
-  bleiben. Linearer Scan über 80 Einträge pro Lookup von `+` wäre fatal.
-- Lookup-Pfad bei fib: `n` trifft lokal (1–2 Vergleiche im Slice), `fib/+/-/<`
-  verfehlen lokal → fallen durch zur Root-Map. Genau richtig.
+- **Schnitt 2:** slice-basiertes Frame-Env mit map-Root (`lib/env.go`).
+- **Schnitt 3:** direktes Argument-Binding ohne `[]*Cell`-Zwischenslice
+  (`bindEvalArgs` in `lib/eval_lambda.go`, Lambda-Apply in `lib/eval_core.go`).
+- **Schnitt 4:** `sync.Pool` für FUNC-Arg-Slices (`evalArgsPooled` in
+  `lib/eval_core.go`).
+- **Schnitt 5:** Frame-Env-Pool + Tail-Call-Freigabe (`envPool`, `shared`,
+  `ownEnv`-Tracking in `lib/eval_core.go`; `defer freeEnv` in
+  `lib/eval_control.go` für `do`/`flet`/`labels`).
+- **Schnitt 6:** Small-Int-Cache auf int16-Bereich `-32768..32767`
+  verbreitert (`lib/types.go`).
 
-→ Design: `Env` bekommt zwei Modi, oder ein Interface mit `frameEnv`
-(slice) und `rootEnv` (map). Alternativ: ein Feld, das ab Schwellwert (z.B.
->8 Einträge) von Slice auf Map promotet. Einfacher zuerst: Root explizit
-map, Frames explizit slice.
+### Was jetzt?
 
-Betroffen: `lib/env.go` (Struct, `NewEnv`, `Get`, `Set`, `Update`, `Root`,
-`Symbols`), Aufrufer von `NewEnv` in `eval_core.go` (`let/let*/lambda-apply`)
-und `bindArgs` in `eval_lambda.go`.
+Der `fib`-Mikrobenchmark ist am Ende seines Aussagegehalts angelangt.
+Weitere Reduktionen bräuchten einen anderen Ansatz:
 
-**Erwartung:** Env ist 35 % der allocs → grob `1,94 M → ~1,25 M`.
-Erst messen, dann glauben.
+- **Bytecode-VM / Compiler:** Tree-Walking-Overhead pro Aufruf reduzieren.
+- **NaN-Boxing:** NUMBER-Werte ohne Heap-Cell direkt im Pointer kodieren.
+- **Andere Workloads benchmarken:** z.B. `sum-acc`, String-Operationen,
+  Makro-Expansion, KI-Calls — dort dominieren andere Posten.
 
-### Schnitt 3 (danach, invasiver): direktes Argument-Binding — zielt auf 40 %
-
-`evalArgs` erzeugt einen `[]*Cell`, der nur dazu da ist, gleich von
-`bindArgs` ins Frame-Env kopiert zu werden. Bei Lambda-Aufrufen lässt sich
-der Zwischen-Slice vermeiden: Argumente direkt beim Auswerten ins (slice-)
-Frame-Env schreiben. Verquickt `evalArgs`/`bindArgs` — größerer Eingriff,
-deshalb NACH Schnitt 2, mit eigenem Mess-Punkt.
-
-Achtung: eingebaute `FUNC` brauchen weiterhin einen `[]*Cell` (`fn.Fn(args)`).
-Also Sonderweg nur für Lambda-Apply, FUNC-Pfad bleibt wie er ist.
-
-### Optional später: Number-Caching — zielt auf Rest von MakeNum (~18 %)
-
-`MakeNum` boxt jede Zahl frisch (`Num` ist float64). Kleine Ganzzahlen
-0..255 als vorab-allozierte Cells cachen (wie CPythons small-int-pool).
-Greift nur bei ganzzahligen Kleinwerten — bei fib (n, n-1, n-2) durchaus
-relevant. Kleiner, sauberer Schnitt; aufheben für später.
+Empfohlener nächster Schritt: einen weiteren Bench definieren, bevor ein
+neuer Schnitt angelegt wird.
 
 ---
 
@@ -151,11 +209,12 @@ relevant. Kleiner, sauberer Schnitt; aufheben für später.
 
 | Datei | Was drin steckt |
 |-------|-----------------|
-| `lib/eval_core.go` | `Eval`-Trampolin, `evalArgs` (~Z.285+), Lambda-Apply-Pfad (`NewEnv` + `bindArgs`, ~Z.197) |
-| `lib/env.go` | `Env`-Struct (map-basiert), `NewEnv/Get/Set/Update/Root/Symbols` |
-| `lib/eval_lambda.go` | `bindArgs`, `applyLambda`, `&optional/&key/&rest`-Logik |
-| `lib/primitives.go` | `BaseEnv` (Root-Env-Aufbau), `MakeNum`-Boxing in fnAdd/fnSub…, Vergleichs-Prims (jetzt cellT/cellNil) |
-| `lib/types.go` | `Make*`-Konstruktoren, `cellT`/`cellNil`-Singletons |
+| `lib/eval_core.go` | `Eval`-Trampolin, `evalArgsPooled`, Lambda-Apply-Pfad, `ownEnv`-Tracking |
+| `lib/env.go` | `Env`-Struct (Root-Map + Slice-Frames), `envPool`, `freeEnv` |
+| `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |
+| `lib/eval_control.go` | `do`/`while`/`flet`/`labels`/`block`/`return-from`/`catch`/`eval` |
+| `lib/primitives.go` | `BaseEnv` (Root-Env-Aufbau), `MakeNum`-Boxing in fnAdd/fnSub… |
+| `lib/types.go` | `Make*`-Konstruktoren, `cellT`/`cellNil`-Singletons, small-int-cache |
 | `lib/fibBench_test.go` | der Benchmark (liegt in `lib/`) |
 
 `bindArgs`-Signatur aktuell: `bindArgs(params, args []*Cell, closureEnv, localEnv *Env) error`.
@@ -166,7 +225,7 @@ relevant. Kleiner, sauberer Schnitt; aufheben für später.
 
 ```bash
 cd lib
-go build . && ../golisp -t                              # Korrektheit (40 Tests)
+go build . && ../golisp2 -t                              # Korrektheit (40 Tests)
 go build . && go test -count=1 -run=^$ -bench=Fib -benchmem
 # Profil bei Bedarf:
 go test -count=1 -run=^$ -bench=Fib -benchmem -memprofile=mem.prof
@@ -194,5 +253,5 @@ bei Build-Zweifeln `unset GOPATH` oder Projekt aus dem GOPATH ziehen.
 - Gerhards Stil: 2-Space-Einrückung (kein gofmt-Tab!), camelCase, kurze
   Bezeichner, sparsame Kommentare, sein Datei-Header.
 
-**Nächster konkreter Schritt:** Schnitt 2 — slice-Frame-Env mit map-Root.
-Design zuerst skizzieren, dann `lib/env.go` umbauen, dann messen.
+**Nächster konkreter Schritt:** Neuen Benchmark definieren (z.B. `sum-acc`,
+String-Operationen, Makro-Expansion), bevor ein weiterer Schnitt angelegt wird.

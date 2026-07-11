@@ -382,6 +382,9 @@ func fnNull(args []*Cell) (*Cell, error) {
 func fnList(args []*Cell) (*Cell, error) {
 	result := MakeNil()
 	for i := len(args) - 1; i >= 0; i-- {
+		if args[i] == nil {
+			return nil, fmt.Errorf("list: Argument %d ist nil", i+1)
+		}
 		result = Cons(args[i], result)
 	}
 	return result, nil

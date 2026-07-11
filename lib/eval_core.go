@@ -14,11 +14,27 @@
 
 package lib
 
-import "fmt"
+import (
+  "fmt"
+  "sync"
+)
 
 // Eval wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
 // setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
 func Eval(expr *Cell, env *Env) (*Cell, error) {
+  // ownEnv trackt den letzten Frame, den dieser Eval-Aufruf im Tail-Call
+  // angelegt hat. Er wird am Ende freigegeben; bei Tail-Calls wird der
+  // Vorgaenger vor dem Uebergang freigegeben, damit Rekursion O(1) allokiert.
+  var ownEnv *Env
+  takeEnv := func(newEnv *Env) *Env {
+    if ownEnv != nil && ownEnv != newEnv.parent && ownEnv.parent != nil && !ownEnv.shared {
+      freeEnv(ownEnv)
+    }
+    ownEnv = newEnv
+    return newEnv
+  }
+  defer func() { freeEnv(ownEnv) }()
+
   for {
     if expr == nil { return MakeNil(), nil }
 
@@ -96,24 +112,25 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
           val, err := Eval(b.Cdr.Car, env)
-          if err != nil { return nil, err }
+          if err != nil { freeEnv(localEnv); return nil, err }
           localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
         }
         // Handle multiple body expressions in let
         body := expr.Cdr.Cdr
         if body == nil {
+          freeEnv(localEnv)
           return MakeNil(), nil
         }
         // Evaluate all but the last expression
         for body.Cdr != nil && body.Cdr.Type == LIST {
           _, err := Eval(body.Car, localEnv)
-          if err != nil { return nil, err }
+          if err != nil { freeEnv(localEnv); return nil, err }
           body = body.Cdr
         }
         // Tail call optimization for the last expression
         expr = body.Car
-        env = localEnv
+        env = takeEnv(localEnv)
         continue
 
       case "let*":
@@ -123,22 +140,23 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
           val, err := Eval(b.Cdr.Car, localEnv)  // Im lokalen env auswerten!
-          if err != nil { return nil, err }
+          if err != nil { freeEnv(localEnv); return nil, err }
           localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
         }
         // Body ausführen
         body := expr.Cdr.Cdr
         if body == nil {
+          freeEnv(localEnv)
           return MakeNil(), nil
         }
         for body.Cdr != nil && body.Cdr.Type == LIST {
           _, err := Eval(body.Car, localEnv)
-          if err != nil { return nil, err }
+          if err != nil { freeEnv(localEnv); return nil, err }
           body = body.Cdr
         }
         expr = body.Car
-        env = localEnv
+        env = takeEnv(localEnv)
         continue
 
       case "cond":
@@ -190,26 +208,70 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
       continue
     }
 
-    args, err := evalArgs(expr.Cdr, env)
-    if err != nil { return nil, err }
-
-    // Lambda → Argumente binden, Loop weiter (TCO)
+    // Lambda → Argumente direkt binden, Loop weiter (TCO)
     if fn.Type == LIST {
       closureEnv := fn.Env.(*Env)
       localEnv := NewEnv(closureEnv)
-      if err := bindArgs(fn.Car, args, closureEnv, localEnv); err != nil {
+      if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv); err != nil {
+        freeEnv(localEnv)
         return nil, err
       }
       expr = fn.Cdr   // body
-      env = localEnv
+      env = takeEnv(localEnv)
       continue
     }
 
-    // Eingebaute Funktion
+    // Eingebaute Funktion: Argumente in Slice auswerten
     if fn.Type != FUNC {
       return nil, fmt.Errorf("eval: '%s' ist keine Funktion", fn)
     }
-    return fn.Fn(args)
+    args, pooled, err := evalArgsPooled(expr.Cdr, env)
+    if err != nil { return nil, err }
+    res, err := fn.Fn(args)
+    if pooled { putArgSlice(args) }
+    return res, err
+  }
+}
+
+// Pool fuer kurze Argument-Slices eingebauter Funktionen. Die meisten
+// FUNC-Aufrufe haben <= 8 Argumente; der Pool vermeidet eine Heap-Allokation
+// pro Aufruf. Groessere Argumentlisten fallen auf make([]*Cell, ...) zurueck.
+var argSlicePool = sync.Pool{
+  New: func() interface{} { return new([8]*Cell) },
+}
+
+// evalArgsPooled wertet Argumente aus und liefert einen Slice. pooled==true
+// bedeutet, der Slice stammt aus argSlicePool und muss mit putArgSlice
+// zurueckgegeben werden.
+func evalArgsPooled(args *Cell, env *Env) ([]*Cell, bool, error) {
+  buf := argSlicePool.Get().(*[8]*Cell)
+  result := buf[:0]
+  pooled := true
+
+  for args != nil && args.Type == LIST {
+    if pooled && len(result) >= cap(result) {
+      // Mehr als 8 Argumente: auf Heap-Buffer umschalten, Pool-Buffer freigeben.
+      heap := make([]*Cell, len(result), len(result)+4)
+      copy(heap, result)
+      argSlicePool.Put((*[8]*Cell)(buf[:8]))
+      result = heap
+      pooled = false
+    }
+    val, err := Eval(args.Car, env)
+    if err != nil {
+      if pooled { argSlicePool.Put((*[8]*Cell)(buf[:8])) }
+      return nil, false, err
+    }
+    result = append(result, val)
+    args = args.Cdr
+  }
+  return result, pooled, nil
+}
+
+// putArgSlice gibt einen aus evalArgsPooled stammenden Slice zurueck.
+func putArgSlice(s []*Cell) {
+  if cap(s) == 8 {
+    argSlicePool.Put((*[8]*Cell)(s[:8]))
   }
 }
 

@@ -1,7 +1,7 @@
-# GoLisp – CLAUDE.md
+# GoLisp2 – CLAUDE.md
 
 ## Projekt-Übersicht
-GoLisp ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung (sigoREST).
+GoLisp2 ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung (sigoREST).
 Ziel: Ein selbsterweiterndes System das Goroutinen, Channels und KI-Calls
 als eingebaute Lisp-Primitiven beherrscht.
 
@@ -158,7 +158,7 @@ Einzelner Ausdruck → direkt, kein Overhead.
 
 ## Unix-Style CLI
 
-GoLisp verhält sich wie ein typisches Unix-Tool:
+GoLisp2 verhält sich wie ein typisches Unix-Tool:
 
 | Flag | Beschreibung | Beispiel |
 |------|--------------|----------|
@@ -191,7 +191,7 @@ EOF
 
 ---
 
-## GoLisp Server (golisp2d) – SWANK-TCP-Server
+## GoLisp2 Server (golisp2d) – SWANK-TCP-Server
 
 `golisp2d` ist der Server-Prozess. Er spricht das **echte SWANK-Protokoll**
 (length-prefixed `:emacs-rex`-RPC) — dieselbe Implementierung, die auch
@@ -380,7 +380,7 @@ Optional ausbaufähig (nicht im aktuellen Scope): Inspector, Debugger/Restarts,
 
 ## sigoREST Anbindung
 
-GoLisp spricht mit dem sigoREST-Server:
+GoLisp2 spricht mit dem sigoREST-Server:
 ```
 Host: http://127.0.0.1:9080 (Default)
 Endpoint: POST /v1/chat/completions
@@ -388,7 +388,7 @@ Endpoint: POST /v1/chat/completions
 
 ### Konfiguration via Umgebungsvariablen
 
-Beim Start liest GoLisp (analog `GOLISP_HOST`/`GOLISP_PORT` für `golisp2d`):
+Beim Start liest GoLisp2 (analog `GOLISP_HOST`/`GOLISP_PORT` für `golisp2d`):
 
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
@@ -472,7 +472,7 @@ Ohne Host-Parameter wird der Default-Host (`sigo-host`) verwendet.
 
 ### Das selbsterweiternde Muster
 ```lisp
-; KI schreibt Code → GoLisp führt ihn aus
+; KI schreibt Code → GoLisp2 führt ihn aus
 (eval (read (sigo "schreibe (defun fib (n) ...)" "cl46-s")))
 (fib 10)
 
@@ -491,7 +491,7 @@ Ohne Host-Parameter wird der Default-Host (`sigo-host`) verwendet.
 
 ## Memory Management
 
-GoLisp vertraut vollständig auf Go's Garbage Collector – es gibt kein
+GoLisp2 vertraut vollständig auf Go's Garbage Collector – es gibt kein
 manuelles Memory-Management. Das bedeutet:
 
 ### Wie es funktioniert
@@ -657,13 +657,13 @@ echo "(+ 1 2)" | ./golisp2; echo $?      # → 0
 
 ## Philosophie
 
-GoLisp ist ein **U-Boot-Projekt** – es reift in Ruhe bevor es
+GoLisp2 ist ein **U-Boot-Projekt** – es reift in Ruhe bevor es
 der Welt gezeigt wird. Ziele:
 
 - **Nexialistisch:** verbindet Go-Effizienz + Lisp-Eleganz + KI-Power
-- **Selbsterweiternd:** GoLisp kann sich durch KI-Calls selbst vervollständigen
+- **Selbsterweiternd:** GoLisp2 kann sich durch KI-Calls selbst vervollständigen
 - **Ensemble-fähig:** mehrere KIs parallel → Synthese durch Claude
 - **Centaur-Ansatz:** Mensch als Meta-Entscheider, KIs als Spezialisten
 
 > "Code = Daten + KI = sich selbst erweiterndes System"
-> – Gerhard & Claude, Februar 2026
+> – Gerhard & Claude, Juli 2026

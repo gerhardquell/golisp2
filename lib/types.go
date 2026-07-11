@@ -8,7 +8,9 @@
 
 package lib
 
-import "fmt"
+import (
+  "fmt"
+)
 
 type LispType int
 
@@ -47,8 +49,8 @@ var cellNil = &Cell{Type: NIL}
 // Cache fuer kleine Ganzzahlen: die meisten Zahlen in Lisp-Programmen
 // (Zaehler, Indizes, arithmetische Zwischenergebnisse) liegen in diesem
 // Bereich. NUMBER-Cells sind unveraenderlich, daher thread-sicher.
-const smallIntMin = -128
-const smallIntMax = 127
+const smallIntMin = -32768
+const smallIntMax = 32767
 const smallIntCount = smallIntMax - smallIntMin + 1
 
 var smallIntCache [smallIntCount]*Cell

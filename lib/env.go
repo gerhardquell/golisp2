@@ -8,7 +8,16 @@
 
 package lib
 
-import "fmt"
+import (
+  "fmt"
+  "sync"
+)
+
+// envPool wiederverwendet Frame-Envs (parent != nil), die nicht mehr
+// referenziert werden. Root-Envs (parent == nil) werden nie gepoolt.
+var envPool = sync.Pool{
+  New: func() interface{} { return &Env{} },
+}
 
 // Env ist eine verkettete Umgebung: lokaler Scope -> aeusserer Scope.
 // Root-Env (parent == nil) nutzt eine Hash-Map fuer ~80+ eingebaute Symbole.
@@ -24,41 +33,81 @@ type Env struct {
   singleVal  *Cell
   names      []string
   vals       []*Cell
+  // shared == true: von mindestens einer Closure referenziert – darf nicht
+  // in den Pool zurueckgegeben werden.
+  shared     bool
+  // mu schuetzt Lese-/Schreibzugriffe fuer parfunc (mehrere Goroutinen
+  // koennen dasselbe Env gleichzeitig nutzen).
+  mu         sync.RWMutex
 }
 
 // NewEnv erzeugt ein Root-Env (parent == nil) mit Map, sonst ein Frame-Env
-// mit inline + Slice-Speicher.
+// mit inline + Slice-Speicher (aus dem Pool wenn moeglich).
 func NewEnv(parent *Env) *Env {
   if parent == nil {
     return &Env{vars: make(map[string]*Cell)}
   }
-  return &Env{parent: parent}
+  e := envPool.Get().(*Env)
+  e.parent = parent
+  e.singleName = ""
+  e.singleVal = nil
+  e.names = e.names[:0]
+  if cap(e.vals) > 0 {
+    for i := range e.vals { e.vals[i] = nil }
+  }
+  e.vals = e.vals[:0]
+  e.shared = false
+  return e
+}
+
+// freeEnv gibt ein Frame-Env in den Pool zurueck, sofern es nicht shared
+// ist. Root-Envs werden ignoriert.
+func freeEnv(e *Env) {
+  if e == nil || e.parent == nil || e.shared {
+    return
+  }
+  e.singleName = ""
+  e.singleVal = nil
+  for i := range e.vals { e.vals[i] = nil }
+  e.names = e.names[:0]
+  e.vals = e.vals[:0]
+  e.parent = nil
+  e.shared = false
+  envPool.Put(e)
 }
 
 // Get sucht einen Namen – erst lokal, dann im aeusseren Scope
 func (e *Env) Get(name string) (*Cell, error) {
+  e.mu.RLock()
   if e.parent == nil {
     if val, ok := e.vars[name]; ok {
+      e.mu.RUnlock()
       return val, nil
     }
+    e.mu.RUnlock()
     return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
   }
   if e.singleName == name {
-    return e.singleVal, nil
+    val := e.singleVal
+    e.mu.RUnlock()
+    return val, nil
   }
   for i, n := range e.names {
     if n == name {
-      return e.vals[i], nil
+      val := e.vals[i]
+      e.mu.RUnlock()
+      return val, nil
     }
   }
-  if e.parent != nil {
-    return e.parent.Get(name)
-  }
-  return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
+  parent := e.parent
+  e.mu.RUnlock()
+  return parent.Get(name)
 }
 
 // Set legt einen Wert im aktuellen Scope ab
 func (e *Env) Set(name string, val *Cell) {
+  e.mu.Lock()
+  defer e.mu.Unlock()
   if e.parent == nil {
     e.vars[name] = val
     return
@@ -88,17 +137,25 @@ func (e *Env) Set(name string, val *Cell) {
 // REPL-Eval heraus lokal im Child-Env definiert und ginge verloren.
 func (e *Env) Root() *Env {
   cur := e
-  for cur.parent != nil {
-    cur = cur.parent
+  for {
+    cur.mu.RLock()
+    if cur.parent == nil {
+      cur.mu.RUnlock()
+      return cur
+    }
+    next := cur.parent
+    cur.mu.RUnlock()
+    cur = next
   }
-  return cur
 }
 
 // Symbols sammelt alle bekannten Namen (inkl. aeussere Scopes, ohne Duplikate)
 func (e *Env) Symbols() []string {
   seen := make(map[string]bool)
   var result []string
-  for cur := e; cur != nil; cur = cur.parent {
+  cur := e
+  for cur != nil {
+    cur.mu.RLock()
     if cur.parent == nil {
       for name := range cur.vars {
         if !seen[name] {
@@ -106,7 +163,8 @@ func (e *Env) Symbols() []string {
           result = append(result, name)
         }
       }
-      continue
+      cur.mu.RUnlock()
+      break
     }
     if cur.singleName != "" && !seen[cur.singleName] {
       seen[cur.singleName] = true
@@ -118,12 +176,17 @@ func (e *Env) Symbols() []string {
         result = append(result, name)
       }
     }
+    next := cur.parent
+    cur.mu.RUnlock()
+    cur = next
   }
   return result
 }
 
 // Update aendert einen bestehenden Wert (fuer set!)
 func (e *Env) Update(name string, val *Cell) error {
+  e.mu.Lock()
+  defer e.mu.Unlock()
   if e.parent == nil {
     if _, ok := e.vars[name]; ok {
       e.vars[name] = val

@@ -1,3 +1,6 @@
+# Superpowers scratch
+.superpowers/
+
 # Python cache
 __pycache__/
 *.pyc

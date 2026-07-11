@@ -40,6 +40,7 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
   }
   // Variablen-Bindungen initialisieren
   localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
   bindings := args.Car
   for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car                         // (var init step)
@@ -117,6 +118,7 @@ func evalFlet(args *Cell, env *Env) (*Cell, error) {
     return nil, fmt.Errorf("flet: Syntax: (flet ((name params body...) ...) body...)")
   }
   localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
   for defs := args.Car; defs != nil && defs.Type == LIST; defs = defs.Cdr {
     def  := defs.Car
     name := def.Car.Val
@@ -132,6 +134,7 @@ func evalLabels(args *Cell, env *Env) (*Cell, error) {
     return nil, fmt.Errorf("labels: Syntax: (labels ((name params body...) ...) body...)")
   }
   localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
   for defs := args.Car; defs != nil && defs.Type == LIST; defs = defs.Cdr {
     def  := defs.Car
     name := def.Car.Val

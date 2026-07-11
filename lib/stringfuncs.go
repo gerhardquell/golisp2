@@ -70,6 +70,9 @@ func fnStringLength(args []*Cell) (*Cell, error) {
 func fnStringAppend(args []*Cell) (*Cell, error) {
   var sb strings.Builder
   for i, a := range args {
+    if a == nil {
+      return nil, fmt.Errorf("string-append: Argument %d ist nil", i+1)
+    }
     if a.Type != STRING {
       return nil, fmt.Errorf("string-append: Argument %d ist kein String", i+1)
     }

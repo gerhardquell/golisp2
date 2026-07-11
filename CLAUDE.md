@@ -139,12 +139,30 @@ Einzelner Ausdruck → direkt, kein Overhead.
   Parametern + Modifiern `:` `@`; dest = `t`→stdout, `nil`→String, String→anhängen;
   `~/name/` ruft benannte Funktion via globalFormatEnv, `~:;` markiert Default-Klausel)
 **Fehler:** `error` `catch`
+**Exec:** `exec`
 **Makro-Hilfe:** `gensym`
 **Datei:** `file-write` `file-append` `file-read` `file-exists?` `file-delete`
 **Nebenläufigkeit:** `chan-make` `chan-send` `chan-recv` `lock-make`
 **KI:** `sigo` `sigo-models` `sigo-host`
 **Zeit:** `sleep`
 **Memory:** `memstats`
+
+### `exec`
+
+Externe Programme direkt ausführen:
+```lisp
+(exec "programm"
+      param: "arg1"
+      param: "arg2"
+      stdin:  eingabe
+      stdout: ausgabe-var
+      stderr: fehler-var
+      exitcd: code-var)
+```
+- `param:` und `stdin:` werden ausgewertet, `stdout:`, `stderr:`, `exitcd:` sind Variablennamen.
+- Rückgabe `t` bei erfolgreichem Start/Beenden, `nil` bei technischem Fehler (z. B. Programm nicht gefunden).
+- Exit-Code ≠ 0 ist kein Fehler; er landet in `exitcd:`.
+- Standard-Timeout: 60 Sekunden.
 
 ### REPL (readline.go) – `golisp2 -i`
 - **Start:** `./golisp2 -i` (benötigt TTY – im Script/CI kommt Fehlermeldung)

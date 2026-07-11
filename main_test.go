@@ -36,6 +36,26 @@ func TestRunExpressionSingleFormPrintsResult(t *testing.T) {
   }
 }
 
+func TestRunExpressionSingleSideEffectFormPrintsReturnValue(t *testing.T) {
+  var out bytes.Buffer
+  var errOut bytes.Buffer
+  env := lib.BaseEnv()
+  lib.SetOutputWriter(func(s string) error { _, err := out.WriteString(s); return err })
+  defer lib.ResetOutputWriter()
+
+  code := runExpression(`(println "a")`, env, &out, &errOut)
+
+  if code != 0 {
+    t.Fatalf("runExpression exit code = %d, want 0", code)
+  }
+  if errOut.Len() != 0 {
+    t.Fatalf("unexpected stderr: %q", errOut.String())
+  }
+  if got := out.String(); got != "\"a\"\n\"a\"\n" {
+    t.Fatalf("stdout = %q, want %q", got, "\"a\"\n\"a\"\n")
+  }
+}
+
 func TestRunExpressionMultiFormSuppressesFinalResult(t *testing.T) {
   var out bytes.Buffer
   var errOut bytes.Buffer

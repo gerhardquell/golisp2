@@ -10,8 +10,6 @@ package shm
 import (
   "fmt"
   "sync"
-  // "shm"
-  // "./shm"  // Deine eigene SHM-Implementation
 )
 
 //########################################
@@ -41,13 +39,17 @@ type ShmPool struct {
 //########################################
 var globalPool *ShmPool
 var once sync.Once
+var initErr error
 
 //########################################
 func GetPool() (*ShmPool, error) {
-  var initErr error
   once.Do(func() {
-    globalPool = &ShmPool{}
-    initErr = globalPool.Init()
+    p := &ShmPool{}
+    if err := p.Init(); err != nil {
+      initErr = err
+      return
+    }
+    globalPool = p
   })
   if initErr != nil {
     return nil, initErr
@@ -64,35 +66,57 @@ func (p *ShmPool) Init() error {
     return nil
   }
   
+  created := make([]*ShmBlock, 0, MAX_POOLS)
+
   for i := 0; i < MAX_POOLS; i++ {
     key := SHM_BASE + i
-    
+
     // SHM erstellen mit deiner API
     shmID, err := ShmGet(key, POOL_SIZE, IPC_CREAT|0644)
     if err != nil {
+      p.rollback(created)
       return fmt.Errorf("ERR100: SHM create failed pool %d: %v", i, err)
     }
-    
+
     // SHM anhängen
     data, err := ShmAt(shmID, 0, 0)
     if err != nil {
+      ShmRm(shmID)
+      p.rollback(created)
       return fmt.Errorf("ERR101: SHM attach failed pool %d: %v", i, err)
     }
-    
-    p.blocks[i] = &ShmBlock{
+
+    block := &ShmBlock{
       ID:       i,
-      Key:      key, 
+      Key:      key,
       ShmID:    shmID,
       Data:     data,
       InUse:    false,
       WorkerID: -1,
     }
-    
+    p.blocks[i] = block
+    created = append(created, block)
+
     // Block initialisiert, kein stdout-Output im Initialisierungsloop.
   }
-  
+
   p.inited = true
   return nil
+}
+
+//########################################
+func (p *ShmPool) rollback(created []*ShmBlock) {
+  for _, block := range created {
+    if block == nil {
+      continue
+    }
+    if block.Data != nil {
+      ShmDt(block.Data)
+    }
+    if block.ShmID != 0 {
+      ShmRm(block.ShmID)
+    }
+  }
 }
 
 //########################################

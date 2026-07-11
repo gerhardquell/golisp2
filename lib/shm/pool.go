@@ -87,7 +87,7 @@ func (p *ShmPool) Init() error {
 
   created := make([]*ShmBlock, 0, MAX_POOLS)
 
-  for i := 0; i < MAX_POOLS; i++ {
+  for i := range MAX_POOLS {
     key := SHM_BASE + i
 
     shmID, err := ShmGet(key, POOL_SIZE, IPC_CREAT|0600)
@@ -144,7 +144,7 @@ func (p *ShmPool) Allocate(workerID int) (*ShmBlock, error) {
     return nil, fmt.Errorf("Allocate: Pool ist nicht initialisiert")
   }
 
-  for i := 0; i < MAX_POOLS; i++ {
+  for i := range MAX_POOLS {
     if !p.blocks[i].InUse {
       p.blocks[i].InUse = true
       p.blocks[i].WorkerID = workerID

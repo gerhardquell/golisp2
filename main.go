@@ -102,10 +102,10 @@ func runTests(env *lib.Env) {
 // result is printed; for multiple forms only side effects are emitted so
 // scripts like (exec ...) (println out) (println cd) produce clean output.
 // Returns exit code 0 on success, 1 on error.
-func runExpression(expr string, env *lib.Env) int {
+func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) int {
 	cells, err := lib.ReadAll(expr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERR read: %v\n", err)
+		fmt.Fprintf(errOut, "ERR read: %v\n", err)
 		return 1
 	}
 	if cells == nil || cells.Type == lib.NIL {
@@ -132,16 +132,16 @@ func runExpression(expr string, env *lib.Env) int {
 		if err != nil {
 			var le *lib.LispError
 			if errors.As(err, &le) {
-				fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
+				fmt.Fprintf(errOut, "ERR: %s\n", le.Msg)
 			} else {
-				fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+				fmt.Fprintf(errOut, "ERR: %v\n", err)
 			}
 			return 1
 		}
 		cur = cur.Cdr
 	}
 	if formCount == 1 {
-		fmt.Println(result)
+		fmt.Fprintln(out, result)
 	}
 	return 0
 }
@@ -328,7 +328,7 @@ func main() {
 
 	// Expression-Modus: golisp2 -e "(expr)"
 	if *exprFlag != "" {
-		exitCode := runExpression(*exprFlag, env)
+		exitCode := runExpression(*exprFlag, env, os.Stdout, os.Stderr)
 		os.Exit(exitCode)
 	}
 

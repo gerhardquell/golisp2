@@ -1,3 +1,13 @@
+//**********************************************************************
+//  lib/shm_lisp_test.go
+//  Autor    : Gerhard Quell - gquell@skequell.de
+//  CoAutor  : claude sonnet 4.6
+//  Copyright: 2026 Gerhard Quell - SKEQuell
+//  Erstellt : 20260711
+//**********************************************************************
+// Tests fuer Shared-Memory Primitiven (Task 1: shm-alloc / shm-free)
+//**********************************************************************
+
 package lib
 
 import (

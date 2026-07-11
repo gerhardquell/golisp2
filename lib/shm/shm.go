@@ -1,3 +1,10 @@
+//      lib/shm/shm.go
+//  Autor    : Gerhard Quell - gquell@skequell.de
+//  CoAutor  : claude sonnet 4.6
+//  Copyright: 2026 Gerhard Quell - SKEQuell
+//  Erstellt : 20260711
+//########################################
+
 package shm
 // ------------------------------------------------------------------------------
 import (

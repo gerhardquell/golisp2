@@ -45,7 +45,11 @@ func RegisterShm(env *Env) {
 }
 
 func fnShmAlloc(args []*Cell) (*Cell, error) {
-  block, err := shm.GetPool().Allocate(0)
+  pool, err := shm.GetPool()
+  if err != nil {
+    return nil, fmt.Errorf("shm-alloc: %v", err)
+  }
+  block, err := pool.Allocate(0)
   if err != nil {
     return nil, fmt.Errorf("shm-alloc: %v", err)
   }
@@ -60,7 +64,11 @@ func fnShmFree(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("shm-free: %v", err)
   }
-  if err := shm.GetPool().Release(block.ID); err != nil {
+  pool, err := shm.GetPool()
+  if err != nil {
+    return nil, fmt.Errorf("shm-free: %v", err)
+  }
+  if err := pool.Release(block.ID); err != nil {
     return nil, fmt.Errorf("shm-free: %v", err)
   }
   return cellT, nil

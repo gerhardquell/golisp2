@@ -1,8 +1,8 @@
-//      shmpool/pool.go
+//      lib/shm/pool.go
 //  Autor    : Gerhard Quell - gquell@skequell.de
 //  CoAutor  : claude 4.0 sonnet
 //  Copyright: 2025 Gerhard Quell - SKEQuell
-//  Erstellt : 20250911
+//  Erstellt : 20260711
 //########################################
 
 package shm
@@ -17,7 +17,7 @@ import (
 //########################################
 const (
   MAX_POOLS = 150
-  POOL_SIZE = 2048 * 1024  // 1MB pro Pool
+  POOL_SIZE = 2048 * 1024  // 2MB pro Pool
   SHM_BASE  = 0x2000       // Basis SHM-Key
 )
 
@@ -43,12 +43,16 @@ var globalPool *ShmPool
 var once sync.Once
 
 //########################################
-func GetPool() *ShmPool {
+func GetPool() (*ShmPool, error) {
+  var initErr error
   once.Do(func() {
     globalPool = &ShmPool{}
-    globalPool.Init()
+    initErr = globalPool.Init()
   })
-  return globalPool
+  if initErr != nil {
+    return nil, initErr
+  }
+  return globalPool, nil
 }
 
 //########################################
@@ -134,6 +138,9 @@ func (p *ShmPool) Release(blockID int) error {
 
 //########################################
 func (p *ShmPool) WriteData(blockID int, data []byte) error {
+  p.mutex.Lock()
+  defer p.mutex.Unlock()
+
   if blockID < 0 || blockID >= MAX_POOLS {
     return fmt.Errorf("ERR105: Invalid block ID %d", blockID)
   }
@@ -153,6 +160,9 @@ func (p *ShmPool) WriteData(blockID int, data []byte) error {
 
 //########################################
 func (p *ShmPool) ReadData(blockID int, maxLen int) ([]byte, error) {
+  p.mutex.Lock()
+  defer p.mutex.Unlock()
+
   if blockID < 0 || blockID >= MAX_POOLS {
     return nil, fmt.Errorf("ERR108: Invalid block ID %d", blockID)
   }

@@ -28,6 +28,7 @@ bin/
 *.backup
 *.bak
 *.swp
+*.swo
 *~
 *.tmp
 

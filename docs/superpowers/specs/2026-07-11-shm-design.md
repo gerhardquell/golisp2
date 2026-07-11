@@ -19,19 +19,22 @@ Die bestehende Shared-Memory-Bibliothek `lib/shm` (SysV SHM + Pool-Manager) soll
 
 | Primitive | Signatur | Rückgabe |
 |-----------|----------|----------|
-| `shm-alloc` | `(shm-alloc)` | Handle `#<shm-block N>` |
+| `shm-alloc` | `(shm-alloc [worker-id])` | Handle `#<shm-block N>` |
 | `shm-free` | `(shm-free handle)` | `t` |
 | `shm-write` | `(shm-write handle string)` | Geschriebener String |
 | `shm-read` | `(shm-read handle [len])` | String |
-| `shm-status` | `(shm-status)` | `t` (druckt Tabelle) |
-| `shm-cleanup` | `(shm-cleanup)` | `t` |
+| `shm-status` | `(shm-status)` | Assoziationsliste `((total . N) (used . N) (free . N))` |
+| `shm-cleanup` | `(shm-cleanup)` | Anzahl freigegebener Blöcke (Zahl) |
 
 ### Semantik
 
+- `(shm-alloc)` alloziiert einen Block mit `WorkerID = 0`.
+- `(shm-alloc 42)` alloziiert einen Block und speichert die übergebene Worker-ID.
 - `(shm-read handle)` liest bis zum ersten NUL-Byte (`0x00`).
 - `(shm-read handle 256)` liest genau 256 Bytes, auf `shm.POOL_SIZE` begrenzt.
-- `(shm-status)` gibt die Belegung aller Pool-Blöcke aus.
-- `(shm-cleanup)` trennt alle Blöcke (`ShmDt`) und entfernt die Segmente (`ShmRm`).
+- `(shm-status)` liefert eine aggregierte Übersicht der Pool-Belegung.
+- `(shm-cleanup)` trennt alle Blöcke (`ShmDt`), entfernt die Segmente (`ShmRm`) und gibt die Anzahl der freigegebenen Blöcke zurück.
+- Handles, die vor einem `shm-cleanup` erzeugt wurden, gelten danach als ungültig und führen bei Verwendung zu einem Fehler.
 
 ## Go-Implementierung
 
@@ -39,14 +42,15 @@ Die bestehende Shared-Memory-Bibliothek `lib/shm` (SysV SHM + Pool-Manager) soll
 
 ```go
 type shmHandle struct {
-  block *shm.ShmBlock
+  pool    *shm.ShmPool
+  blockID int
 }
 
-func makeShmCell(block *shm.ShmBlock) *Cell {
+func makeShmCell(pool *shm.ShmPool, block *shm.ShmBlock) *Cell {
   return &Cell{
     Type: FUNC,
     Val:  "shm-block",
-    Env:  &shmHandle{block: block},
+    Env:  &shmHandle{pool: pool, blockID: block.ID},
   }
 }
 
@@ -55,8 +59,11 @@ func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
     return nil, fmt.Errorf("kein SHM-Block")
   }
   h, ok := c.Env.(*shmHandle)
-  if !ok { return nil, fmt.Errorf("kein SHM-Block") }
-  return h.block, nil
+  if !ok || h.pool == nil { return nil, fmt.Errorf("kein SHM-Block") }
+  pool, err := shm.GetPool()
+  if err != nil { return nil, fmt.Errorf("kein SHM-Block") }
+  if h.pool != pool { return nil, fmt.Errorf("kein SHM-Block") }
+  return pool.GetBlock(h.blockID)
 }
 ```
 
@@ -79,7 +86,7 @@ Alle Fehler lösen eine Go-Ausnahme aus (`return nil, fmt.Errorf("shm-xxx: ...")
 
 Mögliche Fehler:
 - Ungültiger Handle → `shm-xxx: kein SHM-Block`
-- Pool erschöpft → `shm-alloc: ERR102: No free SHM blocks`
+- Pool erschöpft → `shm-alloc: Allocate: kein freier SHM-Block verfügbar`
 - Ungültige Block-ID (intern) → wird vom Pool geprüft
 
 ## Testansatz

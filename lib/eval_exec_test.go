@@ -130,6 +130,32 @@ func TestExecStdin(t *testing.T) {
   }
 }
 
+func TestExecEmptyStdin(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("cat"),
+    MakeAtom("stdin:"),
+    MakeStr(""),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  _, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  out, _ := env.Get("out")
+  if out.Type != STRING || out.Val != "" {
+    t.Fatalf("expected empty stdout, got %v", out)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != 0 {
+    t.Fatalf("expected exit code 0, got %v", cd)
+  }
+}
+
 func TestExecUnknownProgram(t *testing.T) {
   env := BaseEnv()
   form := List(

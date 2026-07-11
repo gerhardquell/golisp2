@@ -38,6 +38,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
 
   var params []string
   var stdinStr string
+  var hasStdin bool
   var stdoutVar, stderrVar, exitcdVar string
 
   rest := args.Cdr
@@ -67,6 +68,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
       }
       params = append(params, val.Val)
     case "stdin:":
+      hasStdin = true
       val, err := Eval(valueCell, env)
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
@@ -104,7 +106,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
   var stdoutBuf, stderrBuf bytes.Buffer
   cmd.Stdout = &stdoutBuf
   cmd.Stderr = &stderrBuf
-  if stdinStr != "" {
+  if hasStdin {
     cmd.Stdin = strings.NewReader(stdinStr)
   }
 

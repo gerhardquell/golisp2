@@ -104,6 +104,8 @@ func TestExecStderr(t *testing.T) {
   }
 }
 
+// TestExecStdin verifies explicit stdin is fed to the child.
+// Note: stdin is never inherited from the parent process.
 func TestExecStdin(t *testing.T) {
   env := BaseEnv()
   form := List(

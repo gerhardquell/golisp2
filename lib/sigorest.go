@@ -23,7 +23,9 @@ import (
 
 var (
   sigoHost    = "http://127.0.0.1:9080"
-  sigoTimeout = 30 * time.Second
+  // Lokale LLMs (z. B. ollama-qwen3-coder-30b) brauchen oft >30s.
+  // Default 120s. Überschreibbar via GOLISP_SIGO_TIMEOUT.
+  sigoTimeout = 120 * time.Second
   // Default-Modell wenn (sigo "prompt") ohne Modell aufgerufen wird.
   // Überschreibbar via GOLISP_SIGO_MODEL. Fallback gem25-flt (live,
   // schnell/billig) – alter Default ollama-gemma3-4b ist nicht mehr
@@ -38,14 +40,20 @@ var (
 
 // init liest sigoREST-Konfiguration aus Umgebungsvariablen (analog
 // GOLISP_HOST/GOLISP_PORT für golisp2d):
-//   GOLISP_SIGO_HOST  – sigoREST-Host (default http://127.0.0.1:9080)
-//   GOLISP_SIGO_MODEL – Default-Modell für (sigo "prompt")
+//   GOLISP_SIGO_HOST     – sigoREST-Host (default http://127.0.0.1:9080)
+//   GOLISP_SIGO_MODEL    – Default-Modell für (sigo "prompt")
+//   GOLISP_SIGO_TIMEOUT  – Request-Timeout, z. B. "30s", "5m", "2m30s"
 func init() {
   if h := os.Getenv("GOLISP_SIGO_HOST"); h != "" {
     sigoHost = strings.TrimRight(h, "/")
   }
   if m := os.Getenv("GOLISP_SIGO_MODEL"); m != "" {
     sigoDefaultModel = m
+  }
+  if t := os.Getenv("GOLISP_SIGO_TIMEOUT"); t != "" {
+    if d, err := time.ParseDuration(t); err == nil {
+      sigoTimeout = d
+    }
   }
 }
 

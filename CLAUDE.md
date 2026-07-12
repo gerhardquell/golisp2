@@ -15,6 +15,10 @@ als eingebaute Lisp-Primitiven beherrscht.
 
 ```
 golisp2/
+  bin                  aktuelle ausführbare Programme
+    golisp2            swank-Daemon
+    golisp2d           Daemon
+    golisp2-client     Client
   main.go              Unix-Style CLI: stdin/-i/-e/-t/Datei + Exit-Codes
   cmd/
     golisp2d/           Server-Binary
@@ -57,8 +61,8 @@ golisp2/
 - **Dateigröße:** max 1000 Zeilen, ab 800 sinnvoll aufteilen
 - **Datei-Header:** immer mit Autor, CoAutor, Copyright, Erstellt (YYYYMMDD)
 - **Fehler:** `fmt.Errorf("funktionsname: beschreibung")`
-- **Build:** verwende `./build.sh` (kompiliert golisp2/golisp2d/golisp2-client nach `./build/`)
-- **tmp:** verwende ./tmp als temporäres Verzeichnis - nicht /tmp !!
+- **Build:** verwende `./build.sh` (kompiliert golisp2, golisp2d, golisp2-client nach `./bin/`)
+- **tmp:** verwende ./tmp/ als temporäres Verzeichnis - nicht /tmp !!
 
 ### Spezialformen vs. Primitiven
 - Braucht die Funktion Zugriff auf `env`? → Spezialform in `eval.go`
@@ -416,15 +420,20 @@ Beim Start liest GoLisp2 (analog `GOLISP_HOST`/`GOLISP_PORT` für `golisp2d`):
 |---------|---------|-----------|
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo ...)` |
 | `GOLISP_SIGO_MODEL` | `gem25-flt` | Default-Modell wenn `(sigo "prompt")` ohne Modell |
+| `GOLISP_SIGO_TIMEOUT` | `120s` | Request-Timeout für `(sigo ...)`; z. B. `30s`, `5m`, `2m30s` |
 
 ```bash
 # Multi-Server-Setup
 GOLISP_SIGO_HOST="http://mammouth:9080" ./golisp2 -i
 GOLISP_SIGO_MODEL="cl48-o" ./golisp2 -e '(sigo "Erkläre TCO")'
+
+# Lokales LLM (z. B. ollama-qwen3-coder-30b) braucht mehr Zeit
+GOLISP_SIGO_TIMEOUT=300s ./golisp2 -e '(sigo "schreib fib in lisp" "ollama-qwen3-coder-30b")'
 ```
 
 Zur Laufzeit zusätzlich änderbar: `(sigo-host "http://...")` oder als
 4. Parameter pro Call: `(sigo "prompt" "model" "" "http://host:9080")`.
+Das Timeout ist nur per Env-Var konfigurierbar.
 
 Aktuelle Modell-Shortcodes (sigoREST dynamisch via Mammouth/Moonshot/ZAI,
 Stand 2026-06-16). **Modelle sind runtime-dynamisch** – Provider deployen

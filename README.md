@@ -87,7 +87,15 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 ```bash
 git clone https://github.com/gerhardquell/golisp.git
 cd golisp2
-go build .
+./build.sh
+```
+
+Binaries land in `./build/`. For manual builds:
+
+```bash
+go build -o build/golisp2 .
+go build -o build/golisp2d ./cmd/golisp2d/
+go build -o build/golisp2-client ./cmd/golisp2-client/
 ```
 
 ### CLI Usage
@@ -96,11 +104,11 @@ GoLisp works like a standard Unix tool with multiple modes:
 
 | Mode | Command | Description |
 |------|---------|-------------|
-| **Stdin (default)** | `echo "(+ 1 2)" \| ./golisp2` | Read from stdin, output result only |
-| **Interactive** | `./golisp2 -i` | REPL with syntax highlighting |
-| **Expression** | `./golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
-| **Script** | `./golisp2 script.lisp` | Run a Lisp file |
-| **Tests** | `./golisp2 -t` | Run built-in test suite |
+| **Stdin (default)** | `echo "(+ 1 2)" \| ./build/golisp2` | Read from stdin, output result only |
+| **Interactive** | `./build/golisp2 -i` | REPL with syntax highlighting |
+| **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
+| **Script** | `./build/golisp2 script.lisp` | Run a Lisp file |
+| **Tests** | `./build/golisp2 -t` | Run built-in test suite |
 
 **Exit codes:** `0` = success, `1` = error
 
@@ -108,15 +116,15 @@ GoLisp works like a standard Unix tool with multiple modes:
 
 ```bash
 # Pipe mode (great for shell scripts)
-echo "(factorial 10)" | ./golisp2
+echo "(factorial 10)" | ./build/golisp2
 # => 3628800
 
 # Direct expression
-./golisp2 -e "(* 6 7)"
+./build/golisp2 -e "(* 6 7)"
 # => 42
 
 # Multiline via stdin
-cat <<'EOF' | ./golisp2
+cat <<'EOF' | ./build/golisp2
 (defun square (x)
   (* x x))
 (square 5)
@@ -130,18 +138,18 @@ GoLisp can run as a TCP server with a SWANK-like S-Expression-RPC protocol:
 
 ```bash
 # Terminal 1: Start the server
-golisp2d --port 4321
+./build/golisp2d --port 4321
 # => golisp2d läuft auf localhost:4321
 
 # Terminal 2: Use the client
-golisp2-client --port 4321 --eval "(+ 1 2 3)"
+./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"
 # => 6
 
-golisp2-client --port 4321 --complete "def"
+./build/golisp2-client --port 4321 --complete "def"
 # => ((define . "Define variable") (defun . "Lambda/Closure") ...)
 
 # Interactive REPL via server
-golisp2-client --port 4321 --repl
+./build/golisp2-client --port 4321 --repl
 golisp2> (defun square (x) (* x x))
 => square
 golisp2> (square 5)
@@ -162,7 +170,7 @@ golisp2> :quit
 ### REPL
 
 ```bash
-./golisp2 -i
+./build/golisp2 -i
 ```
 
 ```lisp
@@ -189,13 +197,13 @@ factorial
 ### Run a Script
 
 ```bash
-./golisp2 script.lisp
+./build/golisp2 script.lisp
 ```
 
 ### Test Suite
 
 ```bash
-./golisp2 -t  # 40 built-in tests
+./build/golisp2 -t  # built-in tests
 ```
 
 ---
@@ -406,7 +414,7 @@ When you call `(load "filename.lisp")`, GoLisp searches in this order:
 # Add custom library directories
 export GOLISP_PATH=/opt/golisp2:/home/user/mylisp
 
-./golisp2 -e '(load "mylib.lisp")'  ; Searches GOLISP_PATH too
+./build/golisp2 -e '(load "mylib.lisp")'  ; Searches GOLISP_PATH too
 ```
 
 ### Project Structure Example

@@ -232,7 +232,7 @@ Die Funktion `load` durchsucht eine definierte Liste von Pfaden, ähnlich wie Py
 # Benutzerdefinierte Bibliotheksverzeichnisse hinzufügen
 export GOLISP_PATH=/opt/golisp2:/home/user/mylisp
 
-./golisp2 -e '(load "mylib.lisp")'  ; Durchsucht auch GOLISP_PATH
+./build/golisp2 -e '(load "mylib.lisp")'  ; Durchsucht auch GOLISP_PATH
 ```
 
 ### KI (sigoREST)
@@ -295,8 +295,8 @@ GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 ### Server starten
 
 ```bash
-golisp2d --port 4321        # Default: localhost:4321
-golisp2d --host 0.0.0.0     # Externe Verbindungen erlauben
+./build/golisp2d --port 4321        # Default: localhost:4321
+./build/golisp2d --host 0.0.0.0     # Externe Verbindungen erlauben
 ```
 
 Umgebungsvariablen: `GOLISP_HOST`, `GOLISP_PORT`
@@ -305,16 +305,16 @@ Umgebungsvariablen: `GOLISP_HOST`, `GOLISP_PORT`
 
 ```bash
 # Expression auswerten
-golisp2-client --eval "(+ 1 2 3)"
+./build/golisp2-client --eval "(+ 1 2 3)"
 
 # Autocomplete
-golisp2-client --complete "def"
+./build/golisp2-client --complete "def"
 
 # Datei laden
-golisp2-client --load skript.lisp
+./build/golisp2-client --load skript.lisp
 
 # Interaktiver REPL
-golisp2-client --repl
+./build/golisp2-client --repl
 ```
 
 ### REPL-Kommandos

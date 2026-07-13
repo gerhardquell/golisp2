@@ -186,3 +186,53 @@
 (defun constantly  (x)   (lambda args x))
 (defun complement  (f)   (lambda (x) (not (f x))))
 (defun compose     (f g) (lambda (x) (f (g x))))
+
+;; === Mengenoperationen ==========================================
+
+;; union: Vereinigung zweier Mengen (als Listen, ohne Duplikate).
+(defun union (a b)
+  (append a (filter (lambda (x) (not (member x a))) b)))
+
+;; set-difference: Elemente in a, aber nicht in b.
+(defun set-difference (a b)
+  (filter (lambda (x) (not (member x b))) a))
+
+;; find-all: alle Elemente aus seq, für die (test item element) wahr ist.
+;; CL-Compat: (find-all item seq &key (test equal?)).
+(defun find-all (item seq &key (test equal?))
+  (filter (lambda (x) (test item x)) seq))
+
+;; === CL-Compat: Variablen / Zuweisung ===========================
+
+;; defvar: deklariert eine globale Variable (CL-Compat). Docstring
+;; (optionales 3. Argument) wird ignoriert. Expandiert zu define.
+(defmacro defvar (name &rest rest)
+  `(define ,name ,(if (null rest) () (car rest))))
+
+;; setf: generalisierte Zuweisung (CL-Compat). Hier nur Variablen-Places
+;; → set!. Generalisierte Places (car, gethash, …) bewusst ausgeklammert.
+(defmacro setf (place val)
+  `(set! ,place ,val))
+
+;; === Strukturen =================================================
+
+;; defstruct: (defstruct name [docstring] slot…) mit slot = sym | (sym [default]).
+;; Repräsentation als Liste (tag val1 val2 …) – golisp2 hat keine Vektoren.
+;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat.
+;; Symbolnamen werden zur Expansionszeit via intern + format gebaut.
+(defmacro defstruct (name &rest body)
+  (let* ((slots      (filter (lambda (x) (not (string? x))) body))
+         (slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
+         (n          (length slots))
+         (mk         (intern (format nil "make-~a" name)))
+         (pred       (intern (format nil "~a?" name)))
+         (accs       (mapcar (lambda (p)
+                               (let ((s (car p)) (i (cadr p)))
+                                 (let ((acc (intern (format nil "~a-~a" name s))))
+                                   `(defun ,acc (x) (nth ,(+ i 1) x)))))
+                             (zip slot-names (iota n)))))
+    `(begin
+       (defun ,mk (&key ,@slots) (list ',name ,@slot-names))
+       ,@accs
+       (defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))
+

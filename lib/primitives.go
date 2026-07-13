@@ -76,6 +76,10 @@ func BaseEnv() *Env {
 	// gensym
 	_ = env.Set("gensym", makeFn(fnGensym))
 
+	// Symbol-Konstruktion (für Makro-Expansion, z. B. defstruct)
+	_ = env.Set("intern", makeFn(fnIntern))
+	_ = env.Set("symbol-name", makeFn(fnSymbolName))
+
 	// error
 	_ = env.Set("error", makeFn(fnError))
 
@@ -484,6 +488,36 @@ func fnGensym(args []*Cell) (*Cell, error) {
 	}
 	n := atomic.AddInt64(&gensymCounter, 1)
 	return MakeAtom(fmt.Sprintf("G__%d", n)), nil
+}
+
+// intern: (intern string) → Symbol mit diesem Namen.
+// ATOM idempotent, STRING → Atom. Benötigt für Makro-Expansion (defstruct),
+// die Symbolnamen wie make-op / op-action zur Expansionszeit konstruiert.
+func fnIntern(args []*Cell) (*Cell, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("intern: 1 Argument nötig")
+	}
+	switch args[0].Type {
+	case ATOM:
+		return args[0], nil
+	case STRING:
+		return MakeAtom(args[0].Val), nil
+	default:
+		return nil, fmt.Errorf("intern: String oder Symbol erwartet, got %s", args[0])
+	}
+}
+
+// symbol-name: (symbol-name sym) → Name als String.
+func fnSymbolName(args []*Cell) (*Cell, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("symbol-name: 1 Argument nötig")
+	}
+	switch args[0].Type {
+	case ATOM, STRING:
+		return MakeStr(args[0].Val), nil
+	default:
+		return nil, fmt.Errorf("symbol-name: Symbol erwartet, got %s", args[0])
+	}
 }
 
 // error: (error msg) → signalisiert Lisp-Laufzeitfehler

@@ -18,12 +18,12 @@ import (
   "os/exec"
 )
 
-// RegisterShellCmd fügt system, file-stat, assoc und symbol->string in env ein
+// RegisterShellCmd fügt system, file-stat, shell-assoc und symbol->string in env ein
 func RegisterShellCmd(env *Env) {
-  env.Set("system",        makeFn(fnSystem))
-  env.Set("file-stat",     makeFn(fnFileStat))
-  env.Set("assoc",         makeFn(fnAssoc))
-  env.Set("symbol->string", makeFn(fnSymbolToString))
+  _ = env.Set("system",        makeFn(fnSystem))
+  _ = env.Set("file-stat",     makeFn(fnFileStat))
+  _ = env.Set("shell-assoc",   makeFn(fnAssoc))
+  _ = env.Set("symbol->string", makeFn(fnSymbolToString))
 }
 
 // symbol->string: (symbol->string 'foo) → "foo"
@@ -32,11 +32,11 @@ func fnSymbolToString(args []*Cell) (*Cell, error) {
   return MakeStr(args[0].String()), nil
 }
 
-// assoc: (assoc key alist) → erstes Paar (key . val) oder nil
+// shell-assoc: (shell-assoc key alist) → erstes Paar (key . val) oder nil
 // Vergleicht mit equal? (strukturell)
 func fnAssoc(args []*Cell) (*Cell, error) {
   if len(args) < 2 {
-    return nil, fmt.Errorf("assoc: 2 Argumente nötig")
+    return nil, fmt.Errorf("shell-assoc: 2 Argumente nötig")
   }
   key  := args[0]
   list := args[1]

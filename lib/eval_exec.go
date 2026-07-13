@@ -111,7 +111,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
 
   if ctx.Err() != nil {
     if exitcdVar != "" {
-      env.Set(exitcdVar, MakeNum(-1))
+      if err := env.Set(exitcdVar, MakeNum(-1)); err != nil { return nil, err }
     }
     return MakeNil(), nil
   }
@@ -121,20 +121,20 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
       exitCode = exitErr.ExitCode()
     } else {
       if exitcdVar != "" {
-        env.Set(exitcdVar, MakeNum(-1))
+        if err := env.Set(exitcdVar, MakeNum(-1)); err != nil { return nil, err }
       }
       return MakeNil(), nil
     }
   }
 
   if stdoutVar != "" {
-    env.Set(stdoutVar, MakeStr(stdoutBuf.String()))
+    if err := env.Set(stdoutVar, MakeStr(stdoutBuf.String())); err != nil { return nil, err }
   }
   if stderrVar != "" {
-    env.Set(stderrVar, MakeStr(stderrBuf.String()))
+    if err := env.Set(stderrVar, MakeStr(stderrBuf.String())); err != nil { return nil, err }
   }
   if exitcdVar != "" {
-    env.Set(exitcdVar, MakeNum(float64(exitCode)))
+    if err := env.Set(exitcdVar, MakeNum(float64(exitCode))); err != nil { return nil, err }
   }
 
   return cellT, nil

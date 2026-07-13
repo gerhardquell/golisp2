@@ -114,7 +114,7 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
           b := bindings.Car
           val, err := Eval(b.Cdr.Car, env)
           if err != nil { freeEnv(localEnv); return nil, err }
-          localEnv.Set(b.Car.Val, val)
+          _ = localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
         }
         // Handle multiple body expressions in let
@@ -142,7 +142,7 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
           b := bindings.Car
           val, err := Eval(b.Cdr.Car, localEnv)  // Im lokalen env auswerten!
           if err != nil { freeEnv(localEnv); return nil, err }
-          localEnv.Set(b.Car.Val, val)
+          _ = localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
         }
         // Body ausführen

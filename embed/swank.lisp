@@ -82,7 +82,7 @@
     ("memstats" . "(memstats)")
     ("system" . "(system command)")
     ("file-stat" . "(file-stat path)")
-    ("assoc" . "(assoc key alist)")
+    ("shell-assoc" . "(shell-assoc key alist)")
     ("symbol->string" . "(symbol->string sym)")
     ("pg-connect" . "(pg-connect conn-str)")
     ("pg-query" . "(pg-query conn query &rest params)")

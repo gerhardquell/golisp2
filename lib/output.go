@@ -25,10 +25,16 @@ type OutputWriter func(string) error
 var (
   outputMu     sync.Mutex
   outputWriter OutputWriter = defaultOutputWriter
+  errorWriter  OutputWriter = defaultErrorWriter
 )
 
 func defaultOutputWriter(s string) error {
   _, err := os.Stdout.WriteString(s)
+  return err
+}
+
+func defaultErrorWriter(s string) error {
+  _, err := os.Stderr.WriteString(s)
   return err
 }
 
@@ -40,6 +46,14 @@ func WriteOutput(s string) error {
   return w(s)
 }
 
+// WriteError schreibt s über den aktuell gesetzten ErrorWriter (stderr).
+func WriteError(s string) error {
+  outputMu.Lock()
+  w := errorWriter
+  outputMu.Unlock()
+  return w(s)
+}
+
 // SetOutputWriter setzt einen neuen OutputWriter. Thread-sicher.
 func SetOutputWriter(w OutputWriter) {
   outputMu.Lock()
@@ -47,9 +61,23 @@ func SetOutputWriter(w OutputWriter) {
   outputWriter = w
 }
 
+// SetErrorWriter setzt einen neuen ErrorWriter. Thread-sicher.
+func SetErrorWriter(w OutputWriter) {
+  outputMu.Lock()
+  defer outputMu.Unlock()
+  errorWriter = w
+}
+
 // ResetOutputWriter stellt den Standard-Writer (os.Stdout) wieder her.
 func ResetOutputWriter() {
   outputMu.Lock()
   defer outputMu.Unlock()
   outputWriter = defaultOutputWriter
+}
+
+// ResetErrorWriter stellt den Standard-ErrorWriter (os.Stderr) wieder her.
+func ResetErrorWriter() {
+  outputMu.Lock()
+  defer outputMu.Unlock()
+  errorWriter = defaultErrorWriter
 }

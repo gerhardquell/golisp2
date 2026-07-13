@@ -10,7 +10,9 @@ package lib
 
 import (
   "fmt"
+  "os"
   "sync"
+  "sync/atomic"
 )
 
 // envPool wiederverwendet Frame-Envs (parent != nil), die nicht mehr
@@ -39,6 +41,72 @@ type Env struct {
   // mu schuetzt Lese-/Schreibzugriffe fuer parfunc (mehrere Goroutinen
   // koennen dasselbe Env gleichzeitig nutzen).
   mu         sync.RWMutex
+}
+
+// redefinePolicy steuert das Verhalten beim Überschreiben von Go-Primitiven
+// (FUNC-Bindungen) im Root-Env. Default ist warn.
+type redefinePolicy int32
+
+const (
+  redefineAllow redefinePolicy = iota
+  redefineWarn
+  redefineError
+)
+
+// redefinePolicyAtomic ist thread-sicher, da parfunc mehrere Goroutinen im
+// Root-Env gleichzeitig Set aufrufen kann.
+var redefinePolicyAtomic atomic.Int32
+
+func init() {
+  redefinePolicyAtomic.Store(int32(redefineWarn))
+}
+
+// SetRedefinePolicy setzt die Guard-Policy anhand des Namens.
+func SetRedefinePolicy(name string) error {
+  var p redefinePolicy
+  switch name {
+  case "allow":
+    p = redefineAllow
+  case "warn":
+    p = redefineWarn
+  case "error":
+    p = redefineError
+  default:
+    return fmt.Errorf("redefine-policy: unbekannte Policy %q", name)
+  }
+  redefinePolicyAtomic.Store(int32(p))
+  return nil
+}
+
+// GetRedefinePolicy liefert den aktuellen Policy-Namen.
+func GetRedefinePolicy() string {
+  switch redefinePolicy(redefinePolicyAtomic.Load()) {
+  case redefineAllow:
+    return "allow"
+  case redefineWarn:
+    return "warn"
+  case redefineError:
+    return "error"
+  }
+  return "allow"
+}
+
+// onRootRedefine wird aus Env.Set gerufen, wenn im Root-Env ein bestehendes
+// FUNC-Binding überschrieben wird. Als Variable hinterlegt, damit später das
+// Define-Log am selben Hook ansetzen kann.
+var onRootRedefine = defaultOnRootRedefine
+
+func defaultOnRootRedefine(name string, old, new *Cell) error {
+  switch redefinePolicy(redefinePolicyAtomic.Load()) {
+  case redefineAllow:
+    return nil
+  case redefineWarn:
+    fmt.Fprintf(os.Stderr, "REDEF: %s (war FUNC)\n", name)
+    return nil
+  case redefineError:
+    return fmt.Errorf("REDEF: %s (war FUNC)", name)
+  }
+  return nil
 }
 
 // NewEnv erzeugt ein Root-Env (parent == nil) mit Map, sonst ein Frame-Env
@@ -104,31 +172,39 @@ func (e *Env) Get(name string) (*Cell, error) {
   return parent.Get(name)
 }
 
-// Set legt einen Wert im aktuellen Scope ab
-func (e *Env) Set(name string, val *Cell) {
+// Set legt einen Wert im aktuellen Scope ab.
+// Auf dem Root-Env (parent == nil) wird eine Redefinition existierender
+// FUNC-Bindungen durch die Policy gesteuert.
+func (e *Env) Set(name string, val *Cell) error {
   e.mu.Lock()
   defer e.mu.Unlock()
   if e.parent == nil {
+    if old, ok := e.vars[name]; ok && old != nil && old.Type == FUNC {
+      if err := onRootRedefine(name, old, val); err != nil {
+        return err
+      }
+    }
     e.vars[name] = val
-    return
+    return nil
   }
   if e.singleName == "" {
     e.singleName = name
     e.singleVal = val
-    return
+    return nil
   }
   if e.singleName == name {
     e.singleVal = val
-    return
+    return nil
   }
   for i, n := range e.names {
     if n == name {
       e.vals[i] = val
-      return
+      return nil
     }
   }
   e.names = append(e.names, name)
   e.vals = append(e.vals, val)
+  return nil
 }
 
 // Root liefert die aeusserste Umgebung (Globalenv). Common-Lisp-Semantik

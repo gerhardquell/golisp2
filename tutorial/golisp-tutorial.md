@@ -1276,17 +1276,6 @@ Liefert eine Assoziationsliste mit size und mtime oder nil, wenn die Datei nicht
 (assoc 'size (file-stat "./tmp/demo.txt"))
 ```
 
-### assoc
-
-**Syntax:** `(assoc key alist)`
-
-Sucht das erste Paar (key . val) in einer Assoziationsliste mittels equal?.
-
-```lisp
-(assoc 'b '((a . 1) (b . 2) (c . 3)))
-(assoc 'x '((a . 1)))
-```
-
 ### symbol->string
 
 **Syntax:** `(symbol->string 'symbol)`
@@ -1589,13 +1578,13 @@ Sucht x in einer Liste und gibt die Restliste ab dem Treffer zurück.
 
 ### assoc
 
-**Syntax:** `(assoc key liste)`
+**Syntax:** `(assoc key alist)`
 
-Sucht key in einer Assoziationsliste und gibt das erste passende (key val)-Paar zurück.
+Sucht key in einer Assoziationsliste und gibt das erste passende (key . val)-Paar zurück. Vergleicht mit `equal?`.
 
 ```lisp
-(assoc 'b '((a 1) (b 2) (c 3)))
-(assoc 'x '((a 1)))
+(assoc 'b '((a . 1) (b . 2) (c . 3)))
+(assoc 'x '((a . 1)))
 ```
 
 ### filter

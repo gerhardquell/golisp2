@@ -34,7 +34,7 @@ import (
 
 // RegisterFormat hängt (format ...) ins Environment ein.
 func RegisterFormat(env *Env) {
-  env.Set("format", makeFn(fnFormat))
+  _ = env.Set("format", makeFn(fnFormat))
   globalFormatEnv = env // für ~/fun/-Direktive (Lookup der User-Funktion)
 }
 

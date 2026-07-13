@@ -19,18 +19,18 @@ import (
 )
 
 func RegisterStringFuncs(env *Env) {
-  env.Set("string-length",   makeFn(fnStringLength))
-  env.Set("string-append",   makeFn(fnStringAppend))
-  env.Set("substring",       makeFn(fnSubstring))
-  env.Set("string-upcase",   makeFn(fnStringUpcase))
-  env.Set("string-downcase", makeFn(fnStringDowncase))
-  env.Set("string->number",  makeFn(fnStringToNumber))
-  env.Set("number->string",  makeFn(fnNumberToString))
-  env.Set("string->list",    makeFn(fnStringToList))
-  env.Set("list->string",    makeFn(fnListToString))
-  env.Set("string-replace",  makeFn(fnStringReplace))
-  env.Set("string-trim",     makeFn(fnStringTrim))
-  env.Set("string-contains", makeFn(fnStringContains))
+  _ = env.Set("string-length",   makeFn(fnStringLength))
+  _ = env.Set("string-append",   makeFn(fnStringAppend))
+  _ = env.Set("substring",       makeFn(fnSubstring))
+  _ = env.Set("string-upcase",   makeFn(fnStringUpcase))
+  _ = env.Set("string-downcase", makeFn(fnStringDowncase))
+  _ = env.Set("string->number",  makeFn(fnStringToNumber))
+  _ = env.Set("number->string",  makeFn(fnNumberToString))
+  _ = env.Set("string->list",    makeFn(fnStringToList))
+  _ = env.Set("list->string",    makeFn(fnListToString))
+  _ = env.Set("string-replace",  makeFn(fnStringReplace))
+  _ = env.Set("string-trim",     makeFn(fnStringTrim))
+  _ = env.Set("string-contains", makeFn(fnStringContains))
 }
 
 // string-replace: (string-replace str old new) → str mit allen Ersetzungen

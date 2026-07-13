@@ -23,67 +23,67 @@ func BaseEnv() *Env {
 	env := NewEnv(nil)
 
 	// Arithmetik
-	env.Set("+", makeFn(fnAdd))
-	env.Set("-", makeFn(fnSub))
-	env.Set("*", makeFn(fnMul))
-	env.Set("/", makeFn(fnDiv))
-	env.Set("mod", makeFn(fnMod))
-	env.Set("remainder", makeFn(fnMod))
-	env.Set("abs", makeFn(fnAbs))
-	env.Set("random", makeFn(fnRandom))
+	_ = env.Set("+", makeFn(fnAdd))
+	_ = env.Set("-", makeFn(fnSub))
+	_ = env.Set("*", makeFn(fnMul))
+	_ = env.Set("/", makeFn(fnDiv))
+	_ = env.Set("mod", makeFn(fnMod))
+	_ = env.Set("remainder", makeFn(fnMod))
+	_ = env.Set("abs", makeFn(fnAbs))
+	_ = env.Set("random", makeFn(fnRandom))
 
 	// Vergleiche
-	env.Set("=", makeFn(fnEq))
-	env.Set("<", makeFn(fnLt))
-	env.Set(">", makeFn(fnGt))
-	env.Set(">=", makeFn(fnGe))
-	env.Set("<=", makeFn(fnLe))
-	env.Set("equal?", makeFn(fnEqual))
-	env.Set("eq", makeFn(fnEqPtr))
+	_ = env.Set("=", makeFn(fnEq))
+	_ = env.Set("<", makeFn(fnLt))
+	_ = env.Set(">", makeFn(fnGt))
+	_ = env.Set(">=", makeFn(fnGe))
+	_ = env.Set("<=", makeFn(fnLe))
+	_ = env.Set("equal?", makeFn(fnEqual))
+	_ = env.Set("eq", makeFn(fnEqPtr))
 
 	// Listen-Primitiven (die klassischen 7!)
-	env.Set("car", makeFn(fnCar))
-	env.Set("cdr", makeFn(fnCdr))
-	env.Set("cons", makeFn(fnCons))
-	env.Set("atom", makeFn(fnAtom))
-	env.Set("null", makeFn(fnNull))
-	env.Set("list", makeFn(fnList))
-	env.Set("append", makeFn(fnAppend))
+	_ = env.Set("car", makeFn(fnCar))
+	_ = env.Set("cdr", makeFn(fnCdr))
+	_ = env.Set("cons", makeFn(fnCons))
+	_ = env.Set("atom", makeFn(fnAtom))
+	_ = env.Set("null", makeFn(fnNull))
+	_ = env.Set("list", makeFn(fnList))
+	_ = env.Set("append", makeFn(fnAppend))
 
 	// Typ-Prädikate
-	env.Set("string?", makeFn(fnStringP))
-	env.Set("number?", makeFn(fnNumberP))
-	env.Set("list?", makeFn(fnListP))
-	env.Set("symbol?", makeFn(fnSymbolP))
+	_ = env.Set("string?", makeFn(fnStringP))
+	_ = env.Set("number?", makeFn(fnNumberP))
+	_ = env.Set("list?", makeFn(fnListP))
+	_ = env.Set("symbol?", makeFn(fnSymbolP))
 	// Aliase für Konsistenz
-	env.Set("atom?", makeFn(fnAtom))
-	env.Set("null?", makeFn(fnNull))
-	env.Set("eq?", makeFn(fnEqPtr))
+	_ = env.Set("atom?", makeFn(fnAtom))
+	_ = env.Set("null?", makeFn(fnNull))
+	_ = env.Set("eq?", makeFn(fnEqPtr))
 
 	// Ausgabe
-	env.Set("print", makeFn(fnPrint))
-	env.Set("read", makeFn(fnRead))
-	env.Set("println", makeFn(fnPrintln))
+	_ = env.Set("print", makeFn(fnPrint))
+	_ = env.Set("read", makeFn(fnRead))
+	_ = env.Set("println", makeFn(fnPrintln))
 
 	// Wahrheitswerte
-	env.Set("t", MakeAtom("t"))
-	env.Set("nil", MakeNil())
+	_ = env.Set("t", MakeAtom("t"))
+	_ = env.Set("nil", MakeNil())
 
 	// apply, funcall
-	env.Set("apply", makeFn(fnApply))
-	env.Set("funcall", makeFn(fnFuncall))
+	_ = env.Set("apply", makeFn(fnApply))
+	_ = env.Set("funcall", makeFn(fnFuncall))
 
 	// gensym
-	env.Set("gensym", makeFn(fnGensym))
+	_ = env.Set("gensym", makeFn(fnGensym))
 
 	// error
-	env.Set("error", makeFn(fnError))
+	_ = env.Set("error", makeFn(fnError))
 
 	// Memory-Profiling
-	env.Set("memstats", makeFn(fnMemstats))
+	_ = env.Set("memstats", makeFn(fnMemstats))
 
 	// Zeitfunktionen
-	env.Set("sleep", makeFn(fnSleep))
+	_ = env.Set("sleep", makeFn(fnSleep))
 
 	// sigoREST
 	RegisterSigo(env)
@@ -111,6 +111,12 @@ func BaseEnv() *Env {
 
 	// Genetischer Algorithmus
 	RegisterGenAlg(env)
+
+	// Redefine-Guard Policy
+	_ = env.Set("redefine-policy", makeFn(fnRedefinePolicy))
+
+	// Live-Tracing einzelner Funktionen
+	RegisterTrace(env)
 
 	return env
 }
@@ -568,11 +574,26 @@ func fnListP(args []*Cell) (*Cell, error) {
 
 func fnSymbolP(args []*Cell) (*Cell, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("symbol?: 1 Argument nötig") 
+		return nil, fmt.Errorf("symbol?: 1 Argument nötig")
 	}
 	if args[0].Type == ATOM {
 		return cellT, nil
 	}
 
 	return cellNil, nil
+}
+
+// redefine-policy: (redefine-policy) -> aktuelle Policy als Atom
+//                  (redefine-policy 'allow|'warn|'error) -> setzt Policy
+func fnRedefinePolicy(args []*Cell) (*Cell, error) {
+	if len(args) == 0 {
+		return MakeAtom(GetRedefinePolicy()), nil
+	}
+	if len(args) != 1 || args[0] == nil || args[0].Type != ATOM {
+		return nil, fmt.Errorf("redefine-policy: Syntax: (redefine-policy ['allow|'warn|'error])")
+	}
+	if err := SetRedefinePolicy(args[0].Val); err != nil {
+		return nil, err
+	}
+	return args[0], nil
 }

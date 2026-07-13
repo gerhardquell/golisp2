@@ -27,8 +27,6 @@
 (defun positive? (n) (> n 0))
 (defun negative? (n) (< n 0))
 (defun pair?     (x) (not (atom x)))
-(defun null?     (x) (null x))
-(defun list?     (x) (or (null x) (pair? x)))
 
 ;; === Kontrollfluss-Makros =======================================
 
@@ -46,11 +44,6 @@
          (let* ,(cdr bindings) ,@body))))
 
 ;; === Listen =====================================================
-
-(defun append (lst1 lst2)
-  (if (null lst1)
-      lst2
-      (cons (car lst1) (append (cdr lst1) lst2))))
 
 (defun reverse (lst)
   (defun rev-acc (l acc)
@@ -129,9 +122,6 @@
   (iota-acc (- n 1) ()))
 
 ;; === Zahlen =====================================================
-
-(defun abs (n)
-  (if (negative? n) (- 0 n) n))
 
 (defun max (a &rest rest) (reduce (lambda (x y) (if (>= x y) x y)) a rest))
 (defun min (a &rest rest) (reduce (lambda (x y) (if (<= x y) x y)) a rest))

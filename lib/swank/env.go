@@ -30,7 +30,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     return send(event)
   })
 
-  env.Set("swank-send-event", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank-send-event", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return nil, fmt.Errorf("swank-send-event: 1 Argument nötig")
     }
@@ -40,15 +40,15 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     return lib.MakeNil(), nil
   }))
 
-  env.Set("swank-print", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank-print", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     return swankPrint(args, send, false)
   }))
 
-  env.Set("swank-println", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank-println", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     return swankPrint(args, send, true)
   }))
 
-  env.Set("swank--value-string", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--value-string", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return nil, fmt.Errorf("swank--value-string: 1 Argument nötig")
     }
@@ -57,7 +57,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
 
   // swank--read-all: String -> Liste aller gelesenen Formen. Für
   // listener-eval mit mehreren Formen pro Eingabeblock.
-  env.Set("swank--read-all", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--read-all", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return nil, fmt.Errorf("swank--read-all: 1 Argument nötig")
     }
@@ -69,7 +69,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
 
   // swank--symbols: Liste aller Symbolnamen im Env (inkl. äußere Scopes).
   // Für swank:simple-completions (Tab-Completion).
-  env.Set("swank--symbols", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--symbols", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     names := env.Symbols()
     cells := make([]*lib.Cell, len(names))
     for i, n := range names {
@@ -81,7 +81,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
   // swank--arglist: (name) -> "(name p1 p2 ...)" oder NIL.
   // Nutzt Lambda-Struktur (Type:LIST mit Env) bzw. Macro (Type:MACRO),
   // deren Car die Parameterliste. Built-in FUNC hat keine Arglist -> NIL.
-  env.Set("swank--arglist", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--arglist", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return lib.MakeNil(), nil
     }
@@ -113,7 +113,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
   }))
   // swank--cell-type: Cell -> Typ-Name als String. Für describe-symbol,
   // damit FUNC/MACRO/LIST/... unterschieden werden können.
-  env.Set("swank--cell-type", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--cell-type", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 || args[0] == nil {
       return lib.MakeStr("unknown"), nil
     }
@@ -140,7 +140,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
   // swank--find-definition: (name) -> ("file" . line) | NIL.
   // Map-Lookup in lib.LookupDefinition (defun/defmacro/define registriert).
   // NIL wenn Datei leer (REPL-defined) oder nicht registriert.
-  env.Set("swank--find-definition", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--find-definition", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return lib.MakeNil(), nil
     }
@@ -153,7 +153,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
 
   // swank--definition-kind: (name) -> "lambda" | "macro" | "builtin" | "unbound".
   // Lambda = Type:LIST mit Env!=nil; Macro = Type:MACRO; sonst builtin/unbound.
-  env.Set("swank--definition-kind", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--definition-kind", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return lib.MakeStr("unbound"), nil
     }
@@ -175,7 +175,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
 
   // swank--definition-cell: (name) -> Lambda/Macro-Cell | NIL.
   // Für swank--reconstruct-definition (REPL-Snippet).
-  env.Set("swank--definition-cell", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
+  _ = env.Set("swank--definition-cell", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return lib.MakeNil(), nil
     }

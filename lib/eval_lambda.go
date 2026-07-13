@@ -48,7 +48,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
     if p.Type == NIL { break }
     if p.Type == ATOM {
       // Dotted rest-Parameter: (lambda (a b . rest) ...)
-      localEnv.Set(p.Val, SliceToCell(args[argIdx:]))
+      _ = localEnv.Set(p.Val, SliceToCell(args[argIdx:]))
       return nil
     }
     if p.Type != LIST { break }
@@ -64,7 +64,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
         if p == nil || p.Type != LIST || p.Car == nil {
           return fmt.Errorf("lambda: &rest braucht Parameter-Namen")
         }
-        localEnv.Set(p.Car.Val, SliceToCell(args[argIdx:]))
+        _ = localEnv.Set(p.Car.Val, SliceToCell(args[argIdx:]))
         return nil
       }
     }
@@ -77,7 +77,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
       if argIdx >= len(args) {
         return fmt.Errorf("lambda: zu wenig Argumente (brauche '%s')", param.Val)
       }
-      localEnv.Set(param.Val, args[argIdx])
+      _ = localEnv.Set(param.Val, args[argIdx])
       argIdx++
 
     case 1:  // &optional
@@ -90,13 +90,13 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
         name = param.Val
       }
       if argIdx < len(args) {
-        localEnv.Set(name, args[argIdx]); argIdx++
+        _ = localEnv.Set(name, args[argIdx]); argIdx++
       } else if def != nil {
         val, err := Eval(def, closureEnv)
         if err != nil { return err }
-        localEnv.Set(name, val)
+        _ = localEnv.Set(name, val)
       } else {
-        localEnv.Set(name, MakeNil())
+        _ = localEnv.Set(name, MakeNil())
       }
 
     case 2:  // &key
@@ -112,16 +112,16 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
       found := false
       for ki := argIdx; ki < len(args); ki++ {
         if args[ki].Type == ATOM && args[ki].Val == keyword && ki+1 < len(args) {
-          localEnv.Set(name, args[ki+1]); found = true; break
+          _ = localEnv.Set(name, args[ki+1]); found = true; break
         }
       }
       if !found {
         if def != nil {
           val, err := Eval(def, closureEnv)
           if err != nil { return err }
-          localEnv.Set(name, val)
+          _ = localEnv.Set(name, val)
         } else {
-          localEnv.Set(name, MakeNil())
+          _ = localEnv.Set(name, MakeNil())
         }
       }
     }
@@ -146,7 +146,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       // Dotted rest-Parameter: (lambda (a b . rest) ...)
       rest, err := evalExprList(argExprs, callerEnv)
       if err != nil { return err }
-      localEnv.Set(p.Val, SliceToCell(rest))
+      _ = localEnv.Set(p.Val, SliceToCell(rest))
       return nil
     }
     if p.Type != LIST { break }
@@ -164,7 +164,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         }
         rest, err := evalExprList(argExprs, callerEnv)
         if err != nil { return err }
-        localEnv.Set(p.Car.Val, SliceToCell(rest))
+        _ = localEnv.Set(p.Car.Val, SliceToCell(rest))
         return nil
       }
     }
@@ -179,7 +179,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       }
       val, err := Eval(argExprs.Car, callerEnv)
       if err != nil { return err }
-      localEnv.Set(param.Val, val)
+      _ = localEnv.Set(param.Val, val)
       argExprs = argExprs.Cdr
 
     case 1:  // &optional
@@ -194,14 +194,14 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       if argExprs != nil && argExprs.Type == LIST {
         val, err := Eval(argExprs.Car, callerEnv)
         if err != nil { return err }
-        localEnv.Set(name, val)
+        _ = localEnv.Set(name, val)
         argExprs = argExprs.Cdr
       } else if def != nil {
         val, err := Eval(def, closureEnv)
         if err != nil { return err }
-        localEnv.Set(name, val)
+        _ = localEnv.Set(name, val)
       } else {
-        localEnv.Set(name, MakeNil())
+        _ = localEnv.Set(name, MakeNil())
       }
 
     case 2:  // &key
@@ -222,7 +222,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
           }
           val, err := Eval(a.Cdr.Car, callerEnv)
           if err != nil { return err }
-          localEnv.Set(name, val)
+          _ = localEnv.Set(name, val)
           found = true
           break
         }
@@ -231,9 +231,9 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         if def != nil {
           val, err := Eval(def, closureEnv)
           if err != nil { return err }
-          localEnv.Set(name, val)
+          _ = localEnv.Set(name, val)
         } else {
-          localEnv.Set(name, MakeNil())
+          _ = localEnv.Set(name, MakeNil())
         }
       }
     }

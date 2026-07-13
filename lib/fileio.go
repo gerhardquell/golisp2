@@ -23,11 +23,11 @@ import (
 
 // RegisterFileIO fügt alle Datei-Funktionen in env ein
 func RegisterFileIO(env *Env) {
-  env.Set("file-write",   makeFn(fnFileWrite))
-  env.Set("file-append",  makeFn(fnFileAppend))
-  env.Set("file-read",    makeFn(fnFileRead))
-  env.Set("file-exists?", makeFn(fnFileExists))
-  env.Set("file-delete",  makeFn(fnFileDelete))
+  _ = env.Set("file-write",   makeFn(fnFileWrite))
+  _ = env.Set("file-append",  makeFn(fnFileAppend))
+  _ = env.Set("file-read",    makeFn(fnFileRead))
+  _ = env.Set("file-exists?", makeFn(fnFileExists))
+  _ = env.Set("file-delete",  makeFn(fnFileDelete))
 }
 
 // file-write: (file-write "datei.txt" "inhalt" ...)

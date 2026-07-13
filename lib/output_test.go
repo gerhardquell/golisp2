@@ -69,3 +69,53 @@ func TestResetOutputWriter(t *testing.T) {
     t.Fatalf("custom writer was still called after reset")
   }
 }
+
+func TestWriteErrorDefault(t *testing.T) {
+  if err := WriteError(""); err != nil {
+    t.Fatalf("WriteError failed: %v", err)
+  }
+}
+
+func TestSetErrorWriter(t *testing.T) {
+  var got string
+  SetErrorWriter(func(s string) error {
+    got = s
+    return nil
+  })
+  defer ResetErrorWriter()
+
+  if err := WriteError("hello stderr"); err != nil {
+    t.Fatalf("WriteError failed: %v", err)
+  }
+  if got != "hello stderr" {
+    t.Fatalf("expected 'hello stderr', got %q", got)
+  }
+}
+
+func TestSetErrorWriterError(t *testing.T) {
+  want := errors.New("boom")
+  SetErrorWriter(func(s string) error {
+    return want
+  })
+  defer ResetErrorWriter()
+
+  if err := WriteError("x"); err != want {
+    t.Fatalf("expected error %v, got %v", want, err)
+  }
+}
+
+func TestResetErrorWriter(t *testing.T) {
+  var got string
+  SetErrorWriter(func(s string) error {
+    got = s
+    return nil
+  })
+  ResetErrorWriter()
+
+  if err := WriteError(""); err != nil {
+    t.Fatalf("WriteError after reset failed: %v", err)
+  }
+  if got != "" {
+    t.Fatalf("custom error writer was still called after reset")
+  }
+}

@@ -47,7 +47,7 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
     name := spec.Car.Val
     init, err := Eval(spec.Cdr.Car, env)  // init im äußeren env auswerten
     if err != nil { return nil, err }
-    localEnv.Set(name, init)
+    _ = localEnv.Set(name, init)
   }
   // Abbruchbedingung: (test result...)
   termClause := args.Cdr.Car
@@ -81,7 +81,7 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
       vals  = append(vals, newVal)
     }
     for i, name := range names {
-      localEnv.Set(name, vals[i])
+      _ = localEnv.Set(name, vals[i])
     }
   }
 }
@@ -123,7 +123,7 @@ func evalFlet(args *Cell, env *Env) (*Cell, error) {
     def  := defs.Car
     name := def.Car.Val
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), env)
-    localEnv.Set(name, lam)
+    _ = localEnv.Set(name, lam)
   }
   return Eval(wrapBegin(args.Cdr), localEnv)
 }
@@ -139,7 +139,7 @@ func evalLabels(args *Cell, env *Env) (*Cell, error) {
     def  := defs.Car
     name := def.Car.Val
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), localEnv)
-    localEnv.Set(name, lam)
+    _ = localEnv.Set(name, lam)
   }
   return Eval(wrapBegin(args.Cdr), localEnv)
 }
@@ -230,7 +230,7 @@ func evalParfunc(args *Cell, env *Env) (*Cell, error) {
     exprList = append(exprList, e.Car)
   }
   if len(exprList) == 0 {
-    env.Set(resultName, MakeNil())
+    if err := env.Set(resultName, MakeNil()); err != nil { return nil, err }
     return MakeNil(), nil
   }
 
@@ -283,7 +283,7 @@ func evalParfunc(args *Cell, env *Env) (*Cell, error) {
   }
 
   // In env speichern
-  env.Set(resultName, listResult)
+  if err := env.Set(resultName, listResult); err != nil { return nil, err }
   return listResult, nil
 }
 

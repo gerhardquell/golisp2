@@ -59,9 +59,9 @@ func init() {
 
 // RegisterSigo fügt (sigo prompt model session-id) in die Umgebung ein
 func RegisterSigo(env *Env) {
-  env.Set("sigo",        makeFn(fnSigo))
-  env.Set("sigo-models", makeFn(fnSigoModels))
-  env.Set("sigo-host",   makeFn(fnSigoHost))
+  _ = env.Set("sigo",        makeFn(fnSigo))
+  _ = env.Set("sigo-models", makeFn(fnSigoModels))
+  _ = env.Set("sigo-host",   makeFn(fnSigoHost))
 }
 
 // fnSigo: (sigo "prompt")

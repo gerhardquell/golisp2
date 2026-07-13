@@ -25,10 +25,10 @@ type pgConn struct {
 
 // RegisterPostgres registriert alle Postgres-Funktionen in der Umgebung
 func RegisterPostgres(env *Env) {
-	env.Set("pg-connect", makeFn(fnPgConnect))
-	env.Set("pg-query", makeFn(fnPgQuery))
-	env.Set("pg-exec", makeFn(fnPgExec))
-	env.Set("pg-close", makeFn(fnPgClose))
+	_ = env.Set("pg-connect", makeFn(fnPgConnect))
+	_ = env.Set("pg-query", makeFn(fnPgQuery))
+	_ = env.Set("pg-exec", makeFn(fnPgExec))
+	_ = env.Set("pg-close", makeFn(fnPgClose))
 }
 
 // pg-connect: (pg-connect "host=... port=... user=... password=... dbname=...")

@@ -305,13 +305,13 @@ func fnGaP(args []*Cell) (*Cell, error) {
 
 // RegisterGenAlg registriert alle GA-Primitive im Environment.
 func RegisterGenAlg(env *Env) {
-  env.Set("ga-create", makeFn(fnGaCreate))
-  env.Set("ga-init", makeFn(fnGaInit))
-  env.Set("ga-cross", makeFn(fnGaCross))
-  env.Set("ga-calc", makeFn(fnGaCalc))
-  env.Set("ga-select", makeFn(fnGaSelect))
-  env.Set("ga-result", makeFn(fnGaResult))
-  env.Set("ga-mut", makeFn(fnGaMut))
-  env.Set("ga-print", makeFn(fnGaPrint))
-  env.Set("ga?", makeFn(fnGaP))
+  _ = env.Set("ga-create", makeFn(fnGaCreate))
+  _ = env.Set("ga-init", makeFn(fnGaInit))
+  _ = env.Set("ga-cross", makeFn(fnGaCross))
+  _ = env.Set("ga-calc", makeFn(fnGaCalc))
+  _ = env.Set("ga-select", makeFn(fnGaSelect))
+  _ = env.Set("ga-result", makeFn(fnGaResult))
+  _ = env.Set("ga-mut", makeFn(fnGaMut))
+  _ = env.Set("ga-print", makeFn(fnGaPrint))
+  _ = env.Set("ga?", makeFn(fnGaP))
 }

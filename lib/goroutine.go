@@ -79,10 +79,10 @@ func getMutex(c *Cell) (*goMutex, error) {
 
 // RegisterGoroutines fügt alle Nebenläufigkeits-Primitiven in env ein
 func RegisterGoroutines(env *Env) {
-  env.Set("chan-make", makeFn(fnChanMake))
-  env.Set("chan-send", makeFn(fnChanSend))
-  env.Set("chan-recv", makeFn(fnChanRecv))
-  env.Set("lock-make", makeFn(fnLockMake))
+  _ = env.Set("chan-make", makeFn(fnChanMake))
+  _ = env.Set("chan-send", makeFn(fnChanSend))
+  _ = env.Set("chan-recv", makeFn(fnChanRecv))
+  _ = env.Set("lock-make", makeFn(fnLockMake))
 }
 
 // ---- Channel-Funktionen ----

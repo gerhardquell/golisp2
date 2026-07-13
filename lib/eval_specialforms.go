@@ -21,7 +21,7 @@ func evalDefine(form *Cell, env *Env) (*Cell, error) {
   name := args.Car.Val
   val, err := Eval(args.Cdr.Car, env)
   if err != nil { return nil, err }
-  env.Set(name, val)
+  if err := env.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil
 }
@@ -125,7 +125,7 @@ func evalDefun(form *Cell, env *Env) (*Cell, error) {
   args := form.Cdr
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
-  env.Set(name, lam)
+  if err := env.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil
 }
@@ -170,9 +170,9 @@ func evalSetQStar(args *Cell, env *Env) (*Cell, error) {
     if err != nil { return nil, err }
     // Update existierende Variable oder neu definieren
     if _, getErr := env.Get(name); getErr == nil {
-      env.Update(name, val)  // Existiert → updaten
+      if err := env.Update(name, val); err != nil { return nil, err }  // Existiert → updaten
     } else {
-      env.Set(name, val)     // Neu → definieren
+      if err := env.Set(name, val); err != nil { return nil, err }     // Neu → definieren
     }
   }
   return MakeAtom(lastName), nil
@@ -241,7 +241,7 @@ func evalDefmacro(form *Cell, env *Env) (*Cell, error) {
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
   lam.Type = MACRO   // ← einziger Unterschied zu defun!
-  env.Set(name, lam)
+  if err := env.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil
 }

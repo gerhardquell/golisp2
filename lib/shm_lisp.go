@@ -53,12 +53,12 @@ func getShmBlock(c *Cell) (*shm.ShmBlock, error) {
 }
 
 func RegisterShm(env *Env) {
-  env.Set("shm-alloc",   makeFn(fnShmAlloc))
-  env.Set("shm-free",    makeFn(fnShmFree))
-  env.Set("shm-write",   makeFn(fnShmWrite))
-  env.Set("shm-read",    makeFn(fnShmRead))
-  env.Set("shm-status",  makeFn(fnShmStatus))
-  env.Set("shm-cleanup", makeFn(fnShmCleanup))
+  _ = env.Set("shm-alloc",   makeFn(fnShmAlloc))
+  _ = env.Set("shm-free",    makeFn(fnShmFree))
+  _ = env.Set("shm-write",   makeFn(fnShmWrite))
+  _ = env.Set("shm-read",    makeFn(fnShmRead))
+  _ = env.Set("shm-status",  makeFn(fnShmStatus))
+  _ = env.Set("shm-cleanup", makeFn(fnShmCleanup))
 }
 
 func fnShmAlloc(args []*Cell) (*Cell, error) {

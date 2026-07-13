@@ -1,17 +1,12 @@
-# TODO - Aufgabenplanung 20260711
+# Aufgabe 20260713
 
-## 1. Eine Shared-Memory-Schnittstelle in Golisp2
+- [x] **1. Retrospektive der Retrospektiven**
+  - RETROSPECTIVE.md und docs/retrospectives/ durchgearbeitet.
+  - Wichtige, generalisierbare Erkenntnisse in CLAUDE.md übernommen.
+  - Projektbezogene Erkenntnisse in den Retrospektiven belassen.
 
-Im Verzeichnis golisp2/lib/shm findest du meine shared-memory-lib. 
-Ich möchte diese auch in golisp2 implementiert haben. 
-
-## 2. Die Möglichkeit, externe Programme über exec aufzurufen:
-(exec "ls" param: "-la" stdout: out stdin: in stderr: err exitcd: cd)
-wobei:
-- Programmname
-- param : die kommandozeilenparameter
-- stdout: die Ausgabe des Programms
-- stdin : die Eingabe 
-- stderr: die Fehlerausgabe
-- exitcd: der Exitcode des Programms
-t => erfolgreich nil => fehler
+- [x] **2. CLAUDE.md überarbeiten**
+  - Engineering-Prinzipien hinzugefügt.
+  - Dateistruktur, Feature-Liste und Env-Vorrang aktualisiert.
+  - Wichtige Regeln beibehalten.
+  - `go test ./...` (144 passed) und `./build.sh` grün.

@@ -26,18 +26,32 @@ golisp2/
     golisp2-client/     Client-Binary
       main.go          CLI-Client mit REPL
   lib/
-    types.go           Cell-Datenstruktur (LispType, Cons, MakeAtom...)
-    types_helpers.go   Hilfsfunktionen: SliceToCell, Append, CellToSlice
-    reader.go          Parser: String → Cell-Baum (NewReader, Read)
-    env.go             Umgebung: Get, Set, Update, Symbols (verkettete Scopes)
-    eval.go            Herzstück: Eval, Spezialformen, defmacro, parfunc
+    types.go           Cell-Datenstruktur (LispType, Cons, MakeAtom...) + Small-Int-Cache
+    types_helpers.go   Hilfsfunktionen: SliceToCell, Append, CellToSlice, IsTruthy
+    reader.go          Parser: String → Cell-Baum (NewReader, Read, ReadAll)
+    env.go             Umgebung: Get, Set, Update, Symbols (verkettete Scopes, RWMutex)
+    eval_core.go       Eval-Trampolin, apply, evalArgs
+    eval_lambda.go     Lambda/Closure-Aufrufe
+    eval_specialforms.go  quote, if, define, defun, lambda, let*, set!, defmacro, mapcar, ...
+    eval_control.go    while, do, catch, cond, case
+    eval_quasiquote.go quasiquote / unquote / unquote-splicing
+    eval_load.go       load-Spezialform + Source-Locations (SrcFile/SrcLine)
+    eval_exec.go       exec-Spezialform
     primitives.go      Eingebaute Funktionen + BaseEnv()
     stringfuncs.go     String-Primitiven (RegisterStringFuncs)
     format.go          FORMAT-Engine (fnFormat, formatRun, Parameter-Parser)
-    format_dirs.go     FORMAT-Direktiven + Helper (~A~S~D~R~F~$~T~* — einfache Direktiven)
-    format_blocks.go   FORMAT-Block-Direktiven (~?~[~{~(~^~/fun/ + findBlock/splitClauses)
+    format_dirs.go     FORMAT-Direktiven + Helper
+    format_blocks.go   FORMAT-Block-Direktiven
     goroutine.go       parfunc, chan-make/send/recv, lock-make
     fileio.go          file-write, file-append, file-read, file-exists?, file-delete
+    shellcmd.go        system, file-stat, assoc, symbol->string
+    output.go          print/println Rückgabewerte
+    postgres.go        PostgreSQL-Primitive
+    genalg.go          Genetischer Algorithmus (Core)
+    genalg_prims.go    GA-Lisp-Primitive
+    shm_lisp.go        Shared-Memory-Primitive
+    defloc.go          Definition-Locations für M-.
+    stdlib.go          //go:embed stdlib.lisp + LoadStdlib
     sigorest.go        sigo, sigo-models, sigo-host (HTTP zu sigoREST)
     readline.go        REPL: go-prompt, Syntax-Highlighting, History, Multiline
     env_test.go        Go-Tests für Env.Symbols()
@@ -131,12 +145,14 @@ Einzelner Ausdruck → direkt, kein Overhead.
 
 ### Eingebaute Funktionen
 **Arithmetik:** `+` `-` `*` `/`
+**Arithmetik/Erweitert:** `mod` `remainder` `abs` `random`
 **Vergleiche:** `=` `<` `>` `>=` `<=` `eq` `eq?` `equal?`
 **Typ-Prädikate:** `string?` `number?` `list?` `symbol?` `atom?` `null?`
 **Listen:** `car` `cdr` `cons` `atom` `null` `list` `apply`
 **I/O:** `print` `println` `read`
 **String:** `string-length` `string-append` `substring`
-  `string-upcase` `string-downcase` `string->number` `number->string`
+  `string-upcase` `string-downcase` `string-replace` `string-trim` `string-contains`
+  `string->number` `number->string`
   `string->list` `list->string`
 **Format:** `format` (Common-Lisp-HyperSpec 22.3 — `~A ~S ~D ~B ~O ~X ~R ~P ~C
   ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~ ~Newline` mit
@@ -146,8 +162,12 @@ Einzelner Ausdruck → direkt, kein Overhead.
 **Exec:** `exec`
 **Makro-Hilfe:** `gensym`
 **Datei:** `file-write` `file-append` `file-read` `file-exists?` `file-delete`
+**Shell/Datei-Meta:** `system` `file-stat` `assoc` `symbol->string`
 **Nebenläufigkeit:** `chan-make` `chan-send` `chan-recv` `lock-make`
 **KI:** `sigo` `sigo-models` `sigo-host`
+**GA:** `ga-create` `ga-init` `ga-calc` `ga-select` `ga-cross` `ga-mut` `ga-result` `ga-print` `ga?`
+**DB:** `pg-connect` `pg-query` `pg-close` (siehe `lib/postgres.go`)
+**Shared Memory:** `shm-create` `shm-attach` `shm-write` `shm-read` `shm-detach` `shm-remove`
 **Zeit:** `sleep`
 **Memory:** `memstats`
 
@@ -247,10 +267,13 @@ sind identisch. Der `golisp2-client` nutzt dasselbe SWANK-Protokoll.
 # Custom port
 ./build/golisp2d --port 5000
 
-# Umgebungsvariablen (haben Vorrang vor Flags)
+# Umgebungsvariablen (Default; Flags überschreiben Env)
 export GOLISP_HOST=0.0.0.0
 export GOLISP_PORT=5000
 ./build/golisp2d
+
+# Flag überschreibt Env (Unix-Konvention: Flag > Env > Default)
+GOLISP_PORT=9123 ./build/golisp2d --port 5000   # bindet auf 5000
 
 # Alternativ: Standalone-Binary mit SWANK-Modus
 ./build/golisp2 --swank 127.0.0.1:4242
@@ -688,6 +711,49 @@ echo "(+ 1 2)" | ./build/golisp2; echo $? # → 0
 ```
 
 ---
+
+## Engineering-Prinzipien
+
+### Qualität & Workflow
+- `go build ./...` ist die Ground Truth; Language-Server-Diagnostiken können nach Änderungen cross-file false positives liefern.
+- Tests als objektive Wahrheitsquelle: bei neuem Verhalten failing test zuerst; bei existierendem Code Charakterisierungstests, die das IST festhalten.
+- Test-Netz vor riskanten Refactorings bauen (certs → Tests → Split).
+- Tests ermöglichen mutige/breaking Changes, weil sie exakt zeigen, was bricht.
+- Breaking Changes und Design-Ausweitungen dem Nutzer vorbehalten — AskUserQuestion mit Optionen/Preview.
+- Plan → Execute → Review (Subagent + Reviewer) für komplexe Änderungen; Task-Briefs als Datei-Handoff halten den Controller-Context schlank.
+
+### Code-Ökonomie
+- Eine Quelle schlägt Synchronisation: eine `LoadStdlib`, ein `IsTruthy`, keine Duplikate.
+- Tooling-Restriktionen bestimmen Architektur (Go `embed` verbietet `..`; Import-Cycle verlangt shared Code im tieferen Package).
+- Minimal Changes: kleine, gezielte Änderungen sind robuster als Big-Bang.
+- Projektregeln (CLAUDE.md) schlagen Standard-Tools: vor dem Befolgen von `gofmt`/LSP-Warnungen CLAUDE.md lesen.
+
+### Erkundung & Design
+- Codegraph/Exploration vor Read-Loop; blast-radius vor Signaturänderungen prüfen.
+- API/Library-Recherche vor dem Coden — gewünschtes Verhalten muss konfigurierbar sein.
+- Common-Lisp-Semantik als Kompass, wenn GoLisp-Verhalten unklar ist.
+- Config-Tasks verbergen oft Bugs (tote Defaults, Drift) — implizite Annahmen verifizieren.
+
+### Go-Gotchas
+- `:=` in Loop-Bodies shadowed Variablen aus dem enclosing Block; Multi-Return-Assignments in Loops immer via Hilfsvariable + `=`.
+- `strings.Builder` nie per Value kopieren; Pointer oder frische Instanz pro Sub-Kontext.
+- Debug-Logs akkumulieren, nie `err`-Variable/Debug-Feld mit Log überschreiben.
+
+### Protokoll- & Integrationstests
+- Protokoll-Integration: Client-Source lesen statt Spec raten; Trace (`>>`/`<<`) früh und bidirektional einbauen.
+- Synthetische Tests müssen echtes Verhalten modellieren (Pipelining, Multi-Event, Stateful Connections).
+- Unit-Tests gegen Protokolle müssen Struktur asserten, nicht Substrings.
+- End-to-End-Verifikation mit echtem Client ergänzt automatisierte Tests.
+
+### Performance & Optimierung
+- Benchmark-Driven: messen, revertieren wenn keine Verbesserung, nicht spekulieren.
+- Nicht jede Allokation ist heap-allokiert; Pooling nur wenn Profiler Heap-Druck zeigt.
+- Immutable Cells erlauben Sharing ohne semantische Brüche.
+
+### Zuverlässigkeit
+- `go test`-Cache kann täuschen; überraschende Ergebnisse mit `-count=1` oder `go clean -testcache` verifizieren.
+- Env-Vorrang kann Smoke-Tests überraschen; für Tests Env explizit setzen.
+- Nicht-bare Git-Remotes sind keine Backups.
 
 ## Philosophie
 

@@ -401,10 +401,7 @@ func fnList(args []*Cell) (*Cell, error) {
 
 // append: (append list item) → Liste mit item am Ende (single-item, wie helper).
 func fnAppend(args []*Cell) (*Cell, error) {
-	if len(args) != 2 {
-		return nil, fmt.Errorf("append: 2 Argumente nötig (list item)")
-	}
-	return Append(args[0], args[1]), nil
+	return Append(args...), nil
 }
 
 // ---- Ausgabe ----

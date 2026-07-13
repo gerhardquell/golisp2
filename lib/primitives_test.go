@@ -75,6 +75,32 @@ func TestPrimitiveListOps(t *testing.T) {
   evalEq(t, `(funcall + 1 2 3)`, "6")
 }
 
+// TestPrimitiveAppendCL: append folgt Common-Lisp-Semantik (Listen-
+// konkatenation, variadisch). Bisher war append single-element ("snoc"),
+// was swank.lisp/flatten (CL-Stil) silent gebrochen hat.
+func TestPrimitiveAppendCL(t *testing.T) {
+  // 2 Listen konkatenieren (flach, nicht geschachtelt)
+  evalEq(t, `(append '(1 2) '(3 4))`, "(1 2 3 4)")
+  evalEq(t, `(append '(1) '(2))`, "(1 2)")
+  // variadisch: >2 Listen
+  evalEq(t, `(append '(1) '(2) '(3))`, "(1 2 3)")
+  evalEq(t, `(append '(1 2) '(3) '(4 5 6))`, "(1 2 3 4 5 6)")
+  // leere Liste als Argument
+  evalEq(t, `(append '() '(1 2))`, "(1 2)")
+  evalEq(t, `(append '(1 2) '())`, "(1 2)")
+  // 0 / 1 Argument
+  evalEq(t, `(append)`, "()")
+  evalEq(t, `(append '(1 2 3))`, "(1 2 3)")
+  // ursprüngliche Single-Element-Nutzung weiterhin möglich: Element
+  // als letzte Liste gibt Cdr vor -> (append lst (list x)) hängt x an.
+  evalEq(t, `(append '(1 2) (list 3))`, "(1 2 3)")
+  // keyword-Listen wie in swank.lisp: events ist Liste-von-Events,
+  // Return-Event als einzelne Liste angehängt -> flache Event-Liste.
+  evalEq(t, `(append (list (list :write-string "x" :repl-result))
+                     (list (list :return (list :ok (list)) 17)))`,
+    `((:write-string "x" :repl-result) (:return (:ok ()) 17))`)
+}
+
 // TestPrimitiveListEdges dokumentiert IST-Verhalten an Listengrenzen.
 func TestPrimitiveListEdges(t *testing.T) {
   // car/cdr auf leerer Liste → Fehler (NIL ist nicht LIST-Typ)

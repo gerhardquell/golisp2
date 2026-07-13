@@ -24,17 +24,31 @@ func SliceToCell(slice []*Cell) *Cell {
   return result
 }
 
-// Append fügt ein Element am Ende einer Liste an
-// Gibt eine neue Liste zurück (funktionaler Stil)
-func Append(list, item *Cell) *Cell {
+// Append konkateniert Listen nach Common-Lisp-Semantik (variadisch):
+// alle Argumente außer dem letzten werden als Listen kopiert, das letzte
+// Argument wird unverändert als Cdr gesetzt. (append) → nil, (append x) → x.
+// Früher war Append single-element ("snoc"); swank.lisp/flatten nutzen aber
+// CL-Stil, daher diese Semantik. appendCopy kopiert list mit tail als Cdr.
+func Append(lists ...*Cell) *Cell {
+  if len(lists) == 0 {
+    return MakeNil()
+  }
+  if len(lists) == 1 {
+    return lists[0]
+  }
+  return appendCopy(lists[0], Append(lists[1:]...))
+}
+
+// appendCopy kopiert list elementweise und setzt tail als Cdr der Kopie.
+// NIL/nicht-Liste als list: tail direkt bzw. dotted pair.
+func appendCopy(list, tail *Cell) *Cell {
   if list == nil || list.Type == NIL {
-    return Cons(item, MakeNil())
+    return tail
   }
   if list.Type != LIST {
-    return Cons(item, MakeNil())
+    return Cons(list, tail)
   }
-  // Rekursiv: Kopiere die Liste und hänge an
-  return Cons(list.Car, Append(list.Cdr, item))
+  return Cons(list.Car, appendCopy(list.Cdr, tail))
 }
 
 // MakeNumber erstellt eine NUMBER-Cell (Alias für MakeNum für Konsistenz)

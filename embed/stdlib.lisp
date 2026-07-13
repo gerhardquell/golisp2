@@ -205,34 +205,83 @@
 ;; === CL-Compat: Variablen / Zuweisung ===========================
 
 ;; defvar: deklariert eine globale Variable (CL-Compat). Docstring
-;; (optionales 3. Argument) wird ignoriert. Expandiert zu define.
+;; (optionales 3. Argument) wird ignoriert. Zweites defvar für dasselbe
+;; Symbol ist no-op, wenn es bereits gebunden ist.
 (defmacro defvar (name &rest rest)
-  `(define ,name ,(if (null rest) () (car rest))))
+  (let ((val (if (null rest) () (car rest))))
+    `(if (bound? ,name)
+         ,name
+         (define ,name ,val))))
 
-;; setf: generalisierte Zuweisung (CL-Compat). Hier nur Variablen-Places
-;; → set!. Generalisierte Places (car, gethash, …) bewusst ausgeklammert.
+;; Registry für setf-Places: Assoc-Liste (accessor . setter).
+(define *setf-expanders* '())
+
+(defun register-setf-expander (accessor setter)
+  (set! *setf-expanders* (cons (cons accessor setter) *setf-expanders*)))
+
+;; setf: generalisierte Zuweisung (CL-Compat).
+;; - Variable: (setf x 1) → (set! x 1)
+;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9) → (set! p (set-pt-x p 9))
+;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
 (defmacro setf (place val)
-  `(set! ,place ,val))
+  (if (atom place)
+      `(set! ,place ,val)
+      (let ((accessor (car place))
+            (arg (cadr place)))
+        (if (not (atom arg))
+            (error "setf: Place-Argument muss ein Symbol sein")
+            (let ((entry (assoc accessor *setf-expanders*)))
+              (if (null? entry)
+                  (error "setf: unbekannter Place")
+                  `(set! ,arg (,(cdr entry) ,arg ,val))))))))
 
 ;; === Strukturen =================================================
 
+;; set-nth: Liste an Position n (0-basiert) durch val ersetzen.
+(defun set-nth (lst n val)
+  (if (= n 0)
+      (cons val (cdr lst))
+      (cons (car lst) (set-nth (cdr lst) (- n 1) val))))
+
 ;; defstruct: (defstruct name [docstring] slot…) mit slot = sym | (sym [default]).
 ;; Repräsentation als Liste (tag val1 val2 …) – golisp2 hat keine Vektoren.
-;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat.
-;; Symbolnamen werden zur Expansionszeit via intern + format gebaut.
+;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat,
+;; sowie Setter-Funktionen set-<name>-<slot> und registriert sie für setf.
+;; Kollisionsvermeidung: Ist der Primärname bereits gebunden, wird der
+;; Alternative mit doppeltem Bindestrich verwendet (z. B. set--difference).
 (defmacro defstruct (name &rest body)
   (let* ((slots      (filter (lambda (x) (not (string? x))) body))
          (slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
+         (defaults   (mapcar (lambda (s) (if (and (list? s) (not (null? (cdr s)))) (cadr s) ())) slots))
          (n          (length slots))
          (mk         (intern (format nil "make-~a" name)))
+         (mk-alt     (intern (format nil "make--~a" name)))
          (pred       (intern (format nil "~a?" name)))
-         (accs       (mapcar (lambda (p)
+         (pred-alt   (intern (format nil "~a--?" name)))
+         (mk-body    (cons 'list (cons (list 'quote name) slot-names)))
+         (slot-specs (mapcar (lambda (p)
                                (let ((s (car p)) (i (cadr p)))
-                                 (let ((acc (intern (format nil "~a-~a" name s))))
-                                   `(defun ,acc (x) (nth ,(+ i 1) x)))))
+                                 (let ((acc (intern (format nil "~a-~a" name s)))
+                                       (alt-acc (intern (format nil "~a--~a" name s)))
+                                       (setter (intern (format nil "set-~a-~a" name s)))
+                                       (alt-setter (intern (format nil "set--~a-~a" name s)))
+                                       (idx (+ i 1)))
+                                   `(if (bound? ,acc)
+                                        (begin
+                                          (eval '(defun ,alt-acc (x) (nth ,idx x)))
+                                          (eval '(defun ,alt-setter (obj val) (set-nth obj ,idx val)))
+                                          (register-setf-expander ',alt-acc ',alt-setter))
+                                        (begin
+                                          (eval '(defun ,acc (x) (nth ,idx x)))
+                                          (eval '(defun ,setter (obj val) (set-nth obj ,idx val)))
+                                          (register-setf-expander ',acc ',setter))))))
                              (zip slot-names (iota n)))))
     `(begin
-       (defun ,mk (&key ,@slots) (list ',name ,@slot-names))
-       ,@accs
-       (defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))
+       (if (bound? ,mk)
+           (eval '(defun ,mk-alt (&key ,@slots) ,mk-body))
+           (eval '(defun ,mk (&key ,@slots) ,mk-body)))
+       ,@slot-specs
+       (if (bound? ,pred)
+           (eval '(defun ,pred-alt (x) (and (list? x) (equal? (car x) ',name))))
+           (eval '(defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))))
 

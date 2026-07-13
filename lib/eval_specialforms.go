@@ -26,6 +26,17 @@ func evalDefine(form *Cell, env *Env) (*Cell, error) {
   return MakeAtom(name), nil
 }
 
+// bound?: (bound? sym) → t wenn sym im aktuellen Env gebunden ist, sonst nil.
+func evalBound(args *Cell, env *Env) (*Cell, error) {
+  if args == nil || args.Car == nil || args.Car.Type != ATOM {
+    return nil, fmt.Errorf("bound?: Symbol erwartet")
+  }
+  if _, err := env.Get(args.Car.Val); err == nil {
+    return MakeAtom("t"), nil
+  }
+  return MakeNil(), nil
+}
+
 // macroexpand: (macroexpand form) → expandiert Makros einmal, gibt Ergebnis zurück
 func evalMacroexpand(args *Cell, env *Env) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {

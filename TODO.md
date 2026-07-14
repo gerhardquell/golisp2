@@ -49,9 +49,8 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
       Makro halbiert sich.
 
 ## 3. stdlib-Tests (Nachholschuld)
-- [ ] `stdlib-test.lisp` anlegen. Sechs Funktionen aus dem GPS-Commit hatten
-      als einzigen Zeugen `gps.lisp`: defstruct, setf, defvar, union,
-      set-difference, find-all.
+- [x] `stdlib-test.lisp` angelegt und in `./build/golisp2 -t` eingebunden.
+      Testet: defstruct, setf, defvar, union, set-difference, find-all.
 - [x] Bekannte Inkonsistenz: `(setf (pt-x p) 9)` liefert jetzt `9`.
       CL-konform: setf gibt den zugewiesenen Wert zurück.
 

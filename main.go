@@ -91,21 +91,8 @@ func runTests(env *lib.Env) {
   // block / return-from
   test(env, `(block outer (return-from outer 42) 0)`)
   test(env, `(block b (+ 1 (return-from b 99)) 0)`)
-  // defstruct: Konstruktor, Accessor, Setter, Kollision, Slot namens "list"
-  test(env, `(defstruct box (list nil))`)
-  test(env, `(box-list (make-box :list (quote (1 2 3))))`)
-  test(env, `(defstruct pt (x 0) (y 0))`)
-  test(env, `(define p (make-pt :x 1 :y 2))`)
-  test(env, `(setf (pt-x p) 9)`)
-  test(env, `(pt-x p)`)
-  test(env, `(pt-x (make-pt))`)
-  test(env, `(defstruct set difference)`)
-  test(env, `(set-difference (quote (1 2)) (quote (2 3)))`)
-  test(env, `(set--difference (make-set :difference (quote (a b))))`)
-  // defvar: idempotent
-  test(env, `(defvar v 1)`)
-  test(env, `(defvar v 2)`)
-  test(env, `v`)
+  // Isolierte stdlib-Tests (defstruct, setf, defvar, union, set-difference, find-all)
+  test(env, `(load "tests/stdlib-test.lisp")`)
   // Genetischer Algorithmus
   test(env, `(define ga (ga-create 'bit1 5 4 (lambda (g) (apply + g))))`)
   test(env, `(ga-init ga)`)

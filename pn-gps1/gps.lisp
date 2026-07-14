@@ -13,11 +13,13 @@
 ;; geeigneten Operator beseitigt – ggf. dessen Voraussetzungen vorher als
 ;; Unterziele löst.
 ;;
-;; Anmerkung zum Scope-Port: Norvigs (defun GPS (*state* goals *ops*) …)
-;; nutzt CL-Special-Variablen (dynamische Bindung). golisp2 ist lexikalisch
-;; – der Parameter *state* würde achieve nicht erreichen. Daher nimmt GPS
-;; Plain-Namen und weist die Globals *state*/*ops* via set! zu. Semantik
-;; bleibt erhalten, nur die Schreibweise weicht leicht ab.
+;; Scope-Port-Hinweis: Norvigs (defun GPS (*state* goals *ops*) …)
+;; nutzt CL-Special-Variables (dynamische Bindung). golisp2 ist lexikalisch
+;; – der Parameter *state* würde achieve nicht erreichen. Daher nutzt GPS
+;; globale Variablen *state*/*ops* und set!. Das bedeutet: Zustandsänderungen
+;; sind Seiteneffekte, die nach einem gescheiterten GPS-Lauf erhalten bleiben
+;; und über verschiedene Aufrufe hinweg sichtbar sind. Semantik weicht also
+;; bewusst von Norvigs dynamischem Scope ab.
 
 ;; === Globale Zustandsvariablen ================================
 
@@ -68,6 +70,10 @@
              :preconds '(son-at-home car-works)
              :add-list '(son-at-school)
              :del-list '(son-at-home))
+    ;; Norvig-Original: shop-installs-battery hat keine :del-list. Dadurch
+    ;; bleibt car-needs-battery im Zustand, sobald car-works hinzukommt.
+    ;; Harmlos in Version 1, wird aber in Version 2 (negierte Ziele) zum
+    ;; Problem. Nicht reparieren – der Port soll den Originalfehler bewahren.
     (make-op :action 'shop-installs-battery
              :preconds '(car-needs-battery shop-knows-problem shop-has-money)
              :add-list '(car-works))

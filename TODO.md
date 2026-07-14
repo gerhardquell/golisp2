@@ -55,20 +55,20 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
       CL-konform: setf gibt den zugewiesenen Wert zurück.
 
 ## 4. gps.lisp — Kommentare ehrlich machen
-- [ ] Kopfkommentar Z. 16–20: "Semantik bleibt erhalten" ist falsch.
+- [x] Kopfkommentar Z. 16–20: "Semantik bleibt erhalten" ist falsch.
       GPS hinterlässt den Endzustand **global** (`set!`), Norvigs dynamische
       Bindung nicht. Belegt: `(println *state*)` nach Fall 1.
-- [ ] Bei `shop-installs-battery`: kein `:del-list` → Zustand bleibt widersprüchlich
+- [x] Bei `shop-installs-battery`: kein `:del-list` → Zustand bleibt widersprüchlich
       (`car-needs-battery` UND `car-works`). Norvig-Original, harmlos bis
       Version 2 (negierte Ziele). Hinschreiben, nicht reparieren.
-- [ ] Norvigs drei bekannte Fehler als Tests ergänzen — ein Port ist erst treu,
+- [x] Norvigs drei bekannte Fehler als Tests ergänzt — ein Port ist erst treu,
       wenn er die *gleichen* Fehler macht:
       1. Clobbered Sibling Goal: Ziele `'(have-money son-at-school)` → muss `solved`
          geben, obwohl das Geld weg ist
       2. Leaping before you look: `'(son-at-school have-money)` → `()`, aber Aktionen
          wurden schon ausgeführt
       3. Rekursives Unterziel (`ask-phone-number`) → muss hängen
-- [ ] TODO-Status "erledigt" erst wieder setzen, wenn 1–3 stehen.
+      Datei: `pn-gps1/gps-norvig-bugs.lisp`, geladen von `./build/golisp2 -t`.
 
 ## 5. Danach
 - [ ] PAIP Kap. 4.11 → GPS Version 2: **State-Passing** statt globaler Mutation.

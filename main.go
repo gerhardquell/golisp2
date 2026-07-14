@@ -93,6 +93,8 @@ func runTests(env *lib.Env) {
   test(env, `(block b (+ 1 (return-from b 99)) 0)`)
   // Isolierte stdlib-Tests (defstruct, setf, defvar, union, set-difference, find-all)
   test(env, `(load "tests/stdlib-test.lisp")`)
+  // Norvigs drei bekannte GPS-Fehler (Timeout für rekursiven Fall)
+  test(env, `(load "pn-gps1/gps-norvig-bugs.lisp")`)
   // Genetischer Algorithmus
   test(env, `(define ga (ga-create 'bit1 5 4 (lambda (g) (apply + g))))`)
   test(env, `(ga-init ga)`)

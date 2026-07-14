@@ -79,7 +79,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
   }))
 
   // swank--arglist: (name) -> "(name p1 p2 ...)" oder NIL.
-  // Nutzt Lambda-Struktur (Type:LIST mit Env) bzw. Macro (Type:MACRO),
+  // Nutzt Lambda-Struktur (Type:LAMBDA) bzw. Macro (Type:MACRO),
   // deren Car die Parameterliste. Built-in FUNC hat keine Arglist -> NIL.
   _ = env.Set("swank--arglist", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
@@ -92,11 +92,11 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     }
     var params *lib.Cell
     switch {
-    case cell.Type == lib.LIST && cell.Env != nil: // Lambda/Closure
+    case cell.Type == lib.LAMBDA:
       params = cell.Car
     case cell.Type == lib.MACRO:
       params = cell.Car
-    default: // FUNC, ATOM, NUMBER, STRING, NIL
+    default: // FUNC, ATOM, NUMBER, STRING, NIL, LIST
       return lib.MakeNil(), nil
     }
     var b strings.Builder
@@ -125,6 +125,8 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     case lib.STRING:
       return lib.MakeStr("string"), nil
     case lib.LIST:
+      return lib.MakeStr("list"), nil
+    case lib.LAMBDA:
       return lib.MakeStr("lambda"), nil
     case lib.FUNC:
       return lib.MakeStr("function"), nil
@@ -152,7 +154,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
   }))
 
   // swank--definition-kind: (name) -> "lambda" | "macro" | "builtin" | "unbound".
-  // Lambda = Type:LIST mit Env!=nil; Macro = Type:MACRO; sonst builtin/unbound.
+  // Lambda = Type:LAMBDA; Macro = Type:MACRO; sonst builtin/unbound.
   _ = env.Set("swank--definition-kind", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {
       return lib.MakeStr("unbound"), nil
@@ -162,7 +164,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
       return lib.MakeStr("unbound"), nil
     }
     switch {
-    case cell.Type == lib.LIST && cell.Env != nil:
+    case cell.Type == lib.LAMBDA:
       return lib.MakeStr("lambda"), nil
     case cell.Type == lib.MACRO:
       return lib.MakeStr("macro"), nil
@@ -183,7 +185,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     if err != nil {
       return lib.MakeNil(), nil
     }
-    if (cell.Type == lib.LIST && cell.Env != nil) || cell.Type == lib.MACRO {
+    if cell.Type == lib.LAMBDA || cell.Type == lib.MACRO {
       return cell, nil
     }
     return lib.MakeNil(), nil

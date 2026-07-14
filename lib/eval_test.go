@@ -187,6 +187,20 @@ func TestEvalLambda(t *testing.T) {
   evalEq(t, `((lambda (x) (* x x)) 5)`, "25")
   evalEq(t, `((lambda (x y) (+ x y)) 3 4)`, "7")
   evalEq(t, `((lambda () 42))`, "42")   // keine Parameter
+  // apply/funcall mit Lambda
+  evalEq(t, `(apply (lambda (x) (+ x 1)) '(2))`, "3")
+  evalEq(t, `(funcall (lambda (x y) (+ x y)) 3 4)`, "7")
+  // Datenliste als Funktion -> Fehler, kein Panic
+  evalErr(t, `((list 'a 'b))`)
+}
+
+func TestEvalLambdaType(t *testing.T) {
+  // Lambda ist ein Atom, aber keine Liste
+  evalEq(t, `(atom? (lambda (x) x))`, "t")
+  evalEq(t, `(list? (lambda (x) x))`, "()")
+  // car/cdr auf Lambda liefern Parameter/Body (für SWANK-Introspektion)
+  evalEq(t, `(car (lambda (x) x))`, "(x)")
+  evalEq(t, `(car (lambda (x y) (+ x y)))`, "(x y)")
 }
 
 func TestEvalDefunRecursion(t *testing.T) {

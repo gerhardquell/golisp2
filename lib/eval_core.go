@@ -45,7 +45,7 @@ func Eval(expr *Cell, env *Env) (res *Cell, err error) {
     if expr == nil { return MakeNil(), nil }
 
     switch expr.Type {
-    case NIL, NUMBER, STRING, FUNC: return expr, nil
+    case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO: return expr, nil
     case ATOM:
       if len(expr.Val) > 0 && expr.Val[0] == ':' { return expr, nil } // Keywords selbst-auswertend
       return env.Get(expr.Val)
@@ -217,10 +217,10 @@ func Eval(expr *Cell, env *Env) (res *Cell, err error) {
     }
 
     // Lambda → Argumente direkt binden, Loop weiter (TCO)
-    if fn.Type == LIST {
+    if fn.Type == LAMBDA {
       closureEnv, ok := fn.Env.(*Env)
       if !ok {
-        return nil, fmt.Errorf("eval: Liste ist keine Funktion (kein Closure-Env)")
+        return nil, fmt.Errorf("eval: Lambda hat keinen Closure-Env")
       }
       localEnv := NewEnv(closureEnv)
       if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv); err != nil {
@@ -300,7 +300,7 @@ func evalArgs(args *Cell, env *Env) ([]*Cell, error) {
 func apply(fn *Cell, args []*Cell) (*Cell, error) {
   switch fn.Type {
   case FUNC: return fn.Fn(args)
-  case LIST: return applyLambda(fn, args)
+  case LAMBDA: return applyLambda(fn, args)
   default:   return nil, fmt.Errorf("apply: '%s' ist keine Funktion", fn)
   }
 }

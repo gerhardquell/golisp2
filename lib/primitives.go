@@ -342,7 +342,7 @@ func cellEqual(a, b *Cell) bool {
 		return a.Val == b.Val
 	case STRING:
 		return a.Val == b.Val
-	case LIST:
+	case LIST, LAMBDA, MACRO:
 		return cellEqual(a.Car, b.Car) && cellEqual(a.Cdr, b.Cdr)
 	}
 	return false
@@ -351,14 +351,14 @@ func cellEqual(a, b *Cell) bool {
 // ---- Listen ----
 
 func fnCar(args []*Cell) (*Cell, error) {
-	if len(args) < 1 || args[0].Type != LIST {
+	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO) {
 		return nil, fmt.Errorf("car: Liste erwartet")
 	}
 	return args[0].Car, nil
 }
 
 func fnCdr(args []*Cell) (*Cell, error) {
-	if len(args) < 1 || args[0].Type != LIST {
+	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO) {
 		return nil, fmt.Errorf("cdr: Liste erwartet")
 	}
 	if args[0].Cdr == nil {

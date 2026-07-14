@@ -6,7 +6,7 @@
 //  Erstellt : 20260616 (aufgespalten aus eval.go)
 //**********************************************************************
 // Lambda/Closure-Logik: makeLambda, applyLambda, bindArgs, IsMacro.
-// Lambda-Struktur: Cell{Type:LIST, Car:params, Cdr:body, Env:closureEnv}
+// Lambda-Struktur: Cell{Type:LAMBDA, Car:params, Cdr:body, Env:closureEnv}
 // (Makros identisch, aber Type:MACRO.)
 //**********************************************************************
 
@@ -14,10 +14,10 @@ package lib
 
 import "fmt"
 
-// makeLambda baut eine Closure-Cell (Type:LIST, Env=Closure).
+// makeLambda baut eine Closure-Cell (Type:LAMBDA, Env=Closure).
 func makeLambda(params, body *Cell, env *Env) *Cell {
   env.shared = true
-  return &Cell{Type: LIST, Car: params, Cdr: body, Env: env}
+  return &Cell{Type: LAMBDA, Car: params, Cdr: body, Env: env}
 }
 
 // applyLambda wendet eine Lambda/Closure auf Argumente an.
@@ -25,7 +25,7 @@ func makeLambda(params, body *Cell, env *Env) *Cell {
 func applyLambda(lambda *Cell, args []*Cell) (*Cell, error) {
   closureEnv, ok := lambda.Env.(*Env)
   if !ok {
-    return nil, fmt.Errorf("applyLambda: Liste ist keine Funktion (kein Closure-Env)")
+    return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
   }
   localEnv   := NewEnv(closureEnv)
   defer freeEnv(localEnv)

@@ -28,9 +28,10 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
   statt Panic.
 - [x] `bound?` wertet sein Argument aus, damit Makros wie `defvar` und
   `defstruct-resolve-name` korrekt mit Symbol-Variablen arbeiten.
-- [ ] Grundsatzfrage (nicht heute entscheiden): eigener Typ LAMBDA/CLOSURE,
+- [x] Grundsatzfrage: eigener Typ LAMBDA/CLOSURE,
       statt Lambda = LIST + optionales Env. Macht den Fehler unmöglich,
-      statt ihn zu fangen. Guter Zeitpunkt: GPS ist einziger ernsthafter Nutzer.
+      statt ihn zu fangen. Implementiert in lib/types.go, eval_lambda.go,
+      eval_core.go, primitives.go, trace.go, genalg_prims.go, swank/env.go.
 
 ## 2. defstruct (embed/stdlib.lisp)
 - [x] Konstruktor-Rumpf baut über `list` → jeder Slot namens `list` bricht ihn.

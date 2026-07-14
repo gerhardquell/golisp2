@@ -60,7 +60,7 @@ func fnTrace(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("trace: Symbol '%s' nicht gebunden", name)
   }
-  if cur.Type != FUNC && cur.Type != LIST {
+  if cur.Type != FUNC && cur.Type != LAMBDA {
     return nil, fmt.Errorf("trace: '%s' ist keine Funktion", name)
   }
 

@@ -19,6 +19,7 @@ const (
 	NUMBER                 // 42, 3.14
 	STRING                 // "hallo"
 	LIST                   // (a b c)
+	LAMBDA                 // (lambda (...) ...)
 	FUNC                   // eingebaute Funktion
 	MACRO                  // defmacro
 	NIL                    // ()
@@ -96,6 +97,8 @@ func (c *Cell) String() string {
 		return fmt.Sprintf("%q", c.Val)
 	case FUNC:
 		return "#<func>"
+	case LAMBDA:
+		return "#<lambda>"
 	case MACRO:
 		return "#<macro>"
 	case LIST:

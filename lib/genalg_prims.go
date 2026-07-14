@@ -83,7 +83,7 @@ func parseGenType(c *Cell) (GenType, error) {
 
 // isCallable prueft ob ein Wert als Funktion aufgerufen werden kann.
 func isCallable(c *Cell) bool {
-  return c != nil && (c.Type == FUNC || c.Type == LIST)
+  return c != nil && (c.Type == FUNC || c.Type == LAMBDA)
 }
 
 // genomeToCell wandelt ein Rohes Genom-Byte-Array in eine Lisp-Liste.

@@ -35,7 +35,8 @@ func evalWhile(args *Cell, env *Env) (*Cell, error) {
 // do: (do ((var init step) ...) (test result) body...)
 // Scheme-style: bindet Variablen, iteriert bis test wahr, gibt result zurück.
 func evalDo(args *Cell, env *Env) (*Cell, error) {
-  if args == nil || args.Type != LIST {
+  if args == nil || args.Type != LIST ||
+     args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("do: Syntax: (do ((var init step) ...) (test result) body...)")
   }
   // Variablen-Bindungen initialisieren
@@ -44,6 +45,9 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
   bindings := args.Car
   for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car                         // (var init step)
+    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
+      return nil, fmt.Errorf("do: Bindung muss (var init step) sein")
+    }
     name := spec.Car.Val
     init, err := Eval(spec.Cdr.Car, env)  // init im äußeren env auswerten
     if err != nil { return nil, err }
@@ -67,6 +71,9 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
     var vals  []*Cell
     for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
       spec := b.Car
+      if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
+        return nil, fmt.Errorf("do: Bindung muss (var init step) sein")
+      }
       name := spec.Car.Val
       step := spec.Cdr.Cdr  // Cdr.Cdr = step-Teil
       var newVal *Cell
@@ -121,6 +128,9 @@ func evalFlet(args *Cell, env *Env) (*Cell, error) {
   defer freeEnv(localEnv)
   for defs := args.Car; defs != nil && defs.Type == LIST; defs = defs.Cdr {
     def  := defs.Car
+    if def == nil || def.Type != LIST || def.Car == nil || def.Car.Type != ATOM {
+      return nil, fmt.Errorf("flet: Definition muss (name (params...) body...) sein")
+    }
     name := def.Car.Val
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), env)
     _ = localEnv.Set(name, lam)
@@ -137,6 +147,9 @@ func evalLabels(args *Cell, env *Env) (*Cell, error) {
   defer freeEnv(localEnv)
   for defs := args.Car; defs != nil && defs.Type == LIST; defs = defs.Cdr {
     def  := defs.Car
+    if def == nil || def.Type != LIST || def.Car == nil || def.Car.Type != ATOM {
+      return nil, fmt.Errorf("labels: Definition muss (name (params...) body...) sein")
+    }
     name := def.Car.Val
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), localEnv)
     _ = localEnv.Set(name, lam)
@@ -146,7 +159,7 @@ func evalLabels(args *Cell, env *Env) (*Cell, error) {
 
 // block: (block name body...) → benannter Block; return-from verlässt ihn.
 func evalBlock(args *Cell, env *Env) (*Cell, error) {
-  if args == nil || args.Type != LIST {
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("block: Syntax: (block name body...)")
   }
   name := args.Car.Val
@@ -162,7 +175,7 @@ func evalBlock(args *Cell, env *Env) (*Cell, error) {
 
 // return-from: (return-from name [value]) → nicht-lokaler Ausstieg aus block.
 func evalReturnFrom(args *Cell, env *Env) (*Cell, error) {
-  if args == nil || args.Type != LIST {
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("return-from: Syntax: (return-from name [value])")
   }
   name := args.Car.Val
@@ -207,7 +220,7 @@ func evalCatch(args *Cell, env *Env) (*Cell, error) {
 // Wertet alle Ausdrücke parallel aus, sammelt Ergebnisse als Liste.
 // Optionaler :timeout N (Sekunden): bei Ablauf liefert die Goroutine nil.
 func evalParfunc(args *Cell, env *Env) (*Cell, error) {
-  if args == nil || args.Type != LIST {
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("parfunc: Syntax: (parfunc name [:timeout N] expr...)")
   }
 

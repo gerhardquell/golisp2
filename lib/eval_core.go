@@ -21,7 +21,7 @@ import (
 
 // Eval wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
 // setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
-func Eval(expr *Cell, env *Env) (*Cell, error) {
+func Eval(expr *Cell, env *Env) (res *Cell, err error) {
   // ownEnv trackt den letzten Frame, den dieser Eval-Aufruf im Tail-Call
   // angelegt hat. Er wird am Ende freigegeben; bei Tail-Calls wird der
   // Vorgaenger vor dem Uebergang freigegeben, damit Rekursion O(1) allokiert.
@@ -33,7 +33,13 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
     ownEnv = newEnv
     return newEnv
   }
-  defer func() { freeEnv(ownEnv) }()
+  defer func() {
+    freeEnv(ownEnv)
+    if r := recover(); r != nil {
+      res = nil
+      err = fmt.Errorf("eval: panic recovered: %v", r)
+    }
+  }()
 
   for {
     if expr == nil { return MakeNil(), nil }
@@ -212,7 +218,10 @@ func Eval(expr *Cell, env *Env) (*Cell, error) {
 
     // Lambda → Argumente direkt binden, Loop weiter (TCO)
     if fn.Type == LIST {
-      closureEnv := fn.Env.(*Env)
+      closureEnv, ok := fn.Env.(*Env)
+      if !ok {
+        return nil, fmt.Errorf("eval: Liste ist keine Funktion (kein Closure-Env)")
+      }
       localEnv := NewEnv(closureEnv)
       if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv); err != nil {
         freeEnv(localEnv)

@@ -23,7 +23,10 @@ func makeLambda(params, body *Cell, env *Env) *Cell {
 // applyLambda wendet eine Lambda/Closure auf Argumente an.
 // Wird auch für Makro-Expansion genutzt (siehe Eval + evalMacroexpand).
 func applyLambda(lambda *Cell, args []*Cell) (*Cell, error) {
-  closureEnv := lambda.Env.(*Env)
+  closureEnv, ok := lambda.Env.(*Env)
+  if !ok {
+    return nil, fmt.Errorf("applyLambda: Liste ist keine Funktion (kein Closure-Env)")
+  }
   localEnv   := NewEnv(closureEnv)
   defer freeEnv(localEnv)
   if err := bindArgs(lambda.Car, args, closureEnv, localEnv); err != nil {

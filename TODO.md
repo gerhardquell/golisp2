@@ -1,201 +1,85 @@
-# Task-Brief: Redefine-Guard + trace
+# TODO — golisp2, Stand 2026-07-14, 00:45
 
-Handoff für Claude Code. Zwei unabhängige Aufgaben. **Erst 1, dann 2.**
-Keine externen Abhängigkeiten. Kein SQLite. Keine Datenbank.
+## Kontext (falls der Kopf leer ist)
+GPS-Port (Norvig PAIP Kap. 4) war grün. Beim Nachfragen *warum* er grün ist,
+fielen drei Ebenen auf: gps.lisp korrekt → defstruct-Makro fehlerhaft →
+Evaluator unterscheidet Code nicht von Daten.
 
-**Motivation:** In einem homoikonischen System kann eine Definition still
-überschrieben werden — aus `stdlib.lisp`, aus dem SWANK-REPL, aus
-`(eval (read (sigo …)))`. Kein Compilerfehler, kein failing Test. Der Fehler
-fällt erst Wochen später auf. Der Guard macht ihn laut.
+Kette: `(defstruct box (list nil))` → Konstruktor `(list (quote box) list)`
+→ Parameter `list` shadowed das Primitiv → Datenliste in Funktionsposition
+→ `eval_core.go:215`, `fn.Env.(*Env)` auf nil → Panic, Prozess tot.
+GPS lief nur, weil Norvig keinen Slot `list` benutzt.
 
----
+## Erledigt (gestern)
+- [x] eval_core.go:215 — Type Assertion abgesichert
 
-## Aufgabe 1: Redefine-Guard
+## 1. Evaluator (zuerst — Fundament)
+- [x] Regressionstest zum Fix: `(define xs '(1 2 3))` `(xs 0)` → Fehler, kein Absturz
+  (manuell verifiziert; persistenter Test wünschenswert)
+- [x] `rg -n '\.\(\*Env\)' lib/` — geprüft und abgesichert
+  - `eval_core.go:215` / `eval_lambda.go:26` sicher
+  - `env.go:118` ist `envPool.Get().(*Env)` — synchronisierter Pool, bleibt sicher
+- [x] `recover()` an die Auswertungsgrenze. **Wichtigster Punkt.**
+  `Eval()` fängt jetzt jede Panic und wandelt sie in `eval: panic recovered: ...` um.
+  Auch `parfunc`-Worker-Goroutinen sind dadurch abgedeckt.
+- [x] Nil-Pointer-Validierung in Spezialformen (zusätzliche harte Abwehr):
+  `define`, `defun`, `defmacro`, `set!`, `do`, `flet`, `labels`, `block`,
+  `return-from`, `parfunc` liefern bei unvollständigem Input Syntax-Fehler
+  statt Panic.
+- [x] `bound?` wertet sein Argument aus, damit Makros wie `defvar` und
+  `defstruct-resolve-name` korrekt mit Symbol-Variablen arbeiten.
+- [ ] Grundsatzfrage (nicht heute entscheiden): eigener Typ LAMBDA/CLOSURE,
+      statt Lambda = LIST + optionales Env. Macht den Fehler unmöglich,
+      statt ihn zu fangen. Guter Zeitpunkt: GPS ist einziger ernsthafter Nutzer.
 
-### Ziel
+## 2. defstruct (embed/stdlib.lisp)
+- [x] Konstruktor-Rumpf baut über `list` → jeder Slot namens `list` bricht ihn.
+      Fix: internes Primitiv (`%make-struct`) oder Name, den der Nutzer nicht wählen kann.
+- [x] **Nicht idempotent**: zweites Laden desselben defstruct weicht komplett auf
+      `make--pt` / `pt--x` / `pt--?` aus. Alte Definition bleibt aktiv, lautlos.
+      Fix: Kollision nur bei *fremdem* Namen ausweichen.
+- [x] `defaults` (Zeile 3 im let*) ist toter Code — wird berechnet, nie benutzt. Raus.
+- [x] Kollisionsregel schützt nur eine Ebene: `set--difference` wird kommentarlos
+      überschrieben, falls belegt.
+- [x] **Warnung auf stderr** bei Ausweichnamen:
+      `WARN: defstruct set: 'set-difference' existiert → Accessor heißt 'set--difference'`
+      Ohne die steht der tatsächliche Name in *keiner* Quelle.
+- [x] `eval '(defun ...)` im Makro ist laut macroexpand überflüssig — prüfen:
+      an einem Slot rausnehmen, `(pt-x (make-pt :x 7))` → 7? Dann überall weg,
+      Makro halbiert sich.
 
-`Env.Set` auf dem **Root-Env** meldet bzw. verhindert das Überschreiben
-existierender Go-Primitiven.
+## 3. stdlib-Tests (Nachholschuld)
+- [ ] `stdlib-test.lisp` anlegen. Sechs Funktionen aus dem GPS-Commit hatten
+      als einzigen Zeugen `gps.lisp`: defstruct, setf, defvar, union,
+      set-difference, find-all.
+- [x] Bekannte Inkonsistenz: `(setf (pt-x p) 9)` liefert jetzt `9`.
+      CL-konform: setf gibt den zugewiesenen Wert zurück.
 
-### Chokepoint
+## 4. gps.lisp — Kommentare ehrlich machen
+- [ ] Kopfkommentar Z. 16–20: "Semantik bleibt erhalten" ist falsch.
+      GPS hinterlässt den Endzustand **global** (`set!`), Norvigs dynamische
+      Bindung nicht. Belegt: `(println *state*)` nach Fall 1.
+- [ ] Bei `shop-installs-battery`: kein `:del-list` → Zustand bleibt widersprüchlich
+      (`car-needs-battery` UND `car-works`). Norvig-Original, harmlos bis
+      Version 2 (negierte Ziele). Hinschreiben, nicht reparieren.
+- [ ] Norvigs drei bekannte Fehler als Tests ergänzen — ein Port ist erst treu,
+      wenn er die *gleichen* Fehler macht:
+      1. Clobbered Sibling Goal: Ziele `'(have-money son-at-school)` → muss `solved`
+         geben, obwohl das Geld weg ist
+      2. Leaping before you look: `'(son-at-school have-money)` → `()`, aber Aktionen
+         wurden schon ausgeführt
+      3. Rekursives Unterziel (`ask-phone-number`) → muss hängen
+- [ ] TODO-Status "erledigt" erst wieder setzen, wenn 1–3 stehen.
 
-`lib/env.go`, `Env.Set`. Das ist der **einzige** Weg ins globale Environment —
-aus Go (`BaseEnv`), aus Lisp (`define`/`defun`/`setq`), aus SWANK, aus `eval`.
-Kein zweiter Hook, kein zweiter Ort.
+## 5. Danach
+- [ ] PAIP Kap. 4.11 → GPS Version 2: **State-Passing** statt globaler Mutation.
+      `achieve-all` nimmt state und gibt neuen state zurück. Das ist die Form,
+      die goroutine-tauglich ist. Version 1 nicht parallelisieren.
 
-### Regel
-
-Greift **nur**, wenn alle drei Bedingungen gelten:
-
-1. Env ist Root (kein Parent)
-2. Binding existiert bereits
-3. Altes Binding hat `Type == FUNC` (= Go-Primitiv aus `BaseEnv()`)
-
-Lambdas (`Type == LIST` mit `Env != nil`) sind **nicht** geschützt — eigene
-`defun`s im REPL neu zu definieren ist normal und darf nicht nerven.
-
-### Policy
-
-Go-Package-Variable, per Lisp-Primitiv setzbar:
-
-```lisp
-(redefine-policy 'allow)   ; still durchlassen
-(redefine-policy 'warn)    ; DEFAULT: nach stderr melden, durchlassen
-(redefine-policy 'error)   ; Fehler zurückgeben, Binding bleibt
-(redefine-policy)          ; aktuelle Policy zurückgeben
-```
-
-Meldung: `REDEF: car (war FUNC)` → **stderr**, nie stdout.
-(CLI-Vertrag: Ergebnisse → stdout, alles andere → stderr.)
-
-### Performance — kritisch
-
-`NewEnv+Set` steht mit **35 %** im Profil (siehe `perfTodo.md`). Der Hot Path
-sind **Frame-Envs** (Lambda-Argumente), nicht der Root-Env.
-
-Die Prüfung darf den Frame-Pfad **nicht** berühren:
-
-```go
-func (e *Env) Set(k string, v *Cell) {
-  if e.parent != nil {          // Frame: unverändert, kein Overhead
-    e.vars[k] = v
-    return
-  }
-  // ... Root: Guard-Prüfung
-}
-```
-
-Feldnamen (`parent`, `vars`) **im Code verifizieren**, nicht raten.
-
-`go test -bench=Fib -count=1` vor und nach der Änderung. **Keine messbare
-Regression erlaubt.** Bei Regression: melden, nicht kaschieren.
-
-### Hook-Struktur
-
-Die Prüfung ruft eine Funktion `onRootRedefine(name string, old, new *Cell)`.
-Später hängt das Define-Log am selben Hook. **Ein Chokepoint, mehrere Nutzer.**
-
-### Tests (`lib/env_test.go`)
-
-| Fall | Erwartung |
-|------|-----------|
-| `(define car ...)`, Policy `error` | Fehler, `car` bleibt Primitiv |
-| `(define car ...)`, Policy `warn` | stderr-Meldung, Überschreiben klappt |
-| `(define car ...)`, Policy `allow` | still, klappt |
-| `(define neuesSymbol ...)` | still — kein existierendes Binding |
-| `(defun f ...)` zweimal | still — Lambda, kein FUNC |
-| `(lambda (car) car)` aufrufen | **darf NICHT feuern** — Frame-Env, lokales Shadowing ist legal |
-| Benchmark `fib` | keine Regression |
-
-Der Lambda-Parameter-Fall ist der wichtigste. Wenn der feuert, ist der
-Frame-Pfad falsch verdrahtet.
-
----
-
-## Aufgabe 2: `(trace fn)` / `(untrace fn)`
-
-### Ziel
-
-Live-Sicht auf Aufruf und Rückgabe einer **gezielt ausgewählten** Funktion.
-Kein globales Tracing.
-
-### API
-
-```lisp
-(trace fib)       ; einschalten
-(untrace fib)     ; ausschalten
-(trace)           ; Liste der aktuell getracten Namen
-(untrace)         ; alle aus
-```
-
-### Ausgabe — nach stderr, eingerückt nach Tiefe
-
-```
-0: (fib 3)
-  1: (fib 2)
-    2: (fib 1) => 1
-    2: (fib 0) => 0
-  1: (fib 2) => 1
-  1: (fib 1) => 1
-0: (fib 3) => 2
-```
-
-### Mechanik
-
-Homoikonisch fast geschenkt: Binding aus dem Root-Env holen, in eine
-Wrapper-Cell packen, zurückschreiben. `untrace` legt das Original zurück.
-Original **immer** in einer Map aufbewahren — sonst ist es weg.
-
-Muss für **beide** Typen funktionieren:
-- `Type == FUNC` (Go-Primitiv) → `Fn` direkt aufrufen
-- `Type == LIST` mit `Env != nil` (Lambda) → über `apply` aufrufen
-
-Ist `apply` aus dem Trace-Modul erreichbar (`lib/eval_core.go`, gleiches
-Package)? **Verifizieren.** Bei Import-Cycle: **stoppen und fragen**, nicht
-umbauen.
-
-### ⚠ Gotcha: Trace bricht TCO
-
-Ein Lambda in eine Go-Wrapper-Funktion zu packen, unterbricht das
-Eval-Trampolin — Tail-Calls der getracten Funktion bekommen wieder einen echten
-Stack-Frame.
-
-**Konsequenz:** Eine tail-rekursive Funktion, die untraced beliebig tief läuft,
-kann getraced den Stack sprengen.
-
-Das ist **akzeptiert** (CL verhält sich ähnlich), aber es muss:
-- in `doc/lisp-semantik.md` dokumentiert werden
-- als Kommentar über der Wrapper-Funktion stehen
-
-Nicht versuchen, das zu „reparieren". Es ist der Preis.
-
-### ⚠ Gotcha: parfunc
-
-Der Tiefenzähler ist global. Unter `parfunc` verschachteln sich die Ausgaben
-mehrerer Goroutinen ineinander.
-
-**Akzeptiert.** Mutex ums Schreiben (damit keine Zeile zerreißt), Verschachtelung
-dokumentieren. **Nicht** über-engineeren — das ist ein Diagnosewerkzeug, kein
-Profiler.
-
-### Tests
-
-| Fall | Erwartung |
-|------|-----------|
-| `(trace fib)`, `(fib 3)` | Ein/Aus-Zeilen, korrekte Einrückung, korrektes Ergebnis |
-| `(untrace fib)`, `(fib 3)` | keine Ausgabe, Original wiederhergestellt |
-| `(trace car)` | Go-Primitiv wird getraced |
-| `(trace)` nach 2× trace | beide Namen |
-| Ergebniswert | durch Tracing **unverändert** |
-| Ausgabe | **stderr**, nie stdout |
-
----
-
-## Grenzen — hier ist Schluss
-
-- **Kein** SQLite, kein Treiber, keine DB.
-- **Kein** globales Auto-Tracing aller Funktionen.
-- **Kein** Call-Graph, keine Aggregation, kein Export. Kommt später, separat.
-- **Kein** Refactoring von `Env`, `Eval` oder `apply` über die genannten Stellen
-  hinaus. Blast-Radius klein halten.
-
-Wenn die Spec unvollständig oder falsch wirkt: **sagen, nicht umgehen.**
-
-## Konventionen
-
-`CLAUDE.md` gilt. Insbesondere:
-2 Spaces · camelCase · Datei-Header · `./tmp/` statt `/tmp` · `./build.sh` ·
-Fehler als `fmt.Errorf("funktion: beschreibung")`.
-
-`go build ./...` ist die Ground Truth, nicht der Language Server.
-
-**Attribution:** Das schreibende Modell trägt sich selbst als
-`Co-Authored-By:` in den Commit ein — mit exakter Modellbezeichnung.
-
-## Definition of Done
-
-1. `go build ./...` sauber
-2. `go test ./... -count=1` grün
-3. `go test -bench=Fib -count=1` ohne Regression
-4. `doc/lisp-semantik.md` ergänzt: `redefine-policy`, `trace`, TCO-Gotcha
-5. Zwei getrennte Commits — Guard und Trace sind unabhängig
+## RETROSPECTIVE (eintragen)
+- Grün heißt nicht richtig. Grün heißt: noch keine passende Frage gestellt.
+- Ein Feature-Port zieht Spracherweiterungen nach. Der Anwendungsfall testet
+  sie nur entlang *eines* Pfades. Neue stdlib-Funktion → eigener Test.
+- Namensgenerierung braucht Kollisionsregeln **und** eine Warnung. Eine Ausweich-
+  regel ohne Meldung tauscht einen lauten Fehler gegen einen leisen.
+- "Unbekanntes Symbol" im REPL beweist nichts über Code in der Datei. Erst laden.

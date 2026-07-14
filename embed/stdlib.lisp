@@ -209,8 +209,8 @@
 ;; Symbol ist no-op, wenn es bereits gebunden ist.
 (defmacro defvar (name &rest rest)
   (let ((val (if (null rest) () (car rest))))
-    `(if (bound? ,name)
-         ,name
+    `(if (bound? ',name)
+         ',name
          (define ,name ,val))))
 
 ;; Registry für setf-Places: Assoc-Liste (accessor . setter).
@@ -220,12 +220,14 @@
   (set! *setf-expanders* (cons (cons accessor setter) *setf-expanders*)))
 
 ;; setf: generalisierte Zuweisung (CL-Compat).
-;; - Variable: (setf x 1) → (set! x 1)
-;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9) → (set! p (set-pt-x p 9))
+;; - Variable: (setf x 1) → (begin (set! x 1) 1)
+;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9)
+;;   → (begin (set! p (set-pt-x p 9)) 9)
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
+;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
 (defmacro setf (place val)
   (if (atom place)
-      `(set! ,place ,val)
+      `(begin (set! ,place ,val) ,val)
       (let ((accessor (car place))
             (arg (cadr place)))
         (if (not (atom arg))
@@ -233,7 +235,7 @@
             (let ((entry (assoc accessor *setf-expanders*)))
               (if (null? entry)
                   (error "setf: unbekannter Place")
-                  `(set! ,arg (,(cdr entry) ,arg ,val))))))))
+                  `(begin (set! ,arg (,(cdr entry) ,arg ,val)) ,val)))))))
 
 ;; === Strukturen =================================================
 
@@ -243,45 +245,54 @@
       (cons val (cdr lst))
       (cons (car lst) (set-nth (cdr lst) (- n 1) val))))
 
+;; Hilfsfunktion für defstruct: finde einen freien Namen, falls der Primärname
+;; bereits gebunden ist. Bei Reload (reload? = t) wird der Primärname beibehalten.
+;; Kollisionsvermeidung fügt Bindestriche zwischen name und slot ein:
+;;   prefix=""  → <name>-<slot>, <name>--<slot>, …
+;;   prefix="set-" → set-<name>-<slot>, set-<name>--<slot>, …
+(defun defstruct-resolve-name (prefix name slot sep reload?)
+  (let ((candidate (intern (format nil "~a~a~a~a" prefix name sep slot))))
+    (if (or reload? (not (bound? candidate)))
+        candidate
+        (defstruct-resolve-name prefix name slot (string-append sep "-") reload?))))
+
 ;; defstruct: (defstruct name [docstring] slot…) mit slot = sym | (sym [default]).
 ;; Repräsentation als Liste (tag val1 val2 …) – golisp2 hat keine Vektoren.
 ;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat,
 ;; sowie Setter-Funktionen set-<name>-<slot> und registriert sie für setf.
-;; Kollisionsvermeidung: Ist der Primärname bereits gebunden, wird der
-;; Alternative mit doppeltem Bindestrich verwendet (z. B. set--difference).
+;; Kollisionsvermeidung: Ist der Primärname bereits gebunden, wird eine
+;; freie Alternative mit zusätzlichem Bindestrich verwendet (z. B. set--difference).
+;; Beim erneuten Laden desselben defstruct bleiben die Primärnamen erhalten,
+;; damit alte Aufrufer nicht auf ausgewichene Namen verweisen.
 (defmacro defstruct (name &rest body)
   (let* ((slots      (filter (lambda (x) (not (string? x))) body))
          (slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
-         (defaults   (mapcar (lambda (s) (if (and (list? s) (not (null? (cdr s)))) (cadr s) ())) slots))
          (n          (length slots))
          (mk         (intern (format nil "make-~a" name)))
-         (mk-alt     (intern (format nil "make--~a" name)))
          (pred       (intern (format nil "~a?" name)))
-         (pred-alt   (intern (format nil "~a--?" name)))
-         (mk-body    (cons 'list (cons (list 'quote name) slot-names)))
-         (slot-specs (mapcar (lambda (p)
-                               (let ((s (car p)) (i (cadr p)))
-                                 (let ((acc (intern (format nil "~a-~a" name s)))
-                                       (alt-acc (intern (format nil "~a--~a" name s)))
-                                       (setter (intern (format nil "set-~a-~a" name s)))
-                                       (alt-setter (intern (format nil "set--~a-~a" name s)))
-                                       (idx (+ i 1)))
-                                   `(if (bound? ,acc)
-                                        (begin
-                                          (eval '(defun ,alt-acc (x) (nth ,idx x)))
-                                          (eval '(defun ,alt-setter (obj val) (set-nth obj ,idx val)))
-                                          (register-setf-expander ',alt-acc ',alt-setter))
-                                        (begin
-                                          (eval '(defun ,acc (x) (nth ,idx x)))
-                                          (eval '(defun ,setter (obj val) (set-nth obj ,idx val)))
-                                          (register-setf-expander ',acc ',setter))))))
-                             (zip slot-names (iota n)))))
+         ;; Reload? make-name oder name? existiert bereits → keine Ausweichung.
+         (reload?    (or (bound? mk) (bound? pred))))
     `(begin
-       (if (bound? ,mk)
-           (eval '(defun ,mk-alt (&key ,@slots) ,mk-body))
-           (eval '(defun ,mk (&key ,@slots) ,mk-body)))
-       ,@slot-specs
-       (if (bound? ,pred)
-           (eval '(defun ,pred-alt (x) (and (list? x) (equal? (car x) ',name))))
-           (eval '(defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))))
-
+       (defun ,mk (&key ,@slots) (%make-struct ',name ,@slot-names))
+       ,@(mapcar (lambda (p)
+                   (let* ((s (car p))
+                          (i (cadr p))
+                          (acc (intern (format nil "~a-~a" name s)))
+                          (setter (intern (format nil "set-~a-~a" name s)))
+                          (idx (+ i 1))
+                          (acc-final (defstruct-resolve-name "" name s "-" reload?))
+                          (setter-final (defstruct-resolve-name "set-" name s "-" reload?))
+                          (warn-acc (if (equal? acc acc-final)
+                                        '()
+                                        `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Accessor heißt '~a'" name acc acc-final)))))
+                          (warn-setter (if (equal? setter setter-final)
+                                           '()
+                                           `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Setter heißt '~a'" name setter setter-final))))))
+                     `(begin
+                        ,@warn-acc
+                        (defun ,acc-final (x) (nth ,idx x))
+                        ,@warn-setter
+                        (defun ,setter-final (obj val) (set-nth obj ,idx val))
+                        (register-setf-expander ',acc-final ',setter-final))))
+                 (zip slot-names (iota n)))
+       (defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))

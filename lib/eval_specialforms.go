@@ -18,6 +18,10 @@ import (
 
 func evalDefine(form *Cell, env *Env) (*Cell, error) {
   args := form.Cdr
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
+     args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
+    return nil, fmt.Errorf("define: Syntax: (define name value)")
+  }
   name := args.Car.Val
   val, err := Eval(args.Cdr.Car, env)
   if err != nil { return nil, err }
@@ -27,11 +31,18 @@ func evalDefine(form *Cell, env *Env) (*Cell, error) {
 }
 
 // bound?: (bound? sym) → t wenn sym im aktuellen Env gebunden ist, sonst nil.
+// sym wird ausgewertet, damit (bound? variable), die ein Symbol enthält,
+// funktioniert (z. B. im defstruct-Makro).
 func evalBound(args *Cell, env *Env) (*Cell, error) {
-  if args == nil || args.Car == nil || args.Car.Type != ATOM {
+  if args == nil || args.Car == nil {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
   }
-  if _, err := env.Get(args.Car.Val); err == nil {
+  sym, err := Eval(args.Car, env)
+  if err != nil { return nil, err }
+  if sym == nil || (sym.Type != ATOM && sym.Type != STRING) {
+    return nil, fmt.Errorf("bound?: Symbol erwartet")
+  }
+  if _, err := env.Get(sym.Val); err == nil {
     return MakeAtom("t"), nil
   }
   return MakeNil(), nil
@@ -134,6 +145,10 @@ func wrapBegin(exprs *Cell) *Cell {
 
 func evalDefun(form *Cell, env *Env) (*Cell, error) {
   args := form.Cdr
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
+     args.Cdr == nil || args.Cdr.Type != LIST {
+    return nil, fmt.Errorf("defun: Syntax: (defun name (params...) body...)")
+  }
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
   if err := env.Set(name, lam); err != nil { return nil, err }
@@ -157,6 +172,10 @@ func evalBegin(args *Cell, env *Env) (*Cell, error) {
 }
 
 func evalSet(args *Cell, env *Env) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
+     args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
+    return nil, fmt.Errorf("set!: Syntax: (set! name value)")
+  }
   val, err := Eval(args.Cdr.Car, env)
   if err != nil { return nil, err }
   return MakeAtom(args.Car.Val), env.Update(args.Car.Val, val)
@@ -249,6 +268,10 @@ func evalNot(args *Cell, env *Env) (*Cell, error) {
 // Wie defun, aber speichert MACRO statt LIST
 func evalDefmacro(form *Cell, env *Env) (*Cell, error) {
   args := form.Cdr
+  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
+     args.Cdr == nil || args.Cdr.Type != LIST {
+    return nil, fmt.Errorf("defmacro: Syntax: (defmacro name (params...) body...)")
+  }
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
   lam.Type = MACRO   // ← einziger Unterschied zu defun!

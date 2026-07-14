@@ -48,6 +48,7 @@ func BaseEnv() *Env {
 	_ = env.Set("atom", makeFn(fnAtom))
 	_ = env.Set("null", makeFn(fnNull))
 	_ = env.Set("list", makeFn(fnList))
+	_ = env.Set("%make-struct", makeFn(fnMakeStruct))
 	_ = env.Set("append", makeFn(fnAppend))
 
 	// Typ-Prädikate
@@ -64,6 +65,7 @@ func BaseEnv() *Env {
 	_ = env.Set("print", makeFn(fnPrint))
 	_ = env.Set("read", makeFn(fnRead))
 	_ = env.Set("println", makeFn(fnPrintln))
+	_ = env.Set("warn", makeFn(fnWarn))
 
 	// Wahrheitswerte
 	_ = env.Set("t", MakeAtom("t"))
@@ -403,6 +405,27 @@ func fnList(args []*Cell) (*Cell, error) {
 	return result, nil
 }
 
+// %make-struct: (make-struct tag slot1 slot2 ...) → (tag slot1 slot2 ...)
+// Internes Primitiv für defstruct. Verwendet statt list, damit ein Slot
+// namens "list" das Primitiv nicht shadowed.
+func fnMakeStruct(args []*Cell) (*Cell, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%%make-struct: min. 1 Argument (tag)")
+	}
+	tag := args[0]
+	if tag == nil || tag.Type != ATOM {
+		return nil, fmt.Errorf("%%make-struct: tag muss Symbol sein")
+	}
+	result := MakeNil()
+	for i := len(args) - 1; i >= 1; i-- {
+		if args[i] == nil {
+			return nil, fmt.Errorf("%%make-struct: Argument %d ist nil", i+1)
+		}
+		result = Cons(args[i], result)
+	}
+	return Cons(tag, result), nil
+}
+
 // append: (append list item) → Liste mit item am Ende (single-item, wie helper).
 func fnAppend(args []*Cell) (*Cell, error) {
 	return Append(args...), nil
@@ -436,6 +459,23 @@ func fnPrintln(args []*Cell) (*Cell, error) {
 	}
 	if err := WriteOutput(b.String()); err != nil {
 		return nil, fmt.Errorf("println: %w", err)
+	}
+	if len(args) == 0 {
+		return MakeNil(), nil
+	}
+	return args[len(args)-1], nil
+}
+
+// warn: (warn arg1 arg2 ...) → schreibt Argumente nach stderr.
+// Rückgabewert ist das letzte Argument (wie print/println).
+func fnWarn(args []*Cell) (*Cell, error) {
+	var b strings.Builder
+	for _, a := range args {
+		b.WriteString(a.String())
+	}
+	b.WriteString("\n")
+	if err := WriteError(b.String()); err != nil {
+		return nil, fmt.Errorf("warn: %w", err)
 	}
 	if len(args) == 0 {
 		return MakeNil(), nil

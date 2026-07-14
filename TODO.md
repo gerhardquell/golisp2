@@ -79,10 +79,10 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
       `./build/golisp2 -t`. Goroutine-tauglich, weil `ops` explizit durchgereicht
       wird (golisp2 hat keinen dynamischen Scope).
 
-## RETROSPECTIVE (eintragen)
-- Grün heißt nicht richtig. Grün heißt: noch keine passende Frage gestellt.
-- Ein Feature-Port zieht Spracherweiterungen nach. Der Anwendungsfall testet
+## RETROSPECTIVE (eingetragen in docs/retrospectives/retrospective-gps-20260714.md)
+- [x] Grün heißt nicht richtig. Grün heißt: noch keine passende Frage gestellt.
+- [x] Ein Feature-Port zieht Spracherweiterungen nach. Der Anwendungsfall testet
   sie nur entlang *eines* Pfades. Neue stdlib-Funktion → eigener Test.
-- Namensgenerierung braucht Kollisionsregeln **und** eine Warnung. Eine Ausweich-
+- [x] Namensgenerierung braucht Kollisionsregeln **und** eine Warnung. Eine Ausweich-
   regel ohne Meldung tauscht einen lauten Fehler gegen einen leisen.
-- "Unbekanntes Symbol" im REPL beweist nichts über Code in der Datei. Erst laden.
+- [x] "Unbekanntes Symbol" im REPL beweist nichts über Code in der Datei. Erst laden.

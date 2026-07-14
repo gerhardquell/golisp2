@@ -53,6 +53,8 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
       Testet: defstruct, setf, defvar, union, set-difference, find-all.
 - [x] Bekannte Inkonsistenz: `(setf (pt-x p) 9)` liefert jetzt `9`.
       CL-konform: setf gibt den zugewiesenen Wert zurück.
+      Zusätzlich: setf wertet den Wert-Ausdruck nur noch einmal aus
+      (gensym-Hilfsvariable), wichtig für Places wie `(setf x (f x))`.
 
 ## 4. gps.lisp — Kommentare ehrlich machen
 - [x] Kopfkommentar Z. 16–20: "Semantik bleibt erhalten" ist falsch.
@@ -71,9 +73,11 @@ GPS lief nur, weil Norvig keinen Slot `list` benutzt.
       Datei: `pn-gps1/gps-norvig-bugs.lisp`, geladen von `./build/golisp2 -t`.
 
 ## 5. Danach
-- [ ] PAIP Kap. 4.11 → GPS Version 2: **State-Passing** statt globaler Mutation.
-      `achieve-all` nimmt state und gibt neuen state zurück. Das ist die Form,
-      die goroutine-tauglich ist. Version 1 nicht parallelisieren.
+- [x] PAIP Kap. 4.11 → GPS Version 2: **State-Passing** statt globaler Mutation.
+      `achieve-all` nimmt state und gibt neuen state zurück. Implementiert in
+      `pn-gps1/gps2.lisp`, Tests in `pn-gps1/gps2-tests.lisp`, eingebunden in
+      `./build/golisp2 -t`. Goroutine-tauglich, weil `ops` explizit durchgereicht
+      wird (golisp2 hat keinen dynamischen Scope).
 
 ## RETROSPECTIVE (eintragen)
 - Grün heißt nicht richtig. Grün heißt: noch keine passende Frage gestellt.

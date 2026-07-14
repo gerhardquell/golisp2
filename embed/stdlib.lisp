@@ -226,16 +226,19 @@
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
 ;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
 (defmacro setf (place val)
-  (if (atom place)
-      `(begin (set! ,place ,val) ,val)
-      (let ((accessor (car place))
-            (arg (cadr place)))
-        (if (not (atom arg))
-            (error "setf: Place-Argument muss ein Symbol sein")
-            (let ((entry (assoc accessor *setf-expanders*)))
-              (if (null? entry)
-                  (error "setf: unbekannter Place")
-                  `(begin (set! ,arg (,(cdr entry) ,arg ,val)) ,val)))))))
+  (let ((v (gensym)))
+    (if (atom place)
+        `(let ((,v ,val)) (set! ,place ,v) ,v)
+        (let ((accessor (car place))
+              (arg (cadr place)))
+          (if (not (atom arg))
+              (error "setf: Place-Argument muss ein Symbol sein")
+              (let ((entry (assoc accessor *setf-expanders*)))
+                (if (null? entry)
+                    (error "setf: unbekannter Place")
+                    `(let ((,v ,val))
+                       (set! ,arg (,(cdr entry) ,arg ,v))
+                       ,v))))))))
 
 ;; === Strukturen =================================================
 

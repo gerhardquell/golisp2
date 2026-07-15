@@ -5,7 +5,7 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260616 (aufgespalten aus eval.go)
 //**********************************************************************
-// Laden von Lisp-Dateien: Pfad-Auflösung (GOLISP_PATH), evalLoad, LoadString.
+// Laden von Lisp-Dateien via zentraler Pfadauflösung in fileio.go.
 //**********************************************************************
 
 package lib
@@ -17,47 +17,15 @@ import (
   "strings"
 )
 
-var librarySearchPaths []string
-var searchPathsInitialized bool
-
-func initSearchPaths() []string {
-  var paths []string
-  paths = append(paths, "/lib/golib")
-  paths = append(paths, "/usr/local/lib/golib")
-  paths = append(paths, "./golib")
-  if golispPath := os.Getenv("GOLISP_PATH"); golispPath != "" {
-    for _, p := range strings.Split(golispPath, ":") {
-      if p != "" {
-        paths = append(paths, p)
-      }
-    }
-  }
-  return paths
-}
-
-func resolveLibraryPath(filename string) (string, error) {
-  if !searchPathsInitialized {
-    librarySearchPaths = initSearchPaths()
-    searchPathsInitialized = true
-  }
-  if _, err := os.Stat(filename); err == nil {
-    return filename, nil
-  }
-  for _, dir := range librarySearchPaths {
-    fullPath := dir + "/" + filename
-    if _, err := os.Stat(fullPath); err == nil {
-      return fullPath, nil
-    }
-  }
-  return "", fmt.Errorf("'%s' nicht gefunden in Suchpfaden", filename)
-}
-
 // load: (load "datei.lisp") → liest und wertet alle Ausdrücke aus
 func evalLoad(args *Cell, env *Env) (*Cell, error) {
   filenameCell, err := Eval(args.Car, env)
   if err != nil { return nil, err }
+  if filenameCell == nil || filenameCell.Type != STRING {
+    return nil, fmt.Errorf("load: Dateiname muss String sein")
+  }
 
-  resolvedPath, err := resolveLibraryPath(filenameCell.Val)
+  resolvedPath, err := resolvePath(filenameCell.Val)
   if err != nil {
     return nil, fmt.Errorf("load: %v", err)
   }

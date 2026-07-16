@@ -31,9 +31,9 @@ func TestEvalWrapperPassesContext(t *testing.T) {
 }
 
 func TestEvalDepthLimit(t *testing.T) {
-  old := MaxEvalDepth
-  MaxEvalDepth = 50
-  defer func() { MaxEvalDepth = old }()
+  old := GetMaxEvalDepth()
+  SetMaxEvalDepth(50)
+  defer func() { SetMaxEvalDepth(old) }()
 
   env := BaseEnv()
   if err := LoadStdlib(env); err != nil {

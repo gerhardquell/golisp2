@@ -130,7 +130,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "while":        return evalWhile(expr.Cdr, env)
       case "do":           return evalDo(expr.Cdr, env)
       case "quasiquote":   return evalQuasiquote(expr.Cdr, env)
-      case "function":     return Eval(expr.Cdr.Car, env)
+      case "function":     return evalWithCtx(expr.Cdr.Car, env, ectx.child())
       case "flet":         return evalFlet(expr.Cdr, env)
       case "labels":       return evalLabels(expr.Cdr, env)
       case "block":        return evalBlock(expr.Cdr, env)
@@ -140,7 +140,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
 
       // ── Tail: expr/env setzen, Loop weiter ──
       case "if":
-        cond, err := Eval(expr.Cdr.Car, env)
+        cond, err := evalWithCtx(expr.Cdr.Car, env, ectx.child())
         if err != nil { return nil, err }
         if IsTruthy(cond) {
           expr = expr.Cdr.Cdr.Car
@@ -154,7 +154,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "begin":
         args := expr.Cdr
         for args != nil && args.Cdr != nil && args.Cdr.Type == LIST {
-          if _, err := Eval(args.Car, env); err != nil { return nil, err }
+          if _, err := evalWithCtx(args.Car, env, ectx.child()); err != nil { return nil, err }
           args = args.Cdr
         }
         if args == nil || args.Type != LIST { return MakeNil(), nil }
@@ -166,7 +166,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         bindings := expr.Cdr.Car
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
-          val, err := Eval(b.Cdr.Car, env)
+          val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
           if err != nil { freeEnv(localEnv); return nil, err }
           _ = localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
@@ -179,7 +179,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         }
         // Evaluate all but the last expression
         for body.Cdr != nil && body.Cdr.Type == LIST {
-          _, err := Eval(body.Car, localEnv)
+          _, err := evalWithCtx(body.Car, localEnv, ectx.child())
           if err != nil { freeEnv(localEnv); return nil, err }
           body = body.Cdr
         }
@@ -194,7 +194,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         // Sequentielle Bindungen: jede sieht die vorherigen
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
-          val, err := Eval(b.Cdr.Car, localEnv)  // Im lokalen env auswerten!
+          val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
           if err != nil { freeEnv(localEnv); return nil, err }
           _ = localEnv.Set(b.Car.Val, val)
           bindings = bindings.Cdr
@@ -206,7 +206,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
           return MakeNil(), nil
         }
         for body.Cdr != nil && body.Cdr.Type == LIST {
-          _, err := Eval(body.Car, localEnv)
+          _, err := evalWithCtx(body.Car, localEnv, ectx.child())
           if err != nil { freeEnv(localEnv); return nil, err }
           body = body.Cdr
         }
@@ -224,14 +224,14 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
           test := clause.Car
           hit := test.Type == ATOM && (test.Val == "t" || test.Val == "else")
           if !hit {
-            val, err := Eval(test, env)
+            val, err := evalWithCtx(test, env, ectx.child())
             if err != nil { return nil, err }
             hit = IsTruthy(val)
           }
           if hit {
             body := clause.Cdr
             for body != nil && body.Cdr != nil && body.Cdr.Type == LIST {
-              if _, err := Eval(body.Car, env); err != nil { return nil, err }
+              if _, err := evalWithCtx(body.Car, env, ectx.child()); err != nil { return nil, err }
               body = body.Cdr
             }
             if body == nil || body.Type != LIST { return MakeNil(), nil }
@@ -252,7 +252,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
     }
 
     // ── Funktionsanwendung ──
-    fn, err := Eval(expr.Car, env)
+    fn, err := evalWithCtx(expr.Car, env, ectx.child())
     if err != nil { return nil, err }
 
     // Makro → expandieren, Loop weiter (TCO)
@@ -283,7 +283,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
     if fn.Type != FUNC {
       return nil, fmt.Errorf("eval: '%s' ist keine Funktion", fn)
     }
-    args, pooled, err := evalArgsPooled(expr.Cdr, env)
+    args, pooled, err := evalArgsPooled(expr.Cdr, env, ectx.child())
     if err != nil { return nil, err }
     res, err := fn.Fn(args)
     if pooled { putArgSlice(args) }
@@ -301,7 +301,7 @@ var argSlicePool = sync.Pool{
 // evalArgsPooled wertet Argumente aus und liefert einen Slice. pooled==true
 // bedeutet, der Slice stammt aus argSlicePool und muss mit putArgSlice
 // zurueckgegeben werden.
-func evalArgsPooled(args *Cell, env *Env) ([]*Cell, bool, error) {
+func evalArgsPooled(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, bool, error) {
   buf := argSlicePool.Get().(*[8]*Cell)
   result := buf[:0]
   pooled := true
@@ -315,7 +315,7 @@ func evalArgsPooled(args *Cell, env *Env) ([]*Cell, bool, error) {
       result = heap
       pooled = false
     }
-    val, err := Eval(args.Car, env)
+    val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil {
       if pooled { argSlicePool.Put((*[8]*Cell)(buf[:8])) }
       return nil, false, err
@@ -333,10 +333,10 @@ func putArgSlice(s []*Cell) {
   }
 }
 
-func evalArgs(args *Cell, env *Env) ([]*Cell, error) {
+func evalArgs(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
   var result []*Cell
   for args != nil && args.Type == LIST {
-    val, err := Eval(args.Car, env)
+    val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
     result = append(result, val)
     args = args.Cdr

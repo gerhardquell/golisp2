@@ -16,14 +16,14 @@ import (
   "fmt"
 )
 
-func evalDefine(form *Cell, env *Env) (*Cell, error) {
+func evalDefine(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("define: Syntax: (define name value)")
   }
   name := args.Car.Val
-  val, err := Eval(args.Cdr.Car, env)
+  val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
   if err := env.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
@@ -33,11 +33,11 @@ func evalDefine(form *Cell, env *Env) (*Cell, error) {
 // bound?: (bound? sym) → t wenn sym im aktuellen Env gebunden ist, sonst nil.
 // sym wird ausgewertet, damit (bound? variable), die ein Symbol enthält,
 // funktioniert (z. B. im defstruct-Makro).
-func evalBound(args *Cell, env *Env) (*Cell, error) {
+func evalBound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Car == nil {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
   }
-  sym, err := Eval(args.Car, env)
+  sym, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   if sym == nil || (sym.Type != ATOM && sym.Type != STRING) {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
@@ -49,11 +49,11 @@ func evalBound(args *Cell, env *Env) (*Cell, error) {
 }
 
 // macroexpand: (macroexpand form) → expandiert Makros einmal, gibt Ergebnis zurück
-func evalMacroexpand(args *Cell, env *Env) (*Cell, error) {
+func evalMacroexpand(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("macroexpand: 1 Argument nötig")
   }
-  form, err := Eval(args.Car, env)
+  form, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
 
   // Wenn es keine Liste ist, geben wir sie unverändert zurück
@@ -64,7 +64,7 @@ func evalMacroexpand(args *Cell, env *Env) (*Cell, error) {
   // Prüfe ob das erste Element ein Makro ist. form.Car kann eine
   // Specialform (begin, if, ...) oder ein nicht gebundenes Symbol sein —
   // dann kein Lookup-Fehler, sondern "nicht expandierbar" -> form zurück.
-  fn, err := Eval(form.Car, env)
+  fn, err := evalWithCtx(form.Car, env, ectx.child())
   if err != nil {
     return form, nil
   }
@@ -81,16 +81,16 @@ func evalMacroexpand(args *Cell, env *Env) (*Cell, error) {
 // macroexpand-all: (macroexpand-all form) → rekursiv alle Makros expandieren.
 // Expandiert Makros in allen Subformen, ohne die Form auszuwerten.
 // quote / quasiquote / function werden nicht durchdrungen.
-func evalMacroexpandAll(args *Cell, env *Env) (*Cell, error) {
+func evalMacroexpandAll(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("macroexpand-all: 1 Argument nötig")
   }
-  form, err := Eval(args.Car, env)
+  form, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
-  return macroexpandAll(form, env)
+  return macroexpandAll(form, env, ectx)
 }
 
-func macroexpandAll(form *Cell, env *Env) (*Cell, error) {
+func macroexpandAll(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if form == nil || form.Type != LIST {
     return form, nil
   }
@@ -102,26 +102,26 @@ func macroexpandAll(form *Cell, env *Env) (*Cell, error) {
     }
   }
   // Top-Level-Makro-Expansion versuchen
-  expanded, err := macroexpandOnce(form, env)
+  expanded, err := macroexpandOnce(form, env, ectx)
   if err != nil { return nil, err }
   if !cellEqual(expanded, form) {
-    return macroexpandAll(expanded, env)
+    return macroexpandAll(expanded, env, ectx)
   }
   // Kein Makro: rekursiv in car und cdr
-  newCar, err := macroexpandAll(form.Car, env)
+  newCar, err := macroexpandAll(form.Car, env, ectx)
   if err != nil { return nil, err }
-  newCdr, err := macroexpandAll(form.Cdr, env)
+  newCdr, err := macroexpandAll(form.Cdr, env, ectx)
   if err != nil { return nil, err }
   return Cons(newCar, newCdr), nil
 }
 
 // macroexpandOnce: expandiert form einmal, falls car ein Makro ist.
 // Liefert form unverändert zurück, wenn kein Makro vorliegt.
-func macroexpandOnce(form *Cell, env *Env) (*Cell, error) {
+func macroexpandOnce(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if form == nil || form.Type != LIST || form.Car == nil {
     return form, nil
   }
-  fn, err := Eval(form.Car, env)
+  fn, err := evalWithCtx(form.Car, env, ectx.child())
   if err != nil {
     return form, nil // Spezialform oder ungebunden
   }
@@ -143,7 +143,7 @@ func wrapBegin(exprs *Cell) *Cell {
   return Cons(MakeAtom("begin"), exprs)  // mehrere → (begin ...)
 }
 
-func evalDefun(form *Cell, env *Env) (*Cell, error) {
+func evalDefun(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST {
@@ -156,33 +156,33 @@ func evalDefun(form *Cell, env *Env) (*Cell, error) {
   return MakeAtom(name), nil
 }
 
-func evalLambda(args *Cell, env *Env) (*Cell, error) {
+func evalLambda(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return makeLambda(args.Car, wrapBegin(args.Cdr), env), nil
 }
 
-func evalBegin(args *Cell, env *Env) (*Cell, error) {
+func evalBegin(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   var result *Cell
   var err error
   for args != nil && args.Type == LIST {
-    result, err = Eval(args.Car, env)
+    result, err = evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
     args = args.Cdr
   }
   return result, nil
 }
 
-func evalSet(args *Cell, env *Env) (*Cell, error) {
+func evalSet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("set!: Syntax: (set! name value)")
   }
-  val, err := Eval(args.Cdr.Car, env)
+  val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
   return MakeAtom(args.Car.Val), env.Update(args.Car.Val, val)
 }
 
 // setq*: (setq* var1 val1 var2 val2 ...) → sequentielles Setzen
-func evalSetQStar(args *Cell, env *Env) (*Cell, error) {
+func evalSetQStar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("setq*: Syntax: (setq* var1 val1 var2 val2 ...)")
   }
@@ -196,7 +196,7 @@ func evalSetQStar(args *Cell, env *Env) (*Cell, error) {
     if a.Cdr == nil || a.Cdr.Type != LIST {
       return nil, fmt.Errorf("setq*: Wert für '%s' fehlt", name)
     }
-    val, err := Eval(a.Cdr.Car, env)
+    val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
     if err != nil { return nil, err }
     // Update existierende Variable oder neu definieren
     if _, getErr := env.Get(name); getErr == nil {
@@ -209,11 +209,11 @@ func evalSetQStar(args *Cell, env *Env) (*Cell, error) {
 }
 
 // mapcar: (mapcar fn liste) → wendet fn auf jedes Element an
-func evalMapcar(args *Cell, env *Env) (*Cell, error) {
-  fn, err := Eval(args.Car, env)
+func evalMapcar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  fn, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
 
-  lst, err := Eval(args.Cdr.Car, env)
+  lst, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
 
   var results []*Cell
@@ -233,10 +233,10 @@ func evalMapcar(args *Cell, env *Env) (*Cell, error) {
 }
 
 // and: (and a b c ...) → gibt ersten falschen Wert zurück, sonst letzten
-func evalAnd(args *Cell, env *Env) (*Cell, error) {
+func evalAnd(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   result := &Cell{Type: ATOM, Val: "t"}
   for args != nil && args.Type == LIST {
-    val, err := Eval(args.Car, env)
+    val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
     if !IsTruthy(val) { return MakeNil(), nil }  // Kurzschluss!
     result = val
@@ -246,9 +246,9 @@ func evalAnd(args *Cell, env *Env) (*Cell, error) {
 }
 
 // or: (or a b c ...) → gibt ersten wahren Wert zurück, sonst nil
-func evalOr(args *Cell, env *Env) (*Cell, error) {
+func evalOr(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   for args != nil && args.Type == LIST {
-    val, err := Eval(args.Car, env)
+    val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
     if IsTruthy(val) { return val, nil }  // Kurzschluss!
     args = args.Cdr
@@ -257,8 +257,8 @@ func evalOr(args *Cell, env *Env) (*Cell, error) {
 }
 
 // not: (not x) → t wenn x falsch, sonst nil
-func evalNot(args *Cell, env *Env) (*Cell, error) {
-  val, err := Eval(args.Car, env)
+func evalNot(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  val, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   if IsTruthy(val) { return MakeNil(), nil }
   return MakeAtom("t"), nil
@@ -266,7 +266,7 @@ func evalNot(args *Cell, env *Env) (*Cell, error) {
 
 // defmacro: (defmacro name (params) body)
 // Wie defun, aber speichert MACRO statt LIST
-func evalDefmacro(form *Cell, env *Env) (*Cell, error) {
+func evalDefmacro(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST {
@@ -283,11 +283,11 @@ func evalDefmacro(form *Cell, env *Env) (*Cell, error) {
 // case: (case key-expr ((val1 val2) result1) (else result3) ...)
 // Syntaktischer Zucker fuer cond mit strukturellem Vergleich.
 // Gibt Tripel zurück, damit der Eval-Loop TCO-fähig bleibt (case ist Tail).
-func evalCase(args *Cell, env *Env) (*Cell, *Env, error) {
+func evalCase(args *Cell, env *Env, ectx *evalCtx) (*Cell, *Env, error) {
   if args == nil || args.Type != LIST {
     return nil, nil, fmt.Errorf("case: Syntax: (case key-expr clause...)")
   }
-  key, err := Eval(args.Car, env)
+  key, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, nil, err }
 
   for clauses := args.Cdr; clauses != nil && clauses.Type == LIST; clauses = clauses.Cdr {
@@ -313,7 +313,7 @@ func evalCase(args *Cell, env *Env) (*Cell, *Env, error) {
       if body == nil || body.Type != LIST { return MakeNil(), env, nil }
       // Evaluiere alle Ausdruecke ausser dem letzten
       for body.Cdr != nil && body.Cdr.Type == LIST {
-        _, err := Eval(body.Car, env)
+        _, err := evalWithCtx(body.Car, env, ectx.child())
         if err != nil { return nil, nil, err }
         body = body.Cdr
       }

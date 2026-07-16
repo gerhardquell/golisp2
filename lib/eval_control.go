@@ -301,12 +301,12 @@ func evalParfunc(args *Cell, env *Env) (*Cell, error) {
 }
 
 // lock: (lock mu expr1 expr2 ...) → atomar ausführen
-func evalLock(args *Cell, env *Env) (*Cell, error) {
+func evalLock(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("lock: Syntax: (lock mutex expr...)")
   }
 
-  muCell, err := Eval(args.Car, env)
+  muCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
 
   gm, err := getMutex(muCell)
@@ -315,5 +315,5 @@ func evalLock(args *Cell, env *Env) (*Cell, error) {
   gm.mu.Lock()
   defer gm.mu.Unlock()
 
-  return evalBegin(args.Cdr, env)
+  return evalBegin(args.Cdr, env, ectx)
 }

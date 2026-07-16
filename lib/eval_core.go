@@ -108,23 +108,23 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
 
       // ── Nicht-Tail: Ergebnis sofort zurückgeben ──
       case "quote":        return expr.Cdr.Car, nil
-      case "macroexpand":  return evalMacroexpand(expr.Cdr, env)
-      case "bound?":       return evalBound(expr.Cdr, env)
-      case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env)
+      case "macroexpand":  return evalMacroexpand(expr.Cdr, env, ectx)
+      case "bound?":       return evalBound(expr.Cdr, env, ectx)
+      case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env, ectx)
       case "exec":         return evalExec(expr.Cdr, env)
-      case "define", "setq":  return evalDefine(expr, env)
-      case "defun":        return evalDefun(expr, env)
-      case "defmacro":     return evalDefmacro(expr, env)
-      case "lambda":       return evalLambda(expr.Cdr, env)
-      case "set!":         return evalSet(expr.Cdr, env)
-      case "setq*":        return evalSetQStar(expr.Cdr, env)
-      case "mapcar":       return evalMapcar(expr.Cdr, env)
+      case "define", "setq":  return evalDefine(expr, env, ectx)
+      case "defun":        return evalDefun(expr, env, ectx)
+      case "defmacro":     return evalDefmacro(expr, env, ectx)
+      case "lambda":       return evalLambda(expr.Cdr, env, ectx)
+      case "set!":         return evalSet(expr.Cdr, env, ectx)
+      case "setq*":        return evalSetQStar(expr.Cdr, env, ectx)
+      case "mapcar":       return evalMapcar(expr.Cdr, env, ectx)
       case "load":         return evalLoad(expr.Cdr, env)
-      case "and":          return evalAnd(expr.Cdr, env)
-      case "or":           return evalOr(expr.Cdr, env)
-      case "not":          return evalNot(expr.Cdr, env)
+      case "and":          return evalAnd(expr.Cdr, env, ectx)
+      case "or":           return evalOr(expr.Cdr, env, ectx)
+      case "not":          return evalNot(expr.Cdr, env, ectx)
       case "parfunc":      return evalParfunc(expr.Cdr, env)
-      case "lock":         return evalLock(expr.Cdr, env)
+      case "lock":         return evalLock(expr.Cdr, env, ectx)
       case "eval":         return evalEval(expr.Cdr, env)
       case "catch":        return evalCatch(expr.Cdr, env)
       case "while":        return evalWhile(expr.Cdr, env)
@@ -244,7 +244,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         continue
 
       case "case":
-        e, newEnv, err := evalCase(expr.Cdr, env)
+        e, newEnv, err := evalCase(expr.Cdr, env, ectx)
         if err != nil { return nil, err }
         expr, env = e, newEnv
         continue

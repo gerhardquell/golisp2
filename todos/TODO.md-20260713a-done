@@ -1,0 +1,18 @@
+# Aufgabe: Umsetzung des GPS aus Peter Norvig
+
+Wir wollen den gps aus dem Buch von Peter Norvig in golisp2 umsetzen.
+Die Beschreibung findest du in /u/lisp-projekte/golisp2/docs/gps1.txt
+
+## Status: erledigt (2026-07-13)
+
+GPS-Port läuft, alle 3 Norvig-Testfälle grün. Commit `1379ebb`
+(branch `build-output-dir`).
+
+Umgesetzt:
+- `lib/primitives.go` — `intern` + `symbol-name` Primitive
+- `embed/stdlib.lisp` — generisches `defstruct`-Makro, `union`,
+  `set-difference`, `find-all`, `defvar`, `setf` (CL-Compat)
+- `pn-gps1/gps.lisp` — `gps`/`achieve`/`appropriate-p`/`apply-op`,
+  `*school-ops*`-Domain, 3 Testfälle
+
+Lauf: `./build/golisp2 pn-gps1/gps.lisp`

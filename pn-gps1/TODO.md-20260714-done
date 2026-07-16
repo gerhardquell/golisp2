@@ -1,0 +1,39 @@
+# TODO - Tests zu Peter Norvigs GPS
+
+## RETROSPECTIVE: 
+Ein Anwendungs-Port zieht Spracherweiterungen nach. Die werden vom Anwendungsfall nur entlang eines Pfades getestet. Grün heißt: der Pfad ist grün. Neue stdlib-Funktion → eigener Test, auch wenn das Feature drumherum schon läuft.
+
+## Tests
+
+;; ==== union: der Pfad, den GPS nie ging ====
+(println (union '(a b) '(b c)))          ; erwartet: 3 Elemente, kein doppeltes b
+(println (union '() '(a)))               ; (a)
+(println (union '(a) '()))               ; (a)
+
+;; ==== set-difference ====
+(println (set-difference '(a b c) '(b))) ; (a c)
+(println (set-difference '(a b) '()))    ; (a b)  <- der :del-list-nil-Fall
+(println (set-difference '() '(a)))      ; ()
+
+;; ==== find-all ====
+(println (find-all 'a '(a b a c)))       ; (a a)   <- ohne :test, greift eql?
+(println (find-all 2 '(1 2 3) :test #'<)) ; (3)     <- Argumentreihenfolge!
+(println (find-all 'x '(a b)))           ; ()
+
+;; ==== defstruct: Defaults + Kollision ====
+(defstruct pt (x 0) (y 0))
+(println (pt-x (make-pt)))               ; 0   <- alle Defaults greifen?
+(println (pt-y (make-pt :x 5)))          ; 0   <- Teil-Init
+(println (pt? (make-pt)))                ; t
+(println (pt? '(1 2)))                   ; ()  <- oder Absturz? oder t??
+
+;; ==== setf: kann es Places? ====
+(define v 1)
+(setf v 2) (println v)                   ; 2
+(define p (make-pt))
+(setf (pt-x p) 9) (println (pt-x p))     ; 9 — oder Fehler? DAS ist die Frage.
+
+;; ==== defvar: idempotent? ====
+(defvar *z* 1)
+(defvar *z* 99)
+(println *z*)                            ; 1 (CL-Semantik) oder 99?

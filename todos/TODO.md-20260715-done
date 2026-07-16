@@ -1,0 +1,26 @@
+# Aufgabe 20260715 - File-Such-Pfad einbauen
+
+## Problem: 
+Wenn ich eine Datei mit load oder Fileoperationen bearbeiten will,
+dann muß ich den ganzen Pfadnamen hinzufügen. Das ist z.B. bei Emacs
+sehr ärgerlich. 
+
+## Lösungsansatz
+Ich möchte jetzt eine Variable working-directories defininieren, in 
+der ich - wie bei der PATH-Variable in der bash - Suchpfade angeben
+kann, in der bei Fileoperationen nach der Datei gesucht wird.
+Idealerweise hätte ich 3 Funktionen:
+
+set-working-directories   -> hier setze ich die Working-Diretories
+get-working-directories   -> hier lese ich die Working-Directories
+get-file-path             -> hier erhalte ich das Directory zu einem File
+
+## Nice-to-have:
+set-working-directories und get-working-directories sollten auch in 
+.emacs definierbar sein (swank).
+
+## Wichtig
+Absolute Pfade sollen immer Vorrang haben!
+
+
+

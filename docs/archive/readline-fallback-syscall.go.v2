@@ -1,0 +1,176 @@
+//**********************************************************************
+//  lib/readline.go - syscall-Version (Fallback ohne chzyer)
+//  Für chzyer: go get github.com/chzyer/readline
+//  und readline_chzyer.go verwenden
+//**********************************************************************
+
+package lib
+
+import (
+  "fmt"
+  "os"
+  "strings"
+  "syscall"
+  "unsafe"
+)
+
+type termios struct {
+  Iflag, Oflag, Cflag, Lflag uint32
+  Cc                         [20]byte
+  Ispeed, Ospeed             uint32
+}
+
+func tcget(fd int) (*termios, error) {
+  t := &termios{}
+  _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+    uintptr(fd), 0x5401, uintptr(unsafe.Pointer(t)))
+  if errno != 0 { return nil, errno }
+  return t, nil
+}
+
+func tcset(fd int, t *termios) error {
+  _, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
+    uintptr(fd), 0x5402, uintptr(unsafe.Pointer(t)))
+  if errno != 0 { return errno }
+  return nil
+}
+
+func makeRaw(fd int) (*termios, error) {
+  orig, err := tcget(fd)
+  if err != nil { return nil, err }
+  raw := *orig
+  raw.Lflag &^= 0x8 | 0x2 | 0x400 | 0x10
+  raw.Iflag &^= 0x1 | 0x200
+  raw.Cc[6] = 1
+  raw.Cc[5] = 0
+  return orig, tcset(fd, &raw)
+}
+
+type Readline struct {
+  history []string
+  prompt  string
+}
+
+func NewReadline(prompt string) *Readline {
+  return &Readline{prompt: prompt}
+}
+
+func (rl *Readline) Close() {}
+
+// Read liest einen vollständigen Lisp-Ausdruck – Multiline-fähig
+func (rl *Readline) Read() (string, error) {
+  var lines []string
+  prompt := rl.prompt
+
+  for {
+    line, err := rl.readLine(prompt)
+    if err != nil { return "", err }
+
+    lines = append(lines, line)
+    combined := strings.Join(lines, " ")
+
+    depth := countDepth(combined)
+    if depth == 0 && strings.TrimSpace(combined) != "" {
+      if combined != "" { rl.history = append(rl.history, combined) }
+      return strings.TrimSpace(combined), nil
+    }
+    if depth < 0 {
+      fmt.Println("ERR: unerwartete ')'")
+      lines = nil
+      prompt = rl.prompt
+      continue
+    }
+    prompt = fmt.Sprintf("..%s", strings.Repeat("  ", depth))
+  }
+}
+
+func (rl *Readline) readLine(prompt string) (string, error) {
+  fd := int(os.Stdin.Fd())
+  orig, err := makeRaw(fd)
+  if err != nil { return rl.readSimple(prompt) }
+  defer tcset(fd, orig)
+
+  fmt.Print(prompt)
+
+  buf  := []rune{}
+  pos  := 0
+  hIdx := len(rl.history)
+  b    := make([]byte, 8)
+
+  redraw := func() {
+    fmt.Print("\r\033[K" + prompt + string(buf))
+    if pos < len(buf) { fmt.Printf("\033[%dD", len(buf)-pos) }
+  }
+
+  for {
+    n, err := os.Stdin.Read(b)
+    if err != nil { return "", err }
+
+    switch {
+    case n == 1 && (b[0] == 13 || b[0] == 10):
+      fmt.Print("\r\n")
+      line := string(buf)
+      if line != "" { rl.history = append(rl.history, line) }
+      return line, nil
+
+    case n == 1 && (b[0] == 127 || b[0] == 8):
+      if pos > 0 { buf = append(buf[:pos-1], buf[pos:]...); pos--; redraw() }
+
+    case n == 1 && b[0] == 3:
+      fmt.Print("\r\n"); return "", fmt.Errorf("interrupt")
+
+    case n == 1 && b[0] == 4:
+      if len(buf) == 0 { fmt.Print("\r\n"); return "", fmt.Errorf("EOF") }
+
+    case n == 1 && b[0] == 21:
+      buf, pos = []rune{}, 0; redraw()
+
+    case n == 1 && b[0] == 1:
+      pos = 0; redraw()
+
+    case n == 1 && b[0] == 5:
+      pos = len(buf); redraw()
+
+    case n >= 3 && b[0] == 27 && b[1] == 91:
+      switch b[2] {
+      case 65:
+        if hIdx > 0 { hIdx--; buf = []rune(rl.history[hIdx]); pos = len(buf); redraw() }
+      case 66:
+        if hIdx < len(rl.history)-1 {
+          hIdx++; buf = []rune(rl.history[hIdx]); pos = len(buf); redraw()
+        } else { hIdx = len(rl.history); buf, pos = []rune{}, 0; redraw() }
+      case 67:
+        if pos < len(buf) { pos++; redraw() }
+      case 68:
+        if pos > 0 { pos--; redraw() }
+      }
+
+    case n == 1 && b[0] >= 32:
+      ch := rune(b[0])
+      buf = append(buf[:pos], append([]rune{ch}, buf[pos:]...)...)
+      pos++; redraw()
+    }
+  }
+}
+
+// countDepth zählt offene Klammern
+func countDepth(s string) int {
+  depth, inStr, escape := 0, false, false
+  for _, ch := range s {
+    if escape  { escape = false; continue }
+    if ch == '\\' && inStr { escape = true; continue }
+    if ch == '"' { inStr = !inStr; continue }
+    if inStr    { continue }
+    if ch == ';' { break }
+    if ch == '(' { depth++ }
+    if ch == ')' { depth-- }
+  }
+  return depth
+}
+
+func (rl *Readline) readSimple(prompt string) (string, error) {
+  fmt.Print(prompt)
+  var line string
+  _, err := fmt.Scanln(&line)
+  return line, err
+}

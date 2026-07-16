@@ -12,6 +12,7 @@
 package lib
 
 import (
+  "context"
   "fmt"
   "time"
 )
@@ -260,9 +261,16 @@ func evalParfunc(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   }
   ch := make(chan parfuncResult, len(exprList))
 
+  workerParent := context.Background()
+  if ectx != nil && ectx.ctx != nil {
+    workerParent = ectx.ctx
+  }
+  workerCtx, cancel := context.WithCancel(workerParent)
+  defer cancel()
+
   for i, expr := range exprList {
     go func(idx int, e *Cell) {
-      val, err := evalWithCtx(e, env, ectx.child())
+      val, err := evalWithCtx(e, env, &evalCtx{depth: 0, ctx: workerCtx})
       if err != nil { val = MakeNil() }
       ch <- parfuncResult{idx, val}
     }(i, expr)
@@ -285,7 +293,8 @@ func evalParfunc(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
         gathered[r.idx] = r.val
         collected++
       case <-timer:
-        // Timeout: restliche Goroutinen laufen weiter, Ergebnisse werden nil
+        // Timeout: laufende Worker canceln, restliche Ergebnisse bleiben nil
+        cancel()
         collected = len(exprList)
       }
     } else {

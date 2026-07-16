@@ -18,11 +18,22 @@ import (
   "context"
   "fmt"
   "sync"
+  "sync/atomic"
 )
 
-// MaxEvalDepth begrenzt nicht-tail-rekursive Eval-Aufrufe.
-// Öffentlich, damit Tests und Suite niedrigere Werte setzen können.
-var MaxEvalDepth = 100000
+// maxEvalDepth begrenzt nicht-tail-rekursive Eval-Aufrufe.
+// Wird atomar gelesen/geschrieben, damit parallele Eval-Aufrufe keine
+// Data-Race produzieren, während Tests den Wert temporär absenken.
+var maxEvalDepth int32 = 100000
+
+// GetMaxEvalDepth liefert das aktuelle Rekursionslimit.
+func GetMaxEvalDepth() int { return int(atomic.LoadInt32(&maxEvalDepth)) }
+
+// SetMaxEvalDepth setzt das Rekursionslimit (Thread-sicher).
+func SetMaxEvalDepth(v int) {
+  if v < 0 { v = 0 }
+  atomic.StoreInt32(&maxEvalDepth, int32(v))
+}
 
 // evalCtx trägt pro Eval-Lauf: Rekursionstiefe und Cancellation.
 // Eine Instanz gehört immer nur einer Goroutine an.
@@ -44,7 +55,7 @@ func (e *evalCtx) check() error {
   if e == nil {
     return nil
   }
-  if e.depth > MaxEvalDepth {
+  if e.depth > int(atomic.LoadInt32(&maxEvalDepth)) {
     return &LispError{Msg: MakeStr("eval: maximum recursion depth exceeded")}
   }
   if e.ctx != nil {
@@ -88,7 +99,20 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
     return nil, err
   }
 
+  // Iterationszaehler fuer periodische Depth-/Cancellation-Checks im
+  // Trampolin-Loop. Reine Tail-Calls inkrementieren die Tiefe nicht, daher
+  // wuerde eine endlose Tail-Rekursion sonst nie check() erreichen.
+  const checkInterval = 1024
+  var iter int
+
   for {
+    if iter%checkInterval == 0 {
+      if err := ectx.check(); err != nil {
+        return nil, err
+      }
+    }
+    iter++
+
     if expr == nil { return MakeNil(), nil }
 
     switch expr.Type {

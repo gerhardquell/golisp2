@@ -185,7 +185,7 @@ Live-Tracing einzelner Root-Env-Funktionen.
 API:
 
 - `(trace 'name)` — wrappt die aktuelle Root-Env-Bindung. Erlaubt für
-  eingebaute Primitiven (`FUNC`) und Lambdas (`LIST`). `name` zurückgeben.
+  eingebaute Primitiven (`FUNC`) und Lambdas (`LAMBDA`). `name` zurückgeben.
 - `(untrace 'name)` — stellt das Original wieder her; `nil` wenn `name` nicht
   getraced war.
 - `(untrace)` — stellt alle getraceden Funktionen wieder her und gibt eine

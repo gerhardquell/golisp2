@@ -22,12 +22,12 @@ import (
 
 const defaultExecTimeout = 60 * time.Second
 
-func evalExec(args *Cell, env *Env) (*Cell, error) {
+func evalExec(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Car == nil {
     return nil, fmt.Errorf("exec: Programmname erwartet")
   }
 
-  programCell, err := Eval(args.Car, env)
+  programCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil {
     return nil, fmt.Errorf("exec: %v", err)
   }
@@ -58,7 +58,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
 
     switch keyword {
     case "param:":
-      val, err := Eval(valueCell, env)
+      val, err := evalWithCtx(valueCell, env, ectx.child())
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }
@@ -67,7 +67,7 @@ func evalExec(args *Cell, env *Env) (*Cell, error) {
       }
       params = append(params, val.Val)
     case "stdin:":
-      val, err := Eval(valueCell, env)
+      val, err := evalWithCtx(valueCell, env, ectx.child())
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }

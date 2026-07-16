@@ -111,7 +111,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "macroexpand":  return evalMacroexpand(expr.Cdr, env, ectx)
       case "bound?":       return evalBound(expr.Cdr, env, ectx)
       case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env, ectx)
-      case "exec":         return evalExec(expr.Cdr, env)
+      case "exec":         return evalExec(expr.Cdr, env, ectx)
       case "define", "setq":  return evalDefine(expr, env, ectx)
       case "defun":        return evalDefun(expr, env, ectx)
       case "defmacro":     return evalDefmacro(expr, env, ectx)
@@ -119,7 +119,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "set!":         return evalSet(expr.Cdr, env, ectx)
       case "setq*":        return evalSetQStar(expr.Cdr, env, ectx)
       case "mapcar":       return evalMapcar(expr.Cdr, env, ectx)
-      case "load":         return evalLoad(expr.Cdr, env)
+      case "load":         return evalLoad(expr.Cdr, env, ectx)
       case "and":          return evalAnd(expr.Cdr, env, ectx)
       case "or":           return evalOr(expr.Cdr, env, ectx)
       case "not":          return evalNot(expr.Cdr, env, ectx)
@@ -129,7 +129,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "catch":        return evalCatch(expr.Cdr, env, ectx)
       case "while":        return evalWhile(expr.Cdr, env, ectx)
       case "do":           return evalDo(expr.Cdr, env, ectx)
-      case "quasiquote":   return evalQuasiquote(expr.Cdr, env)
+      case "quasiquote":   return evalQuasiquote(expr.Cdr, env, ectx)
       case "function":     return evalWithCtx(expr.Cdr.Car, env, ectx.child())
       case "flet":         return evalFlet(expr.Cdr, env, ectx)
       case "labels":       return evalLabels(expr.Cdr, env, ectx)
@@ -257,7 +257,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
 
     // Makro → expandieren, Loop weiter (TCO)
     if fn.Type == MACRO {
-      expanded, err := applyLambda(fn, CellToSlice(expr.Cdr))
+      expanded, err := applyLambda(fn, CellToSlice(expr.Cdr), ectx)
       if err != nil { return nil, err }
       expr = expanded
       continue
@@ -270,7 +270,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         return nil, fmt.Errorf("eval: Lambda hat keinen Closure-Env")
       }
       localEnv := NewEnv(closureEnv)
-      if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv); err != nil {
+      if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv, ectx); err != nil {
         freeEnv(localEnv)
         return nil, err
       }
@@ -345,9 +345,13 @@ func evalArgs(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
 }
 
 func apply(fn *Cell, args []*Cell) (*Cell, error) {
+  return applyWithCtx(fn, args, &evalCtx{depth: 0})
+}
+
+func applyWithCtx(fn *Cell, args []*Cell, ectx *evalCtx) (*Cell, error) {
   switch fn.Type {
   case FUNC: return fn.Fn(args)
-  case LAMBDA: return applyLambda(fn, args)
+  case LAMBDA: return applyLambda(fn, args, ectx)
   default:   return nil, fmt.Errorf("apply: '%s' ist keine Funktion", fn)
   }
 }

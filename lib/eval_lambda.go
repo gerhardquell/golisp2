@@ -22,17 +22,17 @@ func makeLambda(params, body *Cell, env *Env) *Cell {
 
 // applyLambda wendet eine Lambda/Closure auf Argumente an.
 // Wird auch für Makro-Expansion genutzt (siehe Eval + evalMacroexpand).
-func applyLambda(lambda *Cell, args []*Cell) (*Cell, error) {
+func applyLambda(lambda *Cell, args []*Cell, ectx *evalCtx) (*Cell, error) {
   closureEnv, ok := lambda.Env.(*Env)
   if !ok {
     return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
   }
   localEnv   := NewEnv(closureEnv)
   defer freeEnv(localEnv)
-  if err := bindArgs(lambda.Car, args, closureEnv, localEnv); err != nil {
+  if err := bindArgs(lambda.Car, args, closureEnv, localEnv, ectx); err != nil {
     return nil, err
   }
-  return Eval(lambda.Cdr, localEnv)
+  return evalWithCtx(lambda.Cdr, localEnv, ectx.child())
 }
 
 // IsMacro prüft ob eine Cell ein Makro ist (exportiert für macroexpand).
@@ -42,7 +42,7 @@ func IsMacro(c *Cell) bool {
 
 // bindArgs: Lambda-Parameter binden – unterstützt regulär, dotted-rest,
 // &optional, &key, &rest (CL-Stil Lambda-Listen).
-func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error {
+func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   argIdx  := 0
   hasKey  := false  // &key verwendet → kein excess check
@@ -95,7 +95,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
       if argIdx < len(args) {
         _ = localEnv.Set(name, args[argIdx]); argIdx++
       } else if def != nil {
-        val, err := Eval(def, closureEnv)
+        val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, val)
       } else {
@@ -120,7 +120,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
       }
       if !found {
         if def != nil {
-          val, err := Eval(def, closureEnv)
+          val, err := evalWithCtx(def, closureEnv, ectx.child())
           if err != nil { return err }
           _ = localEnv.Set(name, val)
         } else {
@@ -139,7 +139,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env) error 
 // Argument-Ausdrücken. Jeder Argument-Wert wird in callerEnv ausgewertet,
 // Default-Ausdrücke für &optional/&key in closureEnv. Damit entfällt der
 // Zwischen-Slice []\*Cell, den evalArgs/bindArgs sonst benötigen.
-func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env) error {
+func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env, ectx *evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   hasKey := false
 
@@ -147,7 +147,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
     if p.Type == NIL { break }
     if p.Type == ATOM {
       // Dotted rest-Parameter: (lambda (a b . rest) ...)
-      rest, err := evalExprList(argExprs, callerEnv)
+      rest, err := evalExprList(argExprs, callerEnv, ectx)
       if err != nil { return err }
       _ = localEnv.Set(p.Val, SliceToCell(rest))
       return nil
@@ -165,7 +165,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         if p == nil || p.Type != LIST || p.Car == nil {
           return fmt.Errorf("lambda: &rest braucht Parameter-Namen")
         }
-        rest, err := evalExprList(argExprs, callerEnv)
+        rest, err := evalExprList(argExprs, callerEnv, ectx)
         if err != nil { return err }
         _ = localEnv.Set(p.Car.Val, SliceToCell(rest))
         return nil
@@ -180,7 +180,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       if argExprs == nil || argExprs.Type != LIST {
         return fmt.Errorf("lambda: zu wenig Argumente (brauche '%s')", param.Val)
       }
-      val, err := Eval(argExprs.Car, callerEnv)
+      val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
       if err != nil { return err }
       _ = localEnv.Set(param.Val, val)
       argExprs = argExprs.Cdr
@@ -195,12 +195,12 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         name = param.Val
       }
       if argExprs != nil && argExprs.Type == LIST {
-        val, err := Eval(argExprs.Car, callerEnv)
+        val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, val)
         argExprs = argExprs.Cdr
       } else if def != nil {
-        val, err := Eval(def, closureEnv)
+        val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, val)
       } else {
@@ -223,7 +223,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
           if a.Cdr == nil || a.Cdr.Type != LIST {
             return fmt.Errorf("lambda: Keyword %s ohne Wert", keyword)
           }
-          val, err := Eval(a.Cdr.Car, callerEnv)
+          val, err := evalWithCtx(a.Cdr.Car, callerEnv, ectx.child())
           if err != nil { return err }
           _ = localEnv.Set(name, val)
           found = true
@@ -232,7 +232,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       }
       if !found {
         if def != nil {
-          val, err := Eval(def, closureEnv)
+          val, err := evalWithCtx(def, closureEnv, ectx.child())
           if err != nil { return err }
           _ = localEnv.Set(name, val)
         } else {
@@ -249,10 +249,10 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
 }
 
 // evalExprList wertet eine Liste von Ausdrücken aus und liefert einen Slice.
-func evalExprList(exprs *Cell, env *Env) ([]*Cell, error) {
+func evalExprList(exprs *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
   var result []*Cell
   for exprs != nil && exprs.Type == LIST {
-    val, err := Eval(exprs.Car, env)
+    val, err := evalWithCtx(exprs.Car, env, ectx.child())
     if err != nil { return nil, err }
     result = append(result, val)
     exprs = exprs.Cdr

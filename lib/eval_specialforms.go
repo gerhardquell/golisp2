@@ -71,7 +71,7 @@ func evalMacroexpand(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
   // Wenn es ein Makro ist, expandieren wir es
   if fn.Type == MACRO {
-    return applyLambda(fn, CellToSlice(form.Cdr))
+    return applyLambda(fn, CellToSlice(form.Cdr), ectx)
   }
 
   // Kein Makro → Form unverändert zurückgeben
@@ -126,7 +126,7 @@ func macroexpandOnce(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
     return form, nil // Spezialform oder ungebunden
   }
   if fn.Type == MACRO {
-    return applyLambda(fn, CellToSlice(form.Cdr))
+    return applyLambda(fn, CellToSlice(form.Cdr), ectx)
   }
   return form, nil
 }
@@ -218,7 +218,7 @@ func evalMapcar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
   var results []*Cell
   for lst != nil && lst.Type == LIST {
-    res, err := apply(fn, []*Cell{lst.Car})
+    res, err := applyWithCtx(fn, []*Cell{lst.Car}, ectx)
     if err != nil { return nil, err }
     results = append(results, res)
     lst = lst.Cdr

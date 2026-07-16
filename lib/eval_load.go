@@ -18,8 +18,8 @@ import (
 )
 
 // load: (load "datei.lisp") → liest und wertet alle Ausdrücke aus
-func evalLoad(args *Cell, env *Env) (*Cell, error) {
-  filenameCell, err := Eval(args.Car, env)
+func evalLoad(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  filenameCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   if filenameCell == nil || filenameCell.Type != STRING {
     return nil, fmt.Errorf("load: Dateiname muss String sein")
@@ -54,7 +54,7 @@ func evalLoad(args *Cell, env *Env) (*Cell, error) {
       expr.SrcFile = resolvedPath
     }
 
-    result, err = Eval(expr, env)
+    result, err = evalWithCtx(expr, env, ectx.child())
     if err != nil { return nil, fmt.Errorf("load %s: %w", resolvedPath, err) }
   }
   return result, nil
@@ -62,6 +62,10 @@ func evalLoad(args *Cell, env *Env) (*Cell, error) {
 
 // LoadString: Mehrere Ausdrücke aus einem String auswerten
 func LoadString(src string, env *Env) (*Cell, error) {
+  return loadStringWithCtx(src, env, &evalCtx{depth: 0})
+}
+
+func loadStringWithCtx(src string, env *Env, ectx *evalCtx) (*Cell, error) {
   src = strings.TrimSpace(src)
   var result *Cell
   r := NewReader(src)
@@ -70,7 +74,7 @@ func LoadString(src string, env *Env) (*Cell, error) {
     if r.pos >= len(r.src) { break }
     expr, err := r.readExpr()
     if err != nil { return nil, fmt.Errorf("stdlib: %w", err) }
-    result, err = Eval(expr, env)
+    result, err = evalWithCtx(expr, env, ectx.child())
     if err != nil { return nil, fmt.Errorf("stdlib: %w", err) }
   }
   return result, nil

@@ -220,7 +220,7 @@ func evalCatch(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   // Handler auswerten und mit Fehler-Cell aufrufen
   handler, herr := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if herr != nil { return nil, herr }
-  return apply(handler, []*Cell{lispErr.Msg})
+  return applyWithCtx(handler, []*Cell{lispErr.Msg}, ectx)
 }
 
 // parfunc: (parfunc ergebnis [:timeout N] expr1 expr2 ...)

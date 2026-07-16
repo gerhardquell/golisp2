@@ -201,3 +201,10 @@ Einschränkungen:
 - Getracede Tail-Calls sind nicht mehr TCO-optimiert: der Wrapper fügt einen
   zusätzlichen Go-Stackframe hinzu.
 - Trace-Ausgaben gehen immer nach **stderr**.
+
+---
+
+## Rekursionstiefe und `parfunc`
+
+- `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.
+- `parfunc` mit `:timeout N` bricht laufende Worker über `context.Context` ab. Worker, die trotzdem rekursiv tiefer gehen, stoßen vorher an `MaxEvalDepth`.

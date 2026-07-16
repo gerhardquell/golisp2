@@ -50,18 +50,18 @@
 ;; Ein Operator, der ein Ziel als eigene Voraussetzung hat, lässt achieve
 ;; unendlich rekursieren (bzw. hängen). Der Test nutzt parfunc mit Timeout.
 
-(define *recursive-ops*
-  (cons (make-op :action 'ask-phone-number
-                 :preconds '(know-phone-number)
-                 :add-list '(know-phone-number))
-        *school-ops*))
-
-(parfunc recursive-result :timeout 1
-  (gps '(have-money)
-       '(know-phone-number)
-       *recursive-ops*))
-
-(check-equal "recursive subgoal hangs" () (car recursive-result))
-
+ (define *recursive-ops*
+   (cons (make-op :action 'ask-phone-number
+                  :preconds '(know-phone-number)
+                  :add-list '(know-phone-number))
+         *school-ops*))
+ 
+ (parfunc recursive-result :timeout 1
+   (gps '(have-money)
+        '(know-phone-number)
+        *recursive-ops*))
+ 
+ (check-equal "recursive subgoal hangs" () (car recursive-result))
+ 
 (println "gps-norvig-bugs: alle PASS")
-nil
+ nil

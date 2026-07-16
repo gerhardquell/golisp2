@@ -212,6 +212,8 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 - Unit-Tests gegen Protokolle asserten Struktur, nicht Substrings.
 - Synthetische Tests müssen echtes Verhalten modellieren (Pipelining, Multi-Event, Stateful Conns).
 
+**Namensgenerierung**
+- Namensgenerierung braucht Kollisionsregeln und eine Warnung. Eine Ausweichregel ohne Meldung tauscht einen lauten Fehler gegen einen leisen — das ist der schlechtere Handel.
 ---
 
 ## Weiterführende Doku — bei Bedarf lesen, nicht vorsorglich

@@ -38,7 +38,12 @@ func RunServer(addr string) error {
 }
 
 func handleConn(conn net.Conn) {
-  defer conn.Close()
+  defer func() {
+    if r := recover(); r != nil {
+      fmt.Fprintf(os.Stderr, "swank conn panic: %v\n", r)
+    }
+    conn.Close()
+  }()
   fmt.Fprintf(os.Stderr, "swank conn from %s\n", conn.RemoteAddr())
 
   env := lib.BaseEnv()

@@ -15,13 +15,56 @@
 package lib
 
 import (
+  "context"
   "fmt"
   "sync"
 )
 
-// Eval wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
-// setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
+// MaxEvalDepth begrenzt nicht-tail-rekursive Eval-Aufrufe.
+// Öffentlich, damit Tests und Suite niedrigere Werte setzen können.
+var MaxEvalDepth = 100000
+
+// evalCtx trägt pro Eval-Lauf: Rekursionstiefe und Cancellation.
+// Eine Instanz gehört immer nur einer Goroutine an.
+type evalCtx struct {
+  depth int
+  ctx   context.Context
+}
+
+// child liefert einen neuen Kontext für einen nicht-tail-rekursiven Aufruf.
+func (e *evalCtx) child() *evalCtx {
+  if e == nil {
+    return &evalCtx{depth: 1}
+  }
+  return &evalCtx{depth: e.depth + 1, ctx: e.ctx}
+}
+
+// check prüft Depth-Limit und Cancellation.
+func (e *evalCtx) check() error {
+  if e == nil {
+    return nil
+  }
+  if e.depth > MaxEvalDepth {
+    return &LispError{Msg: MakeStr("eval: maximum recursion depth exceeded")}
+  }
+  if e.ctx != nil {
+    select {
+    case <-e.ctx.Done():
+      return &LispError{Msg: MakeStr("eval: cancelled")}
+    default:
+    }
+  }
+  return nil
+}
+
+// Eval wertet einen Ausdruck in env aus. Öffentlicher Einstieg.
 func Eval(expr *Cell, env *Env) (res *Cell, err error) {
+  return evalWithCtx(expr, env, &evalCtx{depth: 0})
+}
+
+// evalWithCtx wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
+// setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
+func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
   // ownEnv trackt den letzten Frame, den dieser Eval-Aufruf im Tail-Call
   // angelegt hat. Er wird am Ende freigegeben; bei Tail-Calls wird der
   // Vorgaenger vor dem Uebergang freigegeben, damit Rekursion O(1) allokiert.
@@ -40,6 +83,10 @@ func Eval(expr *Cell, env *Env) (res *Cell, err error) {
       err = fmt.Errorf("eval: panic recovered: %v", r)
     }
   }()
+
+  if err := ectx.check(); err != nil {
+    return nil, err
+  }
 
   for {
     if expr == nil { return MakeNil(), nil }

@@ -18,23 +18,26 @@ import (
 
 // while: (while test body...)
 // Wertet body aus solange test wahr ist, gibt nil zurück.
-func evalWhile(args *Cell, env *Env) (*Cell, error) {
+func evalWhile(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("while: Syntax: (while test body...)")
   }
   test := args.Car
   body := wrapBegin(args.Cdr)
   for {
-    cond, err := Eval(test, env)
+    if err := ectx.check(); err != nil {
+      return nil, err
+    }
+    cond, err := evalWithCtx(test, env, ectx.child())
     if err != nil { return nil, err }
     if !IsTruthy(cond) { return MakeNil(), nil }
-    if _, err := Eval(body, env); err != nil { return nil, err }
+    if _, err := evalWithCtx(body, env, ectx.child()); err != nil { return nil, err }
   }
 }
 
 // do: (do ((var init step) ...) (test result) body...)
 // Scheme-style: bindet Variablen, iteriert bis test wahr, gibt result zurück.
-func evalDo(args *Cell, env *Env) (*Cell, error) {
+func evalDo(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("do: Syntax: (do ((var init step) ...) (test result) body...)")
@@ -49,7 +52,7 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
       return nil, fmt.Errorf("do: Bindung muss (var init step) sein")
     }
     name := spec.Car.Val
-    init, err := Eval(spec.Cdr.Car, env)  // init im äußeren env auswerten
+    init, err := evalWithCtx(spec.Cdr.Car, env, ectx.child())  // init im äußeren env auswerten
     if err != nil { return nil, err }
     _ = localEnv.Set(name, init)
   }
@@ -60,12 +63,15 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
   // Optionaler Body
   body := wrapBegin(args.Cdr.Cdr)
   for {
+    if err := ectx.check(); err != nil {
+      return nil, err
+    }
     // Abbruchtest
-    cond, err := Eval(test, localEnv)
+    cond, err := evalWithCtx(test, localEnv, ectx.child())
     if err != nil { return nil, err }
-    if IsTruthy(cond) { return Eval(result, localEnv) }
+    if IsTruthy(cond) { return evalWithCtx(result, localEnv, ectx.child()) }
     // Body auswerten
-    if _, err := Eval(body, localEnv); err != nil { return nil, err }
+    if _, err := evalWithCtx(body, localEnv, ectx.child()); err != nil { return nil, err }
     // Alle Step-Ausdrücke gleichzeitig auswerten (im alten env!)
     var names []string
     var vals  []*Cell
@@ -78,7 +84,7 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
       step := spec.Cdr.Cdr  // Cdr.Cdr = step-Teil
       var newVal *Cell
       if step != nil && step.Type == LIST {
-        newVal, err = Eval(step.Car, localEnv)
+        newVal, err = evalWithCtx(step.Car, localEnv, ectx.child())
         if err != nil { return nil, err }
       } else {
         newVal, err = localEnv.Get(name)
@@ -96,18 +102,18 @@ func evalDo(args *Cell, env *Env) (*Cell, error) {
 // eval: (eval ausdruck) → wertet einen Ausdruck nochmal aus
 // Beispiel: (eval (list '+ 1 2)) → 3
 //           (eval (read "(+ 1 2)")) → 3
-func evalEval(args *Cell, env *Env) (*Cell, error) {
+func evalEval(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("eval: 1 Argument nötig")
   }
   // Argument erst auswerten (z.B. Variable oder read-Ergebnis)
-  expr, err := Eval(args.Car, env)
+  expr, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   // dann nochmal auswerten — im globalen Environment (Common-Lisp-Semantik).
   // So bleiben Definitionen aus (eval (read ...)) global sichtbar, was
   // fuer REPL (swank:listener-eval) und das selbsterweiternde Muster
   // essenziell ist.
-  return Eval(expr, env.Root())
+  return evalWithCtx(expr, env.Root(), &evalCtx{depth: 0, ctx: ectx.ctx})
 }
 
 // blockReturn: Sentinel-Fehler für (return-from name value)
@@ -120,7 +126,7 @@ func (b *blockReturn) Error() string { return "return-from: " + b.name }
 
 // flet: (flet ((name (params) body...) ...) body...)
 // Lokale Funktionen schließen über die äußere Umgebung (keine Gegenseitigkeit).
-func evalFlet(args *Cell, env *Env) (*Cell, error) {
+func evalFlet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("flet: Syntax: (flet ((name params body...) ...) body...)")
   }
@@ -135,11 +141,11 @@ func evalFlet(args *Cell, env *Env) (*Cell, error) {
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), env)
     _ = localEnv.Set(name, lam)
   }
-  return Eval(wrapBegin(args.Cdr), localEnv)
+  return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())
 }
 
 // labels: wie flet, aber Funktionen sehen die gemeinsame Umgebung (Rekursion).
-func evalLabels(args *Cell, env *Env) (*Cell, error) {
+func evalLabels(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("labels: Syntax: (labels ((name params body...) ...) body...)")
   }
@@ -154,16 +160,16 @@ func evalLabels(args *Cell, env *Env) (*Cell, error) {
     lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), localEnv)
     _ = localEnv.Set(name, lam)
   }
-  return Eval(wrapBegin(args.Cdr), localEnv)
+  return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())
 }
 
 // block: (block name body...) → benannter Block; return-from verlässt ihn.
-func evalBlock(args *Cell, env *Env) (*Cell, error) {
+func evalBlock(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("block: Syntax: (block name body...)")
   }
   name := args.Car.Val
-  result, err := Eval(wrapBegin(args.Cdr), env)
+  result, err := evalWithCtx(wrapBegin(args.Cdr), env, ectx.child())
   if err != nil {
     if br, ok := err.(*blockReturn); ok && br.name == name {
       return br.value, nil
@@ -174,7 +180,7 @@ func evalBlock(args *Cell, env *Env) (*Cell, error) {
 }
 
 // return-from: (return-from name [value]) → nicht-lokaler Ausstieg aus block.
-func evalReturnFrom(args *Cell, env *Env) (*Cell, error) {
+func evalReturnFrom(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("return-from: Syntax: (return-from name [value])")
   }
@@ -182,7 +188,7 @@ func evalReturnFrom(args *Cell, env *Env) (*Cell, error) {
   val  := MakeNil()
   if args.Cdr != nil && args.Cdr.Type == LIST {
     var err error
-    val, err = Eval(args.Cdr.Car, env)
+    val, err = evalWithCtx(args.Cdr.Car, env, ectx.child())
     if err != nil { return nil, err }
   }
   return nil, &blockReturn{name: name, value: val}
@@ -191,7 +197,7 @@ func evalReturnFrom(args *Cell, env *Env) (*Cell, error) {
 // catch: (catch body-expr handler-expr)
 // Wertet body-expr aus. Bei LispError → handler mit Fehler-Cell aufrufen.
 // Echte Go-Fehler (interne Fehler) werden durchgereicht.
-func evalCatch(args *Cell, env *Env) (*Cell, error) {
+func evalCatch(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST ||
     args.Cdr == nil || args.Cdr.Type != LIST ||
     args.Cdr.Car == nil {
@@ -199,7 +205,7 @@ func evalCatch(args *Cell, env *Env) (*Cell, error) {
   }
 
   // Body auswerten – eigener Eval-Aufruf damit Fehler abgefangen werden kann
-  result, err := Eval(args.Car, env)
+  result, err := evalWithCtx(args.Car, env, ectx.child())
   if err == nil {
     return result, nil  // kein Fehler → normal zurückgeben
   }
@@ -211,7 +217,7 @@ func evalCatch(args *Cell, env *Env) (*Cell, error) {
   }
 
   // Handler auswerten und mit Fehler-Cell aufrufen
-  handler, herr := Eval(args.Cdr.Car, env)
+  handler, herr := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if herr != nil { return nil, herr }
   return apply(handler, []*Cell{lispErr.Msg})
 }
@@ -219,7 +225,7 @@ func evalCatch(args *Cell, env *Env) (*Cell, error) {
 // parfunc: (parfunc ergebnis [:timeout N] expr1 expr2 ...)
 // Wertet alle Ausdrücke parallel aus, sammelt Ergebnisse als Liste.
 // Optionaler :timeout N (Sekunden): bei Ablauf liefert die Goroutine nil.
-func evalParfunc(args *Cell, env *Env) (*Cell, error) {
+func evalParfunc(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
     return nil, fmt.Errorf("parfunc: Syntax: (parfunc name [:timeout N] expr...)")
   }
@@ -256,7 +262,7 @@ func evalParfunc(args *Cell, env *Env) (*Cell, error) {
 
   for i, expr := range exprList {
     go func(idx int, e *Cell) {
-      val, err := Eval(e, env)
+      val, err := evalWithCtx(e, env, ectx.child())
       if err != nil { val = MakeNil() }
       ch <- parfuncResult{idx, val}
     }(i, expr)

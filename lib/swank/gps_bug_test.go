@@ -76,10 +76,17 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
     t.Fatalf("client load failed: %v\n%s", err, out)
   }
 
-  time.Sleep(30 * time.Second)
-
-  if err := server.Process.Signal(syscall.Signal(0)); err != nil {
-    log, _ := os.ReadFile(logFile)
-    t.Fatalf("server died after Norvig bugs script: %v\n%s", err, log)
+  deadline := time.Now().Add(5 * time.Second)
+  for {
+    if err := server.Process.Signal(syscall.Signal(0)); err == nil {
+      return
+    }
+    if time.Now().After(deadline) {
+      break
+    }
+    time.Sleep(200 * time.Millisecond)
   }
+
+  log, _ := os.ReadFile(logFile)
+  t.Fatalf("server died after Norvig bugs script:\n%s", log)
 }

@@ -1,0 +1,37 @@
+# Aufgabe 20270723 - Fehler:
+
+Beim Ausführen von my-reduce tritt der u.a. Fehler auf:
+
+(defmacro my-reduce (op list &optional (initial-value nil init-p))
+  (let ((acc (gensym "ACC"))
+     (item (gensym "ITEM"))
+     (rest (gensym "REST")))
+  `(let* ((,rest ,list)
+     (,acc ,(if init-p
+      initial-value
+      `(if ,rest
+         (pop ,rest)
+         (error "Leere Liste ohne Startwert")))))
+   (dolist (,item ,rest ,acc)
+     (setf ,acc (funcall ,op ,acc ,item))))))
+my-reduce
+USER> (my-reduce #'+ '(1 2 4 7 55))
+; Evaluation aborted on "gensym: keine Argumente erwartet
+
+
+## Weitere Tests
+
+- setf ist nicht vorhanden!
+- teste reduce
+
+## Erledigt 20260723 (Commit 22f6a06)
+
+- gensym: CLHS `(gensym &optional x)` — String=Prefix, Int=Suffix
+- supplied-p (init-p): CL `(name default supplied-p)` für &optional
+  und &key in beiden Bindungswegen (parseParamSpec)
+- setf: existierte bereits; ungebundene Symbole werden jetzt CL-artig
+  global definiert (Entscheidung Gerhard)
+- reduce: CL-Signatur `(reduce f seq &key initial-value from-end start
+  end key)`; max/min migriert (Entscheidung Gerhard)
+- Tests: 196 grün, Lisp-Testsuite -t exit 0
+- `(my-reduce #'+ '(1 2 4 7 55))` => 69

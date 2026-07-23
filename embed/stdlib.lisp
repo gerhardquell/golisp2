@@ -81,10 +81,38 @@
     ((pred (car lst))    (cons (car lst) (filter pred (cdr lst))))
     (t                   (filter pred (cdr lst)))))
 
-(defun reduce (f init lst)
-  (if (null lst)
-      init
-      (reduce f (f init (car lst)) (cdr lst))))
+;; drop/take: Listen-Präfix-Helfer (für reduce :start/:end).
+(defun drop (n lst)
+  (if (or (null lst) (<= n 0))
+      lst
+      (drop (- n 1) (cdr lst))))
+
+(defun take (n lst)
+  (if (or (null lst) (<= n 0))
+      ()
+      (cons (car lst) (take (- n 1) (cdr lst)))))
+
+;; %reduce-fold: eigentliche Faltung (tail-rekursiv, TCO). from-end:
+;; f erhält (elem acc), sonst (acc elem). key wird nur auf kombinierte
+;; Elemente angewandt, nicht auf den Startwert (CLHS).
+(defun %reduce-fold (f s acc key from-end)
+  (if (null s)
+      acc
+      (let ((e (if key (funcall key (car s)) (car s))))
+        (%reduce-fold f (cdr s) (if from-end (f e acc) (f acc e)) key from-end))))
+
+;; reduce: CL-Signatur — (reduce f seq &key initial-value from-end start
+;; end key). Ohne initial-value ist das erste Element der Startwert;
+;; leere Sequenz ohne initial-value ist ein Fehler (CL).
+(defun reduce (f seq &key (initial-value nil init-p) (from-end nil) (start 0) (end nil) (key nil))
+  (let* ((s (drop start seq))
+         (s (if end (take (- end start) s) s))
+         (s (if from-end (reverse s) s)))
+    (if init-p
+        (%reduce-fold f s initial-value key from-end)
+        (if (null s)
+            (error "reduce: leere Sequenz ohne :initial-value")
+            (%reduce-fold f (cdr s) (car s) key from-end)))))
 
 (defun for-each (f lst)
   (if (null lst)
@@ -125,8 +153,8 @@
 
 ;; === Zahlen =====================================================
 
-(defun max (a &rest rest) (reduce (lambda (x y) (if (>= x y) x y)) a rest))
-(defun min (a &rest rest) (reduce (lambda (x y) (if (<= x y) x y)) a rest))
+(defun max (a &rest rest) (reduce (lambda (x y) (if (>= x y) x y)) rest :initial-value a))
+(defun min (a &rest rest) (reduce (lambda (x y) (if (<= x y) x y)) rest :initial-value a))
 
 (defun square (x) (* x x))
 
@@ -242,10 +270,16 @@
 ;;   → (begin (set! p (set-pt-x p 9)) 9)
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
 ;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
+;; Ungebundenes Symbol wird CL-artig global definiert: eval läuft im
+;; Root-Env, das quote um den Wert verhindert Re-Evaluierung.
 (defmacro setf (place val)
   (let ((v (gensym)))
     (if (atom place)
-        `(let ((,v ,val)) (set! ,place ,v) ,v)
+        `(let ((,v ,val))
+           (if (bound? ',place)
+               (set! ,place ,v)
+               (eval (list 'define ',place (list 'quote ,v))))
+           ,v)
         (let ((accessor (car place))
               (arg (cadr place)))
           (if (equal? accessor 'gethash)

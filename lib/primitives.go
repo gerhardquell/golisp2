@@ -554,15 +554,30 @@ func fnRead(args []*Cell) (*Cell, error) {
 	return Read(args[0].Val)
 }
 
-// gensym: global-atomarer Zähler für eindeutige Symbole
+// gensym: global-atomarer Zähler für eindeutige Symbole.
+// CLHS: (gensym &optional x) — x String = Prefix, x Int = Suffix.
 var gensymCounter int64
 
 func fnGensym(args []*Cell) (*Cell, error) {
-	if len(args) != 0 {
-		return nil, fmt.Errorf("gensym: keine Argumente erwartet")
+	if len(args) > 1 {
+		return nil, fmt.Errorf("gensym: höchstens 1 Argument erwartet")
 	}
 	n := atomic.AddInt64(&gensymCounter, 1)
-	return MakeAtom(fmt.Sprintf("G__%d", n)), nil
+	prefix := "G"
+	if len(args) == 1 {
+		switch args[0].Type {
+		case STRING:
+			prefix = args[0].Val
+		case NUMBER:
+			if args[0].Num != float64(int64(args[0].Num)) {
+				return nil, fmt.Errorf("gensym: Zahl muss ganzzahlig sein, nicht %v", args[0].Num)
+			}
+			return MakeAtom(fmt.Sprintf("G%d", int64(args[0].Num))), nil
+		default:
+			return nil, fmt.Errorf("gensym: Argument muss String oder Int sein, nicht %v", args[0].Type)
+		}
+	}
+	return MakeAtom(fmt.Sprintf("%s__%d", prefix, n)), nil
 }
 
 // intern: (intern string) → Symbol mit diesem Namen.

@@ -17,6 +17,7 @@ package lib
 import (
   "os"
   "path/filepath"
+  "strings"
   "testing"
 )
 
@@ -161,6 +162,34 @@ func TestPrimitiveGensym(t *testing.T) {
   }
   // gensym-Symbole sind ungleich
   evalEq(t, `(eq (gensym) (gensym))`, "()")
+}
+
+// TestPrimitiveGensymArgs: CLHS — (gensym &optional x), x = String (Prefix)
+// oder Integer (Suffix). Bug 20260723: Arg wurde mit "keine Argumente
+// erwartet" abgelehnt, my-reduce-Makro brach.
+func TestPrimitiveGensymArgs(t *testing.T) {
+  // String-Prefix
+  g, err := evalStr(`(gensym "ACC")`)
+  if err != nil {
+    t.Fatalf(`(gensym "ACC") Fehler: %v`, err)
+  }
+  if !strings.HasPrefix(g.String(), "ACC") {
+    t.Errorf("Prefix ACC erwartet, got %s", g)
+  }
+  // Int-Suffix
+  g2, err := evalStr(`(gensym 42)`)
+  if err != nil {
+    t.Fatalf(`(gensym 42) Fehler: %v`, err)
+  }
+  if !strings.HasSuffix(g2.String(), "42") {
+    t.Errorf("Suffix 42 erwartet, got %s", g2)
+  }
+  // weiterhin eindeutig trotz gleichem Prefix
+  evalEq(t, `(eq (gensym "A") (gensym "A"))`, "()")
+  // Fehler bei falschem Typ
+  if _, err := evalStr(`(gensym '(1 2))`); err == nil {
+    t.Error("(gensym '(1 2)) sollte Fehler geben")
+  }
 }
 
 func TestPrimitiveError(t *testing.T) {

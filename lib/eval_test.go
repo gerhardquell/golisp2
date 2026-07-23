@@ -433,3 +433,22 @@ func TestEvalEvalWhen(t *testing.T) {
   evalEq(t, `(eval-when () 5)`, "()")
   evalErr(t, `(eval-when)`)
 }
+
+// TestLambdaSuppliedP: CL-Supplied-p-Parameter (name default supplied-p)
+// für &optional und &key — supplied-p ist t, wenn das Argument geliefert
+// wurde. Bug 20260723 (TODO.md my-reduce): init-p blieb ungebunden.
+func TestLambdaSuppliedP(t *testing.T) {
+  // &optional: nicht geliefert → supplied-p nil, Default greift
+  evalEq(t, `((lambda (a &optional (b 9 b-p)) (if b-p b -1)) 5)`, "-1")
+  // &optional: geliefert → supplied-p t, Wert greift
+  evalEq(t, `((lambda (a &optional (b 9 b-p)) (if b-p b -1)) 5 3)`, "3")
+  // explizit nil geliefert zählt als "geliefert"
+  evalEq(t, `((lambda (&optional (x 9 x-p)) (if x-p 1 0)) ())`, "1")
+  // &key: nicht geliefert
+  evalEq(t, `((lambda (&key (k 1 k-p)) (if k-p k -1)))`, "-1")
+  // &key: geliefert
+  evalEq(t, `((lambda (&key (k 1 k-p)) (if k-p k -1)) :k 7)`, "7")
+  // defmacro-Lambda-Liste (der my-reduce-Fall aus TODO.md)
+  evalEq(t, "(begin (defmacro m (x &optional (y nil y-p)) `(if ,y-p 'geliefert 'default)) (m 1))", "default")
+  evalEq(t, "(begin (defmacro m (x &optional (y nil y-p)) `(if ,y-p 'geliefert 'default)) (m 1 2))", "geliefert")
+}

@@ -40,6 +40,39 @@ func IsMacro(c *Cell) bool {
   return c != nil && c.Type == MACRO
 }
 
+// parseParamSpec zerlegt eine &optional/&key-Parameterspec (CL):
+// name | (name) | (name default) | (name default supplied-p).
+// supplied ist "" wenn kein supplied-p-Parameter angegeben.
+// Einzige Quelle für beide Bindungswege (bindArgs/bindEvalArgs).
+func parseParamSpec(param *Cell) (name string, def *Cell, supplied string) {
+  if param.Type != LIST {
+    return param.Val, nil, ""
+  }
+  name = param.Car.Val
+  rest := param.Cdr
+  if rest == nil || rest.Type != LIST {
+    return name, nil, ""
+  }
+  def = rest.Car
+  if rest.Cdr != nil && rest.Cdr.Type == LIST && rest.Cdr.Car != nil && rest.Cdr.Car.Type == ATOM {
+    supplied = rest.Cdr.Car.Val
+  }
+  return name, def, supplied
+}
+
+// bindSupplied setzt das supplied-p-Flag (CL): t wenn das Argument
+// geliefert wurde, sonst (). No-op ohne supplied-p-Parameter.
+func bindSupplied(localEnv *Env, supplied string, delivered bool) {
+  if supplied == "" {
+    return
+  }
+  if delivered {
+    _ = localEnv.Set(supplied, MakeAtom("t"))
+  } else {
+    _ = localEnv.Set(supplied, MakeNil())
+  }
+}
+
 // bindArgs: Lambda-Parameter binden – unterstützt regulär, dotted-rest,
 // &optional, &key, &rest (CL-Stil Lambda-Listen).
 func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *evalCtx) error {
@@ -84,33 +117,22 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *
       argIdx++
 
     case 1:  // &optional
-      var name string
-      var def  *Cell
-      if param.Type == LIST {
-        name = param.Car.Val
-        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
-      } else {
-        name = param.Val
-      }
+      name, def, supplied := parseParamSpec(param)
       if argIdx < len(args) {
         _ = localEnv.Set(name, args[argIdx]); argIdx++
+        bindSupplied(localEnv, supplied, true)
       } else if def != nil {
         val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, val)
+        bindSupplied(localEnv, supplied, false)
       } else {
         _ = localEnv.Set(name, MakeNil())
+        bindSupplied(localEnv, supplied, false)
       }
 
     case 2:  // &key
-      var name string
-      var def  *Cell
-      if param.Type == LIST {
-        name = param.Car.Val
-        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
-      } else {
-        name = param.Val
-      }
+      name, def, supplied := parseParamSpec(param)
       keyword := ":" + name
       found := false
       for ki := argIdx; ki < len(args); ki++ {
@@ -127,6 +149,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *
           _ = localEnv.Set(name, MakeNil())
         }
       }
+      bindSupplied(localEnv, supplied, found)
     }
   }
   if !hasKey && argIdx < len(args) {
@@ -186,36 +209,25 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       argExprs = argExprs.Cdr
 
     case 1:  // &optional
-      var name string
-      var def  *Cell
-      if param.Type == LIST {
-        name = param.Car.Val
-        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
-      } else {
-        name = param.Val
-      }
+      name, def, supplied := parseParamSpec(param)
       if argExprs != nil && argExprs.Type == LIST {
         val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, Primary(val))
         argExprs = argExprs.Cdr
+        bindSupplied(localEnv, supplied, true)
       } else if def != nil {
         val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, val)
+        bindSupplied(localEnv, supplied, false)
       } else {
         _ = localEnv.Set(name, MakeNil())
+        bindSupplied(localEnv, supplied, false)
       }
 
     case 2:  // &key
-      var name string
-      var def  *Cell
-      if param.Type == LIST {
-        name = param.Car.Val
-        if param.Cdr != nil && param.Cdr.Type == LIST { def = param.Cdr.Car }
-      } else {
-        name = param.Val
-      }
+      name, def, supplied := parseParamSpec(param)
       keyword := ":" + name
       found := false
       for a := argExprs; a != nil && a.Type == LIST; a = a.Cdr {
@@ -239,6 +251,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
           _ = localEnv.Set(name, MakeNil())
         }
       }
+      bindSupplied(localEnv, supplied, found)
     }
   }
 

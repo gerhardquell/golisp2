@@ -66,15 +66,14 @@ func TestMacroNested(t *testing.T) {
   evalEq(t, src, "12")  // inc2 → inc1(inc1(10)) → 11+1 ... 10+1+1 = 12
 }
 
-// TestMacroSetqShadowsInLet dokumentiert ein wichtiges IST-Verhalten für
-// Makro-Autoren: setq (= define = env.Set) im Body eines inneren let
-// legt eine SHADOW-Variable im inneren Scope an, statt die äußere zu
-// updaten. Ein swap-Makro mit setq im let-Body ist daher wirkungslos –
-// die äußeren Variablen bleiben unangetastet.
+// TestMacroSetqUpdatesInLet dokumentiert die CL-Semantik von setq (seit
+// 20260723): setq sucht die Bindung entlang der Env-Kette und UPDATET sie
+// (wie set!), statt im inneren Scope zu shadowen. Ein swap-Makro mit
+// setq im let-Body funktioniert daher.
 //
-// Grund: env.Set wirkt im current-env (hier inneres let). tmp/other
-// leben aber im äußeren let. Set legt tmp/other neu im inneren env an;
-// nach let-Ende verschwinden sie. set! (env.Update) wäre nötig.
+// Vorher galt: setq = define = env.Set → Shadow im inneren Env, swap
+// wirkungslos. Das war die alte (Scheme-artige) Semantik und wurde mit
+// dem CL-Konformitäts-Schritt bewusst geändert.
 func TestMacroSetqShadowsInLet(t *testing.T) {
   src := `
     (defmacro swap-setq (a b)
@@ -86,7 +85,7 @@ func TestMacroSetqShadowsInLet(t *testing.T) {
       (swap-setq tmp other)
       (list tmp other))
   `
-  evalEq(t, src, "(1 2)")  // swap wirkungslos: setq shadowed, outer unangetastet
+  evalEq(t, src, "(2 1)")  // CL: setq updatet die äußere Bindung → swap wirkt
 }
 
 // TestMacroSetBangUpdatesOuter: gleiche swap-Logik, aber mit set!
@@ -170,4 +169,54 @@ func TestIsMacroGo(t *testing.T) {
 // TestMacroReturnsAtom: defmacro gibt den Makro-Namen als Atom zurück.
 func TestMacroReturnsAtom(t *testing.T) {
   evalEq(t, `(defmacro m (x) x)`, "m")
+}
+
+// TestEvalMacrolet: lokale Makros — nur im Body sichtbar, schatten globale,
+// nicht-rekursiv (CL: Makro-Body sieht die macrolet-Bindungen nicht).
+func TestEvalMacrolet(t *testing.T) {
+  evalEq(t, `(macrolet ((doppelt (x) (list '* 2 x))) (doppelt 21))`, "42")
+  evalEq(t, `(macrolet ((a () 1)) (a))`, "1")
+  // mehrere Bindungen, Body mit mehreren Formen
+  evalEq(t, `(macrolet ((a () 1) (b () 2)) (a) (b))`, "2")
+  // schattet globale Funktion im Body, außerhalb unverändert
+  evalEq(t, `
+    (defun f (x) (* x 10))
+    (list (macrolet ((f (x) (list '+ x 1))) (f 5)) (f 5))`, "(6 50)")
+  // leere Bindungsliste verhält sich wie progn
+  evalEq(t, `(macrolet () 1 2 3)`, "3")
+  // defun im Body sieht das Makro (Expansion zur Def-Zeit)
+  evalEq(t, `(macrolet ((m () 'global)) (defun ruft-m () (m)))`, "ruft-m")
+  evalErr(t, `(macrolet (kaputt) 1)`)
+}
+
+// TestEvalSymbolMacrolet: SYMMACRO-Marker im Env. Referenz wertet die
+// Expansion aus; setq wird auf Symbol-Expansionen umgeleitet; echte
+// innere Bindungen (let/lambda) schatten den Marker über die Env-Kette.
+func TestEvalSymbolMacrolet(t *testing.T) {
+  evalEq(t, `(symbol-macrolet ((x 42)) x)`, "42")
+  evalEq(t, `(symbol-macrolet ((x (+ 1 2))) (* x 10))`, "30")
+  // Expansion wird bei jeder Referenz neu ausgewertet
+  evalEq(t, `
+    (setq *zaehler* 0)
+    (symbol-macrolet ((x (setq* *zaehler* (+ *zaehler* 1))))
+      x x *zaehler*)`, "2")
+  // setq auf Symbol-Makro wirkt auf die Expansion (CL: wie setf)
+  evalEq(t, `(let ((y 5)) (symbol-macrolet ((x y)) (setq x 9) y))`, "9")
+  // Shadowing: let und lambda-Parameter gewinnen vor dem Marker
+  evalEq(t, `(symbol-macrolet ((x 1)) (let ((x 2)) x))`, "2")
+  evalEq(t, `(symbol-macrolet ((x 5)) ((lambda (x) (+ x 1)) 9))`, "10")
+  // nach dem Body ist das Symbol wieder frei
+  evalErr(t, `(begin (symbol-macrolet ((x 1)) x) x)`)
+  // Form-Expansion ist lesbar, aber nicht zuweisbar
+  evalErr(t, `(symbol-macrolet ((x (+ 1 2))) (setq x 9))`)
+  evalErr(t, `(symbol-macrolet (kaputt) 1)`)
+}
+
+// TestEvalBodyAlias: &body ist CL-Synonym für &rest (Makro-Lambda-Listen).
+func TestEvalBodyAlias(t *testing.T) {
+  evalEq(t, `(defmacro mit-tmp (wert &body body) `+"`(let ((tmp ,wert)) ,@body))"+`
+    (mit-tmp 10 (setq tmp (+ tmp 1)) tmp)`, "11")
+  // &body ohne Rest-Argumente → leere Liste
+  evalEq(t, `(defmacro nur-body (&body body) `+"`(list ,@body))"+`
+    (nur-body)`, "()")
 }

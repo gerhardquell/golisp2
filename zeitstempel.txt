@@ -71,3 +71,8 @@ Start: Mi 15. Jul 10:29:38 CEST 2026
 Ende: Mi 15. Jul 10:30:35 CEST 2026
 Start: Mi 15. Jul 10:45:53 CEST 2026
 Ende: Mi 15. Jul 11:16:02 CEST 2026
+Start: Do 23. Jul 11:52:55 CEST 2026
+Ende: Do 23. Jul 11:54:54 CEST 2026
+Start: Do 23. Jul 11:57:15 CEST 2026
+Ende: Do 23. Jul 12:05:24 CEST 2026
+Start: Do 23. Jul 13:02:16 CEST 2026

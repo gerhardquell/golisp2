@@ -63,7 +63,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *
       switch param.Val {
       case "&optional": section = 1; continue
       case "&key":      section = 2; hasKey = true; continue
-      case "&rest":
+      case "&rest", "&body":  // &body = CL-Synonym für &rest (Makro-Lambda-Listen)
         if p == nil || p.Type != LIST || p.Car == nil {
           return fmt.Errorf("lambda: &rest braucht Parameter-Namen")
         }
@@ -161,7 +161,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       switch param.Val {
       case "&optional": section = 1; continue
       case "&key":      section = 2; hasKey = true; continue
-      case "&rest":
+      case "&rest", "&body":  // &body = CL-Synonym für &rest (Makro-Lambda-Listen)
         if p == nil || p.Type != LIST || p.Car == nil {
           return fmt.Errorf("lambda: &rest braucht Parameter-Namen")
         }
@@ -182,7 +182,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       }
       val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
       if err != nil { return err }
-      _ = localEnv.Set(param.Val, val)
+      _ = localEnv.Set(param.Val, Primary(val))
       argExprs = argExprs.Cdr
 
     case 1:  // &optional
@@ -197,7 +197,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       if argExprs != nil && argExprs.Type == LIST {
         val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
         if err != nil { return err }
-        _ = localEnv.Set(name, val)
+        _ = localEnv.Set(name, Primary(val))
         argExprs = argExprs.Cdr
       } else if def != nil {
         val, err := evalWithCtx(def, closureEnv, ectx.child())
@@ -225,7 +225,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
           }
           val, err := evalWithCtx(a.Cdr.Car, callerEnv, ectx.child())
           if err != nil { return err }
-          _ = localEnv.Set(name, val)
+          _ = localEnv.Set(name, Primary(val))
           found = true
           break
         }
@@ -254,7 +254,7 @@ func evalExprList(exprs *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
   for exprs != nil && exprs.Type == LIST {
     val, err := evalWithCtx(exprs.Car, env, ectx.child())
     if err != nil { return nil, err }
-    result = append(result, val)
+    result = append(result, Primary(val))
     exprs = exprs.Cdr
   }
   return result, nil

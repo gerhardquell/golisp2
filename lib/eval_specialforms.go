@@ -30,6 +30,73 @@ func evalDefine(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return MakeAtom(name), nil
 }
 
+// setq: (setq var1 val1 var2 val2 ...) → sequentielles Setzen, liefert den
+// letzten Wert (CL). Bestehende Bindung wird entlang der Env-Kette
+// aktualisiert; ungebundene Variable wird im aktuellen Env angelegt
+// (clisp-Top-Level-Verhalten).
+func evalSetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  result := MakeNil()
+  for a := args; a != nil && a.Type == LIST; a = a.Cdr.Cdr {
+    if a.Car == nil || a.Car.Type != ATOM {
+      return nil, fmt.Errorf("setq: Variable muss ein Symbol sein")
+    }
+    if a.Cdr == nil || a.Cdr.Type != LIST {
+      return nil, fmt.Errorf("setq: ungerade Argumentzahl")
+    }
+    val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
+    if err != nil {
+      return nil, err
+    }
+    val = Primary(val)
+    name, err := symMacroTarget(env, a.Car.Val)
+    if err != nil {
+      return nil, err
+    }
+    if err := env.Update(name, val); err != nil {
+      if err := env.Set(name, val); err != nil {
+        return nil, err
+      }
+    }
+    result = val
+  }
+  return result, nil
+}
+
+// psetq: (psetq var1 val1 var2 val2 ...) → paralleles Setzen (CL): erst
+// alle Werte im alten Env auswerten, dann zuweisen.
+func evalPsetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  var names []string
+  var vals []*Cell
+  for a := args; a != nil && a.Type == LIST; a = a.Cdr.Cdr {
+    if a.Car == nil || a.Car.Type != ATOM {
+      return nil, fmt.Errorf("psetq: Variable muss ein Symbol sein")
+    }
+    if a.Cdr == nil || a.Cdr.Type != LIST {
+      return nil, fmt.Errorf("psetq: ungerade Argumentzahl")
+    }
+    val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
+    if err != nil {
+      return nil, err
+    }
+    name, err := symMacroTarget(env, a.Car.Val)
+    if err != nil {
+      return nil, err
+    }
+    names = append(names, name)
+    vals = append(vals, Primary(val))
+  }
+  result := MakeNil()
+  for i, name := range names {
+    if err := env.Update(name, vals[i]); err != nil {
+      if err := env.Set(name, vals[i]); err != nil {
+        return nil, err
+      }
+    }
+    result = vals[i]
+  }
+  return result, nil
+}
+
 // bound?: (bound? sym) → t wenn sym im aktuellen Env gebunden ist, sonst nil.
 // sym wird ausgewertet, damit (bound? variable), die ein Symbol enthält,
 // funktioniert (z. B. im defstruct-Makro).
@@ -178,7 +245,9 @@ func evalSet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   }
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
-  return MakeAtom(args.Car.Val), env.Update(args.Car.Val, val)
+  name, err := symMacroTarget(env, args.Car.Val)
+  if err != nil { return nil, err }
+  return MakeAtom(args.Car.Val), env.Update(name, Primary(val))
 }
 
 // setq*: (setq* var1 val1 var2 val2 ...) → sequentielles Setzen
@@ -280,6 +349,126 @@ func evalDefmacro(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return MakeAtom(name), nil
 }
 
+// macrolet: (macrolet ((name (params...) body...) ...) body...)
+// Lokale Makros: nur im body sichtbar, Schatten globale Definitionen.
+// Wie in CL nicht-rekursiv: die Makro-Bodies laufen im ÄUSSEREN env
+// (sehen die anderen macrolet-Makros nicht — Gegensatz zu labels).
+func evalMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Car == nil ||
+     (args.Car.Type != LIST && args.Car.Type != NIL) {
+    return nil, fmt.Errorf("macrolet: Syntax: (macrolet ((name (params...) body...) ...) body...)")
+  }
+  localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
+  for b := args.Car; b != nil && b.Type == LIST; b = b.Cdr {
+    spec := b.Car
+    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM ||
+       spec.Cdr == nil || spec.Cdr.Type != LIST {
+      return nil, fmt.Errorf("macrolet: Bindung muss (name (params...) body...) sein")
+    }
+    lam := makeLambda(spec.Cdr.Car, wrapBegin(spec.Cdr.Cdr), env)
+    lam.Type = MACRO
+    _ = localEnv.Set(spec.Car.Val, lam)
+  }
+  return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())
+}
+
+// symbol-macrolet: (symbol-macrolet ((sym expansion) ...) body...)
+// Bindet sym an eine SYMMACRO-Marker-Cell (Car = unausgewertete
+// Expansion). Die eigentliche Arbeit leisten zwei Haken: der
+// ATOM-Fall in evalWithCtx wertet bei Marker die Expansion aus,
+// symMacroTarget leitet Zuweisungen um. Shadowing durch echte innere
+// Bindungen (let, lambda, dolist) entsteht gratis aus der Env-Kette.
+func evalSymbolMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Car == nil ||
+     (args.Car.Type != LIST && args.Car.Type != NIL) {
+    return nil, fmt.Errorf("symbol-macrolet: Syntax: (symbol-macrolet ((sym expansion) ...) body...)")
+  }
+  localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
+  for b := args.Car; b != nil && b.Type == LIST; b = b.Cdr {
+    spec := b.Car
+    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM ||
+       spec.Cdr == nil || spec.Cdr.Type != LIST || spec.Cdr.Car == nil {
+      return nil, fmt.Errorf("symbol-macrolet: Bindung muss (symbol expansion) sein")
+    }
+    _ = localEnv.Set(spec.Car.Val, &Cell{Type: SYMMACRO, Car: spec.Cdr.Car})
+  }
+  return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())
+}
+
+// symMacroTarget löst das Zuweisungsziel auf: Ist name aktuell an einen
+// symbol-macrolet-Marker gebunden, gilt die Zuweisung der Expansion
+// (CL: setq auf ein Symbol-Makro wirkt wie setf der Expansion — hier
+// auf den Fall beschränkt, dass die Expansion selbst ein Symbol ist).
+// Eine echte (shadownde) Bindung gewinnt, weil env.Get die Kette in
+// Reihenfolge durchläuft und den Marker dann gar nicht sieht.
+func symMacroTarget(env *Env, name string) (string, error) {
+  cur, err := env.Get(name)
+  if err != nil || cur.Type != SYMMACRO {
+    return name, nil
+  }
+  if cur.Car == nil || cur.Car.Type != ATOM {
+    return "", fmt.Errorf("setq: Symbol-Makro '%s' hat Form-Expansion — nur Symbol-Expansionen sind zuweisbar", name)
+  }
+  return cur.Car.Val, nil
+}
+
+// eval-when: (eval-when (situation...) body...) — golisp2 ist reiner
+// Eval-Kontext (kein Compiler, kein separater Load-Modus), darum feuert
+// der Body genau dann, wenn :execute (oder der Altname eval) in den
+// Situationen steht. :compile-toplevel/:load-toplevel allein → nil.
+// Entspricht exakt clisps Verhalten unter (eval ...).
+func evalEvalWhen(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Car == nil ||
+     (args.Car.Type != LIST && args.Car.Type != NIL) {
+    return nil, fmt.Errorf("eval-when: Syntax: (eval-when (situation...) body...)")
+  }
+  run := false
+  for s := args.Car; s != nil && s.Type == LIST; s = s.Cdr {
+    if s.Car != nil && s.Car.Type == ATOM && (s.Car.Val == ":execute" || s.Car.Val == "eval") {
+      run = true
+      break
+    }
+  }
+  if !run {
+    return MakeNil(), nil
+  }
+  return evalWithCtx(wrapBegin(args.Cdr), env, ectx.child())
+}
+
+// progv: (progv symbole werte body...) → bindet die Symbole dynamisch
+// an die Werte und wertet body aus (CL). Symbole ohne korrespondierenden
+// Wert werden an nil gebunden (CL: "unbound" — golisp2-Pragmatik).
+// Abweichung: golisp2 kennt keine lexikalisch/dynamisch-Trennung, darum
+// sieht eine lexikalische let-Bindung desselben Namens den progv-Wert
+// (in CL bliebe sie davon unberührt).
+func evalProgv(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
+    return nil, fmt.Errorf("progv: Syntax: (progv symbole werte body...)")
+  }
+  syms, err := evalWithCtx(args.Car, env, ectx.child())
+  if err != nil { return nil, err }
+  syms = Primary(syms)
+  vals, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
+  if err != nil { return nil, err }
+  vals = Primary(vals)
+  localEnv := NewEnv(env)
+  defer freeEnv(localEnv)
+  for s, v := syms, vals; s != nil && s.Type == LIST; s = s.Cdr {
+    if s.Car == nil || s.Car.Type != ATOM {
+      return nil, fmt.Errorf("progv: Symbolliste darf nur Symbole enthalten, got %s", s.Car)
+    }
+    val := MakeNil()
+    if v != nil && v.Type == LIST {
+      val = Primary(v.Car)
+      v = v.Cdr
+    }
+    _ = localEnv.Set(s.Car.Val, val)
+  }
+  return evalWithCtx(wrapBegin(args.Cdr.Cdr), localEnv, ectx.child())
+}
+
 // case: (case key-expr ((val1 val2) result1) (else result3) ...)
 // Syntaktischer Zucker fuer cond mit strukturellem Vergleich.
 // Gibt Tripel zurück, damit der Eval-Loop TCO-fähig bleibt (case ist Tail).
@@ -321,4 +510,14 @@ func evalCase(args *Cell, env *Env, ectx *evalCtx) (*Cell, *Env, error) {
     }
   }
   return MakeNil(), env, nil
+}
+
+// the: (the typ form) → Wert von form. golisp2 hat kein Typsystem —
+// der Typ wird ignoriert (CL würde ihn prüfen). Transparent für
+// Multiple Values: die Werte von form gehen unverändert durch.
+func evalThe(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
+    return nil, fmt.Errorf("the: Syntax: (the typ form)")
+  }
+  return evalWithCtx(args.Cdr.Car, env, ectx.child())
 }

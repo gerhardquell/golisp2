@@ -119,7 +119,16 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
     case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO: return expr, nil
     case ATOM:
       if len(expr.Val) > 0 && expr.Val[0] == ':' { return expr, nil } // Keywords selbst-auswertend
-      return env.Get(expr.Val)
+      v, err := env.Get(expr.Val)
+      if err != nil { return nil, err }
+      if v.Type == SYMMACRO {
+        // symbol-macrolet: Referenz wertet die Expansion im aktuellen
+        // env aus (CL: Expansion wird bei jeder Referenz neu evaluiert).
+        // Shadowing passiert über die Env-Kette: eine echte innere
+        // Bindung wird von env.Get vor dem Marker gefunden.
+        return evalWithCtx(v.Car, env, ectx.child())
+      }
+      return v, nil
     case LIST:  // handled below
     default:    return nil, fmt.Errorf("eval: unbekannter Typ")
     }
@@ -136,9 +145,15 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "bound?":       return evalBound(expr.Cdr, env, ectx)
       case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env, ectx)
       case "exec":         return evalExec(expr.Cdr, env, ectx)
-      case "define", "setq":  return evalDefine(expr, env, ectx)
+      case "define":       return evalDefine(expr, env, ectx)
+      case "setq":         return evalSetq(expr.Cdr, env, ectx)
+      case "psetq":        return evalPsetq(expr.Cdr, env, ectx)
       case "defun":        return evalDefun(expr, env, ectx)
       case "defmacro":     return evalDefmacro(expr, env, ectx)
+      case "macrolet":     return evalMacrolet(expr.Cdr, env, ectx)
+      case "symbol-macrolet": return evalSymbolMacrolet(expr.Cdr, env, ectx)
+      case "progv":        return evalProgv(expr.Cdr, env, ectx)
+      case "eval-when":    return evalEvalWhen(expr.Cdr, env, ectx)
       case "lambda":       return evalLambda(expr.Cdr, env, ectx)
       case "set!":         return evalSet(expr.Cdr, env, ectx)
       case "setq*":        return evalSetQStar(expr.Cdr, env, ectx)
@@ -151,14 +166,31 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "lock":         return evalLock(expr.Cdr, env, ectx)
       case "eval":         return evalEval(expr.Cdr, env, ectx)
       case "catch":        return evalCatch(expr.Cdr, env, ectx)
+      case "throw":        return evalThrow(expr.Cdr, env, ectx)
+      case "trap":         return evalTrap(expr.Cdr, env, ectx)
+      case "unwind-protect": return evalUnwindProtect(expr.Cdr, env, ectx)
+      case "multiple-value-list":  return evalMultipleValueList(expr.Cdr, env, ectx)
+      case "multiple-value-bind":  return evalMultipleValueBind(expr.Cdr, env, ectx)
+      case "multiple-value-call":  return evalMultipleValueCall(expr.Cdr, env, ectx)
+      case "multiple-value-prog1": return evalMultipleValueProg1(expr.Cdr, env, ectx)
+      case "multiple-value-setq":  return evalMultipleValueSetq(expr.Cdr, env, ectx)
+      case "nth-value":    return evalNthValue(expr.Cdr, env, ectx)
       case "while":        return evalWhile(expr.Cdr, env, ectx)
       case "do":           return evalDo(expr.Cdr, env, ectx)
+      case "do*":          return evalDoStar(expr.Cdr, env, ectx)
+      case "prog1":        return evalProg1(expr.Cdr, env, ectx)
+      case "prog2":        return evalProg2(expr.Cdr, env, ectx)
       case "quasiquote":   return evalQuasiquote(expr.Cdr, env, ectx)
       case "function":     return evalWithCtx(expr.Cdr.Car, env, ectx.child())
       case "flet":         return evalFlet(expr.Cdr, env, ectx)
       case "labels":       return evalLabels(expr.Cdr, env, ectx)
       case "block":        return evalBlock(expr.Cdr, env, ectx)
       case "return-from":  return evalReturnFrom(expr.Cdr, env, ectx)
+      case "return":       return evalReturn(expr.Cdr, env, ectx)
+      case "tagbody":      return evalTagbody(expr.Cdr, env, ectx)
+      case "go":           return evalGo(expr.Cdr, env, ectx)
+      case "declare":      return MakeNil(), nil // Deklarationen: ignoriert (kein Typsystem)
+      case "the":          return evalThe(expr.Cdr, env, ectx)
       case "unquote":      return nil, fmt.Errorf("unquote: außerhalb von quasiquote")
       case "unquote-splice": return nil, fmt.Errorf("unquote-splice: außerhalb von quasiquote")
 
@@ -175,7 +207,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         }
         continue
 
-      case "begin":
+      case "begin", "progn", "locally":
         args := expr.Cdr
         for args != nil && args.Cdr != nil && args.Cdr.Type == LIST {
           if _, err := evalWithCtx(args.Car, env, ectx.child()); err != nil { return nil, err }
@@ -192,7 +224,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
           if err != nil { freeEnv(localEnv); return nil, err }
-          _ = localEnv.Set(b.Car.Val, val)
+          _ = localEnv.Set(b.Car.Val, Primary(val))
           bindings = bindings.Cdr
         }
         // Handle multiple body expressions in let
@@ -220,7 +252,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
           if err != nil { freeEnv(localEnv); return nil, err }
-          _ = localEnv.Set(b.Car.Val, val)
+          _ = localEnv.Set(b.Car.Val, Primary(val))
           bindings = bindings.Cdr
         }
         // Body ausführen
@@ -247,10 +279,14 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
           }
           test := clause.Car
           hit := test.Type == ATOM && (test.Val == "t" || test.Val == "else")
-          if !hit {
+          var testVal *Cell
+          if hit {
+            testVal = MakeAtom("t")
+          } else {
             val, err := evalWithCtx(test, env, ectx.child())
             if err != nil { return nil, err }
             hit = IsTruthy(val)
+            testVal = val
           }
           if hit {
             body := clause.Cdr
@@ -258,7 +294,12 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
               if _, err := evalWithCtx(body.Car, env, ectx.child()); err != nil { return nil, err }
               body = body.Cdr
             }
-            if body == nil || body.Type != LIST { return MakeNil(), nil }
+            // Klausel ohne Body (z. B. (cond (t))) → Wert des Tests (CL)
+            if body == nil || body.Type != LIST {
+              expr = testVal
+              matched = true
+              break
+            }
             expr = body.Car
             matched = true
             break
@@ -344,7 +385,7 @@ func evalArgsPooled(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, bool, error) 
       if pooled { argSlicePool.Put((*[8]*Cell)(buf[:8])) }
       return nil, false, err
     }
-    result = append(result, val)
+    result = append(result, Primary(val))
     args = args.Cdr
   }
   return result, pooled, nil
@@ -362,7 +403,7 @@ func evalArgs(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
   for args != nil && args.Type == LIST {
     val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
-    result = append(result, val)
+    result = append(result, Primary(val))
     args = args.Cdr
   }
   return result, nil

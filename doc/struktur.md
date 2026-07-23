@@ -28,13 +28,15 @@ golisp2/
     eval_core.go         Eval-Trampolin, apply, evalArgs
     eval_lambda.go       Lambda/Closure-Aufrufe
     eval_specialforms.go quote, if, define, defun, lambda, let*, set!, defmacro, mapcar …
-    eval_control.go      while, do, catch, cond, case
+    eval_control.go      while, do, catch/throw, trap, prog1/prog2, cond, case
+    eval_mv.go           Multiple Values: multiple-value-*, nth-value
     eval_quasiquote.go   quasiquote / unquote / unquote-splicing
     eval_load.go         load-Spezialform + Source-Locations (SrcFile/SrcLine)
     eval_exec.go         exec-Spezialform
 
     primitives.go        Eingebaute Funktionen + BaseEnv()
     stringfuncs.go       String-Primitiven (RegisterStringFuncs)
+    hashtable.go         CL-Hashtables: gethash (MV!), puthash, maphash … (RegisterHashtables)
     format.go            FORMAT-Engine (fnFormat, formatRun, Parameter-Parser)
     format_dirs.go       FORMAT-Direktiven + Helper
     format_blocks.go     FORMAT-Block-Direktiven

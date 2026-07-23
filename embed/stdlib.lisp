@@ -56,7 +56,9 @@
   (len-acc lst 0))
 
 (defun nth (n lst)
-  (if (= n 0) (car lst) (nth (- n 1) (cdr lst))))
+  (cond ((null lst) ())
+        ((= n 0) (car lst))
+        (t (nth (- n 1) (cdr lst)))))
 
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))
@@ -141,23 +143,33 @@
 
 (defmacro dotimes (var-n . body)
   (let ((var (car  var-n))
-        (n   (cadr var-n)))
-    `(let ((,var 0))
-       (while (< ,var ,n)
+        (n   (cadr var-n))
+        (res (caddr var-n))
+        (tmp (gensym)))
+    `(let ((,tmp ,n)
+           (,var 0))
+       (while (< ,var ,tmp)
          ,@body
-         (set! ,var (+ ,var 1))))))
+         (set! ,var (+ ,var 1)))
+       ,res)))
 
 (defmacro dolist (var-lst . body)
   (let ((var (car  var-lst))
         (lst (cadr var-lst))
+        (res (caddr var-lst))
         (tmp (gensym)))
     `(let ((,tmp ,lst))
        (while (not (null ,tmp))
          (let ((,var (car ,tmp)))
            ,@body)
-         (set! ,tmp (cdr ,tmp))))))
+         (set! ,tmp (cdr ,tmp)))
+       (let ((,var ()))
+         ,res))))
 
 ;; === Datenstrukturen ============================================
+
+;; nth-value: seit 20260723 Go-Spezialform (eval_mv.go) – früher Makro
+;; auf nth + multiple-value-list; als Makro hier wäre es toter Code.
 
 ;; push/pop – verändern eine Variable
 (defmacro push (val var)
@@ -221,6 +233,11 @@
 
 ;; setf: generalisierte Zuweisung (CL-Compat).
 ;; - Variable: (setf x 1) → (begin (set! x 1) 1)
+;; - gethash-Place: (setf (gethash k t) v) → (puthash k t v)
+;;   (mutiert die Tabelle direkt, kein register-setf-expander nötig)
+;; - nth-Place: (setf (nth i xs) v) → (set! xs (set-nth xs i v))
+;;   (immutable Cells: neue Liste, Symbol-Rebind statt In-Place-Mutation;
+;;   Index und Wert werden je genau einmal ausgewertet)
 ;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9)
 ;;   → (begin (set! p (set-pt-x p 9)) 9)
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
@@ -231,14 +248,23 @@
         `(let ((,v ,val)) (set! ,place ,v) ,v)
         (let ((accessor (car place))
               (arg (cadr place)))
-          (if (not (atom arg))
-              (error "setf: Place-Argument muss ein Symbol sein")
-              (let ((entry (assoc accessor *setf-expanders*)))
-                (if (null? entry)
-                    (error "setf: unbekannter Place")
-                    `(let ((,v ,val))
-                       (set! ,arg (,(cdr entry) ,arg ,v))
-                       ,v))))))))
+          (if (equal? accessor 'gethash)
+              `(puthash ,(cadr place) ,(caddr place) ,val)
+              (if (equal? accessor 'nth)
+                  (let ((i (gensym)))
+                    (if (not (atom (caddr place)))
+                        (error "setf: nth-Place-Argument muss ein Symbol sein")
+                        `(let ((,i ,(cadr place)) (,v ,val))
+                           (set! ,(caddr place) (set-nth ,(caddr place) ,i ,v))
+                           ,v)))
+                  (if (not (atom arg))
+                      (error "setf: Place-Argument muss ein Symbol sein")
+                      (let ((entry (assoc accessor *setf-expanders*)))
+                        (if (null? entry)
+                            (error "setf: unbekannter Place")
+                            `(let ((,v ,val))
+                               (set! ,arg (,(cdr entry) ,arg ,v))
+                               ,v))))))))))
 
 ;; === Strukturen =================================================
 

@@ -74,5 +74,6 @@ func CellToSlice(list *Cell) []*Cell {
 
 // IsTruthy prüft ob ein Wert "wahr" ist (nicht nil)
 func IsTruthy(c *Cell) bool {
+  c = Primary(c) // MVALUES zählt nach Primärwert (CL)
   return c != nil && c.Type != NIL
 }

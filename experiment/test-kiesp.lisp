@@ -122,7 +122,7 @@
 (println "Testing if sigo can understand KIESP...")
 
 ;; Nur ausfuehren wenn sigo verfuegbar
-(catch
+(trap
   (begin
     (println "Sending KIESP to sigo...")
     ;; Kompakte Anfrage im KIESP-Format

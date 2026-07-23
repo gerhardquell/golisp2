@@ -50,7 +50,7 @@
 
 (defun safe-eval-with-x (expr x-val)
   "Evaluiert expr mit x = x-val"
-  (catch
+  (trap
    (eval (list 'let (list (list 'x x-val)) expr))
    (lambda (e) 'error)))
 

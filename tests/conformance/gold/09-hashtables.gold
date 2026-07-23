@@ -1,0 +1,31 @@
+*h*
+t
+nil
+0
+nil
+(nil nil)
+def
+1
+2
+1
+(1 t)
+2
+t
+nil
+(nil nil)
+nil
+1
+10
+20
+32
+3
+#s(hash-table :test fasthash-eql)
+0
+*h2*
+5
+5
+7
+7
+*h3*
+9
+9

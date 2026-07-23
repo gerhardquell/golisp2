@@ -105,9 +105,10 @@ func TestReadNil(t *testing.T) {
 }
 
 func TestReadQuote(t *testing.T) {
-  assertRead(t, "'x", "(quote x)")
-  assertRead(t, "'(a b)", "(quote (a b))")
-  assertRead(t, "''x", "(quote (quote x))")  // geschachteltes Quote
+  // Drucker gibt die Reader-Abkürzung aus (CL): (quote x) → 'x
+  assertRead(t, "'x", "'x")
+  assertRead(t, "'(a b)", "'(a b)")
+  assertRead(t, "''x", "''x")  // geschachteltes Quote
 }
 
 func TestReadQuasiquote(t *testing.T) {

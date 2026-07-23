@@ -14,7 +14,7 @@
 
 (defun safe-sigo (prompt model)
   "Sichere sigo-Aufruf mit Error-Handling"
-  (catch
+  (trap
     (sigo prompt model)
     (lambda (e)
       (println (string-append "  [Warnung] " model " fehlgeschlagen: " e))

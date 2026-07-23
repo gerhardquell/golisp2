@@ -30,6 +30,8 @@ func BaseEnv() *Env {
 	_ = env.Set("mod", makeFn(fnMod))
 	_ = env.Set("remainder", makeFn(fnMod))
 	_ = env.Set("abs", makeFn(fnAbs))
+	_ = env.Set("values", makeFn(fnValues))
+	_ = env.Set("floor", makeFn(fnFloor))
 	_ = env.Set("random", makeFn(fnRandom))
 
 	// Vergleiche
@@ -108,6 +110,9 @@ func BaseEnv() *Env {
 
 	// String-Funktionen
 	RegisterStringFuncs(env)
+
+	// Hashtables (CL)
+	RegisterHashtables(env)
 
 	// FORMAT (Common-Lisp-style)
 	RegisterFormat(env)
@@ -320,6 +325,36 @@ func fnAbs(args []*Cell) (*Cell, error) {
 		return nil, err
 	}
 	return MakeNum(math.Abs(args[0].Num)), nil
+}
+
+// values: (values ...) → liefert alle Argumente als multiple values (CL).
+// Ein Argument bleibt schlichter Wert (kein Wrapper) — wie in CL.
+func fnValues(args []*Cell) (*Cell, error) {
+	if len(args) == 1 {
+		return args[0], nil
+	}
+	return MakeValues(args), nil
+}
+
+// floor: (floor x [y=1]) → zwei Werte (CL): ganzzahliger Quotient
+// (Richtung -inf gerundet) und Rest mit Vorzeichen des Divisors.
+func fnFloor(args []*Cell) (*Cell, error) {
+	if len(args) < 1 || len(args) > 2 {
+		return nil, fmt.Errorf("floor: 1-2 Argumente nötig")
+	}
+	if err := checkNumbers("floor", args); err != nil {
+		return nil, err
+	}
+	y := 1.0
+	if len(args) == 2 {
+		y = args[1].Num
+	}
+	if y == 0 {
+		return nil, fmt.Errorf("floor: Division durch Null")
+	}
+	q := math.Floor(args[0].Num / y)
+	r := args[0].Num - q*y
+	return MakeValues([]*Cell{MakeNum(q), MakeNum(r)}), nil
 }
 
 // cellEqual: struktureller Vergleich zweier Cells (rekursiv)

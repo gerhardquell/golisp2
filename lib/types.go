@@ -23,6 +23,9 @@ const (
 	FUNC                   // eingebaute Funktion
 	MACRO                  // defmacro
 	NIL                    // ()
+	MVALUES                // (values ...) – Träger mehrerer Werte (CL)
+	HASHTABLE              // CL-Hashtabelle (mutable, Pointer-Identität)
+	SYMMACRO               // symbol-macrolet-Marker: Car = unausgewertete Expansion
 )
 
 type Cell struct {
@@ -37,6 +40,8 @@ type Cell struct {
 	Fn func(args []*Cell) (*Cell, error)
 	// Lambda-Closure: Umgebung zum Zeitpunkt der Definition
 	Env interface{} // *Env – interface{} um Zirkelimport zu vermeiden
+	// HASHTABLE: Zeiger auf die mutable Tabelle (hashtable.go)
+	Ht *HashTable
 	// Quellposition (Reader/Load gestempelt, 0 = unbekannt)
 	SrcFile string
 	SrcLine int
@@ -78,6 +83,52 @@ func MakeStr(s string) *Cell     { return &Cell{Type: STRING, Val: s} }
 func MakeNil() *Cell             { return nilCell }
 func Cons(car, cdr *Cell) *Cell  { return &Cell{Type: LIST, Car: car, Cdr: cdr} }
 
+// MakeValues baut eine MVALUES-Cell aus einer Werteliste (CL multiple
+// values). Die Werte liegen als Car/Cdr-Kette: Car = Primärwert, Cdr =
+// LIST der Folgewerte. Nur MV-Konsumformen (multiple-value-*) sehen die
+// Cell; alle anderen Kontexte lesen über Primary() nur den ersten Wert.
+func MakeValues(vals []*Cell) *Cell {
+  mv := &Cell{Type: MVALUES}
+  var tail *Cell
+  for i := len(vals) - 1; i >= 1; i-- {
+    tail = Cons(vals[i], tail)
+  }
+  if len(vals) > 0 {
+    mv.Car = vals[0]
+    mv.Cdr = tail
+  }
+  return mv
+}
+
+// ValuesToSlice packt eine (mögliche) MVALUES-Cell als Slice aus.
+// Nicht-MVALUES liefert Ein-Element-Slice; (values) liefert leeren Slice.
+func ValuesToSlice(c *Cell) []*Cell {
+  if c == nil || c.Type != MVALUES {
+    return []*Cell{c}
+  }
+  if c.Car == nil {
+    return []*Cell{}
+  }
+  vals := []*Cell{c.Car}
+  for rest := c.Cdr; rest != nil && rest.Type == LIST; rest = rest.Cdr {
+    vals = append(vals, rest.Car)
+  }
+  return vals
+}
+
+// Primary: der Wert, den Nicht-MV-Kontexte sehen (CL: alle Kontexte außer
+// den multiple-value-*-Formen nehmen den ersten Wert, bei (values) nil).
+// EINZIGE Stelle dieser Regel — Chokepoint, nicht duplizieren.
+func Primary(c *Cell) *Cell {
+  if c != nil && c.Type == MVALUES {
+    if c.Car == nil {
+      return MakeNil()
+    }
+    return c.Car
+  }
+  return c
+}
+
 // String-Darstellung für Print
 func (c *Cell) String() string {
 	if c == nil {
@@ -102,7 +153,20 @@ func (c *Cell) String() string {
 	case MACRO:
 		return "#<macro>"
 	case LIST:
+		// Reader-Abkürzung drucken: (quote x) → 'x (CL-Printer)
+		if c.Car != nil && c.Car.Type == ATOM && c.Car.Val == "quote" &&
+			c.Cdr != nil && c.Cdr.Type == LIST &&
+			(c.Cdr.Cdr == nil || c.Cdr.Cdr.Type == NIL) {
+			return "'" + c.Cdr.Car.String()
+		}
 		return listStr(c)
+	case MVALUES:
+		// MV ist für Nicht-MV-Kontexte unsichtbar: Primärwert drucken
+		return Primary(c).String()
+	case HASHTABLE:
+		return "#<hash-table>"
+	case SYMMACRO:
+		return "#<symbol-macro>"
 	}
 	return "?"
 }

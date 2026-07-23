@@ -288,12 +288,57 @@ func TestEvalIfPermissive(t *testing.T) {
   evalEq(t, `(if nil)`, "()")      // kein else → Nil
 }
 
-// TestEvalCatch sichert Fehlerbehandlung.
-// Syntax: (catch body handler). handler wird ausgewertet (→ Lambda) und
+// TestEvalTrap sichert Fehlerbehandlung (projekteigen, kein CL).
+// Syntax: (trap body handler). handler wird ausgewertet (→ Lambda) und
 // mit der Fehler-Cell als Argument aufgerufen.
-func TestEvalCatch(t *testing.T) {
-  evalEq(t, `(catch (error "x") (lambda (e) 'fallback))`, "fallback")
-  evalEq(t, `(catch 42 (lambda (e) 0))`, "42")   // kein Fehler → Wert durch
+func TestEvalTrap(t *testing.T) {
+  evalEq(t, `(trap (error "x") (lambda (e) 'fallback))`, "fallback")
+  evalEq(t, `(trap 42 (lambda (e) 0))`, "42")   // kein Fehler → Wert durch
+  // Kontrollfluss-Sentinels sind keine Fehler: throw geht durch trap durch
+  evalEq(t, `(catch 'f (trap (throw 'f 7) (lambda (e) 'geschluckt)))`, "7")
+}
+
+// TestEvalCatchThrow sichert CL-Semantik: (catch tag body...) fängt
+// (throw tag wert) dynamisch; Tag wird evaluiert.
+func TestEvalCatchThrow(t *testing.T) {
+  evalEq(t, `(catch 'f (throw 'f 42) 1)`, "42")
+  evalEq(t, `(catch 'f 1 2 3)`, "3")
+  evalEq(t, `(catch 'a (catch 'b (throw 'a 1)) 2)`, "1")
+  evalEq(t, `(+ 1 (catch 'f (throw 'f 5)))`, "6")
+  // kein passender Catch → Laufzeitfehler
+  evalErr(t, `(throw 'nix 1)`)
+  // Fehler sind kein throw: catch lässt LispError durch
+  evalErr(t, `(catch 'f (error "boom"))`)
+}
+
+// TestEvalTagbody sichert CL-Semantik: Tags sind Sprungziele (werden
+// nicht evaluiert), go setzt den PC, tagbody liefert nil. go springt
+// auch aus tief geschachtelten Formen heraus.
+func TestEvalTagbody(t *testing.T) {
+  evalEq(t, `(let ((x 0)) (tagbody (setq x 1) (go ende) (setq x 99) ende) x)`, "1")
+  evalEq(t, `(let ((x 0) (i 0)) (tagbody loop (setq x (+ x 1)) (setq i (+ i 1)) (if (< i 3) (go loop))) x)`, "3")
+  evalEq(t, `(tagbody (go mitte) mitte)`, "()")
+  // go aus verschachteltem block/catch heraus
+  evalEq(t, `(let ((x 0)) (tagbody (block b (catch 'f (go raus))) raus (setq x 1)) x)`, "1")
+  // tagbody gibt nil zurück
+  evalEq(t, `(tagbody (setq y 1))`, "()")
+  // go ohne passendes tagbody → Laufzeitfehler
+  evalErr(t, `(go nirgendwo)`)
+}
+
+// TestEvalUnwindProtect sichert CL-Semantik: cleanup läuft bei jedem
+// Ausstieg — Wert, Fehler, throw, go, return-from.
+func TestEvalUnwindProtect(t *testing.T) {
+  // normaler Wert: cleanup läuft, Wert bleibt
+  evalEq(t, `(let ((x 0)) (list (unwind-protect 42 (setq x 1)) x))`, "(42 1)")
+  // throw: cleanup läuft, throw geht weiter
+  evalEq(t, `(let ((x 0)) (list (catch 'f (unwind-protect (throw 'f 'raus) (setq x 99))) x))`, "(raus 99)")
+  // Fehler: cleanup läuft, Fehler geht weiter
+  evalEq(t, `(let ((x 0)) (trap (unwind-protect (error "boom") (setq x 7)) (lambda (e) x)))`, "7")
+  // go: cleanup läuft, Sprung geht weiter
+  evalEq(t, `(let ((x 0)) (tagbody (unwind-protect (go raus) (setq x 5)) raus) x)`, "5")
+  // return-from: cleanup läuft, Ausstieg geht weiter
+  evalEq(t, `(let ((x 0)) (list (block b (unwind-protect (return-from b 1) (setq x 3))) x))`, "(1 3)")
 }
 
 // TestEvalNoLeakGoroutines ist eine Sanity-Prüfung, dass reine Eval-Pfade
@@ -321,10 +366,70 @@ func TestMacroexpandAll(t *testing.T) {
   run("(macroexpand-all '(when t 1))", "(if t (begin 1) ())")
   // Rekursive Expansion in Subformen
   run("(macroexpand-all '(list (when t 1)))", "(list (if t (begin 1) ()))")
-  // quote wird nicht durchdrungen
-  run("(macroexpand-all '(quote (when t 1)))", "(quote (when t 1))")
+  // quote wird nicht durchdrungen (Drucker: Reader-Abkürzung)
+  run("(macroexpand-all '(quote (when t 1)))", "'(when t 1)")
   // Atom bleibt unverändert
   run("(macroexpand-all 42)", "42")
   // Lambda-Body wird expandiert
   run("(macroexpand-all '(lambda (x) (when t x)))", "(lambda (x) (if t (begin x) ()))")
+}
+
+// TestEvalDoStar: do* bindet Init und Steps sequentiell (let*-Semantik),
+// im Gegensatz zum parallelen do (let-Semantik).
+func TestEvalDoStar(t *testing.T) {
+  // Init sequentiell: y sieht das frisch gebundene x
+  evalEq(t, `(do* ((x 1) (y (* x 2))) (t (list x y)))`, "(1 2)")
+  // Step sequentiell: s bekommt das NEUE i und akkumuliert 1+2+3+4
+  // (parallel-do würde s nur das alte i sehen → anderes Ergebnis)
+  evalEq(t, `(do* ((i 0 (+ i 1)) (s i (+ s i))) ((= i 4) s))`, "10")
+  // leere Bindungsliste
+  evalEq(t, `(do* () (t 'sofort))`, "sofort")
+  // kein Result-Form → nil
+  evalEq(t, `(do* ((i 0 (+ i 1))) ((= i 2)))`, "()")
+  // Bindung ohne Init → nil; ohne Step unverändert
+  evalEq(t, `(do* ((a) (b 5)) (t (list a b)))`, "(() 5)")
+  // Fehler: kaputte Bindung
+  evalErr(t, `(do* (1) (t))`)
+}
+
+// TestEvalDeclarationen: declare ist No-Op (kein Typsystem), locally ist
+// progn mit Deklarationen, the ignoriert den Typ und ist MV-transparent.
+func TestEvalDeclarationen(t *testing.T) {
+  evalEq(t, `(declare (ignore x))`, "()")
+  evalEq(t, `(let ((x 1)) (declare (ignore x)) 2)`, "2")
+  evalEq(t, `(locally 1 2 3)`, "3")
+  evalEq(t, `(locally (declare) 42)`, "42")
+  evalEq(t, `(the fixnum (+ 1 2))`, "3")
+  // the reicht Multiple Values unverändert durch (CL)
+  evalEq(t, `(multiple-value-list (the t (values 1 2)))`, "(1 2)")
+  evalErr(t, `(the)`)
+}
+
+// TestEvalProgv: dynamische Bindung zur Laufzeit. Symbole/Werte werden
+// ausgewertet; mehr Symbole als Werte → nil; MV des Body geht durch.
+// Abweichung zu CL: keine lexikalisch/dynamisch-Trennung.
+func TestEvalProgv(t *testing.T) {
+  evalEq(t, `(progv '(dyn) '(99) dyn)`, "99")
+  evalEq(t, `(progv '() '() 7)`, "7")
+  // mehrere Bindungen, Rest-Symbole → nil
+  evalEq(t, `(progv '(a b c) '(1 2) (list a b c))`, "(1 2 ())")
+  // Symbolliste wird ausgewertet, nicht gequotet verarbeitet
+  evalEq(t, `(let ((s 'x)) (progv (list s) '(5) x))`, "5")
+  // nach progv ist die Bindung weg
+  evalErr(t, `(begin (progv '(fluechtig) '(1) fluechtig) fluechtig)`)
+  // Nicht-Symbol in der Liste → Fehler
+  evalErr(t, `(progv '(a 5) '(1 2) a)`)
+  evalErr(t, `(progv)`)
+}
+
+// TestEvalEvalWhen: golisp2 ist Eval-Kontext — Body feuert nur bei
+// :execute (oder Altname eval), sonst nil. Wie clisp unter (eval ...).
+func TestEvalEvalWhen(t *testing.T) {
+  evalEq(t, `(eval-when (:execute) 5)`, "5")
+  evalEq(t, `(eval-when (:execute :load-toplevel) 1 2 3)`, "3")
+  evalEq(t, `(eval-when (eval) 5)`, "5")
+  evalEq(t, `(eval-when (:compile-toplevel) 5)`, "()")
+  evalEq(t, `(eval-when (:load-toplevel) 5)`, "()")
+  evalEq(t, `(eval-when () 5)`, "()")
+  evalErr(t, `(eval-when)`)
 }

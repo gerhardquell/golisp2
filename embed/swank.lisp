@@ -64,7 +64,7 @@
     ("string-trim" . "(string-trim str)")
     ("string-contains" . "(string-contains str sub)")
     ("error" . "(error msg)")
-    ("catch" . "(catch body handler)")
+    ("trap" . "(trap body handler)")
     ("gensym" . "(gensym)")
     ("file-write" . "(file-write filename &rest contents)")
     ("file-append" . "(file-append filename &rest contents)")
@@ -111,7 +111,7 @@
     ("read" . "Liest einen Lisp-Ausdruck aus einem String.")
     ("sigo" . "Sendet einen Prompt an den sigoREST-Server.")
     ("parfunc" . "Wertet Ausdrücke parallel aus und speichert die Ergebnisse.")
-    ("catch" . "Fängt Lisp-Laufzeitfehler ab.")
+    ("trap" . "Fängt Lisp-Laufzeitfehler ab.")
     ("error" . "Löst einen Lisp-Laufzeitfehler aus.")
     ("gensym" . "Erzeugt ein eindeutiges Symbol.")))
 
@@ -120,9 +120,9 @@
     (if (null entry) () (cdr entry))))
 
 (defun swank--describe-symbol (name)
-  (let ((cell (catch (eval (read name)) (lambda (err) ()))))
+  (let ((cell (trap (eval (read name)) (lambda (err) ()))))
     (let ((type (if (null? cell) "unbound" (swank--cell-type cell)))
-          (arglist (catch (swank--arglist name) (lambda (err) ())))
+          (arglist (trap (swank--arglist name) (lambda (err) ())))
           (static (swank--static-description name)))
       (string-append
         "Symbol: " name "\n"
@@ -131,7 +131,7 @@
         (if (null? static) "" (string-append "\n" static))))))
 
 (defun swank:describe-symbol (name id)
-  (catch
+  (trap
     (let ((content (swank--describe-symbol name)))
       (list (list :return (list :ok (list :title name :content content)) id)))
     (lambda (err)
@@ -283,7 +283,7 @@
 ;; swank:swank-macroexpand-1 (string) -> (:ok "<expanded>").
 ;; C-c C-m. Eine Expansion via GoLisp macroexpand-Spezialform.
 (defun swank:macroexpand-1 (string id)
-  (catch
+  (trap
     (let ((form (read string)))
       (let ((expanded (macroexpand form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
@@ -293,7 +293,7 @@
 ;; swank:swank-macroexpand / swank-expand (string) -> (:ok "<expanded>").
 ;; Wiederhole macroexpand bis stabil auf Top-Level.
 (defun swank:macroexpand-full (string id)
-  (catch
+  (trap
     (let ((form (read string)))
       (let ((expanded (swank--expand-top form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
@@ -303,7 +303,7 @@
 ;; swank:swank-macroexpand-all / swank-expand-all (string) -> (:ok "<expanded>").
 ;; Echte rekursive Expansion in alle Subformen via GoLisp macroexpand-all.
 (defun swank:macroexpand-all-handler (string id)
-  (catch
+  (trap
     (let ((form (read string)))
       (let ((expanded (macroexpand-all form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
@@ -319,14 +319,14 @@
 ;; swank:load-file (filename) -> (:ok "<result>"). C-c C-l in Emacs.
 ;; Nutzt GoLisp load-Spezialform.
 (defun swank:load-file (filename id)
-  (catch
+  (trap
     (let ((result (eval (list (quote load) filename))))
       (list (list :return (list :ok (swank--value-string result)) id)))
     (lambda (err)
       (list (list :return (list :abort (swank--value-string err)) id)))))
 
 (defun swank:listener-eval (string id)
-  (catch
+  (trap
     (let ((forms (swank--read-all string)))
       (let ((events (swank--eval-forms forms (list))))
         (append events (list (list :return (list :ok (list)) id)))))
@@ -375,7 +375,7 @@
 ;; C-c C-k in Emacs. GoLisp hat keinen Compiler, daher ist "kompilieren"
 ;; synonym zu "laden".
 (defun swank:compile-file-for-emacs (filename id)
-  (catch
+  (trap
     (let ((result (eval (list (quote load) filename))))
       (list (list :return (list :ok (list :filename filename
                                           :result (swank--value-string result))) id)))
@@ -385,7 +385,7 @@
 ;; swank:compile-string-for-emacs (string) -> (:ok t).
 ;; Wertet alle Formen im String still aus.
 (defun swank:compile-string-for-emacs (string id)
-  (catch
+  (trap
     (let ((forms (swank--read-all string)))
       (swank--eval-forms-silently forms)
       (list (list :return (list :ok t) id)))
@@ -396,7 +396,7 @@
 ;; M-. in SLIME. Map-Lookup zuerst; sonst REPL-Snippet-Fallback oder :error.
 ;; SLIME erwartet Liste von (dspec location)-Paaren, keine nackten Locations.
 (defun swank:find-definitions-for-emacs (name id)
-  (catch
+  (trap
     (let ((loc (swank--find-definition name)))
       (let ((location
               (if (null? loc)

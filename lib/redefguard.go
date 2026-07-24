@@ -19,8 +19,8 @@ import (
 // applyRedefPolicy bildet die Policy ab: allow → nil, warn → stderr + nil,
 // error → Fehler (Redefinition wird abgebrochen).
 // detail beschreibt den Kontext, z. B. "war FUNC".
-func applyRedefPolicy(name, detail string) error {
-  switch redefinePolicy(redefinePolicyAtomic.Load()) {
+func applyRedefPolicy(p redefinePolicy, name, detail string) error {
+  switch p {
   case redefineWarn:
     fmt.Fprintf(os.Stderr, "REDEF: %s (%s)\n", name, detail)
   case redefineError:
@@ -29,9 +29,9 @@ func applyRedefPolicy(name, detail string) error {
   return nil
 }
 
-// policyAction liefert den Log-Action-Namen der aktuellen Policy.
-func policyAction() string {
-  switch redefinePolicy(redefinePolicyAtomic.Load()) {
+// policyAction liefert den Log-Action-Namen der uebergebenen Policy.
+func policyAction(p redefinePolicy) string {
+  switch p {
   case redefineWarn:
     return "warn"
   case redefineError:
@@ -39,6 +39,9 @@ func policyAction() string {
   }
   return "redef"
 }
+
+// currentPolicy liest die aktuelle Redefinition-Policy atomar aus.
+func currentPolicy() redefinePolicy { return redefinePolicy(redefinePolicyAtomic.Load()) }
 
 // checkRootRedefine wird von define/defun/defmacro VOR env.Set gerufen.
 // Behandelt nur LAMBDA/MACRO-Altbindungen (Lisp-Definitionen); FUNC faengt
@@ -55,6 +58,8 @@ func checkRootRedefine(env *Env, name string, newVal *Cell, newFile string, newL
   if old.Type != LAMBDA && old.Type != MACRO {
     return nil
   }
+  // fehlende Eintraege sind erwartet: Primitiven und vor Task-3-Definitionen
+  // haben kein DefLoc; Zero-Value "" gilt als interaktive Quelle.
   loc, _ := LookupDefinition(name)
   ev := RedefEvent{
     Name:    name,
@@ -70,9 +75,10 @@ func checkRootRedefine(env *Env, name string, newVal *Cell, newFile string, newL
     logRedef(ev)
     return nil
   }
-  ev.Action = policyAction()
+  p := currentPolicy()
+  ev.Action = policyAction(p)
   logRedef(ev)
   detail := fmt.Sprintf("%s aus %s:%d, neu aus %s:%d",
     kindOf(old), loc.File, loc.Line, newFile, newLine)
-  return applyRedefPolicy(name, detail)
+  return applyRedefPolicy(p, name, detail)
 }

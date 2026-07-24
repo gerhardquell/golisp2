@@ -58,16 +58,19 @@ func TestRedefLogReturnsCopy(t *testing.T) {
 }
 
 func TestKindOf(t *testing.T) {
-  cases := map[*Cell]string{
-    {Type: FUNC}:   "func",
-    {Type: LAMBDA}: "lambda",
-    {Type: MACRO}:  "macro",
-    {Type: NUMBER}: "value",
-    {Type: ATOM}:   "value",
+  cases := []struct {
+    cell *Cell
+    want string
+  }{
+    {cell: &Cell{Type: FUNC}, want: "func"},
+    {cell: &Cell{Type: LAMBDA}, want: "lambda"},
+    {cell: &Cell{Type: MACRO}, want: "macro"},
+    {cell: &Cell{Type: NUMBER}, want: "value"},
+    {cell: &Cell{Type: ATOM}, want: "value"},
   }
-  for c, want := range cases {
-    if got := kindOf(c); got != want {
-      t.Errorf("kindOf(%v) = %q, want %q", c.Type, got, want)
+  for _, c := range cases {
+    if got := kindOf(c.cell); got != c.want {
+      t.Errorf("kindOf(%v) = %q, want %q", c.cell.Type, got, c.want)
     }
   }
 }
@@ -111,9 +114,9 @@ func captureStderr(t *testing.T, fn func()) string {
   }
   old := os.Stderr
   os.Stderr = w
+  defer func() { os.Stderr = old }()
   fn()
   _ = w.Close()
-  os.Stderr = old
   out, _ := io.ReadAll(r)
   return string(out)
 }

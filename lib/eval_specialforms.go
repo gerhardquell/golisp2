@@ -135,7 +135,8 @@ func evalMakunbound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("makunbound: '%s' ist nicht gebunden", sym.Val)
   }
   if old.Type == FUNC || old.Type == LAMBDA || old.Type == MACRO {
-    if err := applyRedefPolicy(sym.Val, "makunbound auf "+kindOf(old)); err != nil {
+    p := currentPolicy()
+    if err := applyRedefPolicy(p, sym.Val, "makunbound auf "+kindOf(old)); err != nil {
       return nil, err
     }
   }

@@ -96,16 +96,19 @@ func GetRedefinePolicy() string {
 var onRootRedefine = defaultOnRootRedefine
 
 func defaultOnRootRedefine(name string, old, new *Cell) error {
+  // fehlende Eintraege sind erwartet: Primitiven und vor Task-3-Definitionen
+  // haben kein DefLoc; Zero-Value "" gilt als interaktive Quelle.
   loc, _ := LookupDefinition(name)
+  p := currentPolicy()
   ev := RedefEvent{
     Name:    name,
     OldKind: kindOf(old),
     NewKind: kindOf(new),
     OldFile: loc.File,
     OldLine: loc.Line,
-    Action:  policyAction(),
+    Action:  policyAction(p),
   }
-  err := applyRedefPolicy(name, "war FUNC")
+  err := applyRedefPolicy(p, name, "war FUNC")
   logRedef(ev)
   return err
 }

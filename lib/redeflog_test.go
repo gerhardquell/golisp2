@@ -68,3 +68,33 @@ func TestKindOf(t *testing.T) {
     }
   }
 }
+
+func TestFuncRedefLogged(t *testing.T) {
+  ClearRedefLog()
+  withRedefinePolicy(t, "allow", func() {
+    if _, err := evalStr("(define car 42)"); err != nil {
+      t.Fatalf("allow-Policy muss still durchlassen: %v", err)
+    }
+  })
+  events := RedefLog()
+  if len(events) != 1 {
+    t.Fatalf("1 Event erwartet, got %d (%+v)", len(events), events)
+  }
+  e := events[0]
+  if e.Name != "car" || e.OldKind != "func" || e.NewKind != "value" || e.Action != "redef" {
+    t.Fatalf("Event unerwartet: %+v", e)
+  }
+}
+
+func TestFuncRedefErrorLogged(t *testing.T) {
+  ClearRedefLog()
+  withRedefinePolicy(t, "error", func() {
+    if _, err := evalStr("(define car 42)"); err == nil {
+      t.Fatal("error-Policy muss blockieren")
+    }
+  })
+  events := RedefLog()
+  if len(events) != 1 || events[0].Action != "error" {
+    t.Fatalf("1 error-Event erwartet, got %+v", events)
+  }
+}

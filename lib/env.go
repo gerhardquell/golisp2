@@ -10,7 +10,6 @@ package lib
 
 import (
   "fmt"
-  "os"
   "sync"
   "sync/atomic"
 )
@@ -97,16 +96,18 @@ func GetRedefinePolicy() string {
 var onRootRedefine = defaultOnRootRedefine
 
 func defaultOnRootRedefine(name string, old, new *Cell) error {
-  switch redefinePolicy(redefinePolicyAtomic.Load()) {
-  case redefineAllow:
-    return nil
-  case redefineWarn:
-    fmt.Fprintf(os.Stderr, "REDEF: %s (war FUNC)\n", name)
-    return nil
-  case redefineError:
-    return fmt.Errorf("REDEF: %s (war FUNC)", name)
+  loc, _ := LookupDefinition(name)
+  ev := RedefEvent{
+    Name:    name,
+    OldKind: kindOf(old),
+    NewKind: kindOf(new),
+    OldFile: loc.File,
+    OldLine: loc.Line,
+    Action:  policyAction(),
   }
-  return nil
+  err := applyRedefPolicy(name, "war FUNC")
+  logRedef(ev)
+  return err
 }
 
 // NewEnv erzeugt ein Root-Env (parent == nil) mit Map, sonst ein Frame-Env

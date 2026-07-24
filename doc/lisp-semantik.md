@@ -208,3 +208,24 @@ Einschränkungen:
 
 - `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.
 - `parfunc` mit `:timeout N` bricht laufende Worker über `context.Context` ab. Worker, die trotzdem rekursiv tiefer gehen, stoßen vorher an `MaxEvalDepth`.
+
+---
+
+## Redefinition, Redef-Log, `makunbound`
+
+Das Root-Env bewacht Redefinitionen über `(redefine-policy 'allow|'warn|'error)`
+(Default: `warn`):
+
+- **FUNC** (Go-Primitiv) überschreiben → immer Policy, egal aus welcher Quelle.
+- **LAMBDA/MACRO** (Lisp-Definition) überschreiben → Policy nur bei *fremder*
+  Quelle. Reload derselben Datei (gleiches `SrcFile`, interaktiv = `""`) ist
+  still — das ist der normale Entwicklungs-Workflow.
+- Alle Redefinitionen landen im Ringpuffer (256 Events), abfragbar via
+  `(redef-log)` — Event-Format:
+  `(name old-kind new-kind old-file old-line new-file new-line action)`.
+  `(redef-log-clear)` leert.
+- `(makunbound 'sym)` entfernt eine Root-Bindung samt DefLoc-Eintrag.
+  Fehler bei ungebundenem Symbol; auf FUNC/LAMBDA/MACRO greift die Policy.
+
+Bewusste Grenzen: `setq`/`progv` am Root über LAMBDA bleiben still (kein
+Quell-Kontext). FUNC-Log-Events kennen die neue Quelle nicht (`NewFile ""`).

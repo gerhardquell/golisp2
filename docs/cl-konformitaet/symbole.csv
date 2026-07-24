@@ -1,0 +1,979 @@
+CL-Symbol,Type,golisp2,Kurzbeschreibung
+&ALLOW-OTHER-KEYS,Kern,N,Lambda-list marker: signals that extra keyword arguments are accepted.
+&AUX,Kern,N,Lambda-list marker for auxiliary local variables with init forms.
+&BODY,Kern,N,"Lambda-list marker: like &REST, documents that the body follows."
+&ENVIRONMENT,Kern,N,Lambda-list marker binding the lexical environment (macros).
+&KEY,Kern,J,Lambda-list marker for keyword arguments.
+&OPTIONAL,Kern,J,Lambda-list marker for optional arguments.
+&REST,Kern,J,Lambda-list marker collecting remaining args as a list.
+&WHOLE,Kern,N,Lambda-list marker binding the entire calling form (macros).
+*,Kern,J,"Return the product of its arguments. With no args, returns 1."
+**,Kern,N,the previous value of *
+***,Kern,N,the previous value of **
+*BREAK-ON-SIGNALS*,Kern,N,"When (TYPEP condition *BREAK-ON-SIGNALS*) is true, then calls to SIGNAL will enter the debugger prior to signalling that condition."
+*COMPILE-FILE-PATHNAME*,Kern,N,Variable: pathname of the file being compiled.
+*COMPILE-FILE-TRUENAME*,Kern,N,Variable: truename of the file being compiled.
+*COMPILE-PRINT*,Kern,N,The default for the :PRINT argument to COMPILE-FILE.
+*COMPILE-VERBOSE*,Kern,N,The default for the :VERBOSE argument to COMPILE-FILE.
+*DEBUG-IO*,Kern,N,interactive debugging stream
+*DEBUGGER-HOOK*,Kern,N,"This is either NIL or a function of two arguments, a condition and the value of *DEBUGGER-HOOK*. This function can either handle the condition or return which causes the standard debugger to execute. "
+*DEFAULT-PATHNAME-DEFAULTS*,Kern,N,Variable: default pathname used by pathname operations.
+*ERROR-OUTPUT*,Kern,N,error output stream
+*FEATURES*,Kern,N,a list of symbols that describe features provided by the implementation
+*GENSYM-COUNTER*,Kern,N,counter for generating unique GENSYM symbols
+*LOAD-PATHNAME*,Kern,N,Variable: pathname of the file being loaded.
+*LOAD-PRINT*,Kern,N,the default for the :PRINT argument to LOAD
+*LOAD-TRUENAME*,Kern,N,Variable: truename of the file being loaded.
+*LOAD-VERBOSE*,Kern,N,the default for the :VERBOSE argument to LOAD
+*MACROEXPAND-HOOK*,Kern,N,"The value of this variable must be a designator for a function that can take three arguments, a macro expander function, the macro form to be expanded, and the lexical environment to expand in. The fu"
+*MODULES*,Kern,N,This is a list of module names that have been loaded into Lisp so far. It is used by PROVIDE and REQUIRE.
+*PACKAGE*,Kern,N,the current package
+*PRINT-ARRAY*,Kern,N,Should the contents of arrays be printed?
+*PRINT-BASE*,Kern,N,The output base for RATIONALs (including integers).
+*PRINT-CASE*,Kern,N,What case should the printer should use default?
+*PRINT-CIRCLE*,Kern,N,Should we use #n= and #n# notation to preserve uniqueness in general (and circularity in particular) when printing?
+*PRINT-ESCAPE*,Kern,N,Should we print in a reasonably machine-readable way? (possibly overridden by *PRINT-READABLY*)
+*PRINT-GENSYM*,Kern,N,Should #: prefixes be used when printing symbols with null SYMBOL-PACKAGE?
+*PRINT-LENGTH*,Kern,N,"How many elements at any level should be printed before abbreviating with ""...""?"
+*PRINT-LEVEL*,Kern,N,"How many levels should be printed before abbreviating with ""#""?"
+*PRINT-LINES*,Kern,N,The maximum number of lines to print per object.
+*PRINT-MISER-WIDTH*,Kern,N,"If the remaining space between the current column and the right margin is less than this, then print using ``miser-style'' output. Miser style conditional newlines are turned on, and all indentations "
+*PRINT-PPRINT-DISPATCH*,Kern,N,The pprint-dispatch-table that controls how to pretty-print objects.
+*PRINT-PRETTY*,Kern,N,Should pretty printing be used?
+*PRINT-RADIX*,Kern,N,Should base be verified when printing RATIONALs?
+*PRINT-READABLY*,Kern,N,"If true, all objects will be printed readably. If readable printing is impossible, an error will be signalled. This overrides the value of *PRINT-ESCAPE*."
+*PRINT-RIGHT-MARGIN*,Kern,N,The position of the right margin in ems (for pretty-printing).
+*QUERY-IO*,Kern,N,query I/O stream
+*RANDOM-STATE*,Kern,N,Variable: default random-state for random.
+*READ-BASE*,Kern,N,the radix that Lisp reads numbers in
+*READ-DEFAULT-FLOAT-FORMAT*,Kern,N,Variable: default float format for the reader.
+*READ-EVAL*,Kern,N,"If false, then the #. read macro is disabled."
+*READ-SUPPRESS*,Kern,N,Suppress most interpreting in the reader when T.
+*READTABLE*,Kern,N,Variable bound to current readtable.
+*STANDARD-INPUT*,Kern,N,default input stream
+*STANDARD-OUTPUT*,Kern,N,default output stream
+*TERMINAL-IO*,Kern,N,terminal I/O stream
+*TRACE-OUTPUT*,Kern,N,trace output stream
++,Kern,J,"Return the sum of its arguments. With no args, returns 0."
+++,Kern,N,the previous value of +
++++,Kern,N,the previous value of ++
+-,Kern,J,"Subtract the second and all subsequent arguments from the first; or with one argument, negate the first argument."
+/,Kern,J,"Divide the first argument by each of the following arguments, in turn. With one argument, return reciprocal."
+//,Kern,N,the previous value of /
+///,Kern,N,the previous value of //
+/=,Kern,N,"Return T if no two of its arguments are numerically equal, NIL otherwise."
+1+,Kern,N,Return NUMBER + 1.
+1-,Kern,N,Return NUMBER - 1.
+<,Kern,J,"Return T if its arguments are in strictly increasing order, NIL otherwise."
+<=,Kern,J,"Return T if arguments are in strictly non-decreasing order, NIL otherwise."
+=,Kern,J,"Return T if all of its arguments are numerically equal, NIL otherwise."
+>,Kern,J,"Return T if its arguments are in strictly decreasing order, NIL otherwise."
+>=,Kern,J,"Return T if arguments are in strictly non-increasing order, NIL otherwise."
+ABORT,Kern,N,"Transfer control to a restart named ABORT, signalling a CONTROL-ERROR if none exists."
+ABS,Kern,J,Return the absolute value of the number.
+ACONS,Kern,N,Construct a new alist by adding the pair (KEY . DATUM) to ALIST.
+ACOS,Kern,N,Return the arc cosine of NUMBER.
+ACOSH,Kern,N,Return the hyperbolic arc cosine of NUMBER.
+ADD-METHOD,Kern,N,Adds a method to a generic function.
+ADJOIN,Kern,N,Add ITEM to LIST unless it is already a member
+ADJUST-ARRAY,Kern,N,Adjust ARRAY's dimensions to the given DIMENSIONS and stuff.
+ADJUSTABLE-ARRAY-P,Kern,N,Return T if and only if calling ADJUST-ARRAY on ARRAY will return the identical object.
+ALLOCATE-INSTANCE,Kern,N,Creates a new uninitialized instance of a class (CLOS).
+ALPHA-CHAR-P,Kern,N,"The argument must be a character object. ALPHA-CHAR-P returns T if the argument is an alphabetic character, A-Z or a-z; otherwise NIL."
+ALPHANUMERICP,Kern,N,"Given a character-object argument, ALPHANUMERICP returns T if the argument is either numeric or alphabetic."
+AND,Macro,J,"Macro: logical AND, short-circuit; last true value or NIL."
+APPEND,Kern,J,Construct and return a list by concatenating LISTS.
+APPLY,Kern,J,"Apply FUNCTION to a list of arguments produced by evaluating ARGUMENTS in the manner of LIST*. That is, a list is made of the values of all but the last argument, appended to the value of the last arg"
+APROPOS,Kern,N,Briefly describe all symbols which contain the specified STRING. If PACKAGE is supplied then only describe symbols present in that package. If EXTERNAL-ONLY then only describe external symbols in the 
+APROPOS-LIST,Kern,N,"Like APROPOS, except that it returns a list of the symbols found instead of describing them."
+AREF,Kern,N,Return the element of the ARRAY specified by the SUBSCRIPTS.
+ARITHMETIC-ERROR,Kern,N,Condition type for arithmetic errors.
+ARITHMETIC-ERROR-OPERANDS,Kern,N,Reader: operands of an arithmetic-error condition.
+ARITHMETIC-ERROR-OPERATION,Kern,N,Reader: operation of an arithmetic-error condition.
+ARRAY,Kern,N,Type: n-dimensional array of any rank.
+ARRAY-DIMENSION,Kern,N,Return the length of dimension AXIS-NUMBER of ARRAY.
+ARRAY-DIMENSION-LIMIT,Kern,N,the exclusive upper bound on any given dimension of an array
+ARRAY-DIMENSIONS,Kern,N,Return a list whose elements are the dimensions of the array
+ARRAY-DISPLACEMENT,Kern,N,"Return the values of :DISPLACED-TO and :DISPLACED-INDEX-offset options to MAKE-ARRAY, or NIL and 0 if not a displaced array."
+ARRAY-ELEMENT-TYPE,Kern,N,Return the type of the elements of the array
+ARRAY-HAS-FILL-POINTER-P,Kern,N,"Return T if the given ARRAY has a fill pointer, or NIL otherwise."
+ARRAY-IN-BOUNDS-P,Kern,N,"Return T if the SUBSCRIPTS are in bounds for the ARRAY, NIL otherwise."
+ARRAY-RANK,Kern,N,Return the number of dimensions of ARRAY.
+ARRAY-RANK-LIMIT,Kern,N,the exclusive upper bound on the rank of an array
+ARRAY-ROW-MAJOR-INDEX,Kern,N,Row-major index for given array subscripts.
+ARRAY-TOTAL-SIZE,Kern,N,Return the total number of elements in the Array.
+ARRAY-TOTAL-SIZE-LIMIT,Kern,N,the exclusive upper bound on the total number of elements in an array
+ARRAYP,Kern,N,"Return true if OBJECT is an ARRAY, and NIL otherwise."
+ASH,Kern,N,Shifts integer left by count places preserving sign. - count shifts right.
+ASIN,Kern,N,Return the arc sine of NUMBER.
+ASINH,Kern,N,Return the hyperbolic arc sine of NUMBER.
+ASSERT,Macro,N,Signals an error if the value of TEST-FORM is NIL. Returns NIL. Optional DATUM and ARGUMENTS can be used to change the signaled error condition and are interpreted as in (APPLY #'ERROR DATUM ARGUMENTS
+ASSOC,Kern,J,Return the cons in ALIST whose car is equal (by a given test or EQL) to the ITEM.
+ASSOC-IF,Kern,N,"Return the first cons in ALIST whose CAR satisfies PREDICATE. If KEY is supplied, apply it to the CAR of each cons before testing."
+ASSOC-IF-NOT,Kern,N,"Return the first cons in ALIST whose CAR does not satisfy PREDICATE. If KEY is supplied, apply it to the CAR of each cons before testing."
+ATAN,Kern,N,Return the arc tangent of Y if X is omitted or Y/X if X is supplied.
+ATANH,Kern,N,Return the hyperbolic arc tangent of NUMBER.
+ATOM,Kern,J,"Return true if OBJECT is an ATOM, and NIL otherwise."
+BASE-CHAR,Kern,N,Type: reduced character type (minimal character set).
+BASE-STRING,Kern,N,Type: vector of base-chars.
+BIGNUM,Kern,N,Type: integer too large to fit in a fixnum.
+BIT,Kern,N,Return the bit from the BIT-ARRAY at the specified SUBSCRIPTS.
+BIT-AND,Kern,N,"Perform a bit-wise LOGAND on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted,"
+BIT-ANDC1,Kern,N,"Perform a bit-wise LOGANDC1 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitte"
+BIT-ANDC2,Kern,N,"Perform a bit-wise LOGANDC2 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitte"
+BIT-EQV,Kern,N,"Perform a bit-wise LOGEQV on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted,"
+BIT-IOR,Kern,N,"Perform a bit-wise LOGIOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted,"
+BIT-NAND,Kern,N,"Perform a bit-wise LOGNAND on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted"
+BIT-NOR,Kern,N,"Perform a bit-wise LOGNOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted,"
+BIT-NOT,Kern,N,"Performs a bit-wise logical NOT on the elements of BIT-ARRAY, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY is used. If RESULT-BIT-ARRAY is NIL or omitted, a new array i"
+BIT-ORC1,Kern,N,"Perform a bit-wise LOGORC1 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted"
+BIT-ORC2,Kern,N,"Perform a bit-wise LOGORC2 on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted"
+BIT-VECTOR,Kern,N,Type: vector of bits (0/1).
+BIT-VECTOR-P,Kern,N,"Return true if OBJECT is a BIT-VECTOR, and NIL otherwise."
+BIT-XOR,Kern,N,"Perform a bit-wise LOGXOR on the elements of BIT-ARRAY-1 and BIT-ARRAY-2, putting the results in RESULT-BIT-ARRAY. If RESULT-BIT-ARRAY is T, BIT-ARRAY-1 is used. If RESULT-BIT-ARRAY is NIL or omitted,"
+BLOCK,Kern,J,"BLOCK name form* Evaluate the FORMS as a PROGN. Within the lexical scope of the body, RETURN-FROM can be used to exit the form."
+BOOLE,Kern,N,Bit-wise boolean function on two integers. Function chosen by OP: 0 BOOLE-CLR 1 BOOLE-SET 2 BOOLE-1 3 BOOLE-2 4 BOOLE-C1 5 BOOLE-C2 6 BOOLE-AND 7 BOOLE-IOR 8 BOOLE-XOR 9 BOOLE-EQV 10 BOOLE-NAND 11 BOO
+BOOLE-1,Kern,N,"Boole function op, makes BOOLE return integer1."
+BOOLE-2,Kern,N,"Boole function op, makes BOOLE return integer2."
+BOOLE-AND,Kern,N,"Boole function op, makes BOOLE return logand of integer1 and integer2."
+BOOLE-ANDC1,Kern,N,"Boole function op, makes BOOLE return logandc1 of integer1 and integer2."
+BOOLE-ANDC2,Kern,N,"Boole function op, makes BOOLE return logandc2 of integer1 and integer2."
+BOOLE-C1,Kern,N,"Boole function op, makes BOOLE return complement of integer1."
+BOOLE-C2,Kern,N,"Boole function op, makes BOOLE return complement of integer2."
+BOOLE-CLR,Kern,N,"Boole function op, makes BOOLE return 0."
+BOOLE-EQV,Kern,N,"Boole function op, makes BOOLE return logeqv of integer1 and integer2."
+BOOLE-IOR,Kern,N,"Boole function op, makes BOOLE return logior of integer1 and integer2."
+BOOLE-NAND,Kern,N,"Boole function op, makes BOOLE return log nand of integer1 and integer2."
+BOOLE-NOR,Kern,N,"Boole function op, makes BOOLE return lognor of integer1 and integer2."
+BOOLE-ORC1,Kern,N,"Boole function op, makes BOOLE return logorc1 of integer1 and integer2."
+BOOLE-ORC2,Kern,N,"Boole function op, makes BOOLE return logorc2 of integer1 and integer2."
+BOOLE-SET,Kern,N,"Boole function op, makes BOOLE return -1."
+BOOLE-XOR,Kern,N,"Boole function op, makes BOOLE return logxor of integer1 and integer2."
+BOOLEAN,Kern,N,"Type: the set {T, NIL}."
+BOTH-CASE-P,Kern,N,"The argument must be a character object. BOTH-CASE-P returns T if the argument is an alphabetic character and if the character exists in both upper and lower case. For ASCII, this is the same as ALPHA"
+BOUNDP,Kern,N,Return non-NIL if SYMBOL is bound to a value.
+BREAK,Kern,N,Print a message and invoke the debugger without allowing any possibility of condition handling occurring.
+BROADCAST-STREAM,Kern,N,Type: stream that writes to multiple streams at once.
+BROADCAST-STREAM-STREAMS,Kern,N,Reader: list of streams a broadcast-stream writes to.
+BUILT-IN-CLASS,Kern,N,Type: class of built-in implementation types.
+BUTLAST,Kern,N,Copy of a list without the last n elements (default 1).
+BYTE,Kern,N,Return a byte specifier which may be used by other byte functions (e.g. LDB).
+BYTE-POSITION,Kern,N,Return the position part of the byte specifier bytespec.
+BYTE-SIZE,Kern,N,Return the size part of the byte specifier bytespec.
+CAAAAR,Kern,N,Return the car of the caaar of a list.
+CAAADR,Kern,N,Return the car of the caadr of a list.
+CAAAR,Kern,N,Return the 1st object in the caar of a list.
+CAADAR,Kern,N,Return the car of the cadar of a list.
+CAADDR,Kern,N,Return the car of the caddr of a list.
+CAADR,Kern,N,Return the 1st object in the cadr of a list.
+CAAR,Kern,J,Return the car of the 1st sublist.
+CADAAR,Kern,N,Return the car of the cdaar of a list.
+CADADR,Kern,N,Return the car of the cdadr of a list.
+CADAR,Kern,N,Return the car of the cdar of a list.
+CADDAR,Kern,N,Return the car of the cddar of a list.
+CADDDR,Kern,J,Return the car of the cdddr of a list.
+CADDR,Kern,J,Return the 1st object in the cddr of a list.
+CADR,Kern,J,Return the 2nd object in a list.
+CALL-ARGUMENTS-LIMIT,Kern,N,"The exclusive upper bound on the number of arguments which may be passed to a function, including &REST args."
+CALL-METHOD,Macro,N,Macro for method combination.
+CALL-NEXT-METHOD,Kern,N,Calls the next most specific applicable method (CLOS).
+CAR,Kern,J,Return the 1st object in a list.
+CASE,Macro,J,CASE Keyform {({(Key*) | Key} Form*)}* Evaluates the Forms in the first clause with a Key EQL to the value of Keyform. If a singleton key is T then the clause is a default clause.
+CATCH,Kern,J,"CATCH tag form* Evaluate TAG and instantiate it as a catcher while the body forms are evaluated in an implicit PROGN. If a THROW is done to TAG within the dynamic scope of the body, then control will "
+CCASE,Macro,N,CCASE Keyform {({(Key*) | Key} Form*)}* Evaluates the Forms in the first clause with a Key EQL to the value of Keyform. If none of the keys matches then a correctable error is signalled.
+CDAAAR,Kern,N,Return the cdr of the caaar of a list.
+CDAADR,Kern,N,Return the cdr of the caadr of a list.
+CDAAR,Kern,N,Return the cdr of the caar of a list.
+CDADAR,Kern,N,Return the cdr of the cadar of a list.
+CDADDR,Kern,N,Return the cdr of the caddr of a list.
+CDADR,Kern,N,Return the cdr of the cadr of a list.
+CDAR,Kern,J,Return the cdr of the 1st sublist.
+CDDAAR,Kern,N,Return the cdr of the cdaar of a list.
+CDDADR,Kern,N,Return the cdr of the cdadr of a list.
+CDDAR,Kern,N,Return the cdr of the cdar of a list.
+CDDDAR,Kern,N,Return the cdr of the cddar of a list.
+CDDDDR,Kern,N,Return the cdr of the cdddr of a list.
+CDDDR,Kern,N,Return the cdr of the cddr of a list.
+CDDR,Kern,J,Return all but the 1st two objects of a list.
+CDR,Kern,J,Return all but the first object in a list.
+CEILING,Kern,N,"Return number/divisor as an integer, rounded toward positive infinity. The second returned value is the remainder."
+CELL-ERROR,Kern,N,Condition type for errors with a name/object reference.
+CELL-ERROR-NAME,Kern,N,Reader: name of a cell-error condition.
+CERROR,Kern,N,Signals a correctable (continuable) error.
+CHANGE-CLASS,Kern,N,Changes the class of an instance dynamically.
+CHAR,Kern,N,"Given a string and a non-negative integer index less than the length of the string, returns the character object representing the character at that position in the string."
+CHAR-CODE,Kern,N,Return the integer code of CHAR.
+CHAR-CODE-LIMIT,Kern,N,the upper exclusive bound on values produced by CHAR-CODE
+CHAR-DOWNCASE,Kern,N,Return CHAR converted to lower-case if that is possible.
+CHAR-EQUAL,Kern,N,Return T if all of the arguments are the same character. Case is ignored.
+CHAR-GREATERP,Kern,N,Return T if the arguments are in strictly decreasing alphabetic order. Case is ignored.
+CHAR-INT,Kern,N,"Return the integer code of CHAR. (In SBCL this is the same as CHAR-CODE, as there are no character bits or fonts.)"
+CHAR-LESSP,Kern,N,Return T if the arguments are in strictly increasing alphabetic order. Case is ignored.
+CHAR-NAME,Kern,N,Return the name (a STRING) for a CHARACTER object.
+CHAR-NOT-EQUAL,Kern,N,Return T if no two of the arguments are the same character. Case is ignored.
+CHAR-NOT-GREATERP,Kern,N,Return T if the arguments are in strictly non-decreasing alphabetic order. Case is ignored.
+CHAR-NOT-LESSP,Kern,N,Return T if the arguments are in strictly non-increasing alphabetic order. Case is ignored.
+CHAR-UPCASE,Kern,N,Return CHAR converted to upper-case if that is possible. Don't convert lowercase eszet (U+DF).
+CHAR/=,Kern,N,Return T if no two of the arguments are the same character.
+CHAR<,Kern,N,Return T if the arguments are in strictly increasing alphabetic order.
+CHAR<=,Kern,N,Return T if the arguments are in strictly non-decreasing alphabetic order.
+CHAR=,Kern,N,Return T if all of the arguments are the same character.
+CHAR>,Kern,N,Return T if the arguments are in strictly decreasing alphabetic order.
+CHAR>=,Kern,N,Return T if the arguments are in strictly non-increasing alphabetic order.
+CHARACTER,Kern,N,"Coerce OBJECT into a CHARACTER if possible. Legal inputs are characters, strings and symbols of length 1."
+CHARACTERP,Kern,N,"Return true if OBJECT is a CHARACTER, and NIL otherwise."
+CHECK-TYPE,Macro,N,"Signal a restartable error of type TYPE-ERROR if the value of PLACE is not of the specified type. If an error is signalled and the restart is used to return, this can only return if the STORE-VALUE re"
+CIS,Kern,N,"Return cos(Theta) + i sin(Theta), i.e. exp(i Theta)."
+CLASS,Kern,N,Type: class metaobject.
+CLASS-NAME,Kern,N,Reader: name of a class.
+CLASS-OF,Kern,N,Returns the class of an object.
+CLEAR-INPUT,Kern,N,Clears buffered input from a stream.
+CLEAR-OUTPUT,Kern,N,Clears buffered output of a stream (async).
+CLOSE,Kern,N,"Close the given STREAM. No more I/O may be performed, but inquiries may still be made. If :ABORT is true, an attempt is made to clean up the side effects of having created the stream."
+CLRHASH,Kern,J,This removes all the entries from HASH-TABLE and returns the hash table itself.
+CODE-CHAR,Kern,N,Return the character with the code CODE.
+COERCE,Kern,N,Coerce the Object to an object of type Output-Type-Spec.
+COMPILATION-SPEED,Kern,N,Optimize quality: speed of compilation.
+COMPILE,Kern,N,"Produce a compiled function from DEFINITION. If DEFINITION is a lambda-expression, it is coerced to a function. If DEFINITION is an interpreted function, it is compiled. If DEFINITION is already a com"
+COMPILE-FILE,Kern,N,"Compile INPUT-FILE, producing a corresponding fasl file and returning its filename. :OUTPUT-FILE The name of the FASL to output. The returned pathname of the output file may differ from the pathname o"
+COMPILE-FILE-PATHNAME,Kern,N,Return a pathname describing what file COMPILE-FILE would write to given these arguments.
+COMPILED-FUNCTION,Kern,N,Type: compiled function object.
+COMPILED-FUNCTION-P,Kern,N,"Return true if OBJECT is a COMPILED-FUNCTION, and NIL otherwise."
+COMPILER-MACRO,Kern,N,Declaration/type for compiler-macro definitions.
+COMPILER-MACRO-FUNCTION,Kern,N,"If NAME names a compiler-macro in ENV, return the expansion function, else return NIL. Can be set with SETF when ENV is NIL."
+COMPLEMENT,Kern,J,Return a new function that returns T whenever FUNCTION returns NIL and NIL whenever FUNCTION returns non-NIL.
+COMPLEX,Kern,N,Return a complex number with the specified real and imaginary components.
+COMPLEXP,Kern,N,"Return true if OBJECT is a COMPLEX, and NIL otherwise."
+COMPUTE-APPLICABLE-METHODS,Kern,N,Sorted list of methods applicable to args.
+COMPUTE-RESTARTS,Kern,N,"Return a list of all the currently active restarts ordered from most recently established to less recently established. If CONDITION is specified, then only restarts associated with CONDITION (or with"
+CONCATENATE,Kern,N,Return a new sequence of all the argument sequences concatenated together which shares no structure with the original argument sequences of the specified RESULT-TYPE.
+CONCATENATED-STREAM,Kern,N,Type: stream reading from several input streams.
+CONCATENATED-STREAM-STREAMS,Kern,N,Reader: list of input streams of a concatenated-stream.
+COND,Macro,J,Macro: conditional evaluation of test/body clauses.
+CONDITION,Kern,N,Type: root of all condition types.
+CONJUGATE,Kern,N,"Return the complex conjugate of NUMBER. For non-complex numbers, this is an identity."
+CONS,Kern,J,Return a list with SE1 as the CAR and SE2 as the CDR.
+CONSP,Kern,N,"Return true if OBJECT is a CONS, and NIL otherwise."
+CONSTANTLY,Kern,J,Return a function that always returns VALUE.
+CONSTANTP,Kern,N,"True of any FORM that has a constant value: self-evaluating objects, keywords, defined constants, quote forms. Additionally the constant-foldability of some function calls and special forms is recogni"
+CONTINUE,Kern,N,"Transfer control to a restart named CONTINUE, or return NIL if none exists."
+CONTROL-ERROR,Kern,N,Condition type for control-transfer errors.
+COPY-ALIST,Kern,N,Return a new association list which is EQUAL to ALIST.
+COPY-LIST,Kern,N,Return a new list which is EQUAL to LIST. LIST may be improper.
+COPY-PPRINT-DISPATCH,Kern,N,Copies a pprint-dispatch table.
+COPY-READTABLE,Kern,N,"Copies FROM-READTABLE and returns the result. Uses TO-READTABLE as a target for the copy when provided, otherwise a new readtable is created. The FROM-READTABLE defaults to the standard readtable when"
+COPY-SEQ,Kern,N,Return a copy of SEQUENCE which is EQUAL to SEQUENCE but not EQ.
+COPY-STRUCTURE,Kern,N,Return a copy of STRUCTURE with the same (EQL) slot values.
+COPY-SYMBOL,Kern,N,"Make and return a new uninterned symbol with the same print name as SYMBOL. If COPY-PROPS is false, the new symbol is neither bound nor fbound and has no properties, else it has a copy of SYMBOL's fun"
+COPY-TREE,Kern,N,Recursively copy trees of conses.
+COS,Kern,N,Return the cosine of NUMBER.
+COSH,Kern,N,Return the hyperbolic cosine of NUMBER.
+COUNT,Kern,N,"Return the number of elements in SEQUENCE satisfying a test with ITEM, which defaults to EQL."
+COUNT-IF,Kern,N,Return the number of elements in SEQUENCE satisfying PRED(el).
+COUNT-IF-NOT,Kern,N,Return the number of elements in SEQUENCE not satisfying TEST(el).
+CTYPECASE,Macro,N,CTYPECASE Keyform {(Type Form*)}* Evaluates the Forms in the first clause for which TYPEP of Keyform and Type is true. If no form is satisfied then a correctable error is signalled.
+DEBUG,Kern,N,Optimize quality: amount of debugging info.
+DECF,Macro,N,"The first argument is some location holding a number. This number is decremented by the second argument, DELTA, which defaults to 1."
+DECLAIM,Macro,N,DECLAIM Declaration* Do a declaration or declarations for the global environment.
+DECLARATION,Kern,N,Declaration: registers a non-standard declaration name.
+DECLARE,Kern,J,Special form: declaration specifier inside a form.
+DECODE-FLOAT,Kern,N,Return three values: 1) a floating-point number representing the significand. This is always between 0.5 (inclusive) and 1.0 (exclusive). 2) an integer representing the exponent. 3) -1.0 or 1.0 (i.e. 
+DECODE-UNIVERSAL-TIME,Kern,N,"Converts a universal-time to decoded time format returning the following nine values: second, minute, hour, date, month, year, day of week (0 = Monday), T (daylight savings time) or NIL (standard time"
+DEFCLASS,Macro,N,Macro: defines a class (CLOS).
+DEFCONSTANT,Macro,N,"Define a global constant, saying that the value is constant and may be compiled into code. If the variable already has a value, and this is not EQL to the new value, the code is not portable (undefine"
+DEFGENERIC,Macro,N,Macro: defines a generic function.
+DEFINE-COMPILER-MACRO,Macro,N,Define a compiler-macro for NAME.
+DEFINE-CONDITION,Macro,N,DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option* Define NAME as a condition type. This new type inherits slots and its report function from the specified PARENT-TYPEs. A slot spec is a list o
+DEFINE-METHOD-COMBINATION,Macro,N,Macro: defines a method combination.
+DEFINE-MODIFY-MACRO,Macro,N,Creates a new read-modify-write macro like PUSH or INCF.
+DEFINE-SETF-EXPANDER,Macro,N,"Syntax like DEFMACRO, but creates a setf expander function. The body of the definition must be a form that returns five appropriate values."
+DEFINE-SYMBOL-MACRO,Macro,N,Macro: defines a symbol macro.
+DEFMACRO,Macro,J,Macro: defines a macro.
+DEFMETHOD,Macro,N,Macro: defines a method on a generic function.
+DEFPACKAGE,Macro,N,Defines a new package called PACKAGE. Each of OPTIONS should be one of the following: (USE {package-name}*) (EXPORT {symbol-name}*) (IMPORT-FROM <package-name> {symbol-name}*) (SHADOW {symbol-name}*) 
+DEFPARAMETER,Macro,N,"Define a parameter that is not normally changed by the program, but that may be changed without causing an error. Declare the variable special and sets its value to VAL, overwriting any previous value"
+DEFSETF,Macro,N,Associates a SETF update function or macro with the specified access function or macro. The format is complex. See the manual for details.
+DEFSTRUCT,Macro,J,"DEFSTRUCT {Name | (Name Option*)} [Documentation] {Slot | (Slot [Default] {Key Value}*)} Define the structure type Name. Instances are created by MAKE-<name>, which takes &KEY arguments allowing initi"
+DEFTYPE,Macro,N,"Define a new type, with syntax like DEFMACRO."
+DEFUN,Macro,J,Define a function at top level.
+DEFVAR,Macro,J,"Define a special variable at top level. Declare the variable SPECIAL and, optionally, initialize it. If the variable already has a value, the old value is not clobbered. The third argument is an optio"
+DELETE,Kern,N,Return a sequence formed by destructively removing the specified ITEM from the given SEQUENCE.
+DELETE-DUPLICATES,Kern,N,"The elements of SEQUENCE are examined, and if any two match, one is discarded. The resulting sequence, which may be formed by destroying the given sequence, is returned. The :TEST-NOT argument is depr"
+DELETE-FILE,Kern,N,"Delete the specified FILE. If FILE is a stream, on Windows the stream is closed immediately. On Unix platforms the stream remains open, allowing IO to continue: the OS resources associated with the de"
+DELETE-IF,Kern,N,Return a sequence formed by destructively removing the elements satisfying the specified PREDICATE from the given SEQUENCE.
+DELETE-IF-NOT,Kern,N,Return a sequence formed by destructively removing the elements not satisfying the specified PREDICATE from the given SEQUENCE.
+DELETE-PACKAGE,Kern,N,Delete the package designated by PACKAGE-DESIGNATOR from the package system data structures.
+DENOMINATOR,Kern,N,"Return the denominator of NUMBER, which must be rational."
+DEPOSIT-FIELD,Kern,N,"Return new integer with newbyte in specified position, newbyte is not right justified."
+DESCRIBE,Kern,N,Print a description of OBJECT to STREAM-DESIGNATOR.
+DESCRIBE-OBJECT,Kern,N,Generic function: describes an object.
+DESTRUCTURING-BIND,Macro,N,Bind the variables in LAMBDA-LIST to the corresponding values in the tree structure resulting from the evaluation of EXPRESSION.
+DIGIT-CHAR,Kern,N,All arguments must be integers. Returns a character object that represents a digit of the given weight in the specified radix. Returns NIL if no such character exists.
+DIGIT-CHAR-P,Kern,N,"If char is a digit in the specified radix, returns the fixnum for which that digit stands, else returns NIL."
+DIRECTORY,Kern,N,"Return a list of PATHNAMEs, each the TRUENAME of a file matching PATHSPEC. Note that the interaction between this ANSI-specified TRUENAMEing and the semantics of the Unix filesystem (symbolic links..)"
+DIRECTORY-NAMESTRING,Kern,N,Return a string representation of the directory in PATHNAME.
+DISASSEMBLE,Kern,N,"Disassemble the compiled code associated with OBJECT, which can be a function, a lambda expression, or a symbol with a function definition. If it is not already compiled, the compiler is called to pro"
+DIVISION-BY-ZERO,Kern,N,Condition type for division by zero.
+DO,Macro,J,"DO ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form* Iteration construct. Each Var is initialized in parallel to the value of the specified Init form. On subsequent iterations, the Vars ar"
+DO*,Macro,J,DO* ({(Var [Init] [Step])}*) (Test Exit-Form*) Declaration* Form* Iteration construct. Each Var is initialized sequentially (like LET*) to the value of the specified Init form. On subsequent iteration
+DO-ALL-SYMBOLS,Macro,N,DO-ALL-SYMBOLS (VAR [RESULT-FORM]) {DECLARATION}* {TAG | FORM}* Executes the FORMs once for each symbol in every package with VAR bound to the current symbol.
+DO-EXTERNAL-SYMBOLS,Macro,N,DO-EXTERNAL-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECL}* {TAG | FORM}* Executes the FORMs once for each external symbol in the given PACKAGE with VAR bound to the current symbol.
+DO-SYMBOLS,Macro,N,DO-SYMBOLS (VAR [PACKAGE [RESULT-FORM]]) {DECLARATION}* {TAG | FORM}* Executes the FORMs at least once for each symbol accessible in the given PACKAGE with VAR bound to the current symbol.
+DOCUMENTATION,Kern,N,"Return the documentation string of Doc-Type for X, or NIL if none exists. System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE, SETF, and T. Function documentation is stored separately for functio"
+DOLIST,Macro,J,Macro: iterates over list elements.
+DOTIMES,Macro,J,Macro: iterates a counter from 0 to n-1.
+DOUBLE-FLOAT,Kern,N,Type: double-precision float.
+DOUBLE-FLOAT-EPSILON,Kern,N,Smallest double-float e with 1.0+e != 1.0.
+DOUBLE-FLOAT-NEGATIVE-EPSILON,Kern,N,Smallest double-float e with 1.0-e != 1.0.
+DPB,Kern,N,"Return new integer with newbyte in specified position, newbyte is right justified."
+DRIBBLE,Kern,N,"With a file name as an argument, dribble opens the file and sends a record of further I/O to that file. Without an argument, it closes the dribble file, and quits logging."
+DYNAMIC-EXTENT,Kern,N,Declaration: object has dynamic extent (limited lifetime).
+ECASE,Macro,N,ECASE Keyform {({(Key*) | Key} Form*)}* Evaluates the Forms in the first clause with a Key EQL to the value of Keyform. If none of the keys matches then an error is signalled.
+ECHO-STREAM,Kern,N,Type: stream echoing input to an output stream.
+ECHO-STREAM-INPUT-STREAM,Kern,N,Reader: input stream of an echo-stream.
+ECHO-STREAM-OUTPUT-STREAM,Kern,N,Reader: output stream of an echo-stream.
+ED,Kern,N,Starts the editor (on a file or a function if named). Functions from the list *ED-FUNCTIONS* are called in order with X as an argument until one of them returns non-NIL; these functions are responsibl
+EIGHTH,Kern,N,Return the 8th object in a list or NIL if there is no 8th object.
+ELT,Kern,N,Return the element of SEQUENCE specified by INDEX.
+ENCODE-UNIVERSAL-TIME,Kern,N,"The time values specified in decoded format are converted to universal time, which is returned."
+END-OF-FILE,Kern,N,Condition type for end of file.
+ENDP,Kern,N,"This is the recommended way to test for the end of a proper list. It returns true if OBJECT is NIL, false if OBJECT is a CONS, and an error for any other type of OBJECT."
+ENOUGH-NAMESTRING,Kern,N,Return an abbreviated pathname sufficient to identify PATHNAME relative to DEFAULTS.
+ENSURE-DIRECTORIES-EXIST,Kern,N,"Test whether the directories containing the specified file actually exist, and attempt to create them if they do not. The MODE argument is a CMUCL/SBCL-specific extension to control the Unix permissio"
+ENSURE-GENERIC-FUNCTION,Kern,N,Ensures a generic function exists (creates if absent).
+EQ,Kern,J,"Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
+EQL,Kern,N,"Return T if OBJ1 and OBJ2 represent the same object, otherwise NIL."
+EQUAL,Kern,N,Return T if X and Y are EQL or if they are structured components whose elements are EQUAL. Strings and bit-vectors are EQUAL if they are the same length and have identical components. Other arrays mus
+EQUALP,Kern,N,"Just like EQUAL, but more liberal in several respects. Numbers may be of different types, as long as the values are identical after coercion. Characters may differ in alphabetic case. Vectors and arra"
+ERROR,Kern,J,"Invoke the signal facility on a condition formed from DATUM and ARGUMENTS. If the condition is not handled, the debugger is invoked."
+ETYPECASE,Macro,N,ETYPECASE Keyform {(Type Form*)}* Evaluates the Forms in the first clause for which TYPEP of Keyform and Type is true. If no form is satisfied then an error is signalled.
+EVAL,Kern,J,"Evaluate the argument in a null lexical environment, returning the result or results."
+EVAL-WHEN,Kern,J,"EVAL-WHEN (situation*) form* Evaluate the FORMS in the specified SITUATIONS (any of :COMPILE-TOPLEVEL, :LOAD-TOPLEVEL, or :EXECUTE, or (deprecated) COMPILE, LOAD, or EVAL)."
+EVENP,Kern,N,Is this integer even?
+EVERY,Kern,J,"Apply PREDICATE to the 0-indexed elements of the sequences, then possibly to those with index 1, and so on. Return NIL as soon as any invocation of PREDICATE returns NIL, or T if every invocation is n"
+EXP,Kern,N,Return e raised to the power NUMBER.
+EXPORT,Kern,N,"Exports SYMBOLS from PACKAGE, checking that no name conflicts result."
+EXPT,Kern,J,Return BASE raised to the POWER.
+EXTENDED-CHAR,Kern,N,Type of CHARACTERs that aren't BASE-CHARs.
+FBOUNDP,Kern,N,Return true if name has a global function definition.
+FCEILING,Kern,N,"Same as CEILING, but returns first value as a float."
+FDEFINITION,Kern,N,Return name's global function definition taking care to respect any encapsulations and to return the innermost encapsulated definition. This is SETF'able.
+FFLOOR,Kern,N,"Same as FLOOR, but returns first value as a float."
+FIFTH,Kern,N,Return the 5th object in a list or NIL if there is no 5th object.
+FILE-AUTHOR,Kern,N,"Return the author of the file specified by PATHSPEC. Signal an error of type FILE-ERROR if no such file exists, or if PATHSPEC is a wild pathname."
+FILE-ERROR,Kern,N,Condition type for file errors.
+FILE-ERROR-PATHNAME,Kern,N,Reader: pathname of a file-error condition.
+FILE-LENGTH,Kern,N,Returns length of a file stream in units.
+FILE-NAMESTRING,Kern,N,Return a string representation of the name in PATHNAME.
+FILE-POSITION,Kern,N,Queries or sets position in a file stream.
+FILE-STREAM,Kern,N,Type: stream backed by a file.
+FILE-STRING-LENGTH,Kern,N,Width of a string when written to a file stream.
+FILE-WRITE-DATE,Kern,N,"Return the write date of the file specified by PATHSPEC. An error of type FILE-ERROR is signaled if no such file exists, or if PATHSPEC is a wild pathname."
+FILL,Kern,N,Replace the specified elements of SEQUENCE with ITEM.
+FILL-POINTER,Kern,N,Return the FILL-POINTER of the given VECTOR.
+FIND,Kern,N,Returns first element of a sequence eq to item.
+FIND-ALL-SYMBOLS,Kern,N,Return a list of all symbols in the system having the specified name.
+FIND-CLASS,Kern,N,Returns the class named by a symbol.
+FIND-IF,Kern,N,Returns first element of a sequence satisfying predicate.
+FIND-IF-NOT,Kern,N,Returns first element not satisfying predicate.
+FIND-METHOD,Kern,N,Returns a method of a generic function.
+FIND-PACKAGE,Kern,N,"If PACKAGE-DESIGNATOR is a package, it is returned. Otherwise PACKAGE-DESIGNATOR must be a string designator, in which case the package it names is located and returned. As an SBCL extension, the curr"
+FIND-RESTART,Kern,N,"Return the first restart identified by IDENTIFIER. If IDENTIFIER is a symbol, then the innermost applicable restart with that name is returned. If IDENTIFIER is a restart, it is returned if it is curr"
+FIND-SYMBOL,Kern,N,"Return the symbol named NAME in PACKAGE. If such a symbol is found then the second value is :INTERNAL, :EXTERNAL or :INHERITED to indicate how the symbol is accessible. If no symbol is found then both"
+FINISH-OUTPUT,Kern,N,Flushes output and waits for completion (sync).
+FIRST,Kern,J,Return the 1st object in a list or NIL if the list is empty.
+FIXNUM,Kern,N,Type: machine-precision integer.
+FLET,Kern,J,FLET ({(name lambda-list declaration* form*)}*) declaration* body-form* Evaluate the BODY-FORMS with local function definitions. The bindings do not enclose the definitions; any use of NAME in the FOR
+FLOAT,Kern,N,"Converts any REAL to a float. If OTHER is not provided, it returns a SINGLE-FLOAT if NUMBER is not already a FLOAT. If OTHER is provided, the result is the same float format as OTHER."
+FLOAT-DIGITS,Kern,N,Return a non-negative number of radix-b digits used in the representation of its argument.
+FLOAT-PRECISION,Kern,N,Return a non-negative number of significant digits in its float argument. Will be less than FLOAT-DIGITS if denormalized or zero.
+FLOAT-RADIX,Kern,N,Return (as an integer) the radix b of its floating-point argument.
+FLOAT-SIGN,Kern,N,"Return a floating-point number that has the same sign as FLOAT1 and, if FLOAT2 is given, has the same absolute value as FLOAT2."
+FLOATING-POINT-INEXACT,Kern,N,Condition: inexact floating-point operation.
+FLOATING-POINT-INVALID-OPERATION,Kern,N,Condition: invalid floating-point operation.
+FLOATING-POINT-OVERFLOW,Kern,N,Condition: floating-point overflow.
+FLOATING-POINT-UNDERFLOW,Kern,N,Condition: floating-point underflow.
+FLOATP,Kern,N,"Return true if OBJECT is a FLOAT, and NIL otherwise."
+FLOOR,Kern,J,"Return number/divisor as an integer, rounded toward negative infinity. The second returned value is the remainder."
+FMAKUNBOUND,Kern,N,Make NAME have no global function definition.
+FORCE-OUTPUT,Kern,N,Flushes buffered output asynchronously.
+FORMAT,Kern,J,"Provides various facilities for formatting output. CONTROL-STRING contains a string to be output, possibly with embedded directives, which are flagged with the escape character ""~"". Directives general"
+FORMATTER,Macro,N,Macro: builds a format-like function from a control string.
+FOURTH,Kern,J,Return the 4th object in a list or NIL if there is no 4th object.
+FRESH-LINE,Kern,N,Writes a newline only if not already at line start.
+FROUND,Kern,N,"Same as ROUND, but returns first value as a float."
+FTRUNCATE,Kern,N,"Same as TRUNCATE, but returns first value as a float."
+FTYPE,Kern,N,Declaration: function type signature.
+FUNCALL,Kern,J,Call FUNCTION with the given ARGUMENTS.
+FUNCTION,Kern,J,FUNCTION name Return the lexically apparent definition of the function NAME. NAME may also be a lambda expression.
+FUNCTION-KEYWORDS,Kern,N,Reader: keyword args of a method.
+FUNCTION-LAMBDA-EXPRESSION,Kern,N,"Return (VALUES DEFINING-LAMBDA-EXPRESSION CLOSURE-P NAME), where DEFINING-LAMBDA-EXPRESSION is NIL if unknown, or a suitable argument to COMPILE otherwise, CLOSURE-P is non-NIL if the function's defin"
+FUNCTIONP,Kern,N,"Return true if OBJECT is a FUNCTION, and NIL otherwise."
+GCD,Kern,J,"Return the greatest common divisor of the arguments, which must be integers. GCD with no arguments is defined to be 0."
+GENERIC-FUNCTION,Kern,N,Type: generic function metaobject.
+GENSYM,Kern,J,"Creates a new uninterned symbol whose name is a prefix string (defaults to ""G""), followed by a decimal number. Thing, when supplied, will alter the prefix if it is a string, or be used for the decimal"
+GENTEMP,Kern,N,Creates a new symbol interned in package PACKAGE with the given PREFIX.
+GET,Kern,N,"Look on the property list of SYMBOL for the specified INDICATOR. If this is found, return the associated value, else return DEFAULT."
+GET-DECODED-TIME,Kern,N,"Return nine values specifying the current time as follows: second, minute, hour, date, month, year, day of week (0 = Monday), T (daylight savings times) or NIL (standard time), and timezone."
+GET-DISPATCH-MACRO-CHARACTER,Kern,N,Return the macro character function for SUB-CHAR under DISP-CHAR or NIL if there is no associated function.
+GET-INTERNAL-REAL-TIME,Kern,N,"Return the real time (""wallclock time"") since startup in the internal time format. (See INTERNAL-TIME-UNITS-PER-SECOND.)"
+GET-INTERNAL-RUN-TIME,Kern,N,"Return the run time used by the process in the internal time format. (See INTERNAL-TIME-UNITS-PER-SECOND.) This is useful for finding CPU usage. Includes both ""system"" and ""user"" time."
+GET-MACRO-CHARACTER,Kern,N,"Return the function associated with the specified CHAR which is a macro character, or NIL if there is no such function. As a second value, return T if CHAR is a macro character which is non-terminatin"
+GET-OUTPUT-STREAM-STRING,Kern,N,Returns accumulated string of a string-output-stream.
+GET-PROPERTIES,Kern,N,"Like GETF, except that INDICATOR-LIST is a list of indicators which will be looked for in the property list stored in PLACE. Three values are returned, see manual for details."
+GET-SETF-EXPANSION,Kern,N,"Return five values needed by the SETF machinery: a list of temporary variables, a list of values with which to fill them, a list of temporaries for the new values, the setting function, and the access"
+GET-UNIVERSAL-TIME,Kern,N,Return a single integer for the current time of day in universal time format.
+GETF,Kern,N,"Search the property list stored in PLACE for an indicator EQ to INDICATOR. If one is found, return the corresponding value, else return DEFAULT."
+GETHASH,Kern,J,"Finds the entry in HASH-TABLE whose key is KEY and returns the associated value and T as multiple values, or returns DEFAULT and NIL if there is no such entry. Entries can be added using SETF."
+GO,Kern,J,GO tag Transfer control to the named TAG in the lexically enclosing TAGBODY. This is constrained to be used only within the dynamic extent of the TAGBODY.
+GRAPHIC-CHAR-P,Kern,N,"The argument must be a character object. GRAPHIC-CHAR-P returns T if the argument is a printing character (space through ~ in ASCII), otherwise returns NIL."
+HANDLER-BIND,Macro,N,(HANDLER-BIND ( {(type handler)}* ) body) Executes body in a dynamic context where the given handler bindings are in effect. Each handler must take the condition being signalled as an argument. The bi
+HANDLER-CASE,Macro,N,"(HANDLER-CASE form { (type ([var]) body) }* ) Execute FORM in a context with handlers established for the condition types. A peculiar property allows type to be :NO-ERROR. If such a clause occurs, and"
+HASH-TABLE,Kern,N,Type: hash table.
+HASH-TABLE-COUNT,Kern,J,Return the number of entries in the given HASH-TABLE.
+HASH-TABLE-P,Kern,J,Predicate: is the argument a hash-table?
+HASH-TABLE-REHASH-SIZE,Kern,N,Return the rehash-size HASH-TABLE was created with.
+HASH-TABLE-REHASH-THRESHOLD,Kern,N,Return the rehash-threshold HASH-TABLE was created with.
+HASH-TABLE-SIZE,Kern,N,Return a size that can be used with MAKE-HASH-TABLE to create a hash table that can hold however many entries HASH-TABLE can hold without having to be grown.
+HASH-TABLE-TEST,Kern,N,Return the test HASH-TABLE was created with.
+HOST-NAMESTRING,Kern,N,Return a string representation of the name of the host in PATHNAME.
+IDENTITY,Kern,J,This function simply returns what was passed to it.
+IF,Kern,J,"IF predicate then [else] If PREDICATE evaluates to true, evaluate THEN and return its values, otherwise evaluate ELSE and return its values. ELSE defaults to NIL."
+IGNORABLE,Kern,N,Declaration: variable may be ignored (no warning).
+IGNORE,Kern,N,Declaration: variable is intentionally unused.
+IGNORE-ERRORS,Macro,N,"Execute FORMS handling ERROR conditions, returning the result of the last form, or (VALUES NIL the-ERROR-that-was-caught) if an ERROR was handled."
+IMAGPART,Kern,N,Extract the imaginary part of a number.
+IMPORT,Kern,N,"Make SYMBOLS accessible as internal symbols in PACKAGE. If a symbol is already accessible then it has no effect. If a name conflict would result from the importation, then a correctable error is signa"
+IN-PACKAGE,Macro,N,Macro: sets the current package.
+INCF,Macro,N,"The first argument is some location holding a number. This number is incremented by the second argument, DELTA, which defaults to 1."
+INITIALIZE-INSTANCE,Kern,N,Initializes a newly created instance (CLOS).
+INLINE,Kern,N,Declaration: function should be inlined.
+INPUT-STREAM-P,Kern,N,Can STREAM perform input operations?
+INSPECT,Kern,N,Interactively inspects an object.
+INTEGER,Kern,N,Type: integer (fixnum or bignum).
+INTEGER-DECODE-FLOAT,Kern,N,Return three values: 1) an integer representation of the significand. 2) the exponent for the power of 2 that the significand must be multiplied by to get the actual value. This differs from the DECOD
+INTEGER-LENGTH,Kern,N,Return the number of non-sign bits in the twos-complement representation of INTEGER.
+INTEGERP,Kern,N,"Return true if OBJECT is an INTEGER, and NIL otherwise."
+INTERACTIVE-STREAM-P,Kern,N,Is STREAM an interactive stream?
+INTERN,Kern,J,"Return a symbol in PACKAGE having the specified NAME, creating it if necessary."
+INTERNAL-TIME-UNITS-PER-SECOND,Kern,N,The number of internal time units that fit into a second. See GET-INTERNAL-REAL-TIME and GET-INTERNAL-RUN-TIME.
+INTERSECTION,Kern,N,Return the intersection of LIST1 and LIST2.
+INVALID-METHOD-ERROR,Kern,N,Signals an invalid method error.
+INVOKE-DEBUGGER,Kern,N,Enter the debugger.
+INVOKE-RESTART,Kern,N,"Calls the function associated with the given restart, passing any given arguments. If the argument restart is not a restart or a currently active non-nil restart name, then a CONTROL-ERROR is signalle"
+INVOKE-RESTART-INTERACTIVELY,Kern,N,"Calls the function associated with the given restart, prompting for any necessary arguments. If the argument restart is not a restart or a currently active non-NIL restart name, then a CONTROL-ERROR i"
+ISQRT,Kern,N,Return the greatest integer less than or equal to the square root of N.
+KEYWORD,Kern,N,Type/package: keyword symbols.
+KEYWORDP,Kern,N,"Return true if Object is a symbol in the ""KEYWORD"" package."
+LABELS,Kern,J,"LABELS ({(name lambda-list declaration* form*)}*) declaration* body-form* Evaluate the BODY-FORMS with local function definitions. The bindings enclose the new definitions, so the defined functions ca"
+LAMBDA,Macro,J,Macro: anonymous function (lambda (args) body).
+LAMBDA-LIST-KEYWORDS,Kern,N,A list of symbols used as lambda list keywords in SBCL.
+LAMBDA-PARAMETERS-LIMIT,Kern,N,The exclusive upper bound on the number of parameters which may be specified in a given lambda list. This is actually the limit on required and &OPTIONAL parameters. With &KEY and &AUX you can get mor
+LAST,Kern,J,Return the last N conses (not the last element!) of a list.
+LCM,Kern,N,Return the least common multiple of one or more integers. LCM of no arguments is defined to be 1.
+LDB,Kern,N,"Extract the specified byte from integer, and right justify result."
+LDB-TEST,Kern,N,Return T if any of the specified bits in integer are 1's.
+LDIFF,Kern,N,"Return a new list, whose elements are those of LIST that appear before OBJECT. If OBJECT is not a tail of LIST, a copy of LIST is returned. LIST must be a proper list or a dotted list."
+LEAST-NEGATIVE-DOUBLE-FLOAT,Kern,N,Largest (least negative) denormalized double-float.
+LEAST-NEGATIVE-LONG-FLOAT,Kern,N,Largest (least negative) denormalized long-float.
+LEAST-NEGATIVE-NORMALIZED-DOUBLE-FLOAT,Kern,N,Largest least-negative normalized double-float.
+LEAST-NEGATIVE-NORMALIZED-LONG-FLOAT,Kern,N,Largest least-negative normalized long-float.
+LEAST-NEGATIVE-NORMALIZED-SHORT-FLOAT,Kern,N,Largest least-negative normalized short-float.
+LEAST-NEGATIVE-NORMALIZED-SINGLE-FLOAT,Kern,N,Largest least-negative normalized single-float.
+LEAST-NEGATIVE-SHORT-FLOAT,Kern,N,Largest (least negative) denormalized short-float.
+LEAST-NEGATIVE-SINGLE-FLOAT,Kern,N,Largest (least negative) denormalized single-float.
+LEAST-POSITIVE-DOUBLE-FLOAT,Kern,N,Smallest positive denormalized double-float.
+LEAST-POSITIVE-LONG-FLOAT,Kern,N,Smallest positive denormalized long-float.
+LEAST-POSITIVE-NORMALIZED-DOUBLE-FLOAT,Kern,N,Smallest positive normalized double-float.
+LEAST-POSITIVE-NORMALIZED-LONG-FLOAT,Kern,N,Smallest positive normalized long-float.
+LEAST-POSITIVE-NORMALIZED-SHORT-FLOAT,Kern,N,Smallest positive normalized short-float.
+LEAST-POSITIVE-NORMALIZED-SINGLE-FLOAT,Kern,N,Smallest positive normalized single-float.
+LEAST-POSITIVE-SHORT-FLOAT,Kern,N,Smallest positive denormalized short-float.
+LEAST-POSITIVE-SINGLE-FLOAT,Kern,N,Smallest positive denormalized single-float.
+LENGTH,Kern,J,Return an integer that is the length of SEQUENCE.
+LET,Kern,J,"LET ({(var [value]) | var}*) declaration* form* During evaluation of the FORMS, bind the VARS to the result of evaluating the VALUE forms. The variables are bound in parallel after all of the VALUES f"
+LET*,Kern,J,"LET* ({(var [value]) | var}*) declaration* form* Similar to LET, but the variables are bound sequentially, allowing each VALUE form to reference any of the previous VARS."
+LISP-IMPLEMENTATION-TYPE,Kern,N,Returns implementation type string.
+LISP-IMPLEMENTATION-VERSION,Kern,N,Returns implementation version string.
+LIST,Kern,J,Construct and return a list containing the objects ARGS.
+LIST*,Kern,N,Return a list of the arguments with last cons a dotted pair.
+LIST-ALL-PACKAGES,Kern,N,Return a list of all existing packages.
+LIST-LENGTH,Kern,N,"Return the length of LIST, or NIL if LIST is circular."
+LISTEN,Kern,N,Predicate: is input available on a stream?
+LISTP,Kern,N,"Return true if OBJECT is a LIST, and NIL otherwise."
+LOAD,Kern,J,"Load the file given by FILESPEC into the Lisp environment, returning T on success. The file type (a.k.a extension) is defaulted if missing. These options are defined: :IF-DOES-NOT-EXIST If :ERROR (the"
+LOAD-LOGICAL-PATHNAME-TRANSLATIONS,Kern,N,"Reads logical pathname translations from SYS:SITE;HOST.TRANSLATIONS.NEWEST, with HOST replaced by the supplied parameter. Returns T on success. If HOST is already defined as logical pathname host, no "
+LOAD-TIME-VALUE,Kern,N,"Arrange for FORM to be evaluated at load-time and use the value produced as if it were a constant. If READ-ONLY-P is non-NIL, then the resultant object is guaranteed to never be modified, so it can be"
+LOCALLY,Kern,N,"LOCALLY declaration* form* Sequentially evaluate the FORMS in a lexical environment where the DECLARATIONS have effect. If LOCALLY is a top level form, then the FORMS are also processed as top level f"
+LOG,Kern,N,"Return the logarithm of NUMBER in the base BASE, which defaults to e."
+LOGAND,Kern,N,Return the bit-wise and of its arguments. Args must be integers.
+LOGANDC1,Kern,N,Bitwise AND (LOGNOT INTEGER1) with INTEGER2.
+LOGANDC2,Kern,N,Bitwise AND INTEGER1 with (LOGNOT INTEGER2).
+LOGBITP,Kern,N,Predicate returns T if bit index of integer is a 1.
+LOGCOUNT,Kern,N,"Count the number of 1 bits if INTEGER is non-negative, and the number of 0 bits if INTEGER is negative."
+LOGEQV,Kern,N,Return the bit-wise equivalence of its arguments. Args must be integers.
+LOGICAL-PATHNAME,Kern,N,Converts the pathspec argument to a logical-pathname and returns it.
+LOGICAL-PATHNAME-TRANSLATIONS,Kern,N,Return the (logical) host object argument's list of translations.
+LOGIOR,Kern,N,Return the bit-wise or of its arguments. Args must be integers.
+LOGNAND,Kern,N,Complement the logical AND of INTEGER1 and INTEGER2.
+LOGNOR,Kern,N,Complement the logical OR of INTEGER1 and INTEGER2.
+LOGNOT,Kern,N,Return the bit-wise logical not of integer.
+LOGORC1,Kern,N,Bitwise OR (LOGNOT INTEGER1) with INTEGER2.
+LOGORC2,Kern,N,Bitwise OR INTEGER1 with (LOGNOT INTEGER2).
+LOGTEST,Kern,N,Predicate which returns T if logand of integer1 and integer2 is not zero.
+LOGXOR,Kern,N,Return the bit-wise exclusive or of its arguments. Args must be integers.
+LONG-FLOAT,Kern,N,Type: long-precision float.
+LONG-FLOAT-EPSILON,Kern,N,Smallest long-float e with 1.0+e != 1.0.
+LONG-FLOAT-NEGATIVE-EPSILON,Kern,N,Smallest long-float e with 1.0-e != 1.0.
+LONG-SITE-NAME,Kern,N,"Return a string with the long form of the site name, or NIL if not known."
+LOOP,Macro,N,Macro: powerful iteration construct.
+LOOP-FINISH,Macro,N,"Cause the iteration to terminate ""normally"", the same as implicit termination by an iteration driving clause, or by use of WHILE or UNTIL -- the epilogue code (if any) will be run, and any implicitly "
+LOWER-CASE-P,Kern,N,"The argument must be a character object; LOWER-CASE-P returns T if the argument is a lower-case character, NIL otherwise."
+MACHINE-INSTANCE,Kern,N,Return a string giving the name of the local machine.
+MACHINE-TYPE,Kern,N,Return a string describing the type of the local machine.
+MACHINE-VERSION,Kern,N,"Return a string describing the version of the computer hardware we are running on, or NIL if we can't find any useful information."
+MACRO-FUNCTION,Kern,N,"If SYMBOL names a macro in ENV, returns the expansion function, else returns NIL. If ENV is unspecified or NIL, use the global environment only."
+MACROEXPAND,Kern,J,"Repetitively call MACROEXPAND-1 until the form can no longer be expanded. Returns the final resultant form, and T if it was expanded. ENV is the lexical environment to expand in, or NIL (the default) "
+MACROEXPAND-1,Kern,N,"If form is a macro (or symbol macro), expand it once. Return two values, the expanded form and a T-or-NIL flag indicating whether the form was, in fact, a macro. ENV is the lexical environment to expa"
+MACROLET,Kern,J,"MACROLET ({(name lambda-list form*)}*) body-form* Evaluate the BODY-FORMS in an environment with the specified local macros defined. NAME is the local macro name, LAMBDA-LIST is a DEFMACRO style destr"
+MAKE-ARRAY,Kern,N,Creates a new array.
+MAKE-BROADCAST-STREAM,Kern,N,Creates a broadcast-stream over given streams.
+MAKE-CONCATENATED-STREAM,Kern,N,"Return a stream which takes its input from each of the streams in turn, going on to the next at EOF."
+MAKE-CONDITION,Kern,N,Make an instance of a condition object using the specified initargs.
+MAKE-DISPATCH-MACRO-CHARACTER,Kern,N,"Cause CHAR to become a dispatching macro character in readtable (which defaults to the current readtable). If NON-TERMINATING-P, the char will be non-terminating."
+MAKE-ECHO-STREAM,Kern,N,"Return a bidirectional stream which gets its input from INPUT-STREAM and sends its output to OUTPUT-STREAM. In addition, all input is echoed to the output stream."
+MAKE-HASH-TABLE,Kern,J,"Create and return a new hash table. The keywords are as follows: :TEST Determines how keys are compared. Must a designator for one of the standard hash table tests, or a hash table test defined using "
+MAKE-INSTANCE,Kern,N,Creates and initializes an instance of a class.
+MAKE-INSTANCES-OBSOLETE,Kern,N,Marks instances of a class as obsolete.
+MAKE-LIST,Kern,N,Construct and return a list with SIZE elements each set to INITIAL-ELEMENT.
+MAKE-LOAD-FORM,Kern,N,Returns load-form for an object (compile-time).
+MAKE-LOAD-FORM-SAVING-SLOTS,Kern,N,Load-form that saves an object's slots.
+MAKE-METHOD,Kern,N,Method object for use in method combination.
+MAKE-PACKAGE,Kern,N,"Make a new package having the specified NAME, NICKNAMES, and USE list. :INTERNAL-SYMBOLS and :EXTERNAL-SYMBOLS are estimates for the number of internal and external symbols which will ultimately be pr"
+MAKE-PATHNAME,Kern,N,Makes a new pathname from the component arguments. Note that host is a host-structure or string.
+MAKE-RANDOM-STATE,Kern,N,"Make a random state object. The optional STATE argument specifies a seed for deterministic pseudo-random number generation. As per the Common Lisp standard, - If STATE is NIL or not supplied, return a"
+MAKE-SEQUENCE,Kern,N,"Return a sequence of the given RESULT-TYPE and LENGTH, with elements initialized to INITIAL-ELEMENT."
+MAKE-STRING,Kern,N,"Given a character count and an optional fill character, makes and returns a new string COUNT long filled with the fill character."
+MAKE-STRING-INPUT-STREAM,Kern,N,Return an input stream which will supply the characters of STRING between START and END in order.
+MAKE-STRING-OUTPUT-STREAM,Kern,N,Return an output stream which will accumulate all output given it for the benefit of the function GET-OUTPUT-STREAM-STRING.
+MAKE-SYMBOL,Kern,N,Make and return a new symbol with the STRING as its print name.
+MAKE-SYNONYM-STREAM,Kern,N,Creates a synonym-stream for a symbol.
+MAKE-TWO-WAY-STREAM,Kern,N,Return a bidirectional stream which gets its input from INPUT-STREAM and sends its output to OUTPUT-STREAM.
+MAKUNBOUND,Kern,N,"Make SYMBOL unbound, removing any value it may currently have."
+MAP,Kern,N,Applies a function across sequences into a result sequence.
+MAP-INTO,Kern,N,Like map but writes into an existing sequence.
+MAPC,Kern,N,Apply FUNCTION to successive tuples of elements of LIST and MORE-LISTS. Return LIST.
+MAPCAN,Kern,N,Apply FUNCTION to successive tuples of elements of LIST and MORE-LISTS. Return NCONC of FUNCTION return values.
+MAPCAR,Kern,J,Apply FUNCTION to successive tuples of elements of LIST and MORE-LISTS. Return list of FUNCTION return values.
+MAPCON,Kern,N,Apply FUNCTION to successive tuples of CDRs of LIST and MORE-LISTS. Return NCONC of results.
+MAPHASH,Kern,J,"For each entry in HASH-TABLE, call the designated two-argument function on the key and value of the entry. Return NIL. Consequences are undefined if HASH-TABLE is mutated during the call to MAPHASH, e"
+MAPL,Kern,N,Apply FUNCTION to successive tuples of CDRs of LIST and MORE-LISTS. Return LIST.
+MAPLIST,Kern,N,Apply FUNCTION to successive tuples of CDRs of LIST and MORE-LISTS. Return list of results.
+MASK-FIELD,Kern,N,"Extract the specified byte from integer, but do not right justify result."
+MAX,Kern,J,"Return the greatest of its arguments; among EQUALP greatest, return the first."
+MEMBER,Kern,J,"Return the tail of LIST beginning with first element satisfying EQLity, :TEST, or :TEST-NOT with the given ITEM."
+MEMBER-IF,Kern,N,Return tail of LIST beginning with first element satisfying TEST.
+MEMBER-IF-NOT,Kern,N,Return tail of LIST beginning with first element not satisfying TEST.
+MERGE,Kern,N,Merge the sequences SEQUENCE1 and SEQUENCE2 destructively into a sequence of type RESULT-TYPE using PREDICATE to order the elements.
+MERGE-PATHNAMES,Kern,N,Construct a filled in pathname by completing the unspecified components from the defaults.
+METHOD,Kern,N,Type: method metaobject.
+METHOD-COMBINATION,Kern,N,Type: method combination metaobject.
+METHOD-COMBINATION-ERROR,Kern,N,Signals a method-combination error.
+METHOD-QUALIFIERS,Kern,N,Reader: qualifiers of a method.
+MIN,Kern,J,"Return the least of its arguments; among EQUALP least, return the first."
+MINUSP,Kern,N,Is this real number strictly negative?
+MISMATCH,Kern,N,"The specified subsequences of SEQUENCE1 and SEQUENCE2 are compared element-wise. If they are of equal length and match in every element, the result is NIL. Otherwise, the result is a non-negative inte"
+MOD,Kern,J,Return second result of FLOOR.
+MOST-NEGATIVE-DOUBLE-FLOAT,Kern,N,Most negative representable double-float.
+MOST-NEGATIVE-FIXNUM,Kern,N,the fixnum closest in value to negative infinity
+MOST-NEGATIVE-LONG-FLOAT,Kern,N,Most negative representable long-float.
+MOST-NEGATIVE-SHORT-FLOAT,Kern,N,Most negative representable short-float.
+MOST-NEGATIVE-SINGLE-FLOAT,Kern,N,Most negative representable single-float.
+MOST-POSITIVE-DOUBLE-FLOAT,Kern,N,Most positive representable double-float.
+MOST-POSITIVE-FIXNUM,Kern,N,the fixnum closest in value to positive infinity
+MOST-POSITIVE-LONG-FLOAT,Kern,N,Most positive representable long-float.
+MOST-POSITIVE-SHORT-FLOAT,Kern,N,Most positive representable short-float.
+MOST-POSITIVE-SINGLE-FLOAT,Kern,N,Most positive representable single-float.
+MUFFLE-WARNING,Kern,N,"Transfer control to a restart named MUFFLE-WARNING, signalling a CONTROL-ERROR if none exists."
+MULTIPLE-VALUE-BIND,Macro,J,Macro: binds multiple values to variables.
+MULTIPLE-VALUE-CALL,Kern,J,"MULTIPLE-VALUE-CALL function values-form* Call FUNCTION, passing all the values of each VALUES-FORM as arguments, values from the first VALUES-FORM making up the first argument, etc."
+MULTIPLE-VALUE-LIST,Macro,J,Macro: list of all multiple values.
+MULTIPLE-VALUE-PROG1,Kern,J,"MULTIPLE-VALUE-PROG1 values-form form* Evaluate VALUES-FORM and then the FORMS, but return all the values of VALUES-FORM."
+MULTIPLE-VALUE-SETQ,Macro,J,Macro: assigns first value to a variable.
+MULTIPLE-VALUES-LIMIT,Kern,N,The exclusive upper bound on the number of multiple VALUES that you can return.
+NAME-CHAR,Kern,N,"Given an argument acceptable to STRING, NAME-CHAR returns a character whose name is that string, if one exists. Otherwise, NIL is returned."
+NAMESTRING,Kern,N,Construct the full (name)string form PATHNAME.
+NBUTLAST,Kern,N,Destructive butlast: removes last elements in place.
+NCONC,Kern,N,Concatenates the lists given as arguments (by changing them)
+NEXT-METHOD-P,Kern,N,Predicate: is there a next applicable method? (CLOS)
+NIL,Kern,J,Constant: empty list and boolean false.
+NINTERSECTION,Kern,N,Destructively return the intersection of LIST1 and LIST2.
+NINTH,Kern,N,Return the 9th object in a list or NIL if there is no 9th object.
+NO-APPLICABLE-METHOD,Kern,N,Called when no method applies to args.
+NO-NEXT-METHOD,Kern,N,Called when call-next-method has no next method.
+NOT,Kern,J,"Return T if X is NIL, otherwise return NIL."
+NOTANY,Kern,N,"Apply PREDICATE to the 0-indexed elements of the sequences, then possibly to those with index 1, and so on. Return NIL as soon as any invocation of PREDICATE returns a non-NIL value, or T if the end o"
+NOTEVERY,Kern,N,"Apply PREDICATE to 0-indexed elements of the sequences, then possibly to those with index 1, and so on. Return T as soon as any invocation of PREDICATE returns NIL, or NIL if every invocation is non-N"
+NOTINLINE,Kern,N,Declaration: function must not be inlined.
+NRECONC,Kern,N,Return (NCONC (NREVERSE X) Y).
+NREVERSE,Kern,N,Return a sequence of the same elements in reverse order; the argument is destroyed.
+NSET-DIFFERENCE,Kern,N,Destructively return the elements of LIST1 which are not in LIST2.
+NSET-EXCLUSIVE-OR,Kern,N,Destructively return a list with elements which appear but once in LIST1 and LIST2.
+NSTRING-CAPITALIZE,Kern,N,Destructive: capitalize each word in string.
+NSTRING-DOWNCASE,Kern,N,Destructive: lowercase string in place.
+NSTRING-UPCASE,Kern,N,Destructive: uppercase string in place.
+NSUBLIS,Kern,N,Substitute from ALIST into TREE destructively.
+NSUBST,Kern,N,Substitute NEW for subtrees matching OLD.
+NSUBST-IF,Kern,N,Substitute NEW for subtrees of TREE for which TEST is true.
+NSUBST-IF-NOT,Kern,N,Substitute NEW for subtrees of TREE for which TEST is false.
+NSUBSTITUTE,Kern,N,Return a sequence of the same kind as SEQUENCE with the same elements except that all elements equal to OLD are replaced with NEW. SEQUENCE may be destructively modified.
+NSUBSTITUTE-IF,Kern,N,Return a sequence of the same kind as SEQUENCE with the same elements except that all elements satisfying PREDICATE are replaced with NEW. SEQUENCE may be destructively modified.
+NSUBSTITUTE-IF-NOT,Kern,N,Return a sequence of the same kind as SEQUENCE with the same elements except that all elements not satisfying PREDICATE are replaced with NEW. SEQUENCE may be destructively modified.
+NTH,Kern,J,Return the nth object in a list where the car is the zero-th element.
+NTH-VALUE,Macro,J,Evaluate FORM and return the Nth value (zero based) without consing a temporary list of values.
+NTHCDR,Kern,N,Performs the cdr function n times on a list.
+NULL,Kern,J,"Return true if OBJECT is a NULL, and NIL otherwise."
+NUMBER,Kern,N,Type: root of all numeric types.
+NUMBERP,Kern,N,"Return true if OBJECT is a NUMBER, and NIL otherwise."
+NUMERATOR,Kern,N,"Return the numerator of NUMBER, which must be rational."
+NUNION,Kern,N,Destructively return the union of LIST1 and LIST2.
+ODDP,Kern,N,Is this integer odd?
+OPEN,Kern,N,"Return a stream which reads from or writes to FILENAME. Defined keywords: :DIRECTION - one of :INPUT, :OUTPUT, :IO, or :PROBE :ELEMENT-TYPE - the type of object to read or write, default CHARACTER :IF"
+OPEN-STREAM-P,Kern,N,Return true if STREAM is not closed. A default method is provided by class FUNDAMENTAL-STREAM which returns true if CLOSE has not been called on the stream.
+OPTIMIZE,Kern,N,Declaration specifier for compile-quality options.
+OR,Macro,J,"Macro: logical OR, short-circuit; first true value."
+OTHERWISE,Kern,N,Clause keyword: default case in case/typecase.
+OUTPUT-STREAM-P,Kern,N,Can STREAM perform output operations?
+PACKAGE,Kern,N,the standard structure for the description of a package
+PACKAGE-ERROR,Kern,N,Condition type for package errors.
+PACKAGE-ERROR-PACKAGE,Kern,N,Reader: package of a package-error condition.
+PACKAGE-NAME,Kern,N,Reader: name string of a package.
+PACKAGE-NICKNAMES,Kern,N,Reader: list of nickname strings of a package.
+PACKAGE-SHADOWING-SYMBOLS,Kern,N,Reader: shadowing symbols of a package.
+PACKAGE-USE-LIST,Kern,N,Reader: packages used by a package.
+PACKAGE-USED-BY-LIST,Kern,N,Reader: packages using a package.
+PACKAGEP,Kern,N,Predicate: is the argument a package?
+PAIRLIS,Kern,N,Construct an association list from KEYS and DATA (adding to ALIST).
+PARSE-ERROR,Kern,N,Condition type for parse errors.
+PARSE-INTEGER,Kern,N,Examine the substring of string delimited by start and end (default to the beginning and end of the string) It skips over whitespace characters and then tries to parse an integer. The radix parameter 
+PARSE-NAMESTRING,Kern,N,Parses a string into a pathname.
+PATHNAME,Kern,N,Convert PATHSPEC (a pathname designator) into a pathname.
+PATHNAME-DEVICE,Kern,N,Return PATHNAME's device.
+PATHNAME-DIRECTORY,Kern,N,Return PATHNAME's directory.
+PATHNAME-HOST,Kern,N,Return PATHNAME's host.
+PATHNAME-MATCH-P,Kern,N,Pathname matches the wildname template?
+PATHNAME-NAME,Kern,N,Return PATHNAME's name.
+PATHNAME-TYPE,Kern,N,Return PATHNAME's type.
+PATHNAME-VERSION,Kern,N,Return PATHNAME's version.
+PATHNAMEP,Kern,N,Predicate: is the argument a pathname?
+PEEK-CHAR,Kern,N,Reads a char without consuming it from stream.
+PHASE,Kern,N,"Return the angle part of the polar representation of a complex number. For complex numbers, this is (atan (imagpart number) (realpart number)). For non-complex positive numbers, this is 0. For non-com"
+PI,Kern,N,Constant: ratio of circumference to diameter (float).
+PLUSP,Kern,N,Is this real number strictly positive?
+POP,Macro,J,The argument is a location holding a list. Pops one item off the front of the list and returns it.
+POSITION,Kern,N,Index of first element eq to item in a sequence.
+POSITION-IF,Kern,N,Index of first element satisfying predicate.
+POSITION-IF-NOT,Kern,N,Index of first element not satisfying predicate.
+PPRINT,Kern,N,Prettily output OBJECT preceded by a newline.
+PPRINT-DISPATCH,Kern,N,Current pprint-dispatch table.
+PPRINT-EXIT-IF-LIST-EXHAUSTED,Macro,N,"Cause the closest enclosing use of PPRINT-LOGICAL-BLOCK to return if its list argument is exhausted. Can only be used inside PPRINT-LOGICAL-BLOCK, and only when the LIST argument to PPRINT-LOGICAL-BLO"
+PPRINT-FILL,Kern,N,"Output LIST to STREAM putting :FILL conditional newlines between each element. If COLON? is NIL (defaults to T), then no parens are printed around the output. ATSIGN? is ignored (but allowed so that P"
+PPRINT-INDENT,Kern,N,Specify the indentation to use in the current logical block if STREAM (which defaults to *STANDARD-OUTPUT*) is a pretty-printing stream and do nothing if not. (See PPRINT-LOGICAL-BLOCK.) N is the inde
+PPRINT-LINEAR,Kern,N,"Output LIST to STREAM putting :LINEAR conditional newlines between each element. If COLON? is NIL (defaults to T), then no parens are printed around the output. ATSIGN? is ignored (but allowed so that"
+PPRINT-LOGICAL-BLOCK,Macro,N,"Group some output into a logical block. STREAM-SYMBOL should be either a stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*). The printer control variable *PRINT-LEVEL* is automatically hand"
+PPRINT-NEWLINE,Kern,N,"Output a conditional newline to STREAM (which defaults to *STANDARD-OUTPUT*) if it is a pretty-printing stream, and do nothing if not. KIND can be one of: :LINEAR - A line break is inserted if and onl"
+PPRINT-POP,Macro,N,"Return the next element from LIST argument to the closest enclosing use of PPRINT-LOGICAL-BLOCK, automatically handling *PRINT-LENGTH* and *PRINT-CIRCLE*. Can only be used inside PPRINT-LOGICAL-BLOCK."
+PPRINT-TAB,Kern,N,"If STREAM (which defaults to *STANDARD-OUTPUT*) is a pretty-printing stream, perform tabbing based on KIND, otherwise do nothing. KIND can be one of: :LINE - Tab to column COLNUM. If already past COLN"
+PPRINT-TABULAR,Kern,N,Output LIST to STREAM tabbing to the next column that is an even multiple of TABSIZE (which defaults to 16) between each element. :FILL style conditional newlines are also output between each element.
+PRIN1,Kern,N,Output a mostly READable printed representation of OBJECT on the specified STREAM.
+PRIN1-TO-STRING,Kern,N,Return the printed representation of OBJECT as a string with slashification on.
+PRINC,Kern,N,Output an aesthetic but not necessarily READable printed representation of OBJECT on the specified STREAM.
+PRINC-TO-STRING,Kern,N,Return the printed representation of OBJECT as a string with slashification off.
+PRINT,Kern,J,"Output a newline, the mostly READable printed representation of OBJECT, and space to the specified STREAM."
+PRINT-NOT-READABLE,Kern,N,Condition: object cannot be printed readably.
+PRINT-NOT-READABLE-OBJECT,Kern,N,Reader: object of a print-not-readable condition.
+PRINT-OBJECT,Kern,N,Generic function: prints an object (CLOS).
+PRINT-UNREADABLE-OBJECT,Macro,N,"Output OBJECT to STREAM with ""#<"" prefix, "">"" suffix, optionally with object-type prefix and object-identity suffix, and executing the code in BODY to provide possible further output."
+PROBE-FILE,Kern,N,"Return the truename of PATHSPEC if the truename can be found, or NIL otherwise. See TRUENAME for more information."
+PROCLAIM,Kern,N,Globally proclaims a declaration at runtime.
+PROG,Macro,N,Macro: block named NIL with tagbody and let bindings.
+PROG*,Macro,N,Macro: like prog with sequential (let*) bindings.
+PROG1,Macro,J,"Macro: evaluates forms, returns first value."
+PROG2,Macro,J,"Macro: evaluates forms, returns second value."
+PROGN,Kern,N,"PROGN form* Evaluates each FORM in order, returning the values of the last form. With no forms, returns NIL."
+PROGRAM-ERROR,Kern,N,Condition type for program errors.
+PROGV,Kern,J,Special form: binds dynamic variables by name/value lists.
+PROVIDE,Kern,N,Adds a new module name to *MODULES* indicating that it has been loaded. Module-name is a string designator
+PSETF,Macro,N,"This is to SETF as PSETQ is to SETQ. Args are alternating place expressions and values to go into those places. All of the subforms and values are determined, left to right, and only then are the loca"
+PSETQ,Macro,J,"PSETQ {var value}* Set the variables to the values, like SETQ, except that assignments happen in parallel, i.e. no assignments take place until all the forms have been evaluated."
+PUSH,Macro,J,"Takes an object and a location holding a list. Conses the object onto the list, returning the modified list. OBJ is evaluated before PLACE."
+PUSHNEW,Macro,N,"Takes an object and a location holding a list. If the object is already in the list, does nothing; otherwise, conses the object onto the list. Keyword arguments are accepted as per the ADJOIN function"
+QUOTE,Kern,J,QUOTE value Return VALUE without evaluating it.
+RANDOM,Kern,J,Returns a random number in a range.
+RANDOM-STATE,Kern,N,Type: state of the random number generator.
+RANDOM-STATE-P,Kern,N,Predicate: is the argument a random-state?
+RASSOC,Kern,N,Return the cons in ALIST whose CDR is equal (by a given test or EQL) to the ITEM.
+RASSOC-IF,Kern,N,"Return the first cons in ALIST whose CDR satisfies PREDICATE. If KEY is supplied, apply it to the CDR of each cons before testing."
+RASSOC-IF-NOT,Kern,N,"Return the first cons in ALIST whose CDR does not satisfy PREDICATE. If KEY is supplied, apply it to the CDR of each cons before testing."
+RATIO,Kern,N,Type: ratio of two integers.
+RATIONAL,Kern,N,"RATIONAL produces a rational number for any real numeric argument. This is more efficient than RATIONALIZE, but it assumes that floating-point is completely accurate, giving a result that isn't as pre"
+RATIONALIZE,Kern,N,Converts any REAL to a RATIONAL. Floats are converted to a simple rational representation exploiting the assumption that floats are only accurate to their precision. RATIONALIZE (and also RATIONAL) pr
+RATIONALP,Kern,N,"Return true if OBJECT is a RATIONAL, and NIL otherwise."
+READ,Kern,J,"Read the next Lisp value from STREAM, and return it."
+READ-BYTE,Kern,N,Reads a byte from a binary stream.
+READ-CHAR,Kern,N,Reads a character from a stream.
+READ-CHAR-NO-HANG,Kern,N,Reads a char without blocking.
+READ-DELIMITED-LIST,Kern,N,"Read Lisp values from INPUT-STREAM until the next character after a value's representation is ENDCHAR, and return the objects as a list."
+READ-FROM-STRING,Kern,N,The characters of string are successively given to the lisp reader and the lisp object built by the reader is returned. Macro chars will take effect.
+READ-LINE,Kern,N,Reads a line as a string from a stream.
+READ-PRESERVING-WHITESPACE,Kern,N,"Read from STREAM and return the value read, preserving any whitespace that followed the object."
+READ-SEQUENCE,Kern,N,Destructively modify SEQ by reading elements from STREAM. That part of SEQ bounded by START and END is destructively modified by copying successive elements into it from STREAM. If the end of file for
+READER-ERROR,Kern,N,Condition: error during reading (parse/stream).
+READTABLE,Kern,N,A READTABLE is a data structure that maps characters into syntax types for the Common Lisp expression reader.
+READTABLE-CASE,Kern,N,Reader: case sensitivity mode of a readtable.
+READTABLEP,Kern,N,Predicate: is the argument a readtable?
+REAL,Kern,N,Type: real number (rational or float).
+REALP,Kern,N,"Return true if OBJECT is a REAL, and NIL otherwise."
+REALPART,Kern,N,Extract the real part of a number.
+REDUCE,Kern,J,Folds a function over a sequence into a value.
+REINITIALIZE-INSTANCE,Kern,N,Reinitializes an existing instance (CLOS).
+REM,Kern,N,Return second result of TRUNCATE.
+REMF,Macro,N,"Place may be any place expression acceptable to SETF, and is expected to hold a property list or (). This list is destructively altered to remove the property specified by the indicator. Returns T if "
+REMHASH,Kern,J,"Remove the entry in HASH-TABLE associated with KEY. Return T if there was such an entry, or NIL if not."
+REMOVE,Kern,N,Return a copy of SEQUENCE with elements satisfying the test (default is EQL) with ITEM removed.
+REMOVE-DUPLICATES,Kern,N,"The elements of SEQUENCE are compared pairwise, and if any two match, the one occurring earlier is discarded, unless FROM-END is true, in which case the one later in the sequence is discarded. The res"
+REMOVE-IF,Kern,N,Return a copy of sequence with elements satisfying PREDICATE removed.
+REMOVE-IF-NOT,Kern,N,Return a copy of sequence with elements not satisfying PREDICATE removed.
+REMOVE-METHOD,Kern,N,Removes a method from a generic function.
+REMPROP,Kern,N,"Look on property list of SYMBOL for property with specified INDICATOR. If found, splice this indicator and its value out of the plist, and return the tail of the original list starting with INDICATOR."
+RENAME-FILE,Kern,N,"Rename FILE to have the specified NEW-NAME. If FILE is a stream open to a file, then the associated file is renamed."
+RENAME-PACKAGE,Kern,N,Changes the name and nicknames for a package.
+REPLACE,Kern,N,"Destructively modifies SEQUENCE1 by copying successive elements into it from the SEQUENCE2. Elements are copied to the subsequence bounded by START1 and END1, from the subsequence bounded by START2 an"
+REQUIRE,Kern,N,"Loads a module, unless it already has been loaded. PATHNAMES, if supplied, is a designator for a list of pathnames to be loaded if the module needs to be. If PATHNAMES is not supplied, functions from "
+REST,Kern,J,Means the same as the cdr of a list.
+RESTART,Kern,N,Type: restart object for condition handling.
+RESTART-BIND,Macro,N,(RESTART-BIND ({(case-name function {keyword value}*)}*) forms) Executes forms in a dynamic context where the given bindings are in effect. Users probably want to use RESTART-CASE. A case-name of NIL 
+RESTART-CASE,Macro,N,(RESTART-CASE form {(case-name arg-list {keyword value}* body)}*) The form is evaluated in a dynamic context where the clauses have special meanings as points to which control may be transferred (see 
+RESTART-NAME,Kern,N,Return the name of the given restart object.
+RETURN,Macro,J,Macro: returns from block named NIL.
+RETURN-FROM,Kern,J,"RETURN-FROM name value Evaluate the VALUE, returning its values from the lexically enclosing block NAME. This is constrained to be used only within the dynamic extent of the block."
+REVAPPEND,Kern,N,Return (append (reverse x) y).
+REVERSE,Kern,J,Return a new sequence containing the same elements but in reverse order.
+ROOM,Kern,N,"Print to *STANDARD-OUTPUT* information about the state of internal storage and its management. The optional argument controls the verbosity of output. If it is T, ROOM prints out a maximal amount of i"
+ROTATEF,Macro,N,"Takes any number of SETF-style place expressions. Evaluates all of the expressions in turn, then assigns to each place the value of the form to its right. The rightmost form gets the value of the left"
+ROUND,Kern,N,Rounds number (or number/divisor) to nearest integer. The second returned value is the remainder.
+ROW-MAJOR-AREF,Kern,N,Return the element of array corresponding to the row-major index. This is SETFable.
+RPLACA,Kern,N,Change the CAR of CONS to X and return the CONS.
+RPLACD,Kern,N,Change the CDR of CONS to X and return the CONS.
+SAFETY,Kern,N,Optimize quality: amount of runtime checking.
+SATISFIES,Kern,N,Type specifier: satisfies a predicate.
+SBIT,Kern,N,Return the bit from SIMPLE-BIT-ARRAY at the specified SUBSCRIPTS.
+SCALE-FLOAT,Kern,N,"Return the value (* f (expt (float 2 f) ex)), but with no unnecessary loss of precision or overflow."
+SCHAR,Kern,N,"SCHAR returns the character object at an indexed position in a string just as CHAR does, except the string must be a simple-string."
+SEARCH,Kern,N,Searches for a subsequence within a sequence.
+SECOND,Kern,J,Return the 2nd object in a list or NIL if there is no 2nd object.
+SEQUENCE,Kern,N,Type: root of list and vector.
+SERIOUS-CONDITION,Kern,N,Type: root of conditions requiring handling.
+SET,Kern,N,Set SYMBOL's value cell to NEW-VALUE.
+SET-DIFFERENCE,Kern,J,Return the elements of LIST1 which are not in LIST2.
+SET-DISPATCH-MACRO-CHARACTER,Kern,N,Cause FUNCTION to be called whenever the reader reads DISP-CHAR followed by SUB-CHAR.
+SET-EXCLUSIVE-OR,Kern,N,Return new list of elements appearing exactly once in LIST1 and LIST2.
+SET-MACRO-CHARACTER,Kern,N,"Causes CHAR to be a macro character which invokes FUNCTION when seen by the reader. The NON-TERMINATINGP flag can be used to make the macro character non-terminating, i.e. embeddable in a symbol name."
+SET-PPRINT-DISPATCH,Kern,N,Sets a pprint-dispatch rule.
+SET-SYNTAX-FROM-CHAR,Kern,N,Causes the syntax of TO-CHAR to be the same as FROM-CHAR in the optional readtable (defaults to the current readtable). The FROM-TABLE defaults to the standard Lisp readtable when NIL.
+SETF,Macro,J,Takes pairs of arguments like SETQ. The first is a place and the second is the value that is supposed to go into that place. Returns the last value. The place argument may be any of the access forms f
+SETQ,Kern,J,Special form: assigns values to variables.
+SEVENTH,Kern,N,Return the 7th object in a list or NIL if there is no 7th object.
+SHADOW,Kern,N,"Make an internal symbol in PACKAGE with the same name as each of the specified SYMBOLS. If a symbol with the given name is already present in PACKAGE, then the existing symbol is placed in the shadowi"
+SHADOWING-IMPORT,Kern,N,"Import SYMBOLS into package, disregarding any name conflict. If a symbol of the same name is present, then it is uninterned."
+SHARED-INITIALIZE,Kern,N,Initializes slots of an instance (CLOS internals).
+SHIFTF,Macro,N,"One or more SETF-style place expressions, followed by a single value expression. Evaluates all of the expressions in turn, then assigns the value of each expression to the place on its left, returning"
+SHORT-FLOAT,Kern,N,Type: short-precision float.
+SHORT-FLOAT-EPSILON,Kern,N,Smallest short-float e with 1.0+e != 1.0.
+SHORT-FLOAT-NEGATIVE-EPSILON,Kern,N,Smallest short-float e with 1.0-e != 1.0.
+SHORT-SITE-NAME,Kern,N,"Return a string with the abbreviated site name, or NIL if not known."
+SIGNAL,Kern,N,"Invokes the signal facility on a condition formed from DATUM and ARGUMENTS. If the condition is not handled, NIL is returned. If (TYPEP condition *BREAK-ON-SIGNALS*) is true, the debugger is invoked b"
+SIGNED-BYTE,Kern,N,Type: signed integer of any size.
+SIGNUM,Kern,N,"If NUMBER is zero, return NUMBER, else return (/ NUMBER (ABS NUMBER))."
+SIMPLE-ARRAY,Kern,N,Type: non-adjustable array without fill-pointer.
+SIMPLE-BASE-STRING,Kern,N,Type: simple vector of base-chars.
+SIMPLE-BIT-VECTOR,Kern,N,Type: simple one-dimensional bit array.
+SIMPLE-BIT-VECTOR-P,Kern,N,"Return true if OBJECT is a SIMPLE-BIT-VECTOR, and NIL otherwise."
+SIMPLE-CONDITION,Kern,N,Condition type with format control and args.
+SIMPLE-CONDITION-FORMAT-ARGUMENTS,Kern,N,Reader: format args of a simple-condition.
+SIMPLE-CONDITION-FORMAT-CONTROL,Kern,N,Reader: format control of a simple-condition.
+SIMPLE-ERROR,Kern,N,Simple condition type for errors.
+SIMPLE-STRING,Kern,N,Type: simple vector of characters.
+SIMPLE-STRING-P,Kern,N,"Return true if OBJECT is a SIMPLE-STRING, and NIL otherwise."
+SIMPLE-TYPE-ERROR,Kern,N,Simple condition type for type errors.
+SIMPLE-VECTOR,Kern,N,Type: simple one-dimensional general vector.
+SIMPLE-VECTOR-P,Kern,N,"Return true if OBJECT is a SIMPLE-VECTOR, and NIL otherwise."
+SIMPLE-WARNING,Kern,N,Simple condition type for warnings.
+SIN,Kern,N,Return the sine of NUMBER.
+SINGLE-FLOAT,Kern,N,Type: single-precision float.
+SINGLE-FLOAT-EPSILON,Kern,N,Smallest single-float e with 1.0+e != 1.0.
+SINGLE-FLOAT-NEGATIVE-EPSILON,Kern,N,Smallest single-float e with 1.0-e != 1.0.
+SINH,Kern,N,Return the hyperbolic sine of NUMBER.
+SIXTH,Kern,N,Return the 6th object in a list or NIL if there is no 6th object.
+SLEEP,Kern,J,This function causes execution to be suspended for SECONDS. SECONDS may be any non-negative real number.
+SLOT-BOUNDP,Kern,N,Predicate: is a slot bound in an instance?
+SLOT-EXISTS-P,Kern,N,Predicate: does a slot exist on an instance?
+SLOT-MAKUNBOUND,Kern,N,Makes a slot of an instance unbound.
+SLOT-MISSING,Kern,N,Called when a slot is missing on an instance.
+SLOT-UNBOUND,Kern,N,Called when reading an unbound slot.
+SLOT-VALUE,Kern,N,Reader: value of a slot in an instance.
+SOFTWARE-TYPE,Kern,N,Return a string describing the supporting software.
+SOFTWARE-VERSION,Kern,N,"Return a string describing version of the supporting software, or NIL if not available."
+SOME,Kern,N,"Apply PREDICATE to the 0-indexed elements of the sequences, then possibly to those with index 1, and so on. Return the first non-NIL value encountered, or NIL if the end of any sequence is reached."
+SORT,Kern,N,Destructively sort SEQUENCE. PREDICATE should return non-NIL if ARG1 is to precede ARG2.
+SPACE,Kern,N,Optimize quality: memory usage.
+SPECIAL,Kern,N,Declaration: variable is dynamically scoped.
+SPECIAL-OPERATOR-P,Kern,N,"If the symbol globally names a special form, return T, otherwise NIL."
+SPEED,Kern,N,Optimize quality: runtime speed.
+SQRT,Kern,N,Return the square root of NUMBER.
+STABLE-SORT,Kern,N,Destructively sort SEQUENCE. PREDICATE should return non-NIL if ARG1 is to precede ARG2.
+STANDARD,Kern,N,Method combination type 'standard'.
+STANDARD-CHAR,Kern,N,Type corresponding to the characters required by the standard.
+STANDARD-CHAR-P,Kern,N,The argument must be a character object. STANDARD-CHAR-P returns T if the argument is a standard character -- one of the 95 ASCII printing characters or <return>.
+STANDARD-CLASS,Kern,N,Type: class of standard classes.
+STANDARD-GENERIC-FUNCTION,Kern,N,Type: standard generic function.
+STANDARD-METHOD,Kern,N,Type: standard method.
+STANDARD-OBJECT,Kern,N,Type: root of standard-object hierarchy.
+STEP,Macro,N,The form is evaluated with single stepping enabled. Function calls outside the lexical scope of the form can be stepped into only if the functions in question have been compiled with sufficient DEBUG 
+STORAGE-CONDITION,Kern,N,Condition type for storage (memory) errors.
+STORE-VALUE,Kern,N,"Transfer control and VALUE to a restart named STORE-VALUE, or return NIL if none exists."
+STREAM,Kern,N,Type: root of all streams.
+STREAM-ELEMENT-TYPE,Kern,N,Return a type specifier for the kind of object returned by the STREAM. The class FUNDAMENTAL-CHARACTER-STREAM provides a default method which returns CHARACTER.
+STREAM-ERROR,Kern,N,Condition type for stream errors.
+STREAM-ERROR-STREAM,Kern,N,Reader: stream of a stream-error condition.
+STREAM-EXTERNAL-FORMAT,Kern,N,Reader: external format of a stream.
+STREAMP,Kern,N,Predicate: is the argument a stream?
+STRING,Kern,N,"Coerces X into a string. If X is a string, X is returned. If X is a symbol, its name is returned. If X is a character then a one element string containing that character is returned. If X cannot be co"
+STRING-CAPITALIZE,Kern,N,Copy of string with each word capitalized.
+STRING-DOWNCASE,Kern,J,Copy of string lowercased.
+STRING-EQUAL,Kern,N,"Given two strings (string1 and string2), and optional integers start1, start2, end1 and end2, compares characters in string1 to characters in string2 (using char-equal)."
+STRING-GREATERP,Kern,N,"Given two strings, if the first string is lexicographically greater than the second string, returns the longest common prefix (using char-equal) of the two strings. Otherwise, returns ()."
+STRING-LEFT-TRIM,Kern,N,Removes chars from left end of string.
+STRING-LESSP,Kern,N,"Given two strings, if the first string is lexicographically less than the second string, returns the longest common prefix (using char-equal) of the two strings. Otherwise, returns ()."
+STRING-NOT-EQUAL,Kern,N,"Given two strings, if the first string is not lexicographically equal to the second string, returns the longest common prefix (using char-equal) of the two strings. Otherwise, returns ()."
+STRING-NOT-GREATERP,Kern,N,"Given two strings, if the first string is lexicographically less than or equal to the second string, returns the longest common prefix (using char-equal) of the two strings. Otherwise, returns ()."
+STRING-NOT-LESSP,Kern,N,"Given two strings, if the first string is lexicographically greater than or equal to the second string, returns the longest common prefix (using char-equal) of the two strings. Otherwise, returns ()."
+STRING-RIGHT-TRIM,Kern,N,Removes chars from right end of string.
+STRING-STREAM,Kern,N,Type: stream backed by a string.
+STRING-TRIM,Kern,J,Removes chars from both ends of string.
+STRING-UPCASE,Kern,J,Copy of string uppercased.
+STRING/=,Kern,N,"Given two strings, if the first string is not lexicographically equal to the second string, returns the longest common prefix (using char=) of the two strings. Otherwise, returns ()."
+STRING<,Kern,N,"Given two strings, if the first string is lexicographically less than the second string, returns the longest common prefix (using char=) of the two strings. Otherwise, returns ()."
+STRING<=,Kern,N,"Given two strings, if the first string is lexicographically less than or equal to the second string, returns the longest common prefix (using char=) of the two strings. Otherwise, returns ()."
+STRING=,Kern,N,"Given two strings (string1 and string2), and optional integers start1, start2, end1 and end2, compares characters in string1 to characters in string2 (using char=)."
+STRING>,Kern,N,"Given two strings, if the first string is lexicographically greater than the second string, returns the longest common prefix (using char=) of the two strings. Otherwise, returns ()."
+STRING>=,Kern,N,"Given two strings, if the first string is lexicographically greater than or equal to the second string, returns the longest common prefix (using char=) of the two strings. Otherwise, returns ()."
+STRINGP,Kern,N,"Return true if OBJECT is a STRING, and NIL otherwise."
+STRUCTURE,Kern,N,Type alias for structure-object.
+STRUCTURE-CLASS,Kern,N,Type: class of structure classes.
+STRUCTURE-OBJECT,Kern,N,Type: root of structure objects.
+STYLE-WARNING,Kern,N,Condition type for style warnings.
+SUBLIS,Kern,N,Substitute from ALIST into TREE nondestructively.
+SUBSEQ,Kern,N,Return a copy of a subsequence of SEQUENCE starting with element number START and continuing to the end of SEQUENCE or the optional END.
+SUBSETP,Kern,N,Return T if every element in LIST1 is also in LIST2.
+SUBST,Kern,N,Substitutes new for subtrees matching old.
+SUBST-IF,Kern,N,Substitutes new for subtrees for which test is true.
+SUBST-IF-NOT,Kern,N,Substitutes new for subtrees for which test is false.
+SUBSTITUTE,Kern,N,"Return a sequence of the same kind as SEQUENCE with the same elements, except that all elements equal to OLD are replaced with NEW."
+SUBSTITUTE-IF,Kern,N,Return a sequence of the same kind as SEQUENCE with the same elements except that all elements satisfying the PRED are replaced with NEW.
+SUBSTITUTE-IF-NOT,Kern,N,Return a sequence of the same kind as SEQUENCE with the same elements except that all elements not satisfying the PRED are replaced with NEW.
+SUBTYPEP,Kern,N,"Return two values indicating the relationship between type1 and type2. If values are T and T, type1 definitely is a subtype of type2. If values are NIL and T, type1 definitely is not a subtype of type"
+SVREF,Kern,N,Return the INDEXth element of the given Simple-Vector.
+SXHASH,Kern,N,Hash code for eq objects (hash tables).
+SYMBOL,Kern,N,Type: symbol.
+SYMBOL-FUNCTION,Kern,N,Return SYMBOL's current function definition. Settable with SETF.
+SYMBOL-MACROLET,Kern,J,"SYMBOL-MACROLET ({(name expansion)}*) decl* form* Define the NAMES as symbol macros with the given EXPANSIONS. Within the body, references to a NAME will effectively be replaced with the EXPANSION."
+SYMBOL-NAME,Kern,J,Return SYMBOL's name as a string.
+SYMBOL-PACKAGE,Kern,N,"Return SYMBOL's home package, or NIL if none."
+SYMBOL-PLIST,Kern,N,Return SYMBOL's property list.
+SYMBOL-VALUE,Kern,N,Return SYMBOL's current bound value.
+SYMBOLP,Kern,N,"Return true if OBJECT is a SYMBOL, and NIL otherwise."
+SYNONYM-STREAM,Kern,N,Type: stream following a synonym symbol.
+SYNONYM-STREAM-SYMBOL,Kern,N,Reader: symbol of a synonym-stream.
+T,Kern,J,Constant: boolean true and supertype of all types.
+TAGBODY,Kern,J,"TAGBODY {tag | statement}* Define tags for use with GO. The STATEMENTS are evaluated in order, skipping TAGS, and NIL is returned. If a statement contains a GO to a defined TAG within the lexical scop"
+TAILP,Kern,N,"Return true if OBJECT is the same as some tail of LIST, otherwise returns false. LIST must be a proper list or a dotted list."
+TAN,Kern,N,Return the tangent of NUMBER.
+TANH,Kern,N,Return the hyperbolic tangent of NUMBER.
+TENTH,Kern,N,Return the 10th object in a list or NIL if there is no 10th object.
+TERPRI,Kern,N,Writes a newline to a stream.
+THE,Kern,J,"Specifies that the values returned by FORM conform to the VALUE-TYPE. CLHS specifies that the consequences are undefined if any result is not of the declared type, but SBCL treats declarations as asse"
+THIRD,Kern,J,Return the 3rd object in a list or NIL if there is no 3rd object.
+THROW,Kern,J,"THROW tag form Do a non-local exit, return the values of FORM from the CATCH whose tag is EQ to TAG."
+TIME,Macro,N,"Execute FORM and print timing information on *TRACE-OUTPUT*. On some hardware platforms estimated processor cycle counts are included in this output; this number is slightly inflated, since it include"
+TRACE,Macro,J,TRACE {Option Global-Value}* {Name {Option Value}*}* TRACE is a debugging tool that provides information when specified functions are called. In its simplest form: (TRACE NAME-1 NAME-2 ...) The NAMEs 
+TRANSLATE-LOGICAL-PATHNAME,Kern,N,"Translate PATHNAME to a physical pathname, which is returned."
+TRANSLATE-PATHNAME,Kern,N,Use the source pathname to translate the from-wildname's wild and unspecified elements into a completed to-pathname based on the to-wildname.
+TREE-EQUAL,Kern,N,Return T if X and Y are isomorphic trees with identical leaves.
+TRUENAME,Kern,N,"If PATHSPEC is a pathname that names an existing file, return a pathname that denotes a canonicalized name for the file. If pathspec is a stream associated with a file, return a pathname that denotes "
+TRUNCATE,Kern,N,"Return number/divisor as an integer, rounded toward 0. The second returned value is the remainder."
+TWO-WAY-STREAM,Kern,N,Type: bidirectional stream (input+output).
+TWO-WAY-STREAM-INPUT-STREAM,Kern,N,Reader: input stream of a two-way-stream.
+TWO-WAY-STREAM-OUTPUT-STREAM,Kern,N,Reader: output stream of a two-way-stream.
+TYPE,Kern,N,Declaration: type of variables.
+TYPE-ERROR,Kern,N,Condition type for type errors.
+TYPE-ERROR-DATUM,Kern,N,Reader: datum of a type-error condition.
+TYPE-ERROR-EXPECTED-TYPE,Kern,N,Reader: expected type of a type-error condition.
+TYPE-OF,Kern,N,Return the type of OBJECT.
+TYPECASE,Macro,N,TYPECASE Keyform {(Type Form*)}* Evaluates the Forms in the first clause for which TYPEP of Keyform and Type is true.
+TYPEP,Kern,N,Is OBJECT of type TYPE?
+UNBOUND-SLOT,Kern,N,Condition type for unbound slot access.
+UNBOUND-SLOT-INSTANCE,Kern,N,Reader: instance of an unbound-slot condition.
+UNBOUND-VARIABLE,Kern,N,Condition type for unbound variable access.
+UNDEFINED-FUNCTION,Kern,N,Condition type for undefined function call.
+UNEXPORT,Kern,N,Makes SYMBOLS no longer exported from PACKAGE.
+UNINTERN,Kern,N,"Makes SYMBOL no longer present in PACKAGE. If SYMBOL was present then T is returned, otherwise NIL. If PACKAGE is SYMBOL's home package, then it is made uninterned."
+UNION,Kern,J,Return the union of LIST1 and LIST2.
+UNLESS,Macro,J,"If the first argument is not true, the rest of the forms are evaluated as a PROGN."
+UNREAD-CHAR,Kern,N,Pushes a char back onto a stream.
+UNSIGNED-BYTE,Kern,N,Type: non-negative integer of any size.
+UNTRACE,Macro,J,Remove tracing from the specified functions. Untraces all functions when called with no arguments.
+UNUSE-PACKAGE,Kern,N,Remove PACKAGES-TO-UNUSE from the USE list for PACKAGE.
+UNWIND-PROTECT,Kern,J,"UNWIND-PROTECT protected cleanup* Evaluate the form PROTECTED, returning its values. The CLEANUP forms are evaluated whenever the dynamic scope of the PROTECTED form is exited (either due to normal co"
+UPDATE-INSTANCE-FOR-DIFFERENT-CLASS,Kern,N,Updates instance after class change (CLOS).
+UPDATE-INSTANCE-FOR-REDEFINED-CLASS,Kern,N,Updates instance after class redefinition.
+UPGRADED-ARRAY-ELEMENT-TYPE,Kern,N,Return the element type that will actually be used to implement an array with the specifier :ELEMENT-TYPE Spec.
+UPGRADED-COMPLEX-PART-TYPE,Kern,N,Return the element type of the most specialized COMPLEX number type that can hold parts of type SPEC.
+UPPER-CASE-P,Kern,N,"The argument must be a character object; UPPER-CASE-P returns T if the argument is an upper-case character, NIL otherwise."
+USE-PACKAGE,Kern,N,Add all the PACKAGES-TO-USE to the use list for PACKAGE so that the external symbols of the used packages are accessible as internal symbols in PACKAGE.
+USE-VALUE,Kern,N,"Transfer control and VALUE to a restart named USE-VALUE, or return NIL if none exists."
+USER-HOMEDIR-PATHNAME,Kern,N,"Return the home directory of the user as a pathname. If the HOME environment variable has been specified, the directory it designates is returned; otherwise obtains the home directory from the operati"
+VALUES,Kern,J,"Return all arguments, in order, as values."
+VALUES-LIST,Kern,N,"Return all of the elements of LIST, in order, as values."
+VARIABLE,Kern,N,Declaration specifier: variable declaration.
+VECTOR,Kern,N,Construct a SIMPLE-VECTOR from the given objects.
+VECTOR-POP,Kern,N,Decrease the fill pointer by 1 and return the element pointed to by the new fill pointer.
+VECTOR-PUSH,Kern,N,"Attempt to set the element of ARRAY designated by its fill pointer to NEW-ELEMENT, and increment the fill pointer by one. If the fill pointer is too large, NIL is returned, otherwise the index of the "
+VECTOR-PUSH-EXTEND,Kern,N,"Pushes element onto adjustable vector, extends if full."
+VECTORP,Kern,N,"Return true if OBJECT is a VECTOR, and NIL otherwise."
+WARN,Kern,J,"Warn about a situation by signalling a condition formed by DATUM and ARGUMENTS. While the condition is being signaled, a MUFFLE-WARNING restart exists that causes WARN to immediately return NIL."
+WARNING,Kern,N,Condition type: root of warnings.
+WHEN,Macro,J,"If the first argument is true, the rest of the forms are evaluated as a PROGN."
+WILD-PATHNAME-P,Kern,N,Predicate for determining whether pathname contains any wildcards.
+WITH-ACCESSORS,Macro,N,Macro: binds accessors to slots of an instance.
+WITH-COMPILATION-UNIT,Macro,N,Affects compilations that take place within its dynamic extent. It is intended to be eg. wrapped around the compilation of all files in the same system. Following options are defined: :OVERRIDE Boolea
+WITH-CONDITION-RESTARTS,Macro,N,"Evaluates the BODY in a dynamic environment where the restarts in the list RESTARTS-FORM are associated with the condition returned by CONDITION-FORM. This allows FIND-RESTART, etc., to recognize rest"
+WITH-HASH-TABLE-ITERATOR,Macro,N,"WITH-HASH-TABLE-ITERATOR ((name hash-table) &body body) Provides a method of manually looping over the elements of a hash-table. NAME is bound to a generator-macro that, within the scope of the invoca"
+WITH-INPUT-FROM-STRING,Macro,N,Macro: body with a string-input-stream.
+WITH-OPEN-FILE,Macro,N,"Macro: body with a file-stream, auto-closed."
+WITH-OPEN-STREAM,Macro,N,"Macro: body with a stream, auto-closed."
+WITH-OUTPUT-TO-STRING,Macro,N,"Macro: body with string-output-stream, returns string."
+WITH-PACKAGE-ITERATOR,Macro,N,"Within the lexical scope of the body forms, MNAME is defined via macrolet such that successive invocations of (MNAME) will return the symbols, one by one, from the packages in PACKAGE-LIST. SYMBOL-TYP"
+WITH-SIMPLE-RESTART,Macro,N,"(WITH-SIMPLE-RESTART (restart-name format-string format-arguments) body) If restart-name is not invoked, then all values returned by forms are returned. If control is transferred to this restart, it i"
+WITH-SLOTS,Macro,N,Macro: binds slot names to slot values of an instance.
+WITH-STANDARD-IO-SYNTAX,Macro,N,Bind the reader and printer control variables to values that enable READ to reliably read the results of PRINT. These values are: *PACKAGE* the COMMON-LISP-USER package *PRINT-ARRAY* T *PRINT-BASE* 10
+WRITE,Kern,N,"Output OBJECT to the specified stream, defaulting to *STANDARD-OUTPUT*."
+WRITE-BYTE,Kern,N,Writes a byte to a binary stream.
+WRITE-CHAR,Kern,N,Writes a character to a stream.
+WRITE-LINE,Kern,N,Writes a string followed by newline.
+WRITE-SEQUENCE,Kern,N,Write the elements of SEQ bounded by START and END to STREAM.
+WRITE-STRING,Kern,N,Writes a string to a stream.
+WRITE-TO-STRING,Kern,N,Return the printed representation of OBJECT as a string.
+Y-OR-N-P,Kern,N,"Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO* until the user enters y or Y as an affirmative, or either n or N as a negative answer. It asks again if you enter any other ch"
+YES-OR-NO-P,Kern,N,"YES-OR-NO-P is similar to Y-OR-N-P, except that it clears the input buffer, beeps, and uses READ-LINE to get the strings YES or NO."
+ZEROP,Kern,N,Is this number zero?

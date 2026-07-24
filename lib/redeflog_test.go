@@ -243,3 +243,62 @@ func TestRedefNonRootUntouched(t *testing.T) {
     t.Fatalf("lokale Defines duerfen nicht geloggt werden, got %+v", events)
   }
 }
+
+func TestMakunbound(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  // defun + makunbound + bound? in EINEM evalStr: evalStr baut pro Aufruf
+  // ein frisches Env, Bindungen ueberleben keinen zweiten Aufruf.
+  got, err := evalStr("(defun mkb (x) x) (makunbound 'mkb) (bound? 'mkb)")
+  if err != nil {
+    t.Fatal(err)
+  }
+  if IsTruthy(got) {
+    t.Fatal("mkb muss nach makunbound ungebunden sein")
+  }
+  if _, ok := LookupDefinition("mkb"); ok {
+    t.Fatal("DefLoc-Eintrag muss entfernt sein")
+  }
+  events := RedefLog()
+  if len(events) != 1 || events[0].Action != "makunbound" || events[0].OldKind != "lambda" {
+    t.Fatalf("makunbound-Event erwartet, got %+v", events)
+  }
+}
+
+func TestMakunboundUnboundError(t *testing.T) {
+  _, err := evalStr("(makunbound 'gibts-nicht)")
+  if err == nil || !strings.Contains(err.Error(), "nicht gebunden") {
+    t.Fatalf("Fehler fuer ungebundenes Symbol erwartet, got %v", err)
+  }
+}
+
+func TestMakunboundFuncErrorPolicy(t *testing.T) {
+  withRedefinePolicy(t, "error", func() {
+    if _, err := evalStr("(makunbound 'car)"); err == nil ||
+      !strings.Contains(err.Error(), "REDEF: car") {
+      t.Fatalf("error-Policy muss makunbound auf FUNC blockieren, got %v", err)
+    }
+    got, err := evalStr("(car '(1 2))")
+    if err != nil || got.Num != 1 {
+      t.Fatalf("car muss erhalten bleiben: %v, %v", got, err)
+    }
+  })
+}
+
+func TestMakunboundFuncAllow(t *testing.T) {
+  ClearRedefLog()
+  withRedefinePolicy(t, "allow", func() {
+    // ebenfalls in einem evalStr (frisches Env pro Aufruf, siehe oben)
+    got, err := evalStr("(makunbound 'cdr) (bound? 'cdr)")
+    if err != nil {
+      t.Fatal(err)
+    }
+    if IsTruthy(got) {
+      t.Fatal("cdr muss entfernt sein")
+    }
+  })
+  events := RedefLog()
+  if len(events) != 1 || events[0].OldKind != "func" || events[0].Action != "makunbound" {
+    t.Fatalf("func-makunbound-Event erwartet, got %+v", events)
+  }
+}

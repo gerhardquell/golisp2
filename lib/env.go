@@ -226,6 +226,22 @@ func (e *Env) Root() *Env {
   }
 }
 
+// UnsetRoot entfernt eine Bindung aus dem Root-Env.
+// Liefert die entfernte Zelle; ok=false wenn nicht gebunden oder kein Root.
+func (e *Env) UnsetRoot(name string) (*Cell, bool) {
+  e.mu.Lock()
+  defer e.mu.Unlock()
+  if e.parent != nil {
+    return nil, false
+  }
+  old, ok := e.vars[name]
+  if !ok {
+    return nil, false
+  }
+  delete(e.vars, name)
+  return old, true
+}
+
 // Symbols sammelt alle bekannten Namen (inkl. aeussere Scopes, ohne Duplikate)
 func (e *Env) Symbols() []string {
   seen := make(map[string]bool)

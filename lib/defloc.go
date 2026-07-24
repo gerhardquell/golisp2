@@ -47,3 +47,10 @@ func ClearDefinitions() {
   defer defMu.Unlock()
   definitions = map[string]DefLoc{}
 }
+
+// RemoveDefinition entfernt den Registry-Eintrag (makunbound).
+func RemoveDefinition(name string) {
+  defMu.Lock()
+  defer defMu.Unlock()
+  delete(definitions, name)
+}

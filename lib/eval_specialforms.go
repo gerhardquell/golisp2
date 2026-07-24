@@ -116,6 +116,35 @@ func evalBound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return MakeNil(), nil
 }
 
+// makunbound: (makunbound 'symbol) → entfernt die globale Bindung (CL).
+// Fehler, wenn das Symbol nicht gebunden ist — laut statt still.
+func evalMakunbound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+  if args == nil || args.Type != LIST || args.Car == nil {
+    return nil, fmt.Errorf("makunbound: Syntax: (makunbound 'symbol)")
+  }
+  sym, err := evalWithCtx(args.Car, env, ectx.child())
+  if err != nil {
+    return nil, err
+  }
+  if sym.Type != ATOM {
+    return nil, fmt.Errorf("makunbound: Argument muss ein Symbol sein")
+  }
+  root := env.Root()
+  old, err := root.Get(sym.Val)
+  if err != nil {
+    return nil, fmt.Errorf("makunbound: '%s' ist nicht gebunden", sym.Val)
+  }
+  if old.Type == FUNC || old.Type == LAMBDA || old.Type == MACRO {
+    if err := applyRedefPolicy(sym.Val, "makunbound auf "+kindOf(old)); err != nil {
+      return nil, err
+    }
+  }
+  _, _ = root.UnsetRoot(sym.Val)
+  RemoveDefinition(sym.Val)
+  logRedef(RedefEvent{Name: sym.Val, OldKind: kindOf(old), Action: "makunbound"})
+  return sym, nil
+}
+
 // macroexpand: (macroexpand form) → expandiert Makros einmal, gibt Ergebnis zurück
 func evalMacroexpand(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {

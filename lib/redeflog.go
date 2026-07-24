@@ -12,7 +12,10 @@
 
 package lib
 
-import "sync"
+import (
+  "fmt"
+  "sync"
+)
 
 // RedefEvent beschreibt eine Root-Redefinition oder ein makunbound.
 type RedefEvent struct {
@@ -72,4 +75,36 @@ func kindOf(c *Cell) string {
     return "macro"
   }
   return "value"
+}
+
+// redef-log: (redef-log) → Liste der Events, aelteste zuerst.
+// Jedes Event: (name old-kind new-kind old-file old-line new-file new-line action)
+func fnRedefLog(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("redef-log: Syntax: (redef-log)")
+  }
+  events := RedefLog()
+  cells := make([]*Cell, 0, len(events))
+  for _, e := range events {
+    cells = append(cells, List(
+      MakeAtom(e.Name),
+      MakeAtom(e.OldKind),
+      MakeAtom(e.NewKind),
+      MakeString(e.OldFile),
+      MakeNumber(float64(e.OldLine)),
+      MakeString(e.NewFile),
+      MakeNumber(float64(e.NewLine)),
+      MakeAtom(e.Action),
+    ))
+  }
+  return List(cells...), nil
+}
+
+// redef-log-clear: (redef-log-clear) → leert das Log, liefert nil.
+func fnRedefLogClear(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("redef-log-clear: Syntax: (redef-log-clear)")
+  }
+  ClearRedefLog()
+  return MakeNil(), nil
 }

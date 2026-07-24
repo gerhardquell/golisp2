@@ -125,6 +125,8 @@ func BaseEnv() *Env {
 
 	// Redefine-Guard Policy
 	_ = env.Set("redefine-policy", makeFn(fnRedefinePolicy))
+	_ = env.Set("redef-log", makeFn(fnRedefLog))
+	_ = env.Set("redef-log-clear", makeFn(fnRedefLogClear))
 
 	// Live-Tracing einzelner Funktionen
 	RegisterTrace(env)

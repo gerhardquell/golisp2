@@ -302,3 +302,31 @@ func TestMakunboundFuncAllow(t *testing.T) {
     t.Fatalf("func-makunbound-Event erwartet, got %+v", events)
   }
 }
+
+func TestRedefLogPrimitive(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  withRedefinePolicy(t, "allow", func() {
+    if _, err := evalStr("(define car 42)"); err != nil {
+      t.Fatal(err)
+    }
+    // Name des ersten (einzigen) Events:
+    got, err := evalStr("(car (car (redef-log)))")
+    if err != nil {
+      t.Fatal(err)
+    }
+    if got.Type != ATOM || got.Val != "car" {
+      t.Fatalf("Event-Name car erwartet, got %v", got)
+    }
+    if _, err := evalStr("(redef-log-clear)"); err != nil {
+      t.Fatal(err)
+    }
+    empty, err := evalStr("(redef-log)")
+    if err != nil {
+      t.Fatal(err)
+    }
+    if empty.Type != NIL {
+      t.Fatalf("leeres Log muss nil sein, got %v", empty)
+    }
+  })
+}

@@ -205,23 +205,29 @@ func runStdin(env *lib.Env) int {
     if countParens(buffer.String()) <= 0 && strings.TrimSpace(buffer.String()) != "" {
       expr := strings.TrimSpace(buffer.String())
       if expr != "" {
-        cell, err := lib.Read(expr)
+        cells, err := lib.ReadAll(expr)
         if err != nil {
           fmt.Fprintf(os.Stderr, "ERR read: %v\n", err)
           hasError = true
           buffer.Reset()
           continue
         }
-        result, err := lib.Eval(cell, env)
-        if err != nil {
-          var le *lib.LispError
-          if errors.As(err, &le) {
-            fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
-          } else {
-            fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+        for cur := cells; cur != nil && cur.Type == lib.LIST; cur = cur.Cdr {
+          form := cur.Car
+          if form == nil {
+            continue
           }
-          hasError = true
-        } else {
+          result, err := lib.Eval(form, env)
+          if err != nil {
+            var le *lib.LispError
+            if errors.As(err, &le) {
+              fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
+            } else {
+              fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
+            }
+            hasError = true
+            break
+          }
           fmt.Println(result)
         }
       }

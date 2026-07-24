@@ -226,7 +226,7 @@ func runStdin(env *lib.Env) int {
               fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
             }
             hasError = true
-            break
+            continue
           }
           fmt.Println(result)
         }

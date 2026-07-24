@@ -7,11 +7,7 @@
 ;; Ein Fehler hier bricht den Datei-Load mit einem FAIL ab.
 ;; ********************************************************************
 
-(defmacro assert= (expected expr)
-  `(let ((actual ,expr))
-     (if (equal? actual ,expected)
-         (println (format nil "PASS: ~a => ~a" ',expr actual))
-         (error (format nil "FAIL: ~a erwartet ~a, got ~a" ',expr ,expected actual)))))
+(load "tests/test-helpers.lisp")  ; assert= — eine Quelle für alle Testdateien
 
 ;; === Mengenoperationen =================================================
 

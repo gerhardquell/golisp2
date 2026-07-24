@@ -9,13 +9,14 @@
 ;; nicht mehr auftreten, und deckt Erfolgs-/Scheitervarianten ab.
 ;; ********************************************************************
 
-(load "pn-gps1/gps2.lisp")
+(load "tests/test-helpers.lisp")  ; assert= — eine Quelle für alle Testdateien
 
-(defmacro assert= (expected expr)
-  `(let ((actual ,expr))
-     (if (equal? actual ,expected)
-         (println (format nil "PASS: ~a => ~a" ',expr actual))
-         (error (format nil "FAIL: ~a erwartet ~a, got ~a" ',expr ,expected actual)))))
+;; gps2 ersetzt bewusst die v1-Funktionen aus gps.lisp (andere Arity und
+;; Semantik: state-passing statt globalem *state*). Der Override ist
+;; Absicht — darum hier explizit erlaubt statt still gewarnt.
+(redefine-policy 'allow)
+(load "pn-gps1/gps2.lisp")
+(redefine-policy 'warn)
 
 ;; === Erfolgsfälle ===================================================
 

@@ -91,6 +91,8 @@ func runTests(env *lib.Env) {
   // block / return-from
   test(env, `(block outer (return-from outer 42) 0)`)
   test(env, `(block b (+ 1 (return-from b 99)) 0)`)
+  // Gemeinsame Test-Helfer (assert=) — eine Quelle für alle Testdateien
+  test(env, `(load "tests/test-helpers.lisp")`)
   // Isolierte stdlib-Tests (defstruct, setf, defvar, union, set-difference, find-all)
   test(env, `(load "tests/stdlib-test.lisp")`)
   // Norvigs drei bekannte GPS-Fehler (Timeout für rekursiven Fall)

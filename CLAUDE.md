@@ -35,12 +35,19 @@ lib/
   swank/             SWANK-Server für Emacs/SLIME
 ```
 
+
 Vollständige Datei-für-Datei-Beschreibung: `doc/struktur.md`.
 Im Zweifel: `rg` statt raten.
 
 ---
 
 ## Konventionen
+
+- **Codierung:**
+```
+  ~/.claude/zutaten/sprachen/lisp.md
+  ~/.claude/zutaten/sprachen/golisp2.md 
+```
 
 - **Sprache:** Go für den Kern, Lisp für Erweiterungen
 - **Einrückung:** 2 Spaces, keine Tabs
@@ -103,10 +110,12 @@ es funktioniert.
 Das gefährlichste Duplikat ist keine Go-Datei. Es ist ein `define` in
 `stdlib.lisp`, `swank.lisp` oder in zur Laufzeit evaluiertem Code.
 
-- **Das globale Env kennt kein `undefine`.** Der letzte Schreiber gewinnt.
-  Ein `(define car ...)` in `stdlib.lisp` überschreibt das Go-Primitiv aus
-  `BaseEnv()` **lautlos** — kein Compilerfehler, kein Test, das Primitiv ist
-  einfach weg.
+- **Der letzte Schreiber gewinnt — aber nicht mehr lautlos.** Das Root-Env
+  bewacht Redefinitionen per `(redefine-policy 'allow|'warn|'error)` (Default
+  `warn`): Go-Primitiven (FUNC) immer, Lisp-Definitionen (LAMBDA/MACRO) bei
+  fremder Quelle — Reload derselben Datei bleibt still. Alle Redefinitionen
+  landen im Ringpuffer, abfragbar via `(redef-log)`. `(makunbound 'sym)`
+  entfernt eine Root-Bindung. Details: `doc/lisp-semantik.md`.
 - **Deshalb: `rg` muss `*.lisp` einschließen.** Eine Suche nur über `*.go`
   findet die halbe Wahrheit.
 - **Spezialformen werden vor Makros geprüft** (siehe Eval-Reihenfolge). Ein

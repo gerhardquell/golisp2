@@ -25,6 +25,7 @@ func evalDefine(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   name := args.Car.Val
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
+  if err := checkRootRedefine(env, name, val, form.SrcFile, form.SrcLine); err != nil { return nil, err }
   if err := env.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil
@@ -218,6 +219,7 @@ func evalDefun(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   }
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
+  if err := checkRootRedefine(env, name, lam, form.SrcFile, form.SrcLine); err != nil { return nil, err }
   if err := env.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil
@@ -344,6 +346,7 @@ func evalDefmacro(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   name := args.Car.Val
   lam  := makeLambda(args.Cdr.Car, wrapBegin(args.Cdr.Cdr), env)
   lam.Type = MACRO   // ← einziger Unterschied zu defun!
+  if err := checkRootRedefine(env, name, lam, form.SrcFile, form.SrcLine); err != nil { return nil, err }
   if err := env.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile, form.SrcLine)
   return MakeAtom(name), nil

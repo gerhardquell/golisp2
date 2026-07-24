@@ -10,6 +10,9 @@ package lib
 
 import (
   "fmt"
+  "io"
+  "os"
+  "strings"
   "testing"
 )
 
@@ -96,5 +99,147 @@ func TestFuncRedefErrorLogged(t *testing.T) {
   events := RedefLog()
   if len(events) != 1 || events[0].Action != "error" {
     t.Fatalf("1 error-Event erwartet, got %+v", events)
+  }
+}
+
+// captureStderr faengt os.Stderr fuer die Dauer von fn ab.
+func captureStderr(t *testing.T, fn func()) string {
+  t.Helper()
+  r, w, err := os.Pipe()
+  if err != nil {
+    t.Fatalf("os.Pipe: %v", err)
+  }
+  old := os.Stderr
+  os.Stderr = w
+  fn()
+  _ = w.Close()
+  os.Stderr = old
+  out, _ := io.ReadAll(r)
+  return string(out)
+}
+
+// evalInEnv wertet src im uebergebenen Env aus (im Gegensatz zu evalStr,
+// das jedes Mal ein frisches BaseEnv erzeugt). Noetig fuer Cross-File-
+// Redefinitionstests, bei denen Definition und simulierte Herkunft in
+// derselben Env-Lebenszeit passieren muessen.
+func evalInEnv(env *Env, src string) (*Cell, error) {
+  r := NewReader(strings.TrimSpace(src))
+  result := MakeNil()
+  for {
+    r.skipWS()
+    if _, ok := r.peek(); !ok {
+      break
+    }
+    expr, err := r.readExpr()
+    if err != nil {
+      return nil, err
+    }
+    result, err = Eval(expr, env)
+    if err != nil {
+      return nil, err
+    }
+  }
+  return result, nil
+}
+
+func TestRedefSameSourceReloadSilent(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  out := captureStderr(t, func() {
+    // Zwei defuns aus derselben Quelle (SrcFile "" bei evalStr):
+    if _, err := evalStr("(defun foo (x) x) (defun foo (x) (cons x nil))"); err != nil {
+      t.Fatalf("Reload derselben Quelle muss erlaubt sein: %v", err)
+    }
+  })
+  if out != "" {
+    t.Fatalf("Reload muss still bleiben, stderr: %q", out)
+  }
+  events := RedefLog()
+  if len(events) != 1 || events[0].Action != "reload" || events[0].OldKind != "lambda" {
+    t.Fatalf("1 reload-Event erwartet, got %+v", events)
+  }
+}
+
+func TestRedefCrossFileWarns(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  withRedefinePolicy(t, "warn", func() {
+    env := BaseEnv()
+    if _, err := evalInEnv(env, "(defun bar (x) x)"); err != nil {
+      t.Fatal(err)
+    }
+    RegisterDefinition("bar", "a.lisp", 12) // simuliert Herkunft aus Datei
+    out := captureStderr(t, func() {
+      // SrcFile "" ≠ "a.lisp" → fremde Quelle
+      if _, err := evalInEnv(env, "(defun bar (x) 42)"); err != nil {
+        t.Fatalf("warn-Policy muss durchlassen: %v", err)
+      }
+    })
+    if !strings.Contains(out, "REDEF: bar") {
+      t.Fatalf("REDEF-Warnung erwartet, stderr: %q", out)
+    }
+    if !strings.Contains(out, "a.lisp") {
+      t.Fatalf("Warnung muss alte Quelle nennen, stderr: %q", out)
+    }
+  })
+  events := RedefLog()
+  if len(events) != 1 || events[0].Action != "warn" || events[0].OldFile != "a.lisp" {
+    t.Fatalf("warn-Event mit Quelle erwartet, got %+v", events)
+  }
+}
+
+func TestRedefCrossFileErrorBlocks(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  withRedefinePolicy(t, "error", func() {
+    env := BaseEnv()
+    if _, err := evalInEnv(env, "(defun baz (x) x)"); err != nil {
+      t.Fatal(err)
+    }
+    RegisterDefinition("baz", "a.lisp", 1)
+    if _, err := evalInEnv(env, "(defun baz (x) 99)"); err == nil ||
+      !strings.Contains(err.Error(), "REDEF: baz") {
+      t.Fatalf("REDEF-Fehler erwartet, got %v", err)
+    }
+    got, err := evalInEnv(env, "(baz 5)")
+    if err != nil || got.Num != 5 {
+      t.Fatalf("alte Bindung muss erhalten bleiben: %v, %v", got, err)
+    }
+  })
+}
+
+func TestRedefValueOverLambdaWarns(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  withRedefinePolicy(t, "warn", func() {
+    env := BaseEnv()
+    if _, err := evalInEnv(env, "(defun qux (x) x)"); err != nil {
+      t.Fatal(err)
+    }
+    RegisterDefinition("qux", "b.lisp", 3)
+    out := captureStderr(t, func() {
+      if _, err := evalInEnv(env, "(define qux 5)"); err != nil {
+        t.Fatal(err)
+      }
+    })
+    if !strings.Contains(out, "REDEF: qux") {
+      t.Fatalf("Wert-über-Funktion muss warnen, stderr: %q", out)
+    }
+  })
+  events := RedefLog()
+  if len(events) != 1 || events[0].OldKind != "lambda" || events[0].NewKind != "value" {
+    t.Fatalf("Event lambda→value erwartet, got %+v", events)
+  }
+}
+
+func TestRedefNonRootUntouched(t *testing.T) {
+  ClearRedefLog()
+  ClearDefinitions()
+  // define im Lambda-Body schreibt in den lokalen Frame, nicht an Root:
+  if _, err := evalStr("(defun mk () (define lokales-symbol 1)) (mk)"); err != nil {
+    t.Fatal(err)
+  }
+  if events := RedefLog(); len(events) != 0 {
+    t.Fatalf("lokale Defines duerfen nicht geloggt werden, got %+v", events)
   }
 }

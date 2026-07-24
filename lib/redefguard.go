@@ -39,3 +39,40 @@ func policyAction() string {
   }
   return "redef"
 }
+
+// checkRootRedefine wird von define/defun/defmacro VOR env.Set gerufen.
+// Behandelt nur LAMBDA/MACRO-Altbindungen (Lisp-Definitionen); FUNC faengt
+// der Hook in Env.Set ab. Reload aus derselben Quelle (DefLoc.File) ist
+// immer erlaubt und still — das ist der normale Entwicklungs-Workflow.
+func checkRootRedefine(env *Env, name string, newVal *Cell, newFile string, newLine int) error {
+  if env != env.Root() {
+    return nil
+  }
+  old, err := env.Get(name)
+  if err != nil {
+    return nil // nicht gebunden → Definition, keine Redefinition
+  }
+  if old.Type != LAMBDA && old.Type != MACRO {
+    return nil
+  }
+  loc, _ := LookupDefinition(name)
+  ev := RedefEvent{
+    Name:    name,
+    OldKind: kindOf(old),
+    NewKind: kindOf(newVal),
+    OldFile: loc.File,
+    OldLine: loc.Line,
+    NewFile: newFile,
+    NewLine: newLine,
+  }
+  if loc.File == newFile {
+    ev.Action = "reload"
+    logRedef(ev)
+    return nil
+  }
+  ev.Action = policyAction()
+  logRedef(ev)
+  detail := fmt.Sprintf("%s aus %s:%d, neu aus %s:%d",
+    kindOf(old), loc.File, loc.Line, newFile, newLine)
+  return applyRedefPolicy(name, detail)
+}

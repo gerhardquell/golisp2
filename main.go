@@ -95,6 +95,8 @@ func runTests(env *lib.Env) {
   test(env, `(load "tests/test-helpers.lisp")`)
   // Isolierte stdlib-Tests (defstruct, setf, defvar, union, set-difference, find-all)
   test(env, `(load "tests/stdlib-test.lisp")`)
+  // defsystem-lite: Systemdefinition, topo-Laden, unload
+  test(env, `(load "tests/defsystem-tests.lisp")`)
   // Norvigs drei bekannte GPS-Fehler (Timeout für rekursiven Fall)
   test(env, `(load "pn-gps1/gps-norvig-bugs.lisp")`)
   // GPS Version 2: state-passing, goroutine-tauglich

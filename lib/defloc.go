@@ -12,7 +12,12 @@
 
 package lib
 
-import "sync"
+import (
+  "fmt"
+  "path/filepath"
+  "sort"
+  "sync"
+)
 
 // DefLoc speichert Quellposition einer Definition.
 type DefLoc struct {
@@ -53,4 +58,38 @@ func RemoveDefinition(name string) {
   defMu.Lock()
   defer defMu.Unlock()
   delete(definitions, name)
+}
+
+// defined-in: (defined-in "pfad") → sortierte Liste der Symbole, deren
+// DefLoc.File dem normalisierten Pfad entspricht. Normalisierung identisch
+// zu load (resolvePath + filepath.Abs), damit relative Angaben matchen.
+// Leere Liste, wenn die Datei nichts definiert hat.
+func fnDefinedIn(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("defined-in: 1 Argument nötig")
+  }
+  if args[0].Type != STRING {
+    return nil, fmt.Errorf("defined-in: String erwartet")
+  }
+  resolved, err := resolvePath(args[0].Val)
+  if err != nil {
+    return nil, fmt.Errorf("defined-in: %v", err)
+  }
+  if abs, aerr := filepath.Abs(resolved); aerr == nil {
+    resolved = abs
+  }
+  defMu.RLock()
+  names := []string{}
+  for name, loc := range definitions {
+    if loc.File == resolved {
+      names = append(names, name)
+    }
+  }
+  defMu.RUnlock()
+  sort.Strings(names)
+  cells := make([]*Cell, len(names))
+  for i, n := range names {
+    cells[i] = MakeAtom(n)
+  }
+  return List(cells...), nil
 }

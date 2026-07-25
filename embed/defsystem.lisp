@@ -41,6 +41,8 @@
   (let ((deps '())
         (comps '())
         (rest-kv kvs))
+    (if (not (= 0 (mod (length kvs) 2)))
+        (error "defsystem: Keyword ohne Wert"))
     (while (not (null rest-kv))
       (let ((k (car rest-kv))
             (v (cadr rest-kv)))

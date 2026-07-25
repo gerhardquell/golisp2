@@ -20,7 +20,7 @@ import (
 
 // LoadStdlib lädt die eingebettete Standardbibliothek (stdlib + defsystem) in env.
 // Einmal pro Env aufrufen (nach BaseEnv). Fehler = Syntaxfehler in
-// stdlib.lisp – sollte zur Compile-Zeit nie passieren.
+// stdlib.lisp/defsystem.lisp – sollte zur Compile-Zeit nie passieren.
 func LoadStdlib(env *Env) error {
   if _, err := LoadString(assets.Stdlib, env); err != nil {
     return err

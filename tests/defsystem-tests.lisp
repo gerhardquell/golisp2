@@ -26,6 +26,7 @@
 (assert= 'err (trap (eval '(defsystem bad1 :falsch ())) (lambda (e) 'err)))
 (assert= 'err (trap (eval '(defsystem bad2 :depends-on ("string-statt-symbol"))) (lambda (e) 'err)))
 (assert= 'err (trap (eval '(defsystem bad3 :components (symbol-statt-string))) (lambda (e) 'err)))
+(assert= 'err (trap (eval '(defsystem bad4 :depends-on)) (lambda (e) 'err)))
 
 ;; --- load-system: Topo-Reihenfolge + Idempotenz ----------------------
 (load-system 'fx-sys-a)
@@ -90,6 +91,12 @@
 (assert= '() (unload-system 'fx-sys-u))
 (assert= 'err (trap (unload-system 'gibts-nicht) (lambda (e) 'err)))
 
+;; --- load-system: Teilzustand bei Fehler ------------------------------
+(defsystem fx-sys-kaputt :components ("tests/fixtures/fx-kaputt.lisp"))
+(assert= 'err (trap (load-system 'fx-sys-kaputt) (lambda (e) 'err)))
+(assert= t (bound? 'fx-kaputt-ok))
+(assert= '() (if (member 'fx-sys-kaputt (loaded-systems)) '(drin) '()))
+
 ;; --- Aufräumen: Registry + Symbole zurücksetzen -----------------------
 (unload-system 'fx-sys-b)
 (unload-system 'fx-sys-c)
@@ -98,5 +105,15 @@
                                                  fx-cy-a fx-cy-b fx-sys-u
                                                  fx-sys-s1 fx-sys-s2
                                                  fx-sys-dm-a fx-sys-dm-b
-                                                 fx-sys-dm-c fx-sys-dm-d))))
+                                                 fx-sys-dm-c fx-sys-dm-d
+                                                 fx-sys-kaputt))))
               *systems*))
+;; fx-kaputt-ok wurde vor dem Fehler definiert; unterdrücke makunbound-Warnung
+(begin
+  (let ((p (redefine-policy)))
+    (redefine-policy 'allow)
+    (when (bound? 'fx-kaputt-ok) (makunbound 'fx-kaputt-ok))
+    (redefine-policy p))
+  ())
+;; *loaded-files*: load-system pusht erst nach erfolgreichem load, daher
+;; bei Fehler kein Eintrag für fx-kaputt.lisp (nichts zu entfernen).

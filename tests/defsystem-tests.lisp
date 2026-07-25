@@ -26,3 +26,24 @@
 (assert= 'err (trap (eval '(defsystem bad1 :falsch ())) (lambda (e) 'err)))
 (assert= 'err (trap (eval '(defsystem bad2 :depends-on ("string-statt-symbol"))) (lambda (e) 'err)))
 (assert= 'err (trap (eval '(defsystem bad3 :components (symbol-statt-string))) (lambda (e) 'err)))
+
+;; --- load-system: Topo-Reihenfolge + Idempotenz ----------------------
+(load-system 'fx-sys-a)
+(assert= t (bound? 'fx-a))
+(assert= t (bound? 'fx-b))
+(assert= t (bound? 'fx-c))
+;; Deps zuerst geladen; push präpendiert → zuletzt geladenes oben
+(assert= (list (get-file-path "tests/fixtures/fx-a.lisp")
+               (get-file-path "tests/fixtures/fx-b.lisp")
+               (get-file-path "tests/fixtures/fx-c.lisp"))
+         *loaded-files*)
+;; Idempotenz: zweiter Aufruf lädt nichts nach
+(let ((n (length *loaded-files*)))
+  (load-system 'fx-sys-a)
+  (assert= n (length *loaded-files*)))
+
+;; --- load-system: Fehlerfälle ----------------------------------------
+(assert= 'err (trap (load-system 'gibts-nicht) (lambda (e) 'err)))
+(defsystem fx-cy-a :depends-on (fx-cy-b) :components ())
+(defsystem fx-cy-b :depends-on (fx-cy-a) :components ())
+(assert= 'err (trap (load-system 'fx-cy-a) (lambda (e) 'err)))

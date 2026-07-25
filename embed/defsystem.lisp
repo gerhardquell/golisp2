@@ -52,3 +52,34 @@
         (error "defsystem: :components muss Stringliste sein"))
     `(set! *systems*
            (alist-set ',name (list :depends-on ',deps :components ',comps) *systems*))))
+
+;; === load-system =====================================================
+
+;; %topo: DFS mit Zykluserkennung. visiting = aktueller DFS-Stack,
+;; done = fertige Systeme. Rückgabe: done mit name oben (Deps darunter).
+(defun %topo (name visiting done)
+  (cond
+    ((member name visiting)
+     (error (format nil "defsystem: Abhängigkeitszyklus: ~a"
+                    (reverse (cons name visiting)))))
+    ((member name done) done)
+    (t
+     (let ((d done)
+           (vis2 (cons name visiting)))
+       (dolist (dep (%sys-get (%sys-entry name) :depends-on) ())
+         (set! d (%topo dep vis2 d)))
+       (cons name d)))))
+
+;; (load-system 'name) → Topo-Liste der beteiligten Systeme (Deps zuerst).
+;; Idempotent auf Datei-Ebene: bereits geladene Komponenten werden
+;; übersprungen. Fehler in einer Komponente bricht ab; der Teilzustand
+;; bleibt stehen und ein erneuter Aufruf setzt an der Fehlerstelle fort.
+(defun load-system (name)
+  (let ((order (reverse (%topo name '() '()))))
+    (dolist (sys order ())
+      (dolist (comp (%sys-get (%sys-entry sys) :components) ())
+        (let ((norm (get-file-path comp)))
+          (unless (member norm *loaded-files*)
+            (eval (list 'load comp))
+            (push norm *loaded-files*)))))
+    order))

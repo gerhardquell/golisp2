@@ -57,3 +57,12 @@
 (defsystem fx-cy-a :depends-on (fx-cy-b) :components ())
 (defsystem fx-cy-b :depends-on (fx-cy-a) :components ())
 (assert= 'err (trap (load-system 'fx-cy-a) (lambda (e) 'err)))
+
+;; --- loaded-systems + system-symbols ---------------------------------
+(assert= t (if (member 'fx-sys-a (loaded-systems)) t ()))
+(assert= t (if (member 'fx-sys-b (loaded-systems)) t ()))
+;; fx-sys-u listet eine Datei, die nie geladen wird -> nicht geladen
+(defsystem fx-sys-u :components ("tests/fixtures/fx-u.lisp"))
+(assert= '() (if (member 'fx-sys-u (loaded-systems)) '(drin) '()))
+(assert= '(fx-a) (system-symbols 'fx-sys-a))
+(assert= 'err (trap (system-symbols 'gibts-nicht) (lambda (e) 'err)))

@@ -83,3 +83,22 @@
             (eval (list 'load comp))
             (push norm *loaded-files*)))))
     order))
+
+;; === Introspection ===================================================
+
+;; %sys-loaded?: t, wenn alle Komponenten des Systems in *loaded-files*
+(defun %sys-loaded? (entry)
+  (every (lambda (c) (member (get-file-path c) *loaded-files*))
+         (%sys-get entry :components)))
+
+;; (loaded-systems) -> Namen aller vollständig geladenen Systeme.
+;; Berechnet aus *loaded-files* — einzige Wahrheit, kein Extra-Flag.
+(defun loaded-systems ()
+  (mapcar #'car (filter (lambda (e) (%sys-loaded? (cadr e))) *systems*)))
+
+;; (system-symbols 'name) -> alle Symbole, die die Komponenten des
+;; Systems definiert haben (via DefLoc-Registry, je Datei sortiert).
+(defun system-symbols (name)
+  (let ((acc '()))
+    (dolist (c (%sys-get (%sys-entry name) :components) acc)
+      (set! acc (append acc (defined-in c))))))

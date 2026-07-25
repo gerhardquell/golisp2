@@ -19,3 +19,6 @@ var Stdlib string
 
 //go:embed swank.lisp
 var Swank string
+
+//go:embed defsystem.lisp
+var Defsystem string

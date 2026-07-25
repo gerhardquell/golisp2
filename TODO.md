@@ -1,34 +1,22 @@
 # TODO
 
-## Erledigt 2026-07-25 — defsystem-lite (siehe docs/superpowers/specs/2026-07-25-defsystem-lite-design.md)
+## Erledigt 2026-07-25 — GOLISP2 Semantik/Syntax-Kurzform (Option B: zwei Dateien)
 
-**Ziel:** Deklarative Systemdefinition + dependency-geordnetes, idempotentes Laden —
-als Fundament eines eigenen GoLisp2-Ökosystems. Orientierung an ASDF-Konzepten,
-keine ASDF-Kompatibilität (kein Compile-File, kein CLOS, keine Packages).
+**Ziel:** Wenn wir andere KIs einsetzen wollen, brauchen diese einen Überblick über die Semantik und Syntax von GOLISP2, aber auch Erläuterungen zu den Schwächen.
 
-**Motivation:** Load-Reihenfolge und Abhängigkeiten sind heute implizit
-(gps.lisp ↔ gps2.lisp ↔ test-helpers). DefLoc + Redef-Log + `makunbound`
-liefern bereits die Infrastruktur dafür.
+**Motivation:** Wenn GOLISP2 erst analysiert werden muß, wird ein Vorgang häufig wiederholt, was nicht notwendig sein sollte.
 
-**Skizze (reines Lisp, ~150–250 Zeilen):**
+**Ergebnis (Option B + eigener Schwächen-Abschnitt):**
+- `doc/ki/referenz.md` (316 Zeilen) — KI-Form: Tabellen, Präfixe, tokenoptimiert
+- `doc/golisp2-cheatsheet.md` (771 Zeilen) — Mensch-Form: Beispiele, Erklärungen
+- Beide haben §10 "Schwächen (bewusst)" als eigenen Abschnitt (12 Punkte:
+  kein Package, kein CLOS, kein Condition-System, progv lex/dyn, kein Compile-File,
+  kein Small-Int-Cache, macrolet nicht-rekursiv, kein Continuations/MOP,
+  load-in-defun, kein GC-Tuning, kein Typ-System, kein LOOP)
 
-```lisp
-(defsystem gps2
-  :depends-on (test-helpers)
-  :components ("pn-gps1/gps2.lisp"))
+## Nächste Aufgaben
 
-(load-system 'gps2)        ; Deps topologisch, jede Datei einmal
-(system-symbols 'gps2)     ; via DefLoc: welche Symbole definiert das System?
-(unload-system 'gps2)      ; via makunbound
-```
-
-**Optionen:** `:redefine :allow` als Hülle (wie gps2-tests manuell),
-`(loaded-systems)`-Abfrage, Fehler bei Zyklen in `:depends-on`.
-
-**Bewusst nicht:** Quicklisp-Analogon (kein Ökosystem zum Verteilen),
-ASDF-Kompat (bräuchte Packages + CLOS), Compile-File (Interpreter).
-
-## Aufgabe — Mini-Test-Framework (Nachfolger von `assert=`)
+### Aufgabe — Mini-Test-Framework (Nachfolger von `assert=`)
 
 **Ziel:** `assert=` aus `tests/test-helpers.lisp` zu echtem Framework ausbauen —
 Testsuiten, Fehler sammeln statt abbrechen, Abschluss-Report.
@@ -50,7 +38,7 @@ laufen nicht. Es gibt kein Zählen, kein Gruppieren, keinen Report.
 **Optionen:** `deftest`-Registry, `(run-tests 'suite)` für Einzelsuiten,
 Exit-relevantes Ergebnis für `golisp2 -t`, expected-failure-Markierung.
 
-## Aufgabe — Condition-lite (Fehler mit Kontext)
+### Aufgabe — Condition-lite (Fehler mit Kontext)
 
 **Ziel:** Fehler mit strukturiertem Kontext statt nur String —
 Signalisieren, Abfangen, optional Restarts. Orientierung am CL-Condition-System, stark reduziert.
@@ -71,11 +59,3 @@ gefunden" vs. „Parse-Fehler"), geschweige denn Recovery anbieten.
 **Optionen:** Condition-Hierarchie (einfacher Typ-Tag mit Eltern),
 `handler-bind`-lite, einfache Restarts (`retry`/`use-value`) — nur wenn
 konkreter Bedarf. Bewusst nicht: volles CL-Restart-Protokoll, MOP-Integration.
-
-## Aufgabe - GOLISP2 Semantik und Syntax in Kurzform 
-
-**Ziel:** Wenn wir andere KIs einsetzen wollen, brauchen diese einen Überblick über die Semantik und Syntax von GOLISP2, aber auch Erläuterungen zu den Schwächen.
-
-**Motivation:** Wenn GOLISP2 erst analysiert werden muß, wird ein Vorgang häufig wiederholt, was nicht notwendig sein sollte. 
-
-**Optionen:** Die Zusammenfassung soll einmal für KIs in tokenoptimierter Form erfolgen und für die Menschen ausführlicher.

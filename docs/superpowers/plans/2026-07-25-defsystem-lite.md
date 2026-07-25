@@ -446,6 +446,7 @@ Expected: ERR — `unbekanntes Symbol 'load-system'`
 
 ;; %topo: DFS mit Zykluserkennung. visiting = aktueller DFS-Stack,
 ;; done = fertige Systeme. Rückgabe: done mit name oben (Deps darunter).
+;; Achtung stdlib-Falle: dolist braucht explizite Ergebnisform ().
 (defun %topo (name visiting done)
   (cond
     ((member name visiting)
@@ -455,7 +456,7 @@ Expected: ERR — `unbekanntes Symbol 'load-system'`
     (t
      (let ((d done)
            (vis2 (cons name visiting)))
-       (dolist (dep (%sys-get (%sys-entry name) :depends-on))
+       (dolist (dep (%sys-get (%sys-entry name) :depends-on) ())
          (set! d (%topo dep vis2 d)))
        (cons name d)))))
 
@@ -463,13 +464,16 @@ Expected: ERR — `unbekanntes Symbol 'load-system'`
 ;; Idempotent auf Datei-Ebene: bereits geladene Komponenten werden
 ;; übersprungen. Fehler in einer Komponente bricht ab; der Teilzustand
 ;; bleibt stehen und ein erneuter Aufruf setzt an der Fehlerstelle fort.
+;; (eval (list 'load comp)) statt (load comp): load in einer Funktion
+;; wertet im Funktions-Env aus — Definitionen müssen global landen
+;; (eval läuft im Root-Env, Projektinvariante).
 (defun load-system (name)
   (let ((order (reverse (%topo name '() '()))))
-    (dolist (sys order)
-      (dolist (comp (%sys-get (%sys-entry sys) :components))
+    (dolist (sys order ())
+      (dolist (comp (%sys-get (%sys-entry sys) :components) ())
         (let ((norm (get-file-path comp)))
           (unless (member norm *loaded-files*)
-            (load comp)
+            (eval (list 'load comp))
             (push norm *loaded-files*)))))
     order))
 ```
@@ -641,11 +645,11 @@ Expected: ERR — `unbekanntes Symbol 'unload-system'`
         (old-policy (redefine-policy)))
     (redefine-policy 'allow)
     (trap
-      (dolist (c (%sys-get entry :components))
+      (dolist (c (%sys-get entry :components) ())
         (let ((norm (get-file-path c)))
           (when (and (member norm *loaded-files*)
                      (not (%file-shared? norm name)))
-            (dolist (s (defined-in c))
+            (dolist (s (defined-in c) ())
               (when (bound? s)
                 (makunbound s)
                 (push s removed)))

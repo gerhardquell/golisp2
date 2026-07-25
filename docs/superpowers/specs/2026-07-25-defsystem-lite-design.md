@@ -23,15 +23,23 @@ Einziger Go-Zuwachs: `defined-in`.
 
 ## Datenstrukturen
 
-Zwei Root-Variablen, reine Daten:
+Drei Root-Variablen, reine Daten:
 
 ```lisp
-(define *systems* '())        ; Alist: (name . (:depends-on (...) :components (...)))
-(define *loaded-files* '())   ; normalisierte Pfade (via get-file-path)
+(define *systems* '())         ; Alist: (name . (:depends-on (...) :components (...)))
+(define *loaded-files* '())    ; normalisierte Pfade (via get-file-path)
+(define *loaded-systems* '())  ; Namen explizit via load-system geladener Systeme
 ```
 
-`loaded-systems` wird **berechnet** (alle Komponenten in `*loaded-files*?`),
-nicht gespeichert — `*loaded-files*` ist die einzige Wahrheit.
+**Nachtrag 2026-07-25 (Implementierung Task 6):** Ursprünglich sollte der
+System-Status rein aus `*loaded-files*` berechnet werden. Das ist ein Defekt:
+beim Shared-File-Fall gilt ein entladenes System weiter als geladen (seine
+Datei steht ja noch drin) — jeder unload des anderen Systems sieht die Datei
+als shared und überspringt sie. Shared Files wären **niemals** entladbar
+(Deadlock). Deshalb: `*loaded-systems*` führt den System-Lifecycle explizit
+(load-system trägt ein, unload-system trägt aus). Getrennte Verantwortung:
+`*loaded-files*` = Datei-Idempotenz, `*loaded-systems*` = System-Status.
+Gerhard genehmigt 2026-07-25.
 
 ## API
 
@@ -76,8 +84,11 @@ Idempotenz auf **Datei-Ebene** (Shared Files zwischen Systemen), nicht System-Eb
 (unload-system 'gps2)   ; → Liste entfernter Symbole
 ```
 
+- `loaded-systems`: Mitgliedschaft in `*loaded-systems*` **und** alle
+  Komponenten in `*loaded-files*` (defensive Doppelprüfung).
 - `system-symbols`: `mapcan` von `defined-in` über normalisierte Komponenten-Pfade.
-- `unload-system`: pro Komponente nur dann `makunbound` aller `defined-in`-Symbole
+- `unload-system`: entfernt den Systemnamen zuerst aus `*loaded-systems*`,
+  dann pro Komponente nur dann `makunbound` aller `defined-in`-Symbole
   + Streichen aus `*loaded-files*`, wenn **kein anderes geladenes System** die
   Datei mitlistet (Shared Files bleiben unangetastet). Deps werden **nicht**
   mit-entladen. Nicht-geladenes System → no-op, leere Liste.

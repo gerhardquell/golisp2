@@ -42,6 +42,16 @@
   (load-system 'fx-sys-a)
   (assert= n (length *loaded-files*)))
 
+;; --- load-system: Diamond-Dependency ---------------------------------
+(defsystem fx-sys-dm-d :components ("tests/fixtures/fx-d.lisp"))
+(defsystem fx-sys-dm-b :depends-on (fx-sys-dm-d) :components ())
+(defsystem fx-sys-dm-c :depends-on (fx-sys-dm-d) :components ())
+(defsystem fx-sys-dm-a :depends-on (fx-sys-dm-b fx-sys-dm-c) :components ())
+(load-system 'fx-sys-dm-a)
+(assert= t (bound? 'fx-d))
+;; fx-d.lisp wird über zwei Pfade referenziert, aber nur einmal geladen
+(assert= 1 (length (find-all (get-file-path "tests/fixtures/fx-d.lisp") *loaded-files*)))
+
 ;; --- load-system: Fehlerfälle ----------------------------------------
 (assert= 'err (trap (load-system 'gibts-nicht) (lambda (e) 'err)))
 (defsystem fx-cy-a :depends-on (fx-cy-b) :components ())

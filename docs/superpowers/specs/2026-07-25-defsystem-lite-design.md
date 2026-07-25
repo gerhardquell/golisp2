@@ -93,6 +93,10 @@ Idempotenz auf **Datei-Ebene** (Shared Files zwischen Systemen), nicht System-Eb
   Datei mitlistet (Shared Files bleiben unangetastet). Deps werden **nicht**
   mit-entladen. Nicht-geladenes System → no-op, leere Liste.
 - `makunbound` loggt ins Redef-Log → Nachvollziehbarkeit gratis.
+- Fehler während `unload-system`: analog load-system bleibt der Teilzustand
+  stehen. `*loaded-systems*` wurde bereits angepasst (zwingend vor der
+  Shared-Prüfung, sonst Deadlock) und wird **nicht** zurückgerollt — der
+  Aufrufer bewertet den Zustand neu.
 
 ## Fehlerfälle
 

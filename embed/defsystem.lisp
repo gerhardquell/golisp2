@@ -12,9 +12,11 @@
 
 ;; *systems*: Alist (name . plist) mit plist = (:depends-on (sym…) :components ("pfad"…))
 ;; *loaded-files*: normalisierte Pfade (via get-file-path) bereits geladener Dateien.
+;; *loaded-systems*: Namen explizit geladener Systeme (für Shared-File-Entscheidungen).
 ;; Idempotenz auf Datei-Ebene: zwei Systeme dürfen dieselbe Datei listen.
 (define *systems* '())
 (define *loaded-files* '())
+(define *loaded-systems* '())
 
 ;; === Interne Zugriffshelfer =========================================
 
@@ -81,20 +83,24 @@
         (let ((norm (get-file-path comp)))
           (unless (member norm *loaded-files*)
             (eval (list 'load comp))
-            (push norm *loaded-files*)))))
+            (push norm *loaded-files*))))
+      (set! *loaded-systems*
+            (cons sys (filter (lambda (n) (not (equal? n sys))) *loaded-systems*))))
     order))
 
 ;; === Introspection ===================================================
 
-;; %sys-loaded?: t, wenn alle Komponenten des Systems in *loaded-files*
+;; %sys-loaded?: t, wenn das System explizit geladen wurde und alle
+;; Komponenten in *loaded-files* stehen.
 (defun %sys-loaded? (entry)
-  (every (lambda (c) (member (get-file-path c) *loaded-files*))
-         (%sys-get entry :components)))
+  (and (member (car entry) *loaded-systems*)
+       (every (lambda (c) (member (get-file-path c) *loaded-files*))
+              (%sys-get (cadr entry) :components))))
 
 ;; (loaded-systems) -> Namen aller vollständig geladenen Systeme.
-;; Berechnet aus *loaded-files* — einzige Wahrheit, kein Extra-Flag.
+;; Berechnet aus *loaded-systems* und *loaded-files*.
 (defun loaded-systems ()
-  (mapcar #'car (filter (lambda (e) (%sys-loaded? (cadr e))) *systems*)))
+  (mapcar #'car (filter (lambda (e) (%sys-loaded? e)) *systems*)))
 
 ;; (system-symbols 'name) -> alle Symbole, die die Komponenten des
 ;; Systems definiert haben (via DefLoc-Registry, je Datei sortiert).
@@ -102,3 +108,47 @@
   (let ((acc '()))
     (dolist (c (%sys-get (%sys-entry name) :components) acc)
       (set! acc (append acc (defined-in c))))))
+
+;; === unload-system ===================================================
+
+;; %remove-first: erstes Vorkommen von x aus Liste entfernen
+(defun %remove-first (x lst)
+  (cond ((null lst)             ())
+        ((equal? x (car lst))   (cdr lst))
+        (t (cons (car lst) (%remove-first x (cdr lst))))))
+
+;; %file-shared?: t, wenn ein ANDERES geladenes System die Datei mitlistet
+(defun %file-shared? (norm self)
+  (any (lambda (e)
+         (and (not (equal? (car e) self))
+              (%sys-loaded? e)
+              (any (lambda (c) (equal? (get-file-path c) norm))
+                   (%sys-get (cadr e) :components))))
+       *systems*))
+
+;; (unload-system 'name) → Liste der entfernten Symbole.
+;; Shared Files (anderes geladenes System listet sie) bleiben unangetastet.
+;; Deps werden nicht mit-entladen. Policy-Hülle: makunbound warnt sonst
+;; pro Symbol — Events landen trotzdem im Redef-Log. trap stellt die
+;; Policy auch im Fehlerfall wieder her (prozess-globaler Zustand!).
+(defun unload-system (name)
+  (let ((entry (%sys-entry name))
+        (removed ())
+        (old-policy (redefine-policy)))
+    (set! *loaded-systems*
+          (filter (lambda (n) (not (equal? n name))) *loaded-systems*))
+    (redefine-policy 'allow)
+    (trap
+      (dolist (c (%sys-get entry :components) ())
+        (let ((norm (get-file-path c)))
+          (when (and (member norm *loaded-files*)
+                     (not (%file-shared? norm name)))
+            (dolist (s (defined-in c) ())
+              (when (bound? s)
+                (makunbound s)
+                (push s removed)))
+            (set! *loaded-files* (%remove-first norm *loaded-files*)))))
+      (lambda (e)
+        (begin (redefine-policy old-policy) (error e))))
+    (redefine-policy old-policy)
+    removed))

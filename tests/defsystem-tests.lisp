@@ -66,3 +66,37 @@
 (assert= '() (if (member 'fx-sys-u (loaded-systems)) '(drin) '()))
 (assert= '(fx-a) (system-symbols 'fx-sys-a))
 (assert= 'err (trap (system-symbols 'gibts-nicht) (lambda (e) 'err)))
+
+;; --- unload-system: einfacher Fall ------------------------------------
+(assert= '(fx-a) (unload-system 'fx-sys-a))
+(assert= '() (bound? 'fx-a))
+;; b und c sind Deps von a — werden NICHT mit-entladen
+(assert= t (bound? 'fx-b))
+(assert= t (bound? 'fx-c))
+(assert= '() (if (member 'fx-sys-a (loaded-systems)) '(drin) '()))
+
+;; --- unload-system: Shared File bleibt beim ersten unload stehen ------
+(defsystem fx-sys-s1 :components ("tests/fixtures/fx-shared.lisp"))
+(defsystem fx-sys-s2 :components ("tests/fixtures/fx-shared.lisp"))
+(load-system 'fx-sys-s1)
+(load-system 'fx-sys-s2)
+(assert= '() (unload-system 'fx-sys-s1))     ; shared → nichts entfernt
+(assert= t (bound? 'fx-shared))
+(assert= '(fx-shared) (unload-system 'fx-sys-s2))
+(assert= '() (bound? 'fx-shared))
+
+;; --- unload-system: nicht-geladenes System = no-op --------------------
+(assert= '() (unload-system 'fx-sys-s1))
+(assert= '() (unload-system 'fx-sys-u))
+(assert= 'err (trap (unload-system 'gibts-nicht) (lambda (e) 'err)))
+
+;; --- Aufräumen: Registry + Symbole zurücksetzen -----------------------
+(unload-system 'fx-sys-b)
+(unload-system 'fx-sys-c)
+(set! *systems*
+      (filter (lambda (e) (not (member (car e) '(fx-sys-a fx-sys-b fx-sys-c
+                                                 fx-cy-a fx-cy-b fx-sys-u
+                                                 fx-sys-s1 fx-sys-s2
+                                                 fx-sys-dm-a fx-sys-dm-b
+                                                 fx-sys-dm-c fx-sys-dm-d))))
+              *systems*))

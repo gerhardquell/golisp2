@@ -1,6 +1,6 @@
 # TODO
 
-## Aufgabe — `defsystem`-lite (ASDF-orientiert, eigenes Ökosystem)
+## Erledigt 2026-07-25 — defsystem-lite (siehe docs/superpowers/specs/2026-07-25-defsystem-lite-design.md)
 
 **Ziel:** Deklarative Systemdefinition + dependency-geordnetes, idempotentes Laden —
 als Fundament eines eigenen GoLisp2-Ökosystems. Orientierung an ASDF-Konzepten,

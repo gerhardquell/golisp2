@@ -605,7 +605,9 @@ Co-Authored-By: kimi-k3 <noreply@anthropic.com>"
 (set! *systems*
       (filter (lambda (e) (not (member (car e) '(fx-sys-a fx-sys-b fx-sys-c
                                                  fx-cy-a fx-cy-b fx-sys-u
-                                                 fx-sys-s1 fx-sys-s2))))
+                                                 fx-sys-s1 fx-sys-s2
+                                                 fx-sys-dm-a fx-sys-dm-b
+                                                 fx-sys-dm-c fx-sys-dm-d))))
               *systems*))
 ```
 

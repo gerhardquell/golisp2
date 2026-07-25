@@ -53,8 +53,7 @@ Exit-relevantes Ergebnis für `golisp2 -t`, expected-failure-Markierung.
 ## Aufgabe — Condition-lite (Fehler mit Kontext)
 
 **Ziel:** Fehler mit strukturiertem Kontext statt nur String —
-Signalisieren, Abfangen, optional Restarts. Orientierung am CL-Condition-System,
-stark reduziert.
+Signalisieren, Abfangen, optional Restarts. Orientierung am CL-Condition-System, stark reduziert.
 
 **Motivation:** `error`/`catch` liefern heute nur Message-Strings. Aufrufer
 können Fehlerarten nicht programmatisch unterscheiden (z. B. „Datei nicht
@@ -73,3 +72,10 @@ gefunden" vs. „Parse-Fehler"), geschweige denn Recovery anbieten.
 `handler-bind`-lite, einfache Restarts (`retry`/`use-value`) — nur wenn
 konkreter Bedarf. Bewusst nicht: volles CL-Restart-Protokoll, MOP-Integration.
 
+## Aufgabe - GOLISP2 Semantik und Syntax in Kurzform 
+
+**Ziel:** Wenn wir andere KIs einsetzen wollen, brauchen diese einen Überblick über die Semantik und Syntax von GOLISP2, aber auch Erläuterungen zu den Schwächen.
+
+**Motivation:** Wenn GOLISP2 erst analysiert werden muß, wird ein Vorgang häufig wiederholt, was nicht notwendig sein sollte. 
+
+**Optionen:** Die Zusammenfassung soll einmal für KIs in tokenoptimierter Form erfolgen und für die Menschen ausführlicher.

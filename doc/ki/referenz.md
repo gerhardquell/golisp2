@@ -4,7 +4,7 @@
 > zu schreiben/verstehen, ohne `rg` über 50 Dateien zu werfen.
 > **Format:** Tabellen, Präfixe, kein Fluff. Menschliche Ergänzung:
 > `doc/golisp2-cheatsheet.md`.
-> **Quelle:** `eval_core.go`, `lib/primitives.go`, `embed/stdlib.lisp` (Stand 20260725).
+> **Quelle:** `eval_core.go`, `lib/primitives.go`, `embed/stdlib.lisp` (Stand 20260730).
 
 ---
 
@@ -24,7 +24,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 ---
 
-## 2. Spezialformen (58)
+## 2. Spezialformen (55) + 2 Stdlib-Makros (`dotimes`, `dolist`)
 
 | Form | Semantik | Anmerkung |
 |------|----------|-----------|
@@ -66,7 +66,6 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 | `(and . exprs)` | Kurzschluss | |
 | `(or . exprs)` | Kurzschluss | |
 | `(not x)` | Negation | |
-| `(mapcar fn liste)` | Map | Spezialform (kein Primitiv!) |
 | `(parfunc expr . opts)` | Parallel-Eval | `:timeout N`, `:workers N` |
 | `(while test . body)` | Schleife | |
 | `(do ((var step) ...) (test result) . body)` | Scheme-Iteration | Parallel step |
@@ -101,6 +100,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 ### Listen (klassische 7)
 `car cdr cons atom null list append`
 `atom? null? string? number? list? symbol?` — Typ-Prädikate
+`mapcar` — Primitiv (first-class: `funcall`/`apply` ok)
 
 ### Symbol/Atom
 `gensym intern symbol-name symbol->string`
@@ -160,7 +160,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 - `()` / `nil` / `NIL` → Singleton-Nil (Pointer-Identität!)
 - `t` → Wahr, aber *nicht* der einzige wahre Wert — alles außer Nil ist wahr
 - `(eq '() '())` → `t` (Singleton)
-- `(eq 5 5)` → `()` — jede Zahl neue Cell! Im Zweifel `equal?`
+- `(eq 5 5)` → `()` — **Design:** `eq` auf Zahlen liefert immer `()` (siehe 10.6). Im Zweifel `equal?`
 
 ---
 
@@ -205,7 +205,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 | Fall | GoLisp2 | CL |
 |------|---------|-----|
-| `(eq 5 5)` | `()` — neue Cell | oft `t` (Small-Int) |
+| `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | oft `t` (Small-Int) |
 | `load` in `defun` | Lokal gebunden | Global |
 | `progv` | Lex/dyn-Trennung fehlt | Dynamisch |
 | `declare` | No-op | Type-Checks |
@@ -244,16 +244,20 @@ kennen, um nicht zu raten:
 - Reiner Interpreter. Kein `compile-file`, `load` von FASLs.
 - Kein `eval-when`-Setup für Compiler/Kombilierzeit.
 
-### 10.6 Kein Small-Int-Cache außerhalb -128..127
-- `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`.
-- Immer `equal?` für Zahlenvergleich, nie `eq`.
+### 10.6 `eq` auf Zahlen liefert immer `()`
+- `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
+- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in `lib/types.go`)
+  zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem bewusst als nie
+  identisch (`fnEqPtr` in `lib/primitives.go`).
+- Immer `equal?` oder `=` für Zahlenvergleich, nie `eq`.
 
 ### 10.7 Makros nicht-rekursiv (macrolet)
 - `macrolet`-Bodies sehen nicht die anderen Makros derselben Ebene.
 - `labels` für Funktionen ist rekursiv — Asymmetrie zu CL.
 
-### 10.8 Kein continuations, kein MOP
-- Kein `call/cc`, kein `catch`/`throw` mit Restart.
+### 10.8 Keine Continuations, kein MOP
+- Kein `call/cc`.
+- `catch`/`throw` vorhanden (Abschnitt 2), aber ohne Restart-Semantik.
 - Kein CLOS Meta-Object-Protocol.
 
 ### 10.9 `load` in `defun` bindet lokal
@@ -314,3 +318,4 @@ main.go              CLI
 ---
 
 **Ende KI-Referenz.** Menschliche Version: `doc/golisp2-cheatsheet.md`.
+English: `doc/ki/referenz_en.md` · 中文: `doc/ki/referenz_cn.md`.

@@ -59,3 +59,20 @@ gefunden" vs. „Parse-Fehler"), geschweige denn Recovery anbieten.
 **Optionen:** Condition-Hierarchie (einfacher Typ-Tag mit Eltern),
 `handler-bind`-lite, einfache Restarts (`retry`/`use-value`) — nur wenn
 konkreter Bedarf. Bewusst nicht: volles CL-Restart-Protokoll, MOP-Integration.
+
+## Hinweise von Opus — erledigt 2026-07-30
+
+- **10.6 gefixt + erweitert:** Überschrift war doppelt falsch — Small-Int-Cache
+  **existiert** (-32768..32767, `MakeNum` in `lib/types.go`), aber `fnEqPtr`
+  behandelt Zahlen bewusst nie als identisch. Neuer Abschnitt: „`eq` auf
+  Zahlen liefert immer `()`". Auch §5/§9-Begründung „jede Zahl neue Cell"
+  korrigiert (referenz.md + cheatsheet.md).
+- **10.8 umformuliert:** „`catch`/`throw` vorhanden, aber ohne Restart-Semantik."
+- **Zählerei:** 56 Spezialformen + 2 Stdlib-Makros — dann 55, weil:
+- **mapcar-Frage beantwortet durch Umbau:** `mapcar` war Spezialform ohne
+  Grund (evaluierte beide Args normal — Spezialform-Preis ohne Gegenleistung).
+  Jetzt Primitiv (`fnMapcar` in `primitives.go`) → first-class:
+  `(funcall mapcar ...)`, `(apply mapcar ...)`, als Wert übergebbar.
+  CL-konform. Aufrufsyntax unverändert, kein Breaking Change.
+- **Übersetzungen:** `doc/ki/referenz_en.md` + `doc/ki/referenz_cn.md`
+  erstellt (gef-fixte Fassung als Basis, alle drei verlinkt).

@@ -51,7 +51,8 @@ Tail-Rekursion.
 
 ## 2. Spezialformen
 
-GoLisp2 hat **58 Spezialformen** (alle in `lib/eval_core.go` dispatchend).
+GoLisp2 hat **55 Spezialformen** (alle in `lib/eval_core.go` dispatchend) —
+plus `dotimes` und `dolist` als Stdlib-Makros.
 Wichtige:
 
 ### Definitionen und Bindungen
@@ -244,6 +245,8 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (error "Nachricht")               ; wirft Fehler (nur String)
 (apply + '(1 2 3))               ; → 6
 (funcall + 1 2 3)                 ; → 6
+(mapcar #'car '((1 2) (3 4)))     ; → (1 3) — Primitiv, first-class:
+(funcall mapcar #'car '((1 2)))   ; → (1)   ✓ funcall/apply möglich
 ```
 
 ### Zeit/Memory
@@ -485,7 +488,7 @@ t                                  ; Wahr
 ```lisp
 (eq 'foo 'foo)                     ; → ()! Zwei verschiedene Atom-Instanzen
 (eq (list) (list))                 ; → t (Singleton-Nil, identischer Pointer)
-(eq 5 5)                           ; → ()! Jede Zahl ist eine neue Cell
+(eq 5 5)                           ; → ()! eq auf Zahlen ist immer () (Design, s. 10.6)
 
 (equal? 'foo 'foo)                 ; → t
 (equal? (list 1 2) (list 1 2))     ; → t
@@ -607,7 +610,7 @@ wenn Pointer-Identität *explizit* gemeint ist.
 
 | Fall | GoLisp2-Verhalten | CL-Verhalten |
 |------|-------------------|--------------|
-| `(eq 5 5)` | `()` — jede Zahl neue Cell | Oft `t` (Small-Int-Cache) |
+| `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | Oft `t` (Small-Int-Cache) |
 | `load` in `defun` | Lokal gebunden | Global |
 | `progv` | Lex/dyn-Trennung fehlt | Dynamisch, lexikalische Bindungen schützen |
 | `declare` | No-op | Type-Checks, Optimierungen |
@@ -690,12 +693,14 @@ Bindungen überdeckt werden.
 **Auswirkung:** Kein statisches Kompiliergeschwindigkeits-Boost. Alles läuft
 interpretiert.
 
-### 10.6 Kein Small-Int-Cache außerhalb -128..127
+### 10.6 eq auf Zahlen liefert immer ()
 
-- `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`.
-- Jede Zahlenzelle ist ein neues Objekt.
+- `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
+- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in
+  `lib/types.go`) zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem
+  bewusst als nie identisch (`fnEqPtr` in `lib/primitives.go`).
 
-**Auswirkung:** Immer `equal?` für Zahlenvergleich verwenden, nie `eq`.
+**Auswirkung:** Immer `equal?` oder `=` für Zahlenvergleich verwenden, nie `eq`.
 
 ### 10.7 Makros nicht-rekursiv (macrolet)
 
@@ -707,7 +712,8 @@ gegenseitig rekursiv aufrufen.
 
 ### 10.8 Kein Continuations, kein MOP
 
-- Kein `call/cc`, kein `catch`/`throw` mit Restart.
+- Kein `call/cc`.
+- `catch`/`throw` vorhanden (Abschnitt 2), aber ohne Restart-Semantik.
 - Kein CLOS Meta-Object-Protocol.
 
 **Auswirkung:** Fortgeschrittene Kontrollfluss-Muster (Backtracking, Coroutinen)

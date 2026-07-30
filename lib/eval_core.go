@@ -158,7 +158,6 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       case "lambda":       return evalLambda(expr.Cdr, env, ectx)
       case "set!":         return evalSet(expr.Cdr, env, ectx)
       case "setq*":        return evalSetQStar(expr.Cdr, env, ectx)
-      case "mapcar":       return evalMapcar(expr.Cdr, env, ectx)
       case "load":         return evalLoad(expr.Cdr, env, ectx)
       case "and":          return evalAnd(expr.Cdr, env, ectx)
       case "or":           return evalOr(expr.Cdr, env, ectx)

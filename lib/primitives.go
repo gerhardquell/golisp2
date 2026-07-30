@@ -76,6 +76,7 @@ func BaseEnv() *Env {
 	// apply, funcall
 	_ = env.Set("apply", makeFn(fnApply))
 	_ = env.Set("funcall", makeFn(fnFuncall))
+	_ = env.Set("mapcar", makeFn(fnMapcar))
 
 	// gensym
 	_ = env.Set("gensym", makeFn(fnGensym))
@@ -547,6 +548,25 @@ func fnFuncall(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("funcall: mindestens 1 Argument nötig")
 	}
 	return apply(args[0], args[1:])
+}
+
+// mapcar: (mapcar fn liste) → wendet fn auf jedes Element an.
+// Primitiv (keine Spezialform): beide Args normal evaluiert, damit mapcar
+// first-class bleibt — (funcall mapcar ...), (apply mapcar ...) etc.
+func fnMapcar(args []*Cell) (*Cell, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("mapcar: 2 Argumente nötig")
+	}
+	fn := args[0]
+	var results []*Cell
+	for lst := args[1]; lst != nil && lst.Type == LIST; lst = lst.Cdr {
+		res, err := apply(fn, []*Cell{lst.Car})
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, res)
+	}
+	return SliceToCell(results), nil
 }
 
 // read: (read "string") → parst String zu Cell

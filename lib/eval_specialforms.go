@@ -6,7 +6,7 @@
 //  Erstellt : 20260616 (aufgespalten aus eval.go)
 //**********************************************************************
 // Spezialformen (nicht-tail): define/setq, defun, lambda, defmacro,
-// set!/setq*, begin, mapcar, load (+ Pfad-Auflösung), LoadString,
+// set!/setq*, begin, load (+ Pfad-Auflösung), LoadString,
 // and/or/not, macroexpand, case (Tail-Hilfsfunktion, gibt Tripel zurück).
 //**********************************************************************
 
@@ -307,30 +307,6 @@ func evalSetQStar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
     }
   }
   return MakeAtom(lastName), nil
-}
-
-// mapcar: (mapcar fn liste) → wendet fn auf jedes Element an
-func evalMapcar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
-  fn, err := evalWithCtx(args.Car, env, ectx.child())
-  if err != nil { return nil, err }
-
-  lst, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
-  if err != nil { return nil, err }
-
-  var results []*Cell
-  for lst != nil && lst.Type == LIST {
-    res, err := applyWithCtx(fn, []*Cell{lst.Car}, ectx)
-    if err != nil { return nil, err }
-    results = append(results, res)
-    lst = lst.Cdr
-  }
-
-  // Ergebnisliste aufbauen
-  result := MakeNil()
-  for i := len(results) - 1; i >= 0; i-- {
-    result = Cons(results[i], result)
-  }
-  return result, nil
 }
 
 // and: (and a b c ...) → gibt ersten falschen Wert zurück, sonst letzten

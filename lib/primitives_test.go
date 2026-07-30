@@ -148,6 +148,23 @@ func TestPrimitiveStringSearch(t *testing.T) {
   evalEq(t, `(string-trim "  hi  ")`, `"hi"`)
 }
 
+// mapcar: Primitiv seit 20260730 (war Spezialform). First-class:
+// funcall/apply/als Wert übergeben muss funktionieren.
+func TestPrimitiveMapcar(t *testing.T) {
+  // Basis
+  evalEq(t, `(mapcar (lambda (x) (* x x)) (list 1 2 3))`, "(1 4 9)")
+  evalEq(t, `(mapcar #'car '((1 2) (3 4)))`, "(1 3)")
+  evalEq(t, `(mapcar #'car '())`, "()")
+  // First-class: als Wert
+  evalEq(t, `(funcall mapcar (lambda (x) (* x 2)) '(1 2 3))`, "(2 4 6)")
+  evalEq(t, `(apply mapcar (list #'car '((1 2) (3 4))))`, "(1 3)")
+  evalEq(t, `(let ((m mapcar)) (m #'car '((1 2) (3 4))))`, "(1 3)")
+  // Fehlerfall: zu wenige Argumente
+  if _, err := evalStr(`(mapcar #'car)`); err == nil {
+    t.Error("mapcar mit 1 Argument: Fehler erwartet")
+  }
+}
+
 // --- gensym / error / memstats ---
 
 func TestPrimitiveGensym(t *testing.T) {

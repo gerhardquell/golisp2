@@ -50,7 +50,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 | `(go tag)` | Jump | Lexical, not evaluated |
 | `(catch tag . body)` | Dynamic catch | Tag is EVALUATED |
 | `(throw tag val)` | Dynamic throw | |
-| `(trap expr handler)` | Simple catch | `(trap expr (lambda (e) ...))`, yields `(error . msg)` |
+| `(trap expr handler)` | Simple catch | `(trap expr (lambda (e) ...))`, e = msg string |
 | `(unwind-protect protected cleanup)` | Cleanup always | |
 | `(eval form)` | Global eval | Always `Env.Root()` |
 | `(load "file")` | Load file | **Caution:** inside `defun` → locally bound! |
@@ -109,7 +109,8 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 `print println read warn`
 
 ### Control/Errors
-`error apply funcall`  — `error` yields **string only**, no condition object
+`error apply funcall exit`  — `error` yields **string only**, no condition object
+`exit` — terminate process immediately, code as number (no cleanup!)
 
 ### Environment/Introspection
 `memstats sleep`
@@ -181,7 +182,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 (error "message")             ; aborts, yields string only
 
 ; Catching
-(trap expr (lambda (e) ...))  ; e = (error . "msg")
+(trap expr (lambda (e) ...))  ; e = "msg" (message string)
 
 ; Dynamic
 (catch 'tag body ...)
@@ -189,6 +190,10 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 ```
 
 **No condition system** — no hierarchy, no slots, no restarts.
+
+**Test framework:** `tests/test-framework.lisp` — `defsuite`, `deftest`
+(`:suite`, `:expected-failure`), `is`, `run-tests` → number of FAILs.
+Typical: `(exit (run-tests))` → exit code = FAILs.
 
 ---
 

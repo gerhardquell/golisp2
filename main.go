@@ -106,6 +106,9 @@ func runTests(env *lib.Env) {
   test(env, `(ga-init ga)`)
   test(env, `(ga-calc ga)`)
   test(env, `(ga-result ga)`)
+  // Test-Framework: alle registrierten Suiten laufen lassen.
+  // Exit-Code des Prozesses = Anzahl FAILs (0 = grün), CI-tauglich.
+  test(env, `(exit (run-tests))`)
 }
 
 // runExpression parses and executes expressions from -e. A single form's

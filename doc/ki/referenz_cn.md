@@ -50,7 +50,7 @@
 | `(go tag)` | 跳转 | 词法，不求值 |
 | `(catch tag . body)` | 动态捕获 | 标签会被求值 |
 | `(throw tag val)` | 动态抛出 | |
-| `(trap expr handler)` | 简单捕获 | `(trap expr (lambda (e) ...))`，返回 `(error . msg)` |
+| `(trap expr handler)` | 简单捕获 | `(trap expr (lambda (e) ...))`，e = 消息字符串 |
 | `(unwind-protect protected cleanup)` | 清理必定执行 | |
 | `(eval form)` | 全局求值 | 始终 `Env.Root()` |
 | `(load "file")` | 加载文件 | **注意：** 在 `defun` 内 → 局部绑定！ |
@@ -109,7 +109,8 @@
 `print println read warn`
 
 ### 控制/错误
-`error apply funcall`  — `error` **只返回字符串**，无条件对象
+`error apply funcall exit`  — `error` **只返回字符串**，无条件对象
+`exit` — 立即终止进程，参数为数字（无清理！）
 
 ### 环境/内省
 `memstats sleep`
@@ -181,7 +182,7 @@
 (error "消息")                 ; 中止，只返回字符串
 
 ; 捕获
-(trap expr (lambda (e) ...))  ; e = (error . "msg")
+(trap expr (lambda (e) ...))  ; e = "msg"（消息字符串）
 
 ; 动态
 (catch 'tag body ...)
@@ -189,6 +190,10 @@
 ```
 
 **无条件系统** — 无层次结构、无槽、无 restart。
+
+**测试框架：** `tests/test-framework.lisp` — `defsuite`、`deftest`
+（`:suite`、`:expected-failure`）、`is`、`run-tests` → 失败数。
+典型用法：`(exit (run-tests))` → 退出码 = 失败数。
 
 ---
 

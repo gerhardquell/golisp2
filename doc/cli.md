@@ -10,7 +10,7 @@ Fehler nach stderr, Exit-Code sagt die Wahrheit.
 | *(default)* | Liest von stdin, gibt nur das Ergebnis aus | `echo "(+ 1 2)" \| ./build/golisp2` |
 | `-i` | Interaktiver REPL (go-prompt, braucht TTY) | `./build/golisp2 -i` |
 | `-e EXPR` | Expression(en) direkt ausführen | `./build/golisp2 -e "(* 6 7)"` |
-| `-t` | Lisp-Testsuite ausführen | `./build/golisp2 -t` |
+| `-t` | Lisp-Testsuite ausführen (Exit-Code = Anzahl FAILs) | `./build/golisp2 -t` |
 | `--swank HOST:PORT` | SWANK-Server starten (Emacs/SLIME) | `./build/golisp2 --swank 127.0.0.1:4242` |
 | `DATEI` | Lisp-Datei laden und ausführen | `./build/golisp2 script.lisp` |
 
@@ -22,6 +22,8 @@ Skripte saubere Ausgabe erzeugen.
 
 - **0** – Erfolg
 - **1** – Fehler (Parser, Eval, unbekanntes Symbol, …)
+- **-t:** Anzahl fehlgeschlagener Framework-Tests (`run-tests`), 0 = grün
+- Lisp-seitig: `(exit n)` beendet den Prozess sofort mit Code `n`
 
 ```bash
 echo "(+ 1 2)" | ./build/golisp2; echo $?   # → 0

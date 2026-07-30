@@ -132,7 +132,7 @@ Wichtige:
 
 (catch 'tag body...)              ; Dynamic catch (tag wird EVALUIERT)
 (throw 'tag value)                ; Dynamic throw
-(trap expr (lambda (e) ...))      ; Einfacher catch, e = (error . "msg")
+(trap expr (lambda (e) ...))      ; Einfacher catch, e = "msg" (String)
 (unwind-protect                   ; Cleanup IMMER, auch bei Fehler
   protected-expr
   cleanup-expr1 cleanup-expr2)
@@ -247,6 +247,8 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (funcall + 1 2 3)                 ; → 6
 (mapcar #'car '((1 2) (3 4)))     ; → (1 3) — Primitiv, first-class:
 (funcall mapcar #'car '((1 2)))   ; → (1)   ✓ funcall/apply möglich
+(exit 0)                          ; Prozess sofort beenden mit Code
+                                  ; (kein Cleanup — Vorsicht im SWANK-Daemon!)
 ```
 
 ### Zeit/Memory
@@ -540,8 +542,8 @@ wenn Pointer-Identität *explizit* gemeint ist.
 
 ### Fehler fangen
 ```lisp
-; trap — einfach, liefert (error . "msg")
-(trap (error "oops") (lambda (e) (println (cdr e))))
+; trap — einfach, Handler bekommt die Fehlermeldung als String
+(trap (error "oops") (lambda (e) (println e)))
 ; → "oops"
 
 ; catch/throw — dynamisch, nicht-lokal
@@ -672,7 +674,7 @@ können Namenskonflikte entstehen. Workaround: Prefix-Konvention.
 
 (trap (risky-op)
   (lambda (e)
-    (if (string-contains (cdr e) "FILE-NOT-FOUND")
+    (if (string-contains e "FILE-NOT-FOUND")
         (use-default)
         (error e))))
 ```

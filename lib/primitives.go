@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -77,6 +78,7 @@ func BaseEnv() *Env {
 	_ = env.Set("apply", makeFn(fnApply))
 	_ = env.Set("funcall", makeFn(fnFuncall))
 	_ = env.Set("mapcar", makeFn(fnMapcar))
+	_ = env.Set("exit", makeFn(fnExit))
 
 	// gensym
 	_ = env.Set("gensym", makeFn(fnGensym))
@@ -548,6 +550,22 @@ func fnFuncall(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("funcall: mindestens 1 Argument nötig")
 	}
 	return apply(args[0], args[1:])
+}
+
+// exit: (exit [code]) → beendet den Prozess sofort mit Exit-Code (Default 0).
+// Kein unwind-protect, kein Cleanup — hartes os.Exit. Vorsicht im
+// SWANK-Daemon: killt den Server. Hauptnutzen: (exit (run-tests)) in
+// Testdateien → CI-taugliche Exit-Codes.
+func fnExit(args []*Cell) (*Cell, error) {
+	code := 0
+	if len(args) > 0 {
+		if args[0] == nil || args[0].Type != NUMBER {
+			return nil, fmt.Errorf("exit: Code muss Zahl sein")
+		}
+		code = int(args[0].Num)
+	}
+	os.Exit(code)
+	return nil, nil // unreachable
 }
 
 // mapcar: (mapcar fn liste) → wendet fn auf jedes Element an.

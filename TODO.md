@@ -16,27 +16,16 @@
 
 ## Nächste Aufgaben
 
-### Aufgabe — Mini-Test-Framework (Nachfolger von `assert=`)
+### Erledigt 2026-07-30 — Mini-Test-Framework (Nachfolger von `assert=`)
 
-**Ziel:** `assert=` aus `tests/test-helpers.lisp` zu echtem Framework ausbauen —
-Testsuiten, Fehler sammeln statt abbrechen, Abschluss-Report.
-Orientierung an FiveAM-Konzepten, kein Port.
-
-**Motivation:** Heute bricht ein FAIL den Datei-Load ab; nachfolgende Tests
-laufen nicht. Es gibt kein Zählen, kein Gruppieren, keinen Report.
-
-**Skizze (reines Lisp):**
-
-```lisp
-(deftest mengen-ops
-  (is (equal? '(1 2 3) (union '(1 2) '(2 3))))
-  (is (equal? '(1 3) (set-difference '(1 2 3) '(2)))))
-
-(run-tests)   ; alle Suiten, Report: n PASS / m FAIL, Fehlerdetails
-```
-
-**Optionen:** `deftest`-Registry, `(run-tests 'suite)` für Einzelsuiten,
-Exit-relevantes Ergebnis für `golisp2 -t`, expected-failure-Markierung.
+`tests/test-framework.lisp`: `defsuite`, `deftest` (`:suite`,
+`:expected-failure`), `is` (sammelt statt abzubrechen), `run-tests`
+(Report PASS/FAIL/XFAIL/XPASS, liefert FAIL-Anzahl). Neu: `(exit n)`-Primitiv
+→ `(exit (run-tests))` macht `golisp2 -t` CI-tauglich (Exit = FAILs).
+Migriert: `stdlib-test.lisp`, `defsystem-tests.lisp`, `pn-gps1/gps2-tests.lisp`
+(71 Checks grün). `assert=` bleibt in `test-helpers.lisp` für Altdateien.
+Fallstrick dokumentiert: `define`/`defstruct` im deftest-Rumpf bindet lokal —
+globale Definitionen via `(eval '(...))` (wie load-in-defun).
 
 ### Aufgabe — Condition-lite (Fehler mit Kontext)
 

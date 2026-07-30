@@ -22,3 +22,6 @@ var Swank string
 
 //go:embed defsystem.lisp
 var Defsystem string
+
+//go:embed condition.lisp
+var Condition string

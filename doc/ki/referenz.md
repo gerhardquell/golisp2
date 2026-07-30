@@ -175,11 +175,11 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 ---
 
-## 7. Fehlerhandling (heute)
+## 7. Fehlerhandling
 
 ```lisp
 ; Fehler werfen
-(error "Nachricht")           ; bracht, liefert nur String
+(error "Nachricht")           ; bricht, liefert nur String
 
 ; Fangen
 (trap expr (lambda (e) ...))  ; e = "msg" (Message-String)
@@ -189,7 +189,27 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 (throw 'tag value)
 ```
 
-**Kein Condition-System** — keine Hierarchie, keine Slots, keine Restarts.
+**Condition-lite** (`embed/condition.lisp`, automatisch geladen) —
+strukturierte Fehler mit Typ-Hierarchie und Slots:
+
+```lisp
+(define-condition file-error (io-error) (path))  ; Typ + Eltern + Slots
+(signal 'file-error :path "x.lisp")              ; wirft, unwindet immer!
+(handler-case (load "x.lisp")
+  (file-error (e) (file-error-path e))  ; Reader automatisch: typ-slot
+  (io-error  (e) "irgendein io-fehler") ; matcht auch Subtypen
+  (error     ()  "ohne Var-Bindung"))   ; Var darf () sein
+```
+
+- Basis-Hierarchie: `condition` → `error` → `lisp-error`
+- **Go-Fehler** (file-read o. ä.) werden in `handler-case` zu `lisp-error`,
+  Message via `(lisp-error-msg e)`
+- Kein Match → **Re-Signal** an äußeren Handler
+- Neudefinition eines Typs ersetzt still (Reload-Semantik)
+- **CL-Abweichung:** `signal` unwindet immer (verhält sich wie CLs `error`,
+  nicht wie CLs `signal`). Keine Restarts, kein `handler-bind`.
+- Slot-Namen müssen über die Vererbungshierarchie hinweg eindeutig sein
+  (flache plist, keine Verdeckung).
 
 **Test-Framework:** `tests/test-framework.lisp` — `defsuite`, `deftest`
 (`:suite`, `:expected-failure`), `is`, `run-tests` → FAIL-Anzahl.
@@ -235,11 +255,12 @@ kennen, um nicht zu raten:
 - Keine Klassen, keine Multi-Methoden, keine Method-Combination.
 - `defmethod`, `defgeneric`, `defclass`, `call-method` — **nicht vorhanden**.
 
-### 10.3 Kein Condition-System
-- `error` liefert nur String, kein Objekt mit Slots.
-- Keine `define-condition`, `handler-case`, `handler-bind`, `restart-case`.
-- Keine programmatische Unterscheidung "Datei nicht gefunden" vs "Parse-Fehler".
-- Recovery nur über `trap`/`catch`/`throw` mit Strings.
+### 10.3 Nur Condition-lite, kein volles CL-Condition-System
+- `define-condition`/`signal`/`handler-case` vorhanden (Hierarchie, Slots,
+  Vererbungs-Dispatch, `lisp-error`-Fallback für Go-Fehler).
+- **Aber:** `signal` unwindet immer (wie CLs `error`), keine Restarts,
+  kein `handler-bind`, kein `restart-case`, kein MOP.
+- Slot-Namen flach — keine Verdeckung über Vererbung hinweg.
 
 ### 10.4 Keine Lex/Dyn-Trennung bei progv
 - `progv` bindet wie `let` — lexikalische Shadowings sehen den progv-Wert.

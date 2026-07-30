@@ -175,7 +175,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 ---
 
-## 7. Error Handling (today)
+## 7. Error Handling
 
 ```lisp
 ; Raising
@@ -189,7 +189,27 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 (throw 'tag value)
 ```
 
-**No condition system** — no hierarchy, no slots, no restarts.
+**Condition-lite** (`embed/condition.lisp`, loaded automatically) —
+structured errors with type hierarchy and slots:
+
+```lisp
+(define-condition file-error (io-error) (path))  ; type + parents + slots
+(signal 'file-error :path "x.lisp")              ; raises, always unwinds!
+(handler-case (load "x.lisp")
+  (file-error (e) (file-error-path e))  ; reader auto-generated: type-slot
+  (io-error  (e) "some io error")       ; matches subtypes too
+  (error     ()  "no var binding"))     ; var may be ()
+```
+
+- Base hierarchy: `condition` → `error` → `lisp-error`
+- **Go errors** (file-read etc.) become `lisp-error` inside `handler-case`,
+  message via `(lisp-error-msg e)`
+- No match → **re-signal** to outer handler
+- Redefining a type replaces silently (reload semantics)
+- **CL deviation:** `signal` always unwinds (behaves like CL's `error`,
+  not like CL's `signal`). No restarts, no `handler-bind`.
+- Slot names must be unique across the inheritance hierarchy
+  (flat plist, no shadowing).
 
 **Test framework:** `tests/test-framework.lisp` — `defsuite`, `deftest`
 (`:suite`, `:expected-failure`), `is`, `run-tests` → number of FAILs.
@@ -235,11 +255,12 @@ to avoid guessing:
 - No classes, no multi-methods, no method combination.
 - `defmethod`, `defgeneric`, `defclass`, `call-method` — **not present**.
 
-### 10.3 No Condition System
-- `error` yields a string only, no object with slots.
-- No `define-condition`, `handler-case`, `handler-bind`, `restart-case`.
-- No programmatic distinction between "file not found" and "parse error".
-- Recovery only via `trap`/`catch`/`throw` with strings.
+### 10.3 Condition-lite only, no full CL condition system
+- `define-condition`/`signal`/`handler-case` present (hierarchy, slots,
+  inheritance dispatch, `lisp-error` fallback for Go errors).
+- **But:** `signal` always unwinds (like CL's `error`), no restarts,
+  no `handler-bind`, no `restart-case`, no MOP.
+- Slot names flat — no shadowing across inheritance.
 
 ### 10.4 No Lex/Dyn Separation in progv
 - `progv` binds like `let` — lexical shadowings see the progv value.

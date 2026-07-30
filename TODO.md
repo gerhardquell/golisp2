@@ -10,7 +10,7 @@
 - `doc/ki/referenz.md` (316 Zeilen) — KI-Form: Tabellen, Präfixe, tokenoptimiert
 - `doc/golisp2-cheatsheet.md` (771 Zeilen) — Mensch-Form: Beispiele, Erklärungen
 - Beide haben §10 "Schwächen (bewusst)" als eigenen Abschnitt (12 Punkte:
-  kein Package, kein CLOS, kein Condition-System, progv lex/dyn, kein Compile-File,
+  kein Package, kein CLOS, nur Condition-lite, progv lex/dyn, kein Compile-File,
   kein Small-Int-Cache, macrolet nicht-rekursiv, kein Continuations/MOP,
   load-in-defun, kein GC-Tuning, kein Typ-System, kein LOOP)
 
@@ -27,27 +27,18 @@ Migriert: `stdlib-test.lisp`, `defsystem-tests.lisp`, `pn-gps1/gps2-tests.lisp`
 Fallstrick dokumentiert: `define`/`defstruct` im deftest-Rumpf bindet lokal —
 globale Definitionen via `(eval '(...))` (wie load-in-defun).
 
-### Aufgabe — Condition-lite (Fehler mit Kontext)
+### Erledigt 2026-07-30 — Condition-lite (Fehler mit Kontext)
 
-**Ziel:** Fehler mit strukturiertem Kontext statt nur String —
-Signalisieren, Abfangen, optional Restarts. Orientierung am CL-Condition-System, stark reduziert.
-
-**Motivation:** `error`/`catch` liefern heute nur Message-Strings. Aufrufer
-können Fehlerarten nicht programmatisch unterscheiden (z. B. „Datei nicht
-gefunden" vs. „Parse-Fehler"), geschweige denn Recovery anbieten.
-
-**Skizze:**
-
-```lisp
-(define-condition 'file-error '(io-error) '((path :reader file-error-path)))
-(signal 'file-error :path "x.lisp")
-(handler-case (load "x.lisp")
-  (file-error (e) (format t "fehlt: ~a" (file-error-path e))))
-```
-
-**Optionen:** Condition-Hierarchie (einfacher Typ-Tag mit Eltern),
-`handler-bind`-lite, einfache Restarts (`retry`/`use-value`) — nur wenn
-konkreter Bedarf. Bewusst nicht: volles CL-Restart-Protokoll, MOP-Integration.
+`embed/condition.lisp` (via `LoadStdlib` geladen): `define-condition`
+(Typ + Eltern + Slots, Reader automatisch als `typ-slot`), `signal`
+(Keyword-Slots, unwindet immer — bewusste CL-Abweichung), `handler-case`
+(Vererbungs-Dispatch, erste passende Klausel, kein Match → Re-Signal,
+Klausel-Var darf `()` sein). Go-Fehler werden in `handler-case` zur
+`lisp-error`-Condition mit `lisp-error-msg`-Reader. Neudefinition ersetzt
+still (Reload). Bewusst nicht: Restarts, `handler-bind`, MOP.
+Tests: `tests/condition-tests.lisp` (23 Checks, Suite `condition`),
+in `-t` eingehängt → 94 PASS, 0 FAIL. Doku: referenz de/en/cn §7 + 10.3,
+cheatsheet §10.3.
 
 ## Hinweise von Opus — erledigt 2026-07-30
 

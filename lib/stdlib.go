@@ -18,13 +18,16 @@ import (
   "golisp2/embed"
 )
 
-// LoadStdlib lädt die eingebettete Standardbibliothek (stdlib + defsystem) in env.
-// Einmal pro Env aufrufen (nach BaseEnv). Fehler = Syntaxfehler in
-// stdlib.lisp/defsystem.lisp – sollte zur Compile-Zeit nie passieren.
+// LoadStdlib lädt die eingebettete Standardbibliothek (stdlib + defsystem +
+// condition) in env. Einmal pro Env aufrufen (nach BaseEnv). Fehler =
+// Syntaxfehler in den .lisp-Dateien – sollte zur Compile-Zeit nie passieren.
 func LoadStdlib(env *Env) error {
   if _, err := LoadString(assets.Stdlib, env); err != nil {
     return err
   }
-  _, err := LoadString(assets.Defsystem, env)
+  if _, err := LoadString(assets.Defsystem, env); err != nil {
+    return err
+  }
+  _, err := LoadString(assets.Condition, env)
   return err
 }

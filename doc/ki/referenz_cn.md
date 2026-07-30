@@ -175,7 +175,7 @@
 
 ---
 
-## 7. 错误处理（现状）
+## 7. 错误处理
 
 ```lisp
 ; 抛出错误
@@ -189,7 +189,26 @@
 (throw 'tag value)
 ```
 
-**无条件系统** — 无层次结构、无槽、无 restart。
+**Condition-lite**（`embed/condition.lisp`，自动加载）—
+带类型层次结构和槽的结构化错误：
+
+```lisp
+(define-condition file-error (io-error) (path))  ; 类型 + 父类 + 槽
+(signal 'file-error :path "x.lisp")              ; 抛出，总是 unwind！
+(handler-case (load "x.lisp")
+  (file-error (e) (file-error-path e))  ; 读取器自动生成：类型-槽
+  (io-error  (e) "某个 io 错误")         ; 也匹配子类型
+  (error     ()  "无变量绑定"))          ; 变量可为 ()
+```
+
+- 基础层次：`condition` → `error` → `lisp-error`
+- **Go 错误**（file-read 等）在 `handler-case` 中变为 `lisp-error`，
+  消息通过 `(lisp-error-msg e)` 获取
+- 无匹配 → **重新抛出**给外层处理器
+- 重定义类型会静默替换（重载语义）
+- **CL 差异：** `signal` 总是 unwind（行为类似 CL 的 `error`，
+  而非 CL 的 `signal`）。无 restart，无 `handler-bind`。
+- 槽名在继承层次中必须唯一（扁平 plist，无遮蔽）。
 
 **测试框架：** `tests/test-framework.lisp` — `defsuite`、`deftest`
 （`:suite`、`:expected-failure`）、`is`、`run-tests` → 失败数。
@@ -234,11 +253,12 @@
 - 无类、无多方法、无方法组合。
 - `defmethod`、`defgeneric`、`defclass`、`call-method` — **不存在**。
 
-### 10.3 无条件系统
-- `error` 只返回字符串，无带槽的对象。
-- 无 `define-condition`、`handler-case`、`handler-bind`、`restart-case`。
-- 无法以编程方式区分“文件未找到”与“解析错误”。
-- 只能通过 `trap`/`catch`/`throw` 加字符串恢复。
+### 10.3 仅有 Condition-lite，无完整 CL 条件系统
+- 有 `define-condition`/`signal`/`handler-case`（层次结构、槽、
+  继承分发、Go 错误的 `lisp-error` 回退）。
+- **但：** `signal` 总是 unwind（类似 CL 的 `error`），无 restart，
+  无 `handler-bind`，无 `restart-case`，无 MOP。
+- 槽名扁平 — 继承中无遮蔽。
 
 ### 10.4 progv 无词法/动态分离
 - `progv` 像 `let` 一样绑定 — 词法遮蔽会看到 progv 的值。

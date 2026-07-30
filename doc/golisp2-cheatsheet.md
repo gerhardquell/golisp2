@@ -243,6 +243,13 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 ### Fehler und Apply
 ```lisp
 (error "Nachricht")               ; wirft Fehler (nur String)
+(trap expr (lambda (e) ...))      ; fängt, e = Message-String
+; Condition-lite: strukturierte Fehler mit Typ + Slots
+(define-condition file-error (io-error) (path))
+(signal 'file-error :path "x.lisp")        ; unwindet immer (CL-Abweichung!)
+(handler-case (load "x.lisp")
+  (file-error (e) (file-error-path e))     ; Reader automatisch
+  (io-error  (e) "io allgemein"))          ; matcht Subtypen
 (apply + '(1 2 3))               ; → 6
 (funcall + 1 2 3)                 ; → 6
 (mapcar #'car '((1 2) (3 4)))     ; → (1 3) — Primitiv, first-class:
@@ -658,26 +665,29 @@ können Namenskonflikte entstehen. Workaround: Prefix-Konvention.
 
 **Auswirkung:** Polymorphismus nur über manuelle Dispatch-Muster (z. B. `case` auf Typ-Tag) möglich.
 
-### 10.3 Kein Condition-System
+### 10.3 Nur Condition-lite, kein volles CL-Condition-System
 
-- `error` liefert nur einen String, kein Objekt mit Slots.
-- **Nicht vorhanden:** `define-condition`, `handler-case`, `handler-bind`, `restart-case`, `restart-bind`.
+- **Vorhanden** (`embed/condition.lisp`, automatisch geladen):
+  `define-condition` (Typ-Hierarchie, Slots, Reader automatisch `typ-slot`),
+  `signal`, `handler-case` (Vererbungs-Dispatch, Re-Signal bei Nicht-Match).
+  Go-Fehler werden zur `lisp-error`-Condition (`lisp-error-msg`).
+- **Nicht vorhanden:** `handler-bind`, `restart-case`, `restart-bind`, MOP.
+- **CL-Abweichung:** `signal` unwindet immer (verhält sich wie CLs `error`).
+- Slot-Namen flach — keine Verdeckung über Vererbung hinweg.
 
-**Auswirkung:**
-- Fehlerarten können nicht programmatisch unterschieden werden (z. B. "Datei nicht gefunden" vs "Parse-Fehler").
-- Recovery-Mechanismen (Retry, Use-Value, etc.) nur manuell über `catch`/`throw` mit Strings.
-
-**Workaround heute:**
+**Beispiel:**
 ```lisp
-; Fehler-Tag als String kodieren
-(error "FILE-NOT-FOUND: path=~a" path)
+(define-condition file-error (io-error) (path))
 
-(trap (risky-op)
-  (lambda (e)
-    (if (string-contains e "FILE-NOT-FOUND")
-        (use-default)
-        (error e))))
+(handler-case (load "x.lisp")
+  (file-error (e) (format nil "fehlt: ~a" (file-error-path e)))
+  (io-error  (e) "irgendein io-fehler")
+  (error     ()  "generisch, ohne Var"))
 ```
+
+**Auswirkung der Lücken:** Kein nicht-unwindendes Signalisieren, keine
+Recovery-Mechanismen (Retry, Use-Value) — dafür weiterhin manuell über
+`catch`/`throw`.
 
 ### 10.4 Keine Lex/Dyn-Trennung bei progv
 

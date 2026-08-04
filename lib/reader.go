@@ -77,6 +77,16 @@ func (r *Reader) skipWS() {
       }
       continue
     }
+    // Shebang (#!/usr/local/bin/golisp2): überall Kommentar bis Zeilenende
+    // (SBCL-Konvention). Muss vor readDispatch greifen, sonst Fehler
+    // "unbekanntes Dispatch-Zeichen #!".
+    if ch == '#' && r.pos+1 < len(r.src) && r.src[r.pos+1] == '!' {
+      for {
+        c, ok := r.next()
+        if !ok || c == '\n' { break }
+      }
+      continue
+    }
     if !unicode.IsSpace(ch) { break }
     r.next()
   }

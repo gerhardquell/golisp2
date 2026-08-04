@@ -215,3 +215,41 @@ func TestReaderStampsSrcLine(t *testing.T) {
     t.Fatalf("form2 SrcLine = 3 erwartet, got %d", f2.SrcLine)
   }
 }
+
+func TestReaderShebang(t *testing.T) {
+  // Shebang-Zeile (#!/usr/local/bin/golisp2) wird wie ein Kommentar
+  // übersprungen — Skripte sind direkt ausführbar.
+  src := "#!/usr/local/bin/golisp2\n(+ 1 2)\n(* 3 4)"
+  forms, err := ReadAll(src)
+  if err != nil {
+    t.Fatalf("ReadAll mit Shebang: %v", err)
+  }
+  if forms.Car.String() != "(+ 1 2)" {
+    t.Errorf("form1 = %q, want (+ 1 2)", forms.Car.String())
+  }
+  if forms.Cdr.Car.String() != "(* 3 4)" {
+    t.Errorf("form2 = %q, want (* 3 4)", forms.Cdr.Car.String())
+  }
+  // Zeilenzählung darf nicht verrutschen: form2 beginnt auf Zeile 3
+  if forms.Cdr.Car.SrcLine != 3 {
+    t.Errorf("form2 SrcLine = %d, want 3", forms.Cdr.Car.SrcLine)
+  }
+
+  // Shebang ohne nachfolgende Form → nur NIL (kein Fehler)
+  only, err := ReadAll("#!/usr/bin/env golisp2\n")
+  if err != nil {
+    t.Fatalf("ReadAll nur Shebang: %v", err)
+  }
+  if only.String() != "()" {
+    t.Errorf("nur Shebang = %q, want ()", only.String())
+  }
+
+  // #' darf nicht brechen — kein Rückfall in Kommentar-Behandlung
+  fn, err := Read("#'car")
+  if err != nil {
+    t.Fatalf("#'car nach Shebang-Änderung: %v", err)
+  }
+  if fn.Car.String() != "function" {
+    t.Errorf("#'car = %q, want (function car)", fn.String())
+  }
+}

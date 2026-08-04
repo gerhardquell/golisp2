@@ -189,6 +189,20 @@ factorial
 ./golisp2 script.lisp
 ```
 
+脚本也可以通过 shebang 直接执行。`#!…` 行在源码任何位置都被视为行注释（SBCL 惯例），因此同一文件仍可通过 `(load "script.lisp")` 加载：
+
+```bash
+#!/usr/local/bin/golisp2
+(format t "hello from script: ~a~%" (* 6 7))
+(exit 0)
+```
+
+```bash
+chmod +x script.lisp
+./script.lisp
+# => hello from script: 42
+```
+
 ### 测试套件
 
 ```bash

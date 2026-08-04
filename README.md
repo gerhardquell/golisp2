@@ -200,6 +200,22 @@ factorial
 ./build/golisp2 script.lisp
 ```
 
+Scripts can also be executed directly via shebang. A `#!…` line is treated
+as a comment to end of line everywhere in the source (SBCL convention), so
+the same file stays loadable via `(load "script.lisp")`:
+
+```bash
+#!/usr/local/bin/golisp2
+(format t "hello from script: ~a~%" (* 6 7))
+(exit 0)
+```
+
+```bash
+chmod +x script.lisp
+./script.lisp
+# => hello from script: 42
+```
+
 ### Test Suite
 
 ```bash

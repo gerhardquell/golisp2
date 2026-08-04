@@ -14,6 +14,11 @@ Fehler nach stderr, Exit-Code sagt die Wahrheit.
 | `--swank HOST:PORT` | SWANK-Server starten (Emacs/SLIME) | `./build/golisp2 --swank 127.0.0.1:4242` |
 | `DATEI` | Lisp-Datei laden und ausführen | `./build/golisp2 script.lisp` |
 
+**Shebang:** Eine Zeile `#!…` (typisch `#!/usr/local/bin/golisp2`) gilt
+überall im Quelltext als Kommentar bis Zeilenende (SBCL-Konvention).
+Skripte sind damit direkt ausführbar (`chmod +x script.lisp`) und bleiben
+gleichzeitig per `(load "script.lisp")` ladbar.
+
 **Hinweis zu `-e`:** Eine einzelne Form gibt ihr Ergebnis aus. Bei mehreren
 Formen wird das letzte Ergebnis unterdrückt, damit rein seiteneffektbehaftete
 Skripte saubere Ausgabe erzeugen.

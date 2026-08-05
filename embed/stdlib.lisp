@@ -36,12 +36,11 @@
 (defmacro unless (test . body)
   `(if ,test () (begin ,@body)))
 
-;; let* – sequentielle Bindungen (jede sieht die vorherigen)
-(defmacro let* (bindings . body)
-  (if (null bindings)
-      `(begin ,@body)
-      `(let (,(car bindings))
-         (let* ,(cdr bindings) ,@body))))
+;; let* ist eine Go-Spezialform (lib/eval_core.go) — hier absichtlich NICHT
+;; als Makro definiert. Spezialformen werden vor Makros geprüft, ein Makro
+;; mit diesem Namen wäre von eval aus unerreichbar und nur über
+;; macroexpand sichtbar: zwei Implementierungen, die still auseinanderlaufen.
+;; Bewacht von TestNoLispDefineShadowsSpecialForm.
 
 ;; === Listen =====================================================
 

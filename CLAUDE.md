@@ -119,8 +119,13 @@ Das gefährlichste Duplikat ist keine Go-Datei. Es ist ein `define` in
 - **Deshalb: `rg` muss `*.lisp` einschließen.** Eine Suche nur über `*.go`
   findet die halbe Wahrheit.
 - **Spezialformen werden vor Makros geprüft** (siehe Eval-Reihenfolge). Ein
-  `defmacro` mit dem Namen einer Spezialform ist toter Code — es feuert nie,
-  ohne dass irgendetwas warnt.
+  `defmacro` mit dem Namen einer Spezialform wird von `eval` nie erreicht —
+  bleibt aber im Root-Env und ist über `macroexpand` sichtbar. Zwei
+  Implementierungen derselben Form, die still auseinanderlaufen. Der
+  Redefine-Guard fängt das *nicht*: er warnt nur bei bestehenden
+  FUNC-Bindungen, und Spezialformen sind gar keine Env-Bindungen.
+  Bewacht von `TestNoLispDefineShadowsSpecialForm` (`lib/specialform_shadow_test.go`),
+  der die Namen aus `eval_core.go` liest — Liste pflegen ist nicht nötig.
 - **`(eval (read (sigo …)))` schreibt zur Laufzeit ins globale Env.** Das ist
   das selbsterweiternde Muster und ausdrücklich gewollt — aber es ist auch der
   direkteste Weg, eine Definition still zu überschreiben. Bei Arbeit an diesem

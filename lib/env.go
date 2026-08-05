@@ -14,11 +14,20 @@ import (
   "sync/atomic"
 )
 
+// envEntry ist ein Frame-Eintrag jenseits des ersten. Ein Slice von Paaren
+// statt zweier paralleler Slices: haelt Env um 24 Byte kleiner und braucht
+// eine Allokation statt zwei, sobald ein Frame mehr als eine Bindung hat.
+type envEntry struct {
+  name string
+  val  *Cell
+}
+
 // Env ist eine verkettete Umgebung: lokaler Scope -> aeusserer Scope.
 // Root-Env (parent == nil) nutzt eine Hash-Map fuer ~80+ eingebaute Symbole.
-// Frame-Envs (parent != nil) nutzen inline singleName/singleVal fuer den
-// ersten Eintrag und parallele Slices fuer weitere Eintraege. Damit fallen
-// die map-Allokationen pro Lambda-/Let-Frame weg.
+// Frame-Envs (parent != nil) legen den ERSTEN Eintrag inline ab
+// (singleName/singleVal) und alle weiteren in entries. Damit fallen die
+// map-Allokationen pro Lambda-/Let-Frame weg, und der haeufigste Fall
+// (ein Parameter) allokiert ausser dem Env selbst gar nichts.
 type Env struct {
   parent     *Env
   // Root-Modus: parent == nil
@@ -26,10 +35,12 @@ type Env struct {
   // Frame-Modus: parent != nil
   singleName string
   singleVal  *Cell
-  names      []string
-  vals       []*Cell
-  // mu schuetzt Lese-/Schreibzugriffe fuer parfunc (mehrere Goroutinen
-  // koennen dasselbe Env gleichzeitig nutzen).
+  entries    []envEntry
+  // mu schuetzt Lese-/Schreibzugriffe. NICHT entfernbar, auch nicht fuer
+  // Frame-Envs: evalParfunc gibt sein env direkt an jede Worker-Goroutine
+  // (eval_control.go), und ein parfunc innerhalb eines let oder einer
+  // Lambda teilt damit einen FRAME-Env ueber N Goroutinen — die dort auch
+  // per setq schreiben. Verifiziert mit -race.
   mu         sync.RWMutex
 }
 
@@ -129,9 +140,9 @@ func (e *Env) Get(name string) (*Cell, error) {
     e.mu.RUnlock()
     return val, nil
   }
-  for i, n := range e.names {
-    if n == name {
-      val := e.vals[i]
+  for i := range e.entries {
+    if e.entries[i].name == name {
+      val := e.entries[i].val
       e.mu.RUnlock()
       return val, nil
     }
@@ -165,14 +176,13 @@ func (e *Env) Set(name string, val *Cell) error {
     e.singleVal = val
     return nil
   }
-  for i, n := range e.names {
-    if n == name {
-      e.vals[i] = val
+  for i := range e.entries {
+    if e.entries[i].name == name {
+      e.entries[i].val = val
       return nil
     }
   }
-  e.names = append(e.names, name)
-  e.vals = append(e.vals, val)
+  e.entries = append(e.entries, envEntry{name: name, val: val})
   return nil
 }
 
@@ -231,7 +241,8 @@ func (e *Env) Symbols() []string {
       seen[cur.singleName] = true
       result = append(result, cur.singleName)
     }
-    for _, name := range cur.names {
+    for i := range cur.entries {
+      name := cur.entries[i].name
       if !seen[name] {
         seen[name] = true
         result = append(result, name)
@@ -271,9 +282,9 @@ func (e *Env) Update(name string, val *Cell) error {
     e.singleVal = val
     return nil
   }
-  for i, n := range e.names {
-    if n == name {
-      e.vals[i] = val
+  for i := range e.entries {
+    if e.entries[i].name == name {
+      e.entries[i].val = val
       return nil
     }
   }

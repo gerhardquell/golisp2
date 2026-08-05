@@ -35,11 +35,14 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 7** (Env-Pool entfernt — Korrektheit) ✅ | 1 578 206 | 59 MB | 142 ms |
 | **Schnitt 8** (Symbol-Interning — Korrektheit) ✅ | 1 578 205 | 59 MB | 148 ms |
 | **Schnitt 9** (evalCtx per Value statt Pointer) ✅ | 242 833 | 27 MB | 115 ms |
+| **Schnitt 10** (Env-Struct 112 → 88 B) ✅ | 242 828 | 23 MB | 113 ms |
 
-**Aktuelle Baseline: `242 833 allocs/op`, 27 MB/op, ~115 ms/op.**
+**Aktuelle Baseline: `242 828 allocs/op`, 23 MB/op, ~113 ms/op.**
 
-Die 242 833 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
-95,8 % der Allokationen aus. Nächstes Ziel, siehe §6.
+Die 242 828 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
+95,8 % der Allokationen aus. Die Zahl der Allokationen ist damit am Boden für
+diese Architektur — ein Frame pro Aufruf ist das Minimum, solange Frames auf
+dem Heap liegen. Was noch geht, ist ihre **Größe**: siehe §4.5e und §6.
 
 ⚠️ **Die „3 allocs/op" aus Schnitt 6 sind Geschichte, nicht Zustand.**
 Zwischen Schnitt 6 (2026-06-26) und der Nachmessung am 2026-08-05 ist das
@@ -259,6 +262,76 @@ genügt, bezahlt eine Heap-Allokation für eine Aussage, die nicht stimmt.
 
 ---
 
+## 4.5e Schnitt 10: Env-Struct verkleinern ✅ — und die Size-Class-Falle
+
+**Ziel:** `NewEnv` war nach Schnitt 9 mit 95,8 % der dominante Posten. Ein
+Frame-Env pro Aufruf, 112 Byte.
+
+**Was NICHT ging.** §6 schlug vor, den `sync.RWMutex` (24 B) aus den
+Frame-Envs zu nehmen, weil ein Frame „per Definition genau einer Goroutine
+gehört". **Das ist falsch.** `evalParfunc` gibt sein `env` direkt an jede
+Worker-Goroutine (`eval_control.go`). Steht ein `parfunc` in einem `let`
+oder Lambda-Body, teilen N Goroutinen einen FRAME-Env — und sie schreiben
+ihn:
+
+```
+(let ((s 42)) (parfunc r (+ s 1) (+ s 2) (+ s 3)) r)  =>  (43 44 45)
+(let ((c 0))  (parfunc r (setq c (+ c 1)) (setq c (+ c 1))) c)  =>  2
+```
+
+Der Race-Detektor ist genau deshalb sauber, weil der Mutex da ist. Ihn zu
+entfernen wäre ein Data Race — die schlechtere Version des Fehlers aus
+§4.5b. Der Mutex bleibt, mit dieser Begründung als Kommentar im Struct.
+
+**Was ging:** `names []string` + `vals []*Cell` (2×24 B) zu einem
+`entries []envEntry{name, val}` (24 B) zusammenlegen. Halbiert außerdem die
+Slice-Allokationen bei Frames mit mehr als einer Bindung.
+
+**Ergebnis (fib 25) — und ein falsches Modell:**
+
+| | Vorhersage | Messung | |
+|---|---|---|---|
+| `unsafe.Sizeof(Env{})` | 88 B | 88 B | ✓ |
+| allocs/op | unverändert | 242 828 | ✓ |
+| B/op | 21,4 MB (−21,4 %) | **23,32 MB (−14,3 %)** | ✗ |
+| ns/op | −2 bis −5 % | **−1,7 %** | knapp drunter |
+
+Die Bytes lagen 2 MB daneben, weil ich gegen die **Struct-Größe** geplant
+habe statt gegen die **Size-Class** des Allocators. Go rundet 88 B auf die
+96-B-Klasse:
+
+```
+242 828 × 88  = 21,37 MB   (Struct-Groesse — falsches Modell)
+242 828 × 96  = 23,31 MB   (Size-Class — passt zu 23,32 gemessen)
+242 828 × 112 = 27,20 MB   (vorher; 112 IST eine Size-Class, daher exakt)
+```
+
+Reale Ersparnis also 16 B pro Allokation, nicht 24. Dass die Rechnung
+vorher aufging, war Zufall: 112 ist selbst eine Size-Class.
+
+**Lektion:** `unsafe.Sizeof` ist nicht die allozierte Größe. Go rundet auf
+Size-Classes (… 64, 80, 96, 112, 128 …). Eine Struktur um 8 Byte zu
+verkleinern bringt nur etwas, wenn sie dabei eine Klassengrenze
+unterschreitet. Vor dem nächsten Schnitt an einem Struct: erst die Klasse
+ausrechnen, dann entscheiden.
+
+**Nächster Hebel wäre die 80-B-Klasse** — 8 Byte weniger, dann
+242 828 × 80 = 19,4 MB (weitere −17 %). Genau 8 Byte liegen brach: das
+`vars`-Map-Feld ist in Frame-Envs immer nil, `singleName`/`singleVal`/
+`entries` sind im Root-Env immer leer. Das Struct bezahlt beide Modi. Das
+aufzulösen heißt `Env` in zwei Typen zu trennen — `Env` ist exportiert und
+wird von `lib/swank` und `main.go` benutzt, also erst Blast-Radius prüfen.
+
+**Netz:** `lib/env_frame_test.go`, sechs Fälle, vor dem Umbau grün.
+`env_test.go` deckte nur Root-Env und Redefine-Policy ab — der Slice-Pfad
+und der Übergang inline → Slice waren untestet, obwohl jede Lambda mit mehr
+als einem Parameter dort landet. Festgehalten werden: der Übergang, Set
+überschreibt ohne Duplikat auf beiden Pfaden, Update trifft beide und steigt
+zum Parent auf, Shadowing schreibt nicht durch, `Symbols` dedupliziert über
+die Kette, und 64 Bindungen gegen einen append-Reallocation-Bug.
+
+---
+
 ## 4.6 Schnitt 6: Small-Int-Cache verbreitern ✅
 
 **Ziel:** die verbleibenden ~987 Allokationen pro `fib 25` eliminieren.
@@ -385,42 +458,59 @@ Beide aus Korrektheitsgründen, nicht wegen Tempo:
   Schnitt 1. §4.5c. (Korrektheit, kostete +4,0 %)
 - **Schnitt 9:** `evalCtx` per Value statt Pointer. §4.5d.
   (Performance: −84,6 % allocs, −21,3 % ns)
+- **Schnitt 10:** Env-Struct 112 → 88 B. §4.5e.
+  (Performance: −14,3 % B/op, −1,7 % ns; Modell lag daneben, s. dort)
 
 Netto gegenüber der Nachmessung vom 2026-08-05: **139 ms → 115 ms** bei
-**1 335 430 → 242 833 allocs/op**. Zwei Fehlerklassen weg *und* schneller.
+**1 335 430 → 242 828 allocs/op** und **32 → 23 MB/op**. Zwei Fehlerklassen weg
+*und* schneller.
 
-### Was jetzt? — `NewEnv` ist der neue Elefant
+### Was jetzt? — `NewEnv` bleibt, aber nur noch über die Größe angreifbar
 
-Profil nach Schnitt 9 (`-sample_index=alloc_objects`):
+Stand nach Schnitt 10: `NewEnv` ist 95,8 % der Allokationen, ein Frame pro
+Aufruf. **Die Anzahl ist am Boden** — ein Frame pro Aufruf ist das Minimum,
+solange Frames auf dem Heap liegen. Angreifbar ist nur noch die Größe, und
+die zählt in **Size-Classes**, nicht in Struct-Bytes (§4.5e):
 
-| Posten | Anteil | Objekte |
-|--------|--------|---------|
-| `NewEnv` | **95,8 %** | 2 411 033 |
-| `init.2` (Small-Int-Cache, einmalig) | 3,0 % | 74 906 |
-| alles andere | 1,2 % | — |
+```
+aktuell   88 B Struct  -> Klasse  96  ->  23,3 MB
+Ziel      80 B Struct  -> Klasse  80  ->  19,4 MB   (−17 %)
+```
 
-Ein Frame-Env pro Aufruf, seit Schnitt 7 wieder auf dem Heap. **Das ist
-NICHT die Einladung, den Pool wiederzubeleben** — er war die Ursache für
-zehn kaputte Frame-Formen (§4.5b). Gangbare Richtungen stattdessen:
+Es fehlen genau 8 Byte. Brachliegend sind mehr: `vars` (8 B) ist in
+Frame-Envs immer nil, `singleName`/`singleVal`/`entries` (48 B) sind im
+Root-Env immer leer. Das Struct bezahlt beide Modi.
 
-1. **`Env` kleiner machen.** `sync.RWMutex` ist 24 Byte in einem Struct, das
-   sonst ~80 Byte hat, und wird nur für `parfunc` gebraucht. Ein Frame-Env
-   gehört per Definition genau einer Goroutine — außer bei `parfunc`. Den
-   Mutex nur im Root-Env zu halten (oder als Pointer, nil für Frames)
-   verkleinert die Allokation, ohne Semantik anzufassen. **Kleinster
-   Schnitt, zuerst probieren.**
-2. **Frame als Wert im Trampolin.** Derselbe Gedanke wie Schnitt 9: der
-   Frame eines Nicht-Closure-Aufrufs wird nie geteilt. Nur weiß man das
-   erst *nach* dem Body — genau die Information, an der das `shared`-Bit
-   gescheitert ist. Bräuchte eine statische Analyse zur Definitionszeit
-   („enthält dieser Body ein `lambda`?"), nicht zur Laufzeit. Machbar, weil
-   `wrapBegin` den Body dort schon anfasst. Deutlich invasiver.
-3. **Escape-Analyse prüfen.** `go build -gcflags='-m'` auf `NewEnv`: falls
-   der Frame nur wegen einer einzigen Speicherung entkommt, vielleicht
-   lokal behebbar.
+**Was NICHT geht — bitte nicht erneut versuchen:**
 
-Erwartung vor dem Lauf formulieren (§9), sonst wiederholt sich das Phantom
-aus §5.
+- **Mutex aus Frame-Envs entfernen.** `evalParfunc` gibt sein `env` direkt
+  an jede Worker-Goroutine, ein `parfunc` in einem `let` teilt also einen
+  FRAME-Env über N Goroutinen, die ihn per `setq` auch schreiben. Verifiziert
+  mit `-race`. Details in §4.5e.
+- **Env-Pooling wiederbeleben.** Ursache für zehn kaputte Frame-Formen,
+  §4.5b.
+- **Mutex lazy allokieren** („nur wenn geteilt"). Genau die
+  Erreichbarkeits-Frage, an der das `shared`-Bit gescheitert ist — nur ist
+  der Fehlerfall hier ein Data Race statt einer verlorenen Bindung, also
+  schlimmer.
+
+**Gangbare Richtungen, aufsteigend invasiv:**
+
+1. **`Env` in zwei Typen trennen** (Root mit Map, Frame mit inline+entries).
+   Bringt die 8 Byte und mehr. `Env` ist exportiert und wird von
+   `lib/swank` und `main.go` benutzt — Blast-Radius vor dem Anfangen prüfen.
+   Ein Interface würde Indirektion kosten; besser ein konkreter Frame-Typ
+   und `Env` als Root.
+2. **`singleName string` (16 B) durch das internierte Symbol `*Cell` (8 B)
+   ersetzen.** Seit Schnitt 8 ist jedes Symbol genau eine Cell, also ist
+   Pointer-Vergleich gültig — und schneller als String-Vergleich. Bringt
+   die 8 Byte allein. Haken: `Get(name string)` ist die öffentliche API;
+   entweder Signatur ändern (Blast-Radius) oder `.Val` vergleichen (dann
+   nur der Größengewinn, kein Geschwindigkeitsgewinn).
+3. **Escape-Analyse prüfen:** `go build -gcflags='-m'` auf `NewEnv`.
+
+Richtung 2 ist der kleinste Schnitt mit dem vollen Größengewinn. Vorher die
+Size-Class ausrechnen, nicht die Struct-Größe (§4.5e).
 
 Danach ist der `fib`-Mikrobenchmark am Ende seines Aussagegehalts.
 Weitere Reduktionen bräuchten einen anderen Ansatz:
@@ -441,7 +531,8 @@ neuer Schnitt angelegt wird.
 |-------|-----------------|
 | `lib/eval_core.go` | `Eval`-Trampolin, `evalCtx` (**per Value**), `evalArgsPooled`, Lambda-Apply-Pfad |
 | `lib/eval_depth_test.go` | Netz für Tiefe + Cancellation (§4.5d), nur öffentliche API |
-| `lib/env.go` | `Env`-Struct (Root-Map + Slice-Frames), Redefine-Policy |
+| `lib/env.go` | `Env`-Struct 88 B (Root-Map + inline/`entries`-Frames), Redefine-Policy |
+| `lib/env_frame_test.go` | Netz für den Frame-Pfad inline↔`entries` (§4.5e) |
 | `lib/env_closure_test.go` | Regressionsnetz Closure × Frame-Form (§4.5b) |
 | `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |
 | `lib/eval_control.go` | `do`/`while`/`flet`/`labels`/`block`/`return-from`/`catch`/`eval` |

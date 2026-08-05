@@ -245,6 +245,18 @@ func (e *Env) Symbols() []string {
 }
 
 // Update aendert einen bestehenden Wert (fuer set!)
+//
+// Haelt sein Lock ueber die Rekursion zum Parent — anders als Get, das vor
+// dem Aufstieg freigibt. Das ist geprueft und bleibt so:
+//   - Kein Deadlock. Alle Env-Methoden laufen ausschliesslich Kind -> Eltern
+//     (Get, Set, Symbols, Root, Update). Es gibt keinen Pfad, der ein
+//     Eltern-Lock haelt und ein Kind-Lock nimmt, also keinen Zyklus.
+//   - Freigeben vor dem Aufstieg wuerde ein Fenster oeffnen, in dem eine
+//     andere Goroutine dieselbe Bindung im Kind-Frame anlegen kann, waehrend
+//     dieser Update sie schon im Parent sucht. Aktuell existiert das Fenster
+//     nicht.
+// Wer das hier auf das Get-Muster umstellt, tauscht also keine Contention
+// gegen Sicherheit, sondern Sicherheit gegen Contention.
 func (e *Env) Update(name string, val *Cell) error {
   e.mu.Lock()
   defer e.mu.Unlock()

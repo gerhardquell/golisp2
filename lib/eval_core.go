@@ -377,21 +377,17 @@ func evalArgsPooled(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, bool, error) 
 }
 
 // putArgSlice gibt einen aus evalArgsPooled stammenden Slice zurueck.
+//
+// Nullt die Eintraege absichtlich NICHT. sync.Pool wirft seinen Inhalt bei
+// jedem GC-Lauf weg, die Retention der alten *Cell-Zeiger reicht also
+// hoechstens bis zum naechsten GC — genau bis zu dem Zyklus, in dem sie
+// ohnehin einsammelt wuerden. Gemessen (fib 25, A/B in einer Session):
+// Nullen kostet +1,1 % ns/op auf dem heissesten Pfad, die Ranges
+// ueberlappen nicht. Schlechter Handel, bewusst nicht gemacht.
 func putArgSlice(s []*Cell) {
   if cap(s) == 8 {
     argSlicePool.Put((*[8]*Cell)(s[:8]))
   }
-}
-
-func evalArgs(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
-  var result []*Cell
-  for args != nil && args.Type == LIST {
-    val, err := evalWithCtx(args.Car, env, ectx.child())
-    if err != nil { return nil, err }
-    result = append(result, Primary(val))
-    args = args.Cdr
-  }
-  return result, nil
 }
 
 func apply(fn *Cell, args []*Cell) (*Cell, error) {

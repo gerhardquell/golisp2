@@ -161,7 +161,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *
 // bindEvalArgs bindet Lambda-Parameter direkt aus den unevaluierten
 // Argument-Ausdrücken. Jeder Argument-Wert wird in callerEnv ausgewertet,
 // Default-Ausdrücke für &optional/&key in closureEnv. Damit entfällt der
-// Zwischen-Slice []\*Cell, den evalArgs/bindArgs sonst benötigen.
+// Zwischen-Slice []*Cell, den bindArgs sonst benötigt.
 func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env, ectx *evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   hasKey := false

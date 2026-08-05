@@ -41,3 +41,8 @@ certs/
 
 # Temporaer: Builds, Test-Scripts, Server-Logs
 /tmp/
+
+# Claude-Code-Worktrees: Arbeitsverzeichnisse, nie ins Repo. Ein
+# versehentliches `git add .` hat sie einmal als konfigurationslosen
+# Gitlink (Modus 160000) committet — ohne .gitmodules unauflösbar.
+.claude/worktrees/

@@ -58,6 +58,47 @@ weniger GC-Druck.
 
 ---
 
+## 3. Zweiter Benchmark-Satz (evalBench_test.go, 2026-08-05)
+
+`fib` misst genau einen Fall: einstelliger Lambda-Aufruf, Zahlen aus dem
+Small-Int-Cache, keine Cell-Allokation, keine Strings, keine Makros, keine
+Closures. Es ist damit blind für die Pfade, in denen die Korrektheitsfehler
+dieses Tages sassen (Closure × Frame, §4.5b) und für `Cell` (104 B), den
+nächsten Größen-Kandidaten.
+
+Baseline nach Schnitt 11, Ryzen 5 5500:
+
+| Benchmark | ns/op | B/op | allocs/op | allocs pro Lisp-Op |
+|---|---|---|---|---|
+| `ListBuild` (1000 cons + traverse) | 1 183 257 | 398 543 | 4 971 | ~2,5 |
+| `MultiArgLambda` (2000 × 4-stellig) | 2 270 655 | 576 258 | 12 002 | 6,0 |
+| `ClosureCreate` (2000 Closures) | 1 956 416 | 958 563 | 11 986 | 6,0 |
+| `MacroExpand` (2000 Expansionen) | 1 907 175 | 1 040 325 | 14 002 | 7,0 |
+| `StringOps` (500 string-append) | 351 868 | 244 009 | 2 027 | ~4,0 |
+| `LetChain` (2000 × 2 verschachtelte let) | 1 727 591 | 512 210 | 8 002 | 4,0 |
+
+**Erster Befund, den `fib` nie zeigen konnte:** der `entries`-Slice eines
+Frame-Envs startet bei `nil`, und Gos `append`-Wachstum (1→2→4→8) kostet
+⌈log₂(n)⌉+1 Allokationen für n Einträge statt einer. Gemessen über die
+Parameterzahl:
+
+| params | entries | allocs/op | B/op |
+|---|---|---|---|
+| 1 | 0 | 1 | 80 |
+| 2 | 1 | 2 | 96 |
+| 3 | 2 | 3 | 128 |
+| 4 | 3 | 4 | 192 |
+| 5 | 4 | 4 | 192 |
+| 8 | 7 | 5 | 320 |
+| 9 | 8 | 5 | 320 |
+
+`fib` hat genau einen Parameter, also null `entries` — deshalb war der
+Posten elf Schnitte lang unsichtbar. Der Aufrufer kennt die Parameterzahl
+(`bindArgs`/`bindEvalArgs`) bzw. die Bindungszahl (`let`/`let*`), das ist
+also vermeidbar. Siehe §6.
+
+---
+
 ## 4.5 Schnitt 5: Frame-Env-Pool + Tail-Call-Freigabe ✅
 
 **Ziel:** die verbleibenden `NewEnv`-Allokationen eliminieren, nachdem
@@ -590,7 +631,8 @@ neuer Schnitt angelegt wird.
 | `lib/primitives.go` | `BaseEnv` (Root-Env-Aufbau), `MakeNum`-Boxing in fnAdd/fnSub… |
 | `lib/types.go` | `Make*`-Konstruktoren, `internTable` (Symbol-Interning), `nilCell`, small-int-cache |
 | `lib/intern_test.go` | Regressionsnetz Symbol-Interning + `eq`-Semantik (§4.5c) |
-| `lib/fibBench_test.go` | der Benchmark (liegt in `lib/`) |
+| `lib/fibBench_test.go` | fib-Mikrobenchmark (ein Fall: 1-stelliges Lambda, gecachte Zahlen) |
+| `lib/evalBench_test.go` | zweiter Satz: Cell, Multi-Arg, Closure, Makro, String, let-Kette (§3) |
 
 `bindArgs`-Signatur aktuell: `bindArgs(params, args []*Cell, closureEnv, localEnv *Env) error`.
 

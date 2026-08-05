@@ -33,8 +33,9 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 6** (Small-Int-Cache auf int16-Bereich) ✅ | 3 | 641 B | 88 ms |
 | ⚠️ Nachmessung 2026-08-05 (unverändert) | 1 335 430 | 32 MB | 139 ms |
 | **Schnitt 7** (Env-Pool entfernt — Korrektheit) ✅ | 1 578 206 | 59 MB | 142 ms |
+| **Schnitt 8** (Symbol-Interning — Korrektheit) ✅ | 1 578 205 | 59 MB | 148 ms |
 
-**Aktuelle Baseline: `1 578 206 allocs/op`, 59 MB/op, ~142 ms/op.**
+**Aktuelle Baseline: `1 578 205 allocs/op`, 59 MB/op, ~148 ms/op.**
 
 ⚠️ **Die „3 allocs/op" aus Schnitt 6 sind Geschichte, nicht Zustand.**
 Zwischen Schnitt 6 (2026-06-26) und der Nachmessung am 2026-08-05 ist das
@@ -133,6 +134,70 @@ Eigenschaft nicht transitiv ist. Bei verketteten Environments ist sie es.
 **Regressionsnetz:** `lib/env_closure_test.go` — Kreuzprodukt Closure ×
 Frame-Form, 10 Bug-Fälle + 7 Kontrollen + ein Subprozess-Test für den
 Stack-Overflow. Vor dem Fix rot verifiziert.
+
+---
+
+## 4.5c Schnitt 8: Symbol-Interning ✅ — und was Schnitt 1 falsch gemacht hat
+
+**Anlass:** wieder Korrektheit, nicht Tempo. `eq` ist Pointer-Identität,
+aber `MakeAtom` gab bei jedem Aufruf eine frische Cell zurück. Damit war
+`(eq 'foo 'foo)` → `()`, wo CL `T` sagt — und zwar für **jedes** Symbol.
+
+**Schnitt 1 war eine Optimierung, die versehentlich Semantik verändert hat.**
+`cellT`/`cellNil` waren ein Ad-hoc-Interning für genau zwei Werte. §4 notiert
+den Nebeneffekt sogar positiv („Bei `t` macht der Singleton `eq` sogar
+*korrekter*") — aber nur an den 14 Stellen, die die Singletons benutzten.
+`member`/`assoc` lieferten weiter `MakeNil()`. Ergebnis: zwei NIL-Instanzen,
+und `eq` war je nach Primitiv verschieden. Halb-korrekt ist bei Identität
+schlechter als konsistent falsch — konsistent falsch kann man dokumentieren.
+
+**Änderung:** `internTable sync.Map` in `lib/types.go`; `MakeAtom` liefert pro
+Namen dieselbe Cell. `cellNil` gelöscht (14 Stellen → `MakeNil()`), `cellT`
+bleibt als Direktreferenz für heiße Pfade, kommt aber AUS der Tabelle
+(`var cellT = MakeAtom("t")`) — eine Quelle, nicht zwei.
+
+**Vorher geprüft, weil Interning Cells teilt:** kein ATOM wird in-place
+mutiert. Quellpositionen stempeln `reader.go:130` (auf einer `Cons`-Zelle) und
+`eval_load.go:54` (`if expr.Type == LIST`) ausschließlich auf Listen;
+destruktive Listen-Ops (`rplaca`/`nconc`) existieren nicht.
+
+**Ergebnis:** alle sechs `eq`-Divergenzen aus TODO 4.1 behoben, gegen SBCL
+verifiziert. Zwei bewusste Ausnahmen bleiben: Zahlen (`(eq 5 5)` → `()`) und
+Strings (`(eq "a" "a")` → `()`).
+
+```
+allocs/op:  1 578 206 → 1 578 205   (bit-identisch)
+B/op:            59 MB → 59 MB
+ns/op:          142,4 → 148,1 ms   (+4,0 %)
+```
+
+**⚠️ Die +4 % sind NICHT erklärt.** A/B in derselben Session (`git stash`,
+je 5 Läufe, Mediane) — die Ranges überlappen kaum, es ist kein Rauschen. Aber:
+
+- allocs/op ist **bit-identisch**. Nach dem Merksatz aus §5 heißt das:
+  der neue Code wird auf diesem Pfad nicht ausgeführt.
+- Das CPU-Profil bestätigt es. `MakeAtom` erscheint in den Top 40 **nicht**.
+  `mapaccess2_faststr` (6,3 %) ist `Env.Get` auf dem Root-Env, die
+  `sync.Pool`-Posten sind der Arg-Slice-Pool — beides vorher schon da.
+  Keine einzige `sync.Map`-Operation im Profil.
+
+`fib` erzeugt keine Symbole, kann diese Änderung also gar nicht messen. Die
+wahrscheinlichste Erklärung ist ein Code-Layout-Effekt (verschobene
+Funktionsadressen → i-Cache/Branch-Alignment im Interpreter-Loop), aber das
+ist **eine Hypothese, keine Messung**. Wer es wissen will, braucht einen
+lese-/makrolastigen Benchmark — steht in §6 sowieso auf der Liste.
+
+Nicht dieselbe Falle wie §5 aufmachen: die Zahl steht hier, die Ursache ist
+offen, und sie wird nicht wegerklärt.
+
+**Lektion:** Eine Optimierung, die Identität anfasst, ändert Semantik — auch
+wenn sie nur schneller sein will. `cellT`/`cellNil` waren als Allokations-
+Ersparnis gedacht und haben `eq` sechs Wochen lang inkonsistent gemacht,
+ohne einen einzigen Test zu brechen.
+
+**Regressionsnetz:** `lib/intern_test.go` — 15 Interning-Fälle, 3
+Negativfälle, 3 Charakterisierungstests für die bewussten Abweichungen,
+plus ein Nebenläufigkeitstest (32 Goroutinen × 16 Symbole, mit `-race`).
 
 ---
 
@@ -251,11 +316,20 @@ Schnitt 2–6 sind umgesetzt und verifiziert. `fib 25` allokiert nur noch
 - **Schnitt 6:** Small-Int-Cache auf int16-Bereich `-32768..32767`
   verbreitert (`lib/types.go`).
 
-### Schnitt 7 ✅ (erledigt, 2026-08-05)
+### Schnitt 7 + 8 ✅ (erledigt, 2026-08-05)
 
-Rücknahme von Schnitt 5: `envPool`/`shared`/`ownEnv` entfernt, weil das
-`shared`-Bit die transitive Erreichbarkeit von Closures nicht ausdrücken
-kann. Details in §4.5b.
+Beide aus Korrektheitsgründen, nicht wegen Tempo:
+
+- **Schnitt 7:** Rücknahme von Schnitt 5 — `envPool`/`shared`/`ownEnv`
+  entfernt, weil das `shared`-Bit die transitive Erreichbarkeit von
+  Closures nicht ausdrücken kann. Details in §4.5b.
+- **Schnitt 8:** Symbol-Interning — Rücknahme des Ad-hoc-Interning aus
+  Schnitt 1. Details in §4.5c.
+
+Zusammen: **+9 ms (+6,5 %) gegenüber der Nachmessung**, dafür sind zwei
+Fehlerklassen weg, die kein Test gefangen hat. Beide Schnitte waren
+Optimierungen, die Semantik verändert haben — Schnitt 5 die
+Frame-Lebensdauer, Schnitt 1 die Identität.
 
 ### Was jetzt? — `evalCtx.child()` ist der Elefant
 
@@ -312,7 +386,8 @@ neuer Schnitt angelegt wird.
 | `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |
 | `lib/eval_control.go` | `do`/`while`/`flet`/`labels`/`block`/`return-from`/`catch`/`eval` |
 | `lib/primitives.go` | `BaseEnv` (Root-Env-Aufbau), `MakeNum`-Boxing in fnAdd/fnSub… |
-| `lib/types.go` | `Make*`-Konstruktoren, `cellT`/`cellNil`-Singletons, small-int-cache |
+| `lib/types.go` | `Make*`-Konstruktoren, `internTable` (Symbol-Interning), `nilCell`, small-int-cache |
+| `lib/intern_test.go` | Regressionsnetz Symbol-Interning + `eq`-Semantik (§4.5c) |
 | `lib/fibBench_test.go` | der Benchmark (liegt in `lib/`) |
 
 `bindArgs`-Signatur aktuell: `bindArgs(params, args []*Cell, closureEnv, localEnv *Env) error`.

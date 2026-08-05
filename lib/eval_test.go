@@ -245,11 +245,15 @@ func TestEvalQuasiquote(t *testing.T) {
 func TestEvalEqEqual(t *testing.T) {
   // eq = Pointer-Identität; equal? = strukturell
   evalEq(t, `(eq (list) (list))`, "t")          // Singleton-Nil: identisch
-  evalEq(t, `(eq 'foo 'foo)`, "()")             // zwei Atom-Instanzen
+  evalEq(t, `(eq 'foo 'foo)`, "t")              // interniert: eine Cell pro Symbol (CL)
   evalEq(t, `(equal? 'foo 'foo)`, "t")
   evalEq(t, `(equal? (list 1 2) (list 1 2))`, "t")
   evalEq(t, `(equal? 5 5)`, "t")
-  evalEq(t, `(eq 5 5)`, "()")                    // jede Zahl neue Cell
+  // Zahlen: bewusste Abweichung. Der Small-Int-Cache liefert fuer 5 zwar
+  // dieselbe Cell, aber fnEqPtr filtert NUMBER heraus — eine Optimierung
+  // soll eq-Semantik nicht durch die Hintertuer aendern. CL laesst eq auf
+  // Zahlen ausdruecklich unspezifiziert. Details: intern_test.go.
+  evalEq(t, `(eq 5 5)`, "()")
 }
 
 func TestEvalErrors(t *testing.T) {

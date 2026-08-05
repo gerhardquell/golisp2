@@ -52,8 +52,9 @@ func TestPrimitiveTypePredicates(t *testing.T) {
     {`(atom? (list 1))`, "()"},
     {`(null? '())`, "t"},
     {`(null? 5)`, "()"},
-    // eq? = Pointer-Identität wie eq: zwei 'foo-Instanzen sind NICHT eq?
-    {`(eq? 'foo 'foo)`, "()"},
+    // eq? = Alias für eq (beide fnEqPtr). Symbole sind interniert, also
+    // ist dasselbe Symbol dieselbe Cell — wie in CL.
+    {`(eq? 'foo 'foo)`, "t"},
   }
   for _, c := range cases {
     evalEq(t, c.src, c.want)

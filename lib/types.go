@@ -10,6 +10,7 @@ package lib
 
 import (
   "fmt"
+  "sync"
 )
 
 type LispType int
@@ -48,9 +49,32 @@ type Cell struct {
 }
 
 // Singleton nil cell - vermeidet Allokationen fuer jedes ()
+// EINZIGE NIL-Instanz. Es darf keine zweite geben: eq ist
+// Pointer-Identitaet, also wuerde ein zweites NIL (eq (= 1 2) '()) auf ()
+// stellen — CL sagt T. Siehe intern_test.go.
 var nilCell = &Cell{Type: NIL}
-var cellT = &Cell{Type: ATOM, Val: "t"}
-var cellNil = &Cell{Type: NIL}
+
+// internTable haelt fuer jeden Symbolnamen genau eine Cell.
+// eq ist Pointer-Identitaet; in CL ist das nur deshalb sinnvoll, weil
+// intern das Symbol im Package ablegt. Ohne Interning gab MakeAtom bei
+// jedem Aufruf eine frische Cell und (eq 'foo 'foo) war ().
+//
+// sync.Map, weil parfunc mehrere Goroutinen gleichzeitig evaluieren
+// laesst und der Zugriff nach dem Warmlauf praktisch nur lesend ist.
+//
+// Sicher, weil ATOM-Cells nie in-place mutiert werden: die Quellposition
+// stempeln reader.go und eval_load.go ausschliesslich auf LIST-Cells, und
+// destruktive Listen-Ops (rplaca/nconc) gibt es nicht.
+//
+// Die Tabelle schrumpft nie — wie in CL, wo interne Symbole permanent im
+// Package bleiben. Relevant fuer das selbsterweiternde Muster: KI-
+// generierter Code mit vielen frischen Symbolnamen laesst sie wachsen.
+var internTable sync.Map // string -> *Cell
+
+// cellT ist die interne t-Cell — dieselbe, die MakeAtom("t") liefert,
+// nur als Direktreferenz fuer die heissen Pfade. Keine zweite Quelle:
+// sie kommt AUS der Intern-Tabelle.
+var cellT = MakeAtom("t")
 
 // Cache fuer kleine Ganzzahlen: die meisten Zahlen in Lisp-Programmen
 // (Zaehler, Indizes, arithmetische Zwischenergebnisse) liegen in diesem
@@ -69,7 +93,15 @@ func init() {
 }
 
 // Hilfskonstruktoren
-func MakeAtom(name string) *Cell { return &Cell{Type: ATOM, Val: name} }
+// MakeAtom liefert die internierte Cell fuer name — bei gleichem Namen
+// immer denselben Pointer, damit eq CL-Semantik hat.
+func MakeAtom(name string) *Cell {
+  if c, ok := internTable.Load(name); ok {
+    return c.(*Cell)
+  }
+  c, _ := internTable.LoadOrStore(name, &Cell{Type: ATOM, Val: name})
+  return c.(*Cell)
+}
 func MakeNum(n float64) *Cell {
   if n == float64(int64(n)) {
     i := int(n)

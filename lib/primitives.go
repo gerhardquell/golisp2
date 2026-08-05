@@ -217,7 +217,7 @@ func fnEq(args []*Cell) (*Cell, error) {
 	if args[0].Num == args[1].Num {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnLt(args []*Cell) (*Cell, error) {
@@ -230,7 +230,7 @@ func fnLt(args []*Cell) (*Cell, error) {
 	if args[0].Num < args[1].Num {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnGt(args []*Cell) (*Cell, error) {
@@ -243,7 +243,7 @@ func fnGt(args []*Cell) (*Cell, error) {
 	if args[0].Num > args[1].Num {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnGe(args []*Cell) (*Cell, error) {
@@ -256,7 +256,7 @@ func fnGe(args []*Cell) (*Cell, error) {
 	if args[0].Num >= args[1].Num {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnLe(args []*Cell) (*Cell, error) {
@@ -269,7 +269,7 @@ func fnLe(args []*Cell) (*Cell, error) {
 	if args[0].Num <= args[1].Num {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnEqual(args []*Cell) (*Cell, error) {
@@ -279,7 +279,7 @@ func fnEqual(args []*Cell) (*Cell, error) {
 	if cellEqual(args[0], args[1]) {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 // eq: Pointer-Gleichheit (identisches Objekt im Speicher).
@@ -291,11 +291,11 @@ func fnEqPtr(args []*Cell) (*Cell, error) {
 	}
 	if args[0] == args[1] {
 		if args[0] != nil && args[0].Type == NUMBER {
-			return cellNil, nil
+			return MakeNil(), nil
 		}
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnRandom(args []*Cell) (*Cell, error) {
@@ -420,7 +420,7 @@ func fnAtom(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("atom: 1 Argument nötig")
 	}
 	if args[0].Type == LIST {
-		return cellNil, nil
+		return MakeNil(), nil
 	}
 	return cellT, nil
 }
@@ -432,7 +432,7 @@ func fnNull(args []*Cell) (*Cell, error) {
 	if args[0].Type == NIL {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnList(args []*Cell) (*Cell, error) {
@@ -710,7 +710,7 @@ func fnStringP(args []*Cell) (*Cell, error) {
 	if args[0].Type == STRING {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnNumberP(args []*Cell) (*Cell, error) {
@@ -720,7 +720,7 @@ func fnNumberP(args []*Cell) (*Cell, error) {
 	if args[0].Type == NUMBER {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnListP(args []*Cell) (*Cell, error) {
@@ -731,7 +731,7 @@ func fnListP(args []*Cell) (*Cell, error) {
 	if args[0].Type == NIL || args[0].Type == LIST {
 		return cellT, nil
 	}
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 func fnSymbolP(args []*Cell) (*Cell, error) {
@@ -742,7 +742,7 @@ func fnSymbolP(args []*Cell) (*Cell, error) {
 		return cellT, nil
 	}
 
-	return cellNil, nil
+	return MakeNil(), nil
 }
 
 // redefine-policy: (redefine-policy) -> aktuelle Policy als Atom

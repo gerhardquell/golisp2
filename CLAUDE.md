@@ -150,11 +150,19 @@ Definitionen aus `(eval (read ...))` (REPL, `swank-repl:listener-eval`,
 selbsterweiterndes Muster) global sichtbar bleiben und nicht im Child-Env der
 aufrufenden Lambda-Kette verschwinden.
 
-**Singleton-Nil**
-`MakeNil()` gibt immer dieselbe Instanz zurück. `(eq '() '())` → `t`.
-Nur lesen, nie modifizieren — sonst bricht `parfunc`.
-Konsequenz: `eq` ist Pointer-Identität, `equal?` ist struktureller Vergleich.
-Im Zweifel `equal?`.
+**Singleton-Nil + Symbol-Interning**
+Genau **eine** NIL-Cell (`MakeNil()`), und genau **eine** Cell pro
+Symbolname (`MakeAtom`, `internTable` in `types.go`). Es darf keine zweite
+geben — ein zweites NIL oder ein nicht-interniertes `t` bricht `eq` still.
+Nur lesen, nie modifizieren: eine Mutation trifft `parfunc` *und* jedes
+andere Vorkommen desselben Symbols. Quellpositionen werden deshalb
+ausschließlich auf `LIST`-Cells gestempelt (`reader.go`, `eval_load.go`).
+Konsequenz: `eq` ist Pointer-Identität und für Symbole CL-korrekt —
+`(eq 'foo 'foo)` → `t`. `equal?` bleibt struktureller Vergleich.
+Zwei bewusste Ausnahmen: Zahlen sind ausgenommen (`(eq 5 5)` → `()`,
+damit der Small-Int-Cache `eq` nicht durch die Hintertür verändert; CL
+lässt das unspezifiziert), Strings werden nicht interniert
+(`(eq "a" "a")` → `()`, wie CL).
 
 **Multi-Body via `wrapBegin`**
 `defun`/`lambda`/`defmacro` wrappen mehrere Body-Ausdrücke zur *Definitionszeit*

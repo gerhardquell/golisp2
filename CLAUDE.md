@@ -221,6 +221,7 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 - **Breaking Changes und Design-Ausweitungen sind Gerhards Entscheidung** —
   fragen, mit Optionen und Preview.
 - Diese CLAUDE.md schlägt Standard-Tools: nicht blind `gofmt`/LSP-Warnungen folgen.
+- **Subagent-Driven** - verwende frische Agenten für den BUILD-Prozess
 
 **Performance**
 - Benchmark-driven: messen, revertieren wenn keine Verbesserung. Nicht spekulieren.
@@ -276,3 +277,4 @@ gezeigt wird.
 
 > „Code = Daten + KI = sich selbst erweiterndes System"
 > – Gerhard & Claude, Juli 2026
+

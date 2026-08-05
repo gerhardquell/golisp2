@@ -1,0 +1,236 @@
+GPS: The General Problem Solver
+Es gibt nun Maschinen auf der Welt, die denken.
+
+-Herbert Simon
+
+Nobelpreisträgernder KI-Forscher
+
+Der General Problem Solver, entwickelt 1957 von Alan Newell und Herbert Simon, verkörperte eine grandiose Vision: ein einziges Computerprogramm, das jedes Problem lösen konnte, vorausgesetzt, es erhielt eine geeignete Beschreibung des Problems. GPS sorgte bei seiner Vorstellung für großen Aufruhr, und einige in der KI-Forschung meinten, es würde eine großartige neue Ära intelligenter Maschinen einleiten. Simon ging sogar so weit, über seine Schöpfung folgende Aussage zu machen:
+
+Es ist nicht mein Ziel, Sie zu überraschen oder zu schockieren…. Aber die einfachste Art, wie ich es zusammenfassen kann, ist zu sagen, dass es jetzt Maschinen auf der Welt gibt, die denken, lernen und schaffen. Darüber hinaus wird ihre Fähigkeit, diese Dinge zu tun, rasch zunehmen, bis – in einer sichtbaren Zukunft – der Bereich der Probleme, die sie bewältigen können, mit dem Bereich übereinstimmen wird, auf den sich der menschliche Geist erstreckt hat.
+
+Obwohl GPS diesen übertriebenen Ansprüchen nie gerecht wurde, war es aus historischen Gründen dennoch ein wichtiges Programm. Es war das erste Programm, das seine Problemlösungsstrategie von seinem Wissen über spezifische Probleme trennte, und es regte viel weitere Forschung in der Problemlösung an. Aus all diesen Gründen ist es ein geeignetes Studienobjekt.
+
+Das ursprüngliche GPS-Programm hatte eine Reihe kleinerer Funktionen, die es ziemlich komplex machten. Darüber hinaus war es in einer veralteten Low-Level-Sprache, IPL, geschrieben, die unnötige Komplexität hinzufügte. Tatsächlich war die verwirrende Natur von IPL wahrscheinlich ein wichtiger Grund für die großen Behauptungen über GPS. Wenn das Programm so kompliziert war, musste es etwas Wichtiges leisten. Wir werden einige der Feinheiten des ursprünglichen Programms ignorieren und stattdessen Common Lisp verwenden, eine viel klarere Sprache als IPL. Das Ergebnis wird eine Version von GPS sein, die ziemlich einfach ist, aber dennoch wichtige Punkte über KI illustriert.
+
+Auf einer Ebene handelt dieses Kapitel von GPS. Auf einer anderen Ebene geht es um den Prozess der Entwicklung eines KI-Computerprogramms. Wir unterscheiden fünf Phasen in der Entwicklung eines Programms. Zuerst steht die Problem-Beschreibung, die eine grobe Idee – meist in englischer Prosa formuliert – davon darstellt, was wir tun wollen. Zweitens folgt die Programmspezifikation, bei der wir das Problem in Begriffen umformulieren, die einem berechenbaren Verfahren näherkommen. Die dritte Phase ist die Implementierung des Programms in einer Programmiersprache wie Common Lisp, die vierte ist das Testen und die fünfte das Debuggen und Analysieren. Die Grenzen zwischen diesen Phasen sind fließend, und die Phasen müssen nicht in der angegebenen Reihenfolge abgeschlossen werden. Probleme in einer beliebigen Phase können zu Änderungen in vorherigen Phasen führen oder sogar zu einem vollständigen Neuentwurf oder zur Aufgabe des Projekts. Ein Programmierer kann es vorziehen, nur eine teilweise Beschreibung oder Spezifikation zu erstellen, direkt zur Implementierung und zum Testen überzugehen und dann auf Basis eines besseren Verständnisses zur Vervollständigung der Spezifikation zurückzukehren.
+
+Wir durchlaufen alle fünf Phasen bei der Entwicklung unserer GPS-Versionen, in der Hoffnung, dass der Leser GPS besser versteht und auch besser lernt, wie er oder sie ein eigenes Programm schreiben kann. Zusammenfassend sind die fünf Phasen eines KI-Programmierprojekts:
+
+Beschreiben Sie das Problem in vagen Begriffen
+
+Spezifizieren Sie das Problem in algorithmischen Begriffen
+
+Implementieren Sie das Problem in einer Programmiersprache
+
+Testen Sie das Programm an repräsentativen Beispielen
+
+Debuggen und analysieren Sie das resultierende Programm und wiederholen Sie den Prozess
+
+Stufe 1: Beschreibung
+Als unsere Problembeschreibung beginnen wir mit einem Zitat aus dem 1972er Buch von Newell und Simon, Human Problem Solving:
+
+Die Hauptmethoden von GPS verkörpern gemeinsam die Heuristik der Mittel-Ziel-Analyse. Die Mittel-Ziel-Analyse ist durch folgendes Art von gesundem Menschenverstand charakterisiert:
+
+Ich möchte meinen Sohn in den Kindergarten bringen. Was ist der Unterschied zwischen dem, was ich habe, und dem, was ich will? Eine Distanz. Was verändert Distanz? Mein Auto. Mein Auto funktioniert nicht. Was wird benötigt, um es zum Laufen zu bringen? Eine neue Batterie. Was hat neue Batterien? Eine Autowerkstatt. Ich möchte, dass die Werkstatt eine neue Batterie einbaut; aber die Werkstatt weiß nicht, dass ich eine brauche. Was ist das Problem? Ein Kommunikationsproblem. Was ermöglicht Kommunikation? Ein Telefon… und so weiter.
+
+Diese Art der Analyse – das Klassifizieren von Dingen nach den Funktionen, die sie erfüllen, und das Hin- und Herschalten zwischen Zielen, erforderlichen Funktionen und Mitteln, die sie erfüllen – bildet das grundlegende Heuristiksytem von GPS.
+
+Natürlich ist diese Art der Analyse nicht genau neu. Die Theorie der Mittel-Ziel-Analyse wurde bereits 2300 Jahre früher von Aristoteles in dem Kapitel „Die Natur der Überlegung und ihre Objekte“ der Nicomachean Ethics (Buch III. 3,1112b) recht elegant niedergelegt:
+
+Wir beraten nicht über Zwecke, sondern über Mittel. Denn ein Arzt berät nicht darüber, ob er heilen soll, noch ein Redner darüber, ob er überzeugen soll, noch ein Staatsmann darüber, ob er Gesetz und Ordnung schaffen soll, noch berät jemand anderes über seinen Zweck. Sie nehmen den Zweck als gegeben an und erwägen, wie und durch welche Mittel er erreicht wird; und wenn er durch mehrere Mittel erreicht zu werden scheint, erwägen sie, durch welches er am leichtesten und besten erreicht wird, während sie, wenn er nur durch eines erreicht wird, erwägen, wie er durch dieses erreicht wird und durch welche Mittel dieses erreicht wird, bis sie zur ersten Ursache kommen, die in der Ordnung der Entdeckung die letzte ist… und was in der Ordnung der Analyse das Letzte ist, scheint in der Ordnung des Werdens das Erste zu sein. Und wenn wir auf eine Unmöglichkeit stoßen, geben wir die Suche auf, z. B., wenn wir Geld brauchen und es nicht beschaffen können; aber wenn etwas möglich erscheint, versuchen wir, es zu tun.
+
+Angesichts dieser Beschreibung einer Theorie des Problemlösens, wie sollten wir dann ein Programm schreiben? Zuerst versuchen wir, das in den Zitaten skizzierte Verfahren gründlicher zu verstehen. Die Hauptidee besteht darin, ein Problem mit einem Prozess namens Mittel-Ziel-Analyse zu lösen, wobei das Problem in Bezug auf das formuliert wird, was wir erreichen wollen. Im Beispiel von Newell und Simon geht es darum, das Kind zur Schule zu bringen, aber im Allgemeinen möchten wir, dass das Programm eine breite Klasse von Problemen lösen kann. Wir können ein Problem lösen, wenn wir einen Weg finden, „den Unterschied zwischen dem, was ich habe, und dem, was ich will“ zu eliminieren. Zum Beispiel, wenn das, was ich habe, ein Kind zu Hause ist, und das, was ich will, ein Kind in der Schule, dann könnte Fahren eine Lösung sein, weil wir wissen, dass Fahren zu einer Veränderung des Standorts führt. Wir sollten uns bewusst sein, dass die Verwendung der Mittel-Ziel-Analyse eine Wahl ist: Es ist auch möglich, von der aktuellen Situation auszugehen und vorwärts zum Ziel zu suchen oder eine Mischung aus verschiedenen Suchstrategien anzuwenden.
+
+Einige Aktionen erfordern das Lösen von Voraussetzungen als Unterprobleme. Bevor wir das Auto fahren können, müssen wir das Unterproblem lösen, das Auto in einen fahrtüchtigen Zustand zu bringen. Es kann sein, dass das Auto bereits funktioniert, in diesem Fall müssen wir nichts tun, um das Unterproblem zu lösen. Ein Problem wird also entweder gelöst, indem man direkt eine geeignete Aktion ausführt, oder indem man zuerst die Voraussetzungen einer geeigneten Aktion löst und dann die Aktion ausführt. Es ist klar, dass wir eine Beschreibung zulässiger Aktionen benötigen, zusammen mit ihren Voraussetzungen und Effekten. Wir müssen auch eine Definition von Angemessenheit entwickeln. Wenn wir jedoch diese Begriffe besser definieren können, scheint es, als ob wir keine neuen Begriffe benötigen. Daher entscheiden wir willkürlich, dass die Problembeschreibung vollständig ist, und fahren mit der Problemspezifikation fort.
+
+Stufe 2: Spezifikation
+Zu diesem Zeitpunkt haben wir eine Idee – zugegebenermaßen vage – davon, was es bedeutet, ein Problem in GPS zu lösen. Wir können diese Begriffe in Repräsentationen verfeinern, die Lisp näherkommen, wie folgt:
+
+Wir können den aktuellen Zustand der Welt – „was ich habe“ – oder den Zielzustand – „was ich will“ – als Mengen von Bedingungen darstellen. Common Lisp hat keinen Datentyp für Mengen, aber es hat Listen, die zur Implementierung von Mengen verwendet werden können. Jede Bedingung kann durch ein Symbol dargestellt werden. So könnte ein typisches Ziel die Liste von zwei Bedingungen ( rich famous) sein, und ein typischer aktueller Zustand könnte (unknown poor) sein.
+
+Wir benötigen eine Liste zulässiger Operatoren. Diese Liste bleibt während des Verlaufs eines Problems, oder sogar einer Reihe von Problemen, konstant, aber wir wollen sie ändern und ein neues Problemgebiet angehen können.
+
+Ein Operator kann als Struktur dargestellt werden, die aus einer Aktion, einer Liste von Voraussetzungen und einer Liste von Effekten besteht. Wir können Grenzen für die Arten möglicher Effekte setzen, indem wir sagen, dass ein Effekt entweder eine Bedingung zum aktuellen Zustand hinzufügt oder eine Bedingung aus dem aktuellen Zustand löscht. Daher kann die Liste der Effekte in eine Add-Liste und eine Delete-Liste aufgeteilt werden. Dies war der Ansatz, der von der Strips 1 Implementierung von GPS verwendet wurde, die wir in diesem Kapitel im Wesentlichen rekonstruieren werden. Das ursprüngliche GPS erlaubte mehr Flexibilität bei der Spezifikation von Effekten, aber Flexibilität führt zu Ineffizienz.
+
+Ein vollständiges Problem wird GPS in Form eines Startzustands, eines Zielzustands und einer Menge bekannter Operatoren beschrieben. Daher wird GPS eine Funktion von drei Argumenten sein. Zum Beispiel könnte ein Beispielaufruf lauten:
+
+(GPS '(unknown poor) '(rich famous) list-of-ops)
+Mit anderen Worten: Ausgehend vom Zustand arm und unbekannt den Zustand reich und berühmt erreichen, unter Verwendung beliebiger Kombinationen der bekannten Operatoren. GPS sollte nur dann einen wahren Wert zurückgeben, wenn es das Problem löst, und es sollte einen Bericht über die durchgeführten Aktionen ausgeben. Der einfachste Ansatz besteht darin, die Bedingungen im Zielzustand der Reihe nach durchzugehen und jede einzeln zu erreichen. Wenn alle erreicht werden können, ist das Problem gelöst.
+
+Eine einzelne Zielbedingung kann auf zwei Arten erreicht werden. Wenn sie bereits im aktuellen Zustand vorliegt, ist das Ziel trivialerweise ohne Aufwand erreicht. Andernfalls müssen wir einen geeigneten Operator finden und versuchen, ihn anzuwenden.
+
+Ein Operator ist geeignet, wenn einer der Effekte des Operators darin besteht, das fragliche Ziel zum aktuellen Zustand hinzuzufügen; mit anderen Worten, wenn das Ziel in der Add-List des Operators steht.
+
+Wir können einen Operator anwenden, wenn wir alle Voraussetzungen erfüllen können. Das ist jedoch einfach, weil wir im vorherigen Absatz gerade das Konzept des Erreichens eines Ziels definiert haben. Sobald die Voraussetzungen erfüllt sind, bedeutet das Anwenden eines Operators, die Aktion auszuführen und den aktuellen Zustand gemäß der Add-List und Delete-List des Operators zu aktualisieren. Da unser Programm nur eine Simulation ist – es wird kein Auto wirklich fahren oder ein Telefon wählen –, müssen wir uns damit begnügen, die Aktion einfach auszugeben, anstatt eine echte Aktion durchzuführen.
+
+Stufe 3: Implementierung
+Die Spezifikation ist vollständig genug, um direkt zu einem vollständigen Common Lisp-Programm zu führen. Figure 4.1 fasst die Variablen, Datentypen und Funktionen zusammen, die das GPS-Programm ausmachen, zusammen mit einigen der Common Lisp-Funktionen, die zur Implementierung verwendet werden.
+
+Symbol	Verwendung
+Funktion auf oberster Ebene
+GPS	Löst ein Ziel aus einem Zustand mit einer Liste von Operatoren.
+Spezielle Variablen
+*state*	Der aktuelle Zustand, eine Liste von Bedingungen.
+*ops*	Eine Liste verfügbarer Operatoren.
+Datentypen
+op	Eine Operation mit Preconds, Add-List und Del-List.
+Funktionen
+achieve	Ein individuelles Ziel erreichen.
+appropriate-p	Entscheiden, ob ein Operator für ein Ziel geeignet ist.
+apply-op	Operator auf den aktuellen Zustand anwenden.
+Ausgewählte Common Lisp-Funktionen
+member	Testet, ob ein Element Mitglied einer Liste ist. (S.78)
+set-difference	Alle Elemente in einer Menge, aber nicht in der anderen.
+Vereinigung	Alle Elemente in einer der beiden Mengen.
+jeder	Teste, ob jedes Element einer Liste einen Test besteht. (S. 62)
+some	Teste, ob irgendein Element einer Liste einen Test besteht.
+Zuvor definierte Funktionen
+find-all	Eine Liste aller passenden Elemente. (S. 101)
+Hier ist das vollständige GPS-Programm selbst:
+
+(defvar *state* nil "Der aktuelle Zustand: eine Liste von Bedingungen.")
+
+(defvar *ops* nil "Eine Liste verfügbarer Operatoren.")
+
+(defstruct op "Eine Operation"
+(action nil) (preconds nil) (add-list nil) (del-list nil))
+
+(defun GPS (*state* goals *ops*)
+"Allgemeiner Problemlöser: Erreiche alle Ziele mit *ops*."
+(if (every #'achieve goals) 'solved))
+
+(defun achieve (goal)
+"Ein Ziel ist erreicht, wenn es bereits zutrifft,
+oder wenn es eine passende op dafür gibt, die anwendbar ist."
+(or (member goal *state*)
+(some #'apply-op
+(find-all goal *ops* :test #'appropriate-p))))
+
+
+
+(defun appropriate-p (goal op)
+
+"Ein op ist einem goal angemessen, wenn es in seiner add list steht."
+(member goal (op-add-list op)))
+
+
+
+(defun apply-op (op)
+
+"Drucke eine Nachricht und aktualisiere *state*, wenn op anwendbar ist."
+(when (every #'achieve (op-preconds op))
+(print (list 'executing (op-action op)))
+(setf *state* (set-difference *state* (op-del-list op)))
+(setf *state* (union *state* (op-add-list op)))
+t))
+Wir können sehen, dass das Programm aus sieben Definitionen besteht. Diese entsprechen den sieben Punkten in der obigen Spezifikation. Im Allgemeinen sollte man nicht mit einer so perfekten Übereinstimmung zwischen Spezifikation und Implementierung rechnen. Es gibt zwei defvar-Formen, eine defstruct-Form und vier defun-Formen. Dies sind die Common-Lisp-Formen zum Definieren von Variablen, Strukturen und Funktionen. Sie sind die häufigsten Top-Level-Formen in Lisp, aber es gibt nichts Magisches an ihnen; sie sind nur spezielle Formen, die die Nebenwirkung haben, neue Definitionen zur Lisp-Umgebung hinzuzufügen.
+
+Die zwei defvar-Formen, unten wiederholt, deklarieren spezielle Variablen namens *state* und *ops*, die dann von überall im Programm aus zugänglich sind.
+
+(defvar *state* nil "Der aktuelle Zustand: eine Liste von Bedingungen.")
+(defvar *ops* nil "Eine Liste verfügbarer Operatoren.")
+Die defstruct-Form definiert eine Struktur namens op, die Slots namens action, preconds, add-list und del-list hat. Strukturen in Common Lisp ähneln Strukturen in C oder Records in Pascal. Die defstruct definiert automatisch eine Konstruktorfunktion namens make-op und eine Zugriffsfunktion für jeden Slot der Struktur. Die Zugriffsfunktionen heißen op-action, op-preconds, op-add-list und op-del-list. Die defstruct definiert auch eine Kopierfunktion copy-op, ein Prädikat op-p und setf-Definitionen zum Ändern jedes Slots. Keine davon wird im GPS-Programm verwendet. Grobschlächtig gesagt, ist es so, als ob die defstruct-Form
+
+(defstruct op "Eine Operation"
+(action nil) (preconds nil) (add-list nil) (del-list nil))
+erweitert zu den folgenden Definitionen:
+
+(defun make-op (&key action preconds add-list del-list)
+(vector 'op action preconds add-list del-list))
+
+(defun op-action (op) (elt op 1))
+
+(defun op-preconds (op) (elt op 2))
+
+(defun op-add-list (op) (elt op 3))
+
+(defun op-del-list (op) (elt op 4))
+
+
+
+(defun copy-op (op) (copy-seq op))
+
+
+
+
+(defun op-p (op)
+
+
+
+  (and (vectorp op) (eq (elt op 0) 'op)))
+
+
+
+
+(setf (documentation 'op 'structure) "Eine Operation")
+
+Als Nächstes folgen im GPS-Programm vier Funktionsdefinitionen. Die Hauptfunktion, GPS, erhält drei Argumente. Das erste ist der aktuelle Zustand der Welt, das zweite der Zielzustand und das dritte eine Liste zulässiger Operatoren. Der Funktionskörper besagt einfach, dass das Problem gelöst ist, wenn wir alle uns gestellten Ziele erreichen können. Die unausgesprochene Alternative ist, dass das Problem ansonsten nicht gelöst ist.
+
+Die Funktion achieve erhält als Argument ein einzelnes Ziel. Die Funktion ist erfolgreich, wenn dieses Ziel bereits im aktuellen Zustand wahr ist (in diesem Fall müssen wir nichts tun) oder wenn wir einen geeigneten Operator anwenden können. Dies wird erreicht, indem zunächst die Liste der geeigneten Operatoren erstellt und dann jeder nacheinander getestet wird, bis einer angewendet werden kann. achieve ruft find-all auf, das wir auf Seite 101 definiert haben. In dieser Verwendung gibt find-all eine Liste von Operatoren zurück, die zum aktuellen Ziel passen, gemäß dem Prädikat appropriate-p.
+
+Die Funktion appropriate-p prüft, ob ein Operator für das Erreichen eines Ziels geeignet ist. (Sie folgt der Lisp-Namenskonvention, dass Prädikate mit -p enden.)
+
+Schließlich besagt die Funktion apply-op, dass wir einen geeigneten Operator anwenden können, wenn wir alle Voraussetzungen dafür erfüllen können. Dies umfasst das Ausgeben einer entsprechenden Meldung und das Ändern des Weltzustands durch Löschen dessen, was in der delete-list stand, und Hinzufügen dessen, was in der add-list stand. apply-op ist ebenfalls ein Prädikat; es gibt t nur zurück, wenn der Operator angewendet werden kann.
+
+Stufe 4: Test
+Dieser Abschnitt definiert eine Liste von Operatoren, die für den Bereich „Fahren zur Kindertagesstätte“ anwendbar sind, und zeigt, wie man Probleme in diesem Bereich formuliert und löst. Zuerst müssen wir die Liste der Operatoren für den Bereich erstellen. Die defstruct-Form für den Typ op definiert automatisch die Funktion make-op, die wie folgt verwendet werden kann:
+
+(make-op :action 'drive-son-to-school
+:preconds '(son-at-home car-works)
+:add-list '(son-at-school)
+:del-list '(son-at-home))
+Diese Expression gibt einen Operator zurück, dessen Aktion das Symbol drive-son-to-school ist und dessen Voraussetzungen, add-list und delete-list die angegebenen Listen sind. Die Absicht dieses Operators ist, dass immer dann, wenn der Sohn zu Hause ist und das Auto funktioniert, drive-son-to-school angewendet werden kann, was den Zustand ändert, indem die Tatsache, dass der Sohn zu Hause ist, gelöscht und die Tatsache, dass er in der Schule ist, hinzugefügt wird.
+
+Es ist zu beachten, dass die Verwendung langer bindestrichverknüpfter Atome wie son-at-home nur für sehr einfache Beispiele wie dieses eine nützliche Herangehensweise ist. Eine bessere Darstellung würde das Atom in seine Bestandteile zerlegen: vielleicht ( at son home). Das Problem mit dem atom-basierten Ansatz ist ein kombinatorisches. Wenn es 10 Prädikate (wie at) und 10 Personen oder Objekte gibt, dann gibt es 10 x 10 x 10 = 1000 mögliche bindestrichverknüpfte Atome, aber nur 20 Bestandteile. Offensichtlich wäre es einfacher, die Bestandteile zu beschreiben. In diesem Kapitel bleiben wir bei den bindestrichverknüpften Atomen, weil es einfacher ist und wir nicht die ganze Welt beschreiben müssen. Spätere Kapitel nehmen die Wissensrepräsentation ernster.
+
+Mit diesem Operator als Modell können wir andere Operatoren definieren, die dem Zitat von Newell und Simon auf Seite 109 entsprechen. Es wird einen Operator für das Einbauen eines Akkus geben, für das Mitteilung des Problems an die Werkstatt und für das Anrufen der Werkstatt. Wir können das „und so weiter“ ergänzen, indem wir Operatoren für das Nachschlagen der Telefonnummer der Werkstatt und für das Bezahlen der Werkstatt hinzufügen:
+
+(defparameter *school-ops*
+(list
+(make-op :action 'sohn-zur-schule-fahren
+:preconds '(sohn-zu-hause auto-funktioniert)
+:add-list '(sohn-in-der-schule)
+:del-list '(sohn-zu-hause))
+(make-op :action 'shop-installs-battery
+:preconds '(car-needs-battery shop-knows-problem shop-has-money)
+:add-list '(car-works))
+(make-op :action 'tell-shop-problem
+:preconds '(in-communication-with-shop)
+:add-list '(shop-knows-problem))
+(make-op :action 'telephone-shop
+:preconds '(know-phone-number)
+:add-list '(in-communication-with-shop))
+(make-op :action 'look-up-number
+:preconds '(have-phone-book)
+:add-list '(know-phone-number))
+(make-op :action 'give-shop-money
+:preconds '(have-money)
+:add-list '(shop-has-money)
+:del-list '(have-money))))
+Der nächste Schritt besteht darin, GPS einige Probleme zu stellen und die Lösungen zu untersuchen. Im Folgenden sind drei Beispielfälle aufgeführt. In jedem Fall ist das Ziel dasselbe: die Erreichung der einen Bedingung son-at-school. Die Liste der verfügbaren Operatoren ist in jedem Problem ebenfalls dieselbe; der Unterschied liegt im Anfangszustand. Jeder der drei Beispiele besteht aus dem Prompt „>“, der vom Lisp-System ausgegeben wird, gefolgt von einem Aufruf von GPS „ ( gps… )“, der vom Benutzer eingegeben wird, dann der Ausgabe des Programms „(EXECUTING…)“ und schließlich dem Ergebnis des Funktionsaufrufs, das entweder SOLVED oder NIL sein kann.
+
+> (gps '(son-at-home car-needs-battery have-money have-phone-book)
+'(son-at-school)
+*school-ops*)
+(AUSFÜHRUNG NUMMER-SUCHEN)
+(AUSFÜHRUNG TELEFON-LADEN)
+(AUSFÜHRUNG LADEN-PROBLEM-ERZÄHLEN)
+(AUSFÜHRUNG LADEN-GELD-GEBEN)
+(AUSFÜHRUNG SHOP-INSTALLS-BATTERY)
+(AUSFÜHRUNG DRIVE-SON-TO-SCHOOL)
+GELÖST
+> (gps '(son-at-home car-needs-battery have-money)
+'(sohn-in-der-schule)
+*schul-betrieb*)
+NIL
+> (gps '(sohn-zu-hause auto-funktioniert)
+'(Sohn-in-der-Schule)
+*schul-betrieb*)
+(AUSFÜHRUNG FAHRT-SOHN-ZUR-SCHULE)
+GELÖST
+In allen drei Beispielen ist das Ziel, den Sohn in der Schule zu haben. Der einzige Operator, der son-at-school in seiner Add-Liste hat, ist drive-son-to-school, daher wählt GPS diesen Operator zunächst aus. Bevor es diesen Operator ausführen kann, muss GPS die Voraussetzungen erfüllen. Im ersten Beispiel arbeitet das Programm rückwärts durch die Operatoren shop-installs-battery, give-shop-money, tell-shop-problem und telephone-shop bis zu look-up-number, das keine offenen Voraussetzungen hat. Daher kann die Aktion look-up-number ausgeführt werden, und das Programm fährt mit den anderen Aktionen fort. Wie Aristoteles sagte: „Was in der Ordnung der Analyse das Letzte ist, scheint in der Ordnung des Werdens das Erste zu sein.“
+
+Das zweite Beispiel beginnt genau gleich, aber der look-up-number-Operator schlägt fehl, weil seine Voraussetzung have-phone-book nicht erfüllt werden kann. Das Wissen der Telefonnummer ist eine Voraussetzung, direkt oder indirekt, aller Operatoren, daher wird keine Aktion durchgeführt und GPS gibt NIL zurück.
+
+Schließlich ist das dritte Beispiel viel direkter; der Anfangszustand besagt, dass das Auto funktioniert, sodass der Fahr-Operator sofort angewendet werden kann.

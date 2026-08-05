@@ -37,24 +37,24 @@ func SetMaxEvalDepth(v int) {
 
 // evalCtx trägt pro Eval-Lauf: Rekursionstiefe und Cancellation.
 // Eine Instanz gehört immer nur einer Goroutine an.
+//
+// Wird per VALUE durchgereicht, nicht per Pointer. Der Wert ist 24 Byte
+// (int + Interface), passt damit in Register und wird nie geschrieben —
+// child() erzeugt immer eine neue Instanz, niemand mutiert eine
+// bestehende. Als Pointer kostete jedes child() eine Heap-Allokation und
+// machte 84,9 % aller Allokationen des Interpreters aus (PerfTODO §4.5d).
 type evalCtx struct {
   depth int
   ctx   context.Context
 }
 
 // child liefert einen neuen Kontext für einen nicht-tail-rekursiven Aufruf.
-func (e *evalCtx) child() *evalCtx {
-  if e == nil {
-    return &evalCtx{depth: 1}
-  }
-  return &evalCtx{depth: e.depth + 1, ctx: e.ctx}
+func (e evalCtx) child() evalCtx {
+  return evalCtx{depth: e.depth + 1, ctx: e.ctx}
 }
 
 // check prüft Depth-Limit und Cancellation.
-func (e *evalCtx) check() error {
-  if e == nil {
-    return nil
-  }
+func (e evalCtx) check() error {
   if e.depth > int(atomic.LoadInt32(&maxEvalDepth)) {
     return &LispError{Msg: MakeStr("eval: maximum recursion depth exceeded")}
   }
@@ -70,12 +70,12 @@ func (e *evalCtx) check() error {
 
 // Eval wertet einen Ausdruck in env aus. Öffentlicher Einstieg.
 func Eval(expr *Cell, env *Env) (res *Cell, err error) {
-  return evalWithCtx(expr, env, &evalCtx{depth: 0})
+  return evalWithCtx(expr, env, evalCtx{depth: 0})
 }
 
 // evalWithCtx wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
 // setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
-func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
+func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
   defer func() {
     if r := recover(); r != nil {
       res = nil
@@ -351,7 +351,7 @@ var argSlicePool = sync.Pool{
 // evalArgsPooled wertet Argumente aus und liefert einen Slice. pooled==true
 // bedeutet, der Slice stammt aus argSlicePool und muss mit putArgSlice
 // zurueckgegeben werden.
-func evalArgsPooled(args *Cell, env *Env, ectx *evalCtx) ([]*Cell, bool, error) {
+func evalArgsPooled(args *Cell, env *Env, ectx evalCtx) ([]*Cell, bool, error) {
   buf := argSlicePool.Get().(*[8]*Cell)
   result := buf[:0]
   pooled := true
@@ -391,10 +391,10 @@ func putArgSlice(s []*Cell) {
 }
 
 func apply(fn *Cell, args []*Cell) (*Cell, error) {
-  return applyWithCtx(fn, args, &evalCtx{depth: 0})
+  return applyWithCtx(fn, args, evalCtx{depth: 0})
 }
 
-func applyWithCtx(fn *Cell, args []*Cell, ectx *evalCtx) (*Cell, error) {
+func applyWithCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   switch fn.Type {
   case FUNC: return fn.Fn(args)
   case LAMBDA: return applyLambda(fn, args, ectx)

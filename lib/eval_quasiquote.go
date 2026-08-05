@@ -15,14 +15,14 @@ package lib
 import "fmt"
 
 // quasiquote: `expr → wertet unquote/unquote-splice innerhalb aus
-func evalQuasiquote(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalQuasiquote(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("quasiquote: 1 Argument nötig")
   }
   return evalQQ(args.Car, env, 1, ectx)
 }
 
-func evalQQ(expr *Cell, env *Env, depth int, ectx *evalCtx) (*Cell, error) {
+func evalQQ(expr *Cell, env *Env, depth int, ectx evalCtx) (*Cell, error) {
   if expr == nil { return MakeNil(), nil }
   if expr.Type != LIST { return expr, nil }
 
@@ -49,7 +49,7 @@ func evalQQ(expr *Cell, env *Env, depth int, ectx *evalCtx) (*Cell, error) {
   return evalQQList(expr, env, depth, ectx)
 }
 
-func evalQQList(lst *Cell, env *Env, depth int, ectx *evalCtx) (*Cell, error) {
+func evalQQList(lst *Cell, env *Env, depth int, ectx evalCtx) (*Cell, error) {
   if lst == nil || lst.Type != LIST { return lst, nil }
   car := lst.Car
 

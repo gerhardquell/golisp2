@@ -18,7 +18,7 @@ import (
 )
 
 // load: (load "datei.lisp") → liest und wertet alle Ausdrücke aus
-func evalLoad(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   filenameCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   if filenameCell == nil || filenameCell.Type != STRING {
@@ -62,10 +62,10 @@ func evalLoad(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // LoadString: Mehrere Ausdrücke aus einem String auswerten
 func LoadString(src string, env *Env) (*Cell, error) {
-  return loadStringWithCtx(src, env, &evalCtx{depth: 0})
+  return loadStringWithCtx(src, env, evalCtx{depth: 0})
 }
 
-func loadStringWithCtx(src string, env *Env, ectx *evalCtx) (*Cell, error) {
+func loadStringWithCtx(src string, env *Env, ectx evalCtx) (*Cell, error) {
   src = strings.TrimSpace(src)
   var result *Cell
   r := NewReader(src)

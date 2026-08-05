@@ -16,7 +16,7 @@ import (
   "fmt"
 )
 
-func evalDefine(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
@@ -35,7 +35,7 @@ func evalDefine(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // letzten Wert (CL). Bestehende Bindung wird entlang der Env-Kette
 // aktualisiert; ungebundene Variable wird im aktuellen Env angelegt
 // (clisp-Top-Level-Verhalten).
-func evalSetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   result := MakeNil()
   for a := args; a != nil && a.Type == LIST; a = a.Cdr.Cdr {
     if a.Car == nil || a.Car.Type != ATOM {
@@ -65,7 +65,7 @@ func evalSetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // psetq: (psetq var1 val1 var2 val2 ...) → paralleles Setzen (CL): erst
 // alle Werte im alten Env auswerten, dann zuweisen.
-func evalPsetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalPsetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   var names []string
   var vals []*Cell
   for a := args; a != nil && a.Type == LIST; a = a.Cdr.Cdr {
@@ -101,7 +101,7 @@ func evalPsetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // bound?: (bound? sym) → t wenn sym im aktuellen Env gebunden ist, sonst nil.
 // sym wird ausgewertet, damit (bound? variable), die ein Symbol enthält,
 // funktioniert (z. B. im defstruct-Makro).
-func evalBound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalBound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Car == nil {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
   }
@@ -118,7 +118,7 @@ func evalBound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // makunbound: (makunbound 'symbol) → entfernt die globale Bindung (CL).
 // Fehler, wenn das Symbol nicht gebunden ist — laut statt still.
-func evalMakunbound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMakunbound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("makunbound: Syntax: (makunbound 'symbol)")
   }
@@ -147,7 +147,7 @@ func evalMakunbound(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 }
 
 // macroexpand: (macroexpand form) → expandiert Makros einmal, gibt Ergebnis zurück
-func evalMacroexpand(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMacroexpand(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("macroexpand: 1 Argument nötig")
   }
@@ -179,7 +179,7 @@ func evalMacroexpand(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // macroexpand-all: (macroexpand-all form) → rekursiv alle Makros expandieren.
 // Expandiert Makros in allen Subformen, ohne die Form auszuwerten.
 // quote / quasiquote / function werden nicht durchdrungen.
-func evalMacroexpandAll(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMacroexpandAll(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("macroexpand-all: 1 Argument nötig")
   }
@@ -188,7 +188,7 @@ func evalMacroexpandAll(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return macroexpandAll(form, env, ectx)
 }
 
-func macroexpandAll(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func macroexpandAll(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if form == nil || form.Type != LIST {
     return form, nil
   }
@@ -215,7 +215,7 @@ func macroexpandAll(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // macroexpandOnce: expandiert form einmal, falls car ein Makro ist.
 // Liefert form unverändert zurück, wenn kein Makro vorliegt.
-func macroexpandOnce(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func macroexpandOnce(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if form == nil || form.Type != LIST || form.Car == nil {
     return form, nil
   }
@@ -241,7 +241,7 @@ func wrapBegin(exprs *Cell) *Cell {
   return Cons(MakeAtom("begin"), exprs)  // mehrere → (begin ...)
 }
 
-func evalDefun(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalDefun(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST {
@@ -255,11 +255,11 @@ func evalDefun(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return MakeAtom(name), nil
 }
 
-func evalLambda(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalLambda(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   return makeLambda(args.Car, wrapBegin(args.Cdr), env), nil
 }
 
-func evalBegin(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalBegin(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   var result *Cell
   var err error
   for args != nil && args.Type == LIST {
@@ -270,7 +270,7 @@ func evalBegin(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   return result, nil
 }
 
-func evalSet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalSet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("set!: Syntax: (set! name value)")
@@ -283,7 +283,7 @@ func evalSet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 }
 
 // setq*: (setq* var1 val1 var2 val2 ...) → sequentielles Setzen
-func evalSetQStar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalSetQStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("setq*: Syntax: (setq* var1 val1 var2 val2 ...)")
   }
@@ -310,7 +310,7 @@ func evalSetQStar(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 }
 
 // and: (and a b c ...) → gibt ersten falschen Wert zurück, sonst letzten
-func evalAnd(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalAnd(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   result := &Cell{Type: ATOM, Val: "t"}
   for args != nil && args.Type == LIST {
     val, err := evalWithCtx(args.Car, env, ectx.child())
@@ -323,7 +323,7 @@ func evalAnd(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 }
 
 // or: (or a b c ...) → gibt ersten wahren Wert zurück, sonst nil
-func evalOr(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalOr(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   for args != nil && args.Type == LIST {
     val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
@@ -334,7 +334,7 @@ func evalOr(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 }
 
 // not: (not x) → t wenn x falsch, sonst nil
-func evalNot(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalNot(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   val, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   if IsTruthy(val) { return MakeNil(), nil }
@@ -343,7 +343,7 @@ func evalNot(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // defmacro: (defmacro name (params) body)
 // Wie defun, aber speichert MACRO statt LIST
-func evalDefmacro(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalDefmacro(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST {
@@ -362,7 +362,7 @@ func evalDefmacro(form *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // Lokale Makros: nur im body sichtbar, Schatten globale Definitionen.
 // Wie in CL nicht-rekursiv: die Makro-Bodies laufen im ÄUSSEREN env
 // (sehen die anderen macrolet-Makros nicht — Gegensatz zu labels).
-func evalMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil ||
      (args.Car.Type != LIST && args.Car.Type != NIL) {
     return nil, fmt.Errorf("macrolet: Syntax: (macrolet ((name (params...) body...) ...) body...)")
@@ -387,7 +387,7 @@ func evalMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // ATOM-Fall in evalWithCtx wertet bei Marker die Expansion aus,
 // symMacroTarget leitet Zuweisungen um. Shadowing durch echte innere
 // Bindungen (let, lambda, dolist) entsteht gratis aus der Env-Kette.
-func evalSymbolMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalSymbolMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil ||
      (args.Car.Type != LIST && args.Car.Type != NIL) {
     return nil, fmt.Errorf("symbol-macrolet: Syntax: (symbol-macrolet ((sym expansion) ...) body...)")
@@ -426,7 +426,7 @@ func symMacroTarget(env *Env, name string) (string, error) {
 // der Body genau dann, wenn :execute (oder der Altname eval) in den
 // Situationen steht. :compile-toplevel/:load-toplevel allein → nil.
 // Entspricht exakt clisps Verhalten unter (eval ...).
-func evalEvalWhen(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalEvalWhen(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil ||
      (args.Car.Type != LIST && args.Car.Type != NIL) {
     return nil, fmt.Errorf("eval-when: Syntax: (eval-when (situation...) body...)")
@@ -450,7 +450,7 @@ func evalEvalWhen(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // Abweichung: golisp2 kennt keine lexikalisch/dynamisch-Trennung, darum
 // sieht eine lexikalische let-Bindung desselben Namens den progv-Wert
 // (in CL bliebe sie davon unberührt).
-func evalProgv(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalProgv(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
     return nil, fmt.Errorf("progv: Syntax: (progv symbole werte body...)")
   }
@@ -478,7 +478,7 @@ func evalProgv(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // case: (case key-expr ((val1 val2) result1) (else result3) ...)
 // Syntaktischer Zucker fuer cond mit strukturellem Vergleich.
 // Gibt Tripel zurück, damit der Eval-Loop TCO-fähig bleibt (case ist Tail).
-func evalCase(args *Cell, env *Env, ectx *evalCtx) (*Cell, *Env, error) {
+func evalCase(args *Cell, env *Env, ectx evalCtx) (*Cell, *Env, error) {
   if args == nil || args.Type != LIST {
     return nil, nil, fmt.Errorf("case: Syntax: (case key-expr clause...)")
   }
@@ -521,7 +521,7 @@ func evalCase(args *Cell, env *Env, ectx *evalCtx) (*Cell, *Env, error) {
 // the: (the typ form) → Wert von form. golisp2 hat kein Typsystem —
 // der Typ wird ignoriert (CL würde ihn prüfen). Transparent für
 // Multiple Values: die Werte von form gehen unverändert durch.
-func evalThe(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalThe(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
     return nil, fmt.Errorf("the: Syntax: (the typ form)")
   }

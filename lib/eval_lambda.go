@@ -23,7 +23,7 @@ func makeLambda(params, body *Cell, env *Env) *Cell {
 
 // applyLambda wendet eine Lambda/Closure auf Argumente an.
 // Wird auch für Makro-Expansion genutzt (siehe Eval + evalMacroexpand).
-func applyLambda(lambda *Cell, args []*Cell, ectx *evalCtx) (*Cell, error) {
+func applyLambda(lambda *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   closureEnv, ok := lambda.Env.(*Env)
   if !ok {
     return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
@@ -75,7 +75,7 @@ func bindSupplied(localEnv *Env, supplied string, delivered bool) {
 
 // bindArgs: Lambda-Parameter binden – unterstützt regulär, dotted-rest,
 // &optional, &key, &rest (CL-Stil Lambda-Listen).
-func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *evalCtx) error {
+func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   argIdx  := 0
   hasKey  := false  // &key verwendet → kein excess check
@@ -162,7 +162,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx *
 // Argument-Ausdrücken. Jeder Argument-Wert wird in callerEnv ausgewertet,
 // Default-Ausdrücke für &optional/&key in closureEnv. Damit entfällt der
 // Zwischen-Slice []*Cell, den bindArgs sonst benötigt.
-func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env, ectx *evalCtx) error {
+func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env, ectx evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   hasKey := false
 
@@ -262,7 +262,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
 }
 
 // evalExprList wertet eine Liste von Ausdrücken aus und liefert einen Slice.
-func evalExprList(exprs *Cell, env *Env, ectx *evalCtx) ([]*Cell, error) {
+func evalExprList(exprs *Cell, env *Env, ectx evalCtx) ([]*Cell, error) {
   var result []*Cell
   for exprs != nil && exprs.Type == LIST {
     val, err := evalWithCtx(exprs.Car, env, ectx.child())

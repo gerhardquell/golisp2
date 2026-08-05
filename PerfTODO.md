@@ -34,8 +34,12 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | ⚠️ Nachmessung 2026-08-05 (unverändert) | 1 335 430 | 32 MB | 139 ms |
 | **Schnitt 7** (Env-Pool entfernt — Korrektheit) ✅ | 1 578 206 | 59 MB | 142 ms |
 | **Schnitt 8** (Symbol-Interning — Korrektheit) ✅ | 1 578 205 | 59 MB | 148 ms |
+| **Schnitt 9** (evalCtx per Value statt Pointer) ✅ | 242 833 | 27 MB | 115 ms |
 
-**Aktuelle Baseline: `1 578 205 allocs/op`, 59 MB/op, ~148 ms/op.**
+**Aktuelle Baseline: `242 833 allocs/op`, 27 MB/op, ~115 ms/op.**
+
+Die 242 833 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
+95,8 % der Allokationen aus. Nächstes Ziel, siehe §6.
 
 ⚠️ **Die „3 allocs/op" aus Schnitt 6 sind Geschichte, nicht Zustand.**
 Zwischen Schnitt 6 (2026-06-26) und der Nachmessung am 2026-08-05 ist das
@@ -201,6 +205,60 @@ plus ein Nebenläufigkeitstest (32 Goroutinen × 16 Symbole, mit `-race`).
 
 ---
 
+## 4.5d Schnitt 9: evalCtx per Value ✅ — der Elefant aus §6
+
+**Ziel:** `(*evalCtx).child()` allokierte pro Nicht-Tail-Auswertung ein
+`&evalCtx{depth, ctx}` — 24 Byte, ~5,5 Stück pro fib-Aufruf, 84,9 % aller
+Allokationen des Interpreters.
+
+**Analyse vor dem Umbau:** `evalCtx` wird nach der Erzeugung **nie**
+mutiert (`rg '\.(depth|ctx)\s*=[^=]'` → leer außer den Literalen). `child()`
+baut immer eine neue Instanz. Damit ist by-value semantisch identisch, und
+der Wert (int + Interface = 24 Byte, 3 Words) passt in Register — die
+Go-Register-ABI nimmt bis zu 9 Words, `evalWithCtx` braucht mit 2 Pointern
+insgesamt 5.
+
+**Änderung:** `ectx *evalCtx` → `ectx evalCtx` an 63 Stellen in 8 Dateien,
+Methoden von Pointer- auf Value-Receiver, 7 `&evalCtx{…}` → `evalCtx{…}`.
+Die defensiven `e == nil`-Zweige in `child()`/`check()` fallen weg (ein
+Value ist nie nil), ebenso `ectx != nil` in `evalParfunc`.
+
+**Ergebnis (fib 25):**
+```
+             vorher       nachher      Delta
+allocs/op    1 578 205    242 833      −84,6 %
+B/op         59,27 MB     27,20 MB     −54,1 %
+ns/op        145,6 ms     114,6 ms     −21,3 %
+```
+
+Die Rechnung schließt sich: 1 578 205 − 242 833 = 1 335 372, und das ist
+praktisch genau die „Nachmessung 2026-08-05" von 1 335 430. Die
+undokumentierte Regression zwischen Schnitt 6 und heute **war** `evalCtx`,
+vollständig und ausschließlich.
+
+Im Profil erscheint `evalCtx` nicht mehr. Neuer Spitzenposten: `NewEnv` mit
+95,84 %.
+
+**Nebeneffekt:** die 3-Mio-Tail-Call-Schleife läuft in 2,05 s statt 2,48 s
+(−17 %). Tail-Calls erhöhen die Tiefe nicht, allokierten aber trotzdem einen
+Kontext pro Argument-Auswertung.
+
+**Netz:** `lib/eval_depth_test.go`, sieben Fälle, VOR dem Umbau committet
+(`f331b24`). Bewusst nur über die öffentliche API, damit die
+Signaturänderung an `evalWithCtx`/`child` sie nicht berührt — ein Netz, das
+beim Refactoring mitgeändert werden muss, sichert nichts ab. Es hält die
+Tiefen-Rücksetzpunkte fest (`eval`, `funcall`/`apply`), die Tail-Freiheit
+und die ctx-Weitergabe an `child()`.
+
+**Lektion:** Drei Optimierungen in dieser Datei haben Semantik verändert
+(Schnitt 1 Identität, Schnitt 5 Frame-Lebensdauer) oder waren teuer, weil
+etwas per Pointer durchgereicht wurde, das per Value gehört. Der
+gemeinsame Nenner: ein Pointer signalisiert „geteilter, veränderlicher
+Zustand". `evalCtx` war beides nicht. Wer einen Pointer nimmt, wo ein Wert
+genügt, bezahlt eine Heap-Allokation für eine Aussage, die nicht stimmt.
+
+---
+
 ## 4.6 Schnitt 6: Small-Int-Cache verbreitern ✅
 
 **Ziel:** die verbleibenden ~987 Allokationen pro `fib 25` eliminieren.
@@ -322,46 +380,47 @@ Beide aus Korrektheitsgründen, nicht wegen Tempo:
 
 - **Schnitt 7:** Rücknahme von Schnitt 5 — `envPool`/`shared`/`ownEnv`
   entfernt, weil das `shared`-Bit die transitive Erreichbarkeit von
-  Closures nicht ausdrücken kann. Details in §4.5b.
+  Closures nicht ausdrücken kann. §4.5b. (Korrektheit, kostete +2,3 %)
 - **Schnitt 8:** Symbol-Interning — Rücknahme des Ad-hoc-Interning aus
-  Schnitt 1. Details in §4.5c.
+  Schnitt 1. §4.5c. (Korrektheit, kostete +4,0 %)
+- **Schnitt 9:** `evalCtx` per Value statt Pointer. §4.5d.
+  (Performance: −84,6 % allocs, −21,3 % ns)
 
-Zusammen: **+9 ms (+6,5 %) gegenüber der Nachmessung**, dafür sind zwei
-Fehlerklassen weg, die kein Test gefangen hat. Beide Schnitte waren
-Optimierungen, die Semantik verändert haben — Schnitt 5 die
-Frame-Lebensdauer, Schnitt 1 die Identität.
+Netto gegenüber der Nachmessung vom 2026-08-05: **139 ms → 115 ms** bei
+**1 335 430 → 242 833 allocs/op**. Zwei Fehlerklassen weg *und* schneller.
 
-### Was jetzt? — `evalCtx.child()` ist der Elefant
+### Was jetzt? — `NewEnv` ist der neue Elefant
 
-Profil vom 2026-08-05 (`-sample_index=alloc_objects`, nach Schnitt 7):
+Profil nach Schnitt 9 (`-sample_index=alloc_objects`):
 
 | Posten | Anteil | Objekte |
 |--------|--------|---------|
-| `(*evalCtx).child` | **84,9 %** | 21 823 932 |
-| `NewEnv` | 14,8 % | 3 810 846 |
-| alles andere | 0,3 % | — |
+| `NewEnv` | **95,8 %** | 2 411 033 |
+| `init.2` (Small-Int-Cache, einmalig) | 3,0 % | 74 906 |
+| alles andere | 1,2 % | — |
 
-`ectx.child()` allokiert pro **Nicht-Tail**-Auswertung ein `&evalCtx{depth,
-ctx}` — 24 Byte, ~5,5 Stück pro fib-Aufruf. Das Depth-Limit- und
-Cancellation-Feature ist damit der dominante Allokationsposten des
-Interpreters, mit fast sechsfachem Volumen gegenüber den Frame-Envs, deren
-Pooling sich Schnitt 5 ein Korrektheitsloch kosten ließ.
+Ein Frame-Env pro Aufruf, seit Schnitt 7 wieder auf dem Heap. **Das ist
+NICHT die Einladung, den Pool wiederzubeleben** — er war die Ursache für
+zehn kaputte Frame-Formen (§4.5b). Gangbare Richtungen stattdessen:
 
-**Nächster Schnitt: `evalCtx` von der Halde nehmen.** Kandidaten, in
-aufsteigender Invasivität:
+1. **`Env` kleiner machen.** `sync.RWMutex` ist 24 Byte in einem Struct, das
+   sonst ~80 Byte hat, und wird nur für `parfunc` gebraucht. Ein Frame-Env
+   gehört per Definition genau einer Goroutine — außer bei `parfunc`. Den
+   Mutex nur im Root-Env zu halten (oder als Pointer, nil für Frames)
+   verkleinert die Allokation, ohne Semantik anzufassen. **Kleinster
+   Schnitt, zuerst probieren.**
+2. **Frame als Wert im Trampolin.** Derselbe Gedanke wie Schnitt 9: der
+   Frame eines Nicht-Closure-Aufrufs wird nie geteilt. Nur weiß man das
+   erst *nach* dem Body — genau die Information, an der das `shared`-Bit
+   gescheitert ist. Bräuchte eine statische Analyse zur Definitionszeit
+   („enthält dieser Body ein `lambda`?"), nicht zur Laufzeit. Machbar, weil
+   `wrapBegin` den Body dort schon anfasst. Deutlich invasiver.
+3. **Escape-Analyse prüfen.** `go build -gcflags='-m'` auf `NewEnv`: falls
+   der Frame nur wegen einer einzigen Speicherung entkommt, vielleicht
+   lokal behebbar.
 
-1. `evalCtx` **per Value** durchreichen statt per Pointer — `depth int` +
-   `ctx context.Context` sind 24 Byte, das kopiert sich billiger als es
-   allokiert. `child()` wird `ectx.childVal()` und gibt einen Wert zurück.
-   Braucht eine Signaturänderung über den halben Interpreter — Blast-Radius
-   vor dem Anfangen prüfen.
-2. Nur allokieren, wenn `ctx != nil`: die Tiefe allein könnte als `int`-Parameter
-   mitlaufen. Die meisten Läufe haben gar keinen Context.
-3. Escape-Analyse prüfen: `go build -gcflags='-m'` auf `child()` — vielleicht
-   entkommt es nur wegen einer einzigen Speicherung.
-
-Erst messen, welche der drei greift. Erwartung vor dem Lauf formulieren
-(siehe §9), sonst wiederholt sich das Phantom aus §5.
+Erwartung vor dem Lauf formulieren (§9), sonst wiederholt sich das Phantom
+aus §5.
 
 Danach ist der `fib`-Mikrobenchmark am Ende seines Aussagegehalts.
 Weitere Reduktionen bräuchten einen anderen Ansatz:
@@ -380,7 +439,8 @@ neuer Schnitt angelegt wird.
 
 | Datei | Was drin steckt |
 |-------|-----------------|
-| `lib/eval_core.go` | `Eval`-Trampolin, `evalCtx`/`child()`, `evalArgsPooled`, Lambda-Apply-Pfad |
+| `lib/eval_core.go` | `Eval`-Trampolin, `evalCtx` (**per Value**), `evalArgsPooled`, Lambda-Apply-Pfad |
+| `lib/eval_depth_test.go` | Netz für Tiefe + Cancellation (§4.5d), nur öffentliche API |
 | `lib/env.go` | `Env`-Struct (Root-Map + Slice-Frames), Redefine-Policy |
 | `lib/env_closure_test.go` | Regressionsnetz Closure × Frame-Form (§4.5b) |
 | `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |

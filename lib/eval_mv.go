@@ -18,7 +18,7 @@ import (
 )
 
 // multiple-value-list: (multiple-value-list form) → Liste aller Werte.
-func evalMultipleValueList(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMultipleValueList(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("multiple-value-list: Syntax: (multiple-value-list form)")
   }
@@ -32,7 +32,7 @@ func evalMultipleValueList(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 // multiple-value-bind: (multiple-value-bind (var...) form body...) →
 // bindet die Werte von form an var (fehlende → nil, überschüssige
 // verworfen) und wertet body aus.
-func evalMultipleValueBind(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMultipleValueBind(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil ||
     (args.Car.Type != LIST && args.Car.Type != NIL) ||
     args.Cdr == nil || args.Cdr.Type != LIST {
@@ -61,7 +61,7 @@ func evalMultipleValueBind(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // multiple-value-call: (multiple-value-call fn form...) → ruft fn mit
 // ALLEN Werten aller formen auf (nicht nur Primärwerte).
-func evalMultipleValueCall(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMultipleValueCall(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("multiple-value-call: Syntax: (multiple-value-call fn form...)")
   }
@@ -82,7 +82,7 @@ func evalMultipleValueCall(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // multiple-value-prog1: (multiple-value-prog1 form rest...) → liefert
 // ALLE Werte von form (anders als prog1, das nur den Primärwert reicht).
-func evalMultipleValueProg1(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMultipleValueProg1(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("multiple-value-prog1: Syntax: (multiple-value-prog1 form rest...)")
   }
@@ -103,7 +103,7 @@ func evalMultipleValueProg1(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) 
 // nth + multiple-value-list; hier als Spezialform, damit es ohne
 // Stdlib verfügbar ist (Go-Tests nutzen nur BaseEnv) und alle
 // MV-Formen an einem Ort leben.
-func evalNthValue(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalNthValue(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
     return nil, fmt.Errorf("nth-value: Syntax: (nth-value n form)")
   }
@@ -128,7 +128,7 @@ func evalNthValue(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
 
 // multiple-value-setq: (multiple-value-setq (var...) form) → weist die
 // Werte von form den Variablen zu (fehlende → nil), liefert Primärwert.
-func evalMultipleValueSetq(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
+func evalMultipleValueSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil ||
     (args.Car.Type != LIST && args.Car.Type != NIL) ||
     args.Cdr == nil || args.Cdr.Type != LIST {

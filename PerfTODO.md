@@ -38,8 +38,11 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 10** (Env-Struct 112 → 88 B) ✅ | 242 828 | 23 MB | 113 ms |
 | **Schnitt 11** (Env 80 B + Symbol-Keyed Lookup) ✅ | 242 819 | 19 MB | 109 ms |
 | entries-Startkapazität ❌ (netto negativ, siehe §3) | — | — | — |
+| **Schnitt 12** (Cell.SrcFile 104 → 96 B) ✅ kein fib-Effekt, siehe §4.5g | 242 823 | 19 MB | 110 ms |
 
 **Aktuelle Baseline: `242 819 allocs/op`, 19,4 MB/op, ~109 ms/op.**
+Schnitt 12 ändert diese Baseline nicht messbar — `fib` erzeugt keine
+LIST-Cells zur Laufzeit, siehe §4.5g.
 
 Die 242 819 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
 95,8 % der Allokationen aus. Die Zahl der Allokationen ist damit am Boden für
@@ -478,6 +481,46 @@ gefixt (`e396f4e`), war eine echte `eq`-Divergenz gegen SBCL.
 in beiden Richtungen, `GetSym`-Durchfall bis ins Root-Env). Die sechs
 bestehenden Fälle nutzen die String-API und blieben unverändert grün — genau
 das soll ein Netz bei einem Refactoring tun.
+
+---
+
+## 4.5g Schnitt 12: Cell.SrcFile string → *string (104 → 96 B) ✅
+
+**Ziel:** der in §6 vorgeschlagene erste Schritt am nächsten Kandidaten —
+`Cell` ist 104 B, `SrcFile`/`SrcLine` (24 B) sitzen ausschließlich auf
+LIST-Cells und werden pro Datei redundant als eigener String-Header
+getragen.
+
+**Änderung:** `SrcFile string` → `srcFile *string` (16 → 8 B), Zugriff über
+neue Methode `SrcFile() string` (Chokepoint, ersetzt Feldzugriff an allen
+Callsites in `eval_specialforms.go`, `types_test.go`). `eval_load.go`
+stempelt jetzt über `SetSrcFilePtr` mit einem geteilten `*string` pro
+Datei — alle Formen einer geladenen Datei zeigen auf denselben String statt
+je einen eigenen zu allozieren. `SetSrcFile(string)` bleibt für Einzelfälle
+(z. B. Tests), die keinen geteilten Pointer haben.
+
+**Gemessen (`BenchmarkFib`, ×3):**
+
+| | ns/op | B/op | allocs/op |
+|---|---|---|---|
+| Schnitt 11 (Baseline) | 109,0 ms | 19,43 MB | 242 819 |
+| **Schnitt 12** | 110,1 ms | 19,43 MB | 242 823 |
+
+Kein Effekt — **erwartungsgemäß**, nicht überraschend: `fib` baut zur
+Laufzeit keine neuen LIST-Cells, nur `NewEnv`-Frames und gecachte
+NUMBER-Cells. `SrcFile` wird ausschließlich beim Lesen/Laden gestempelt,
+nicht im Eval-Hot-Path von `fib`. Die Streuung (+1,0 % ns) liegt im
+Rauschband der Messreihe, nicht in der Änderung selbst.
+
+Der eigentliche Effekt — kleinere `Cell`, weniger String-Header beim
+Datei-Laden — ist mit `fib` nicht sichtbar zu machen. Bestätigt exakt die
+Warnung aus §6: „vor einem Schnitt dort erst einen Benchmark bauen, der
+Cells tatsächlich erzeugt." Dieser zweite Benchmark steht weiterhin aus,
+bevor an `Cell` weitergeschnitten wird.
+
+**Netz:** `types_test.go` (Default-Wert, jetzt über `SrcFile()`),
+`eval_load_test.go` (`SetSrcFile` statt Feldzuweisung) — beide bestehende
+Tests, auf die neue API umgestellt statt neu geschrieben.
 
 ---
 

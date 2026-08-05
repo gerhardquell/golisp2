@@ -78,7 +78,7 @@ func TestDefunRegistersLocation(t *testing.T) {
   if err != nil {
     t.Fatalf("read: %v", err)
   }
-  form.SrcFile = "/test.lisp"
+  form.SetSrcFile("/test.lisp")
   form.SrcLine = 3
   if _, err := Eval(form, env); err != nil {
     t.Fatalf("eval: %v", err)

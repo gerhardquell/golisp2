@@ -41,6 +41,10 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   src := strings.TrimSpace(string(data))
   var result *Cell
 
+  // Ein Pointer für die ganze Datei: alle Formen teilen denselben String,
+  // statt jede ihren eigenen Header zu tragen.
+  srcPath := &resolvedPath
+
   // Mehrere Ausdrücke in der Datei nacheinander auswerten
   r := NewReader(src)
   for {
@@ -51,7 +55,7 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if err != nil { return nil, fmt.Errorf("load %s: %w", resolvedPath, err) }
 
     if expr.Type == LIST {
-      expr.SrcFile = resolvedPath
+      expr.SetSrcFilePtr(srcPath)
     }
 
     result, err = evalWithCtx(expr, env, ectx.child())

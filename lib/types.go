@@ -43,10 +43,33 @@ type Cell struct {
 	Env interface{} // *Env – interface{} um Zirkelimport zu vermeiden
 	// HASHTABLE: Zeiger auf die mutable Tabelle (hashtable.go)
 	Ht *HashTable
-	// Quellposition (Reader/Load gestempelt, 0 = unbekannt)
-	SrcFile string
+	// Quellposition. srcFile ist ein *string statt string: 8 statt 16 Byte,
+	// und das bringt Cell von 104 auf 96 Byte — genau die Size-Class-Grenze
+	// des Allocators, der sonst 112 Byte pro Cell vergibt (PerfTODO §4.5e).
+	// Nur LIST-Cells werden gestempelt, und alle Formen einer Datei teilen
+	// denselben Pointer (siehe eval_load.go). Zugriff über SrcFile().
+	srcFile *string
 	SrcLine int
 }
+
+// SrcFile liefert die Quelldatei der Form oder "" wenn ungestempelt.
+// Gestempelt werden ausschliesslich LIST-Cells, durch reader.go und
+// eval_load.go — nie ATOM-Cells, denn die sind interniert und geteilt.
+func (c *Cell) SrcFile() string {
+	if c.srcFile == nil {
+		return ""
+	}
+	return *c.srcFile
+}
+
+// SetSrcFile stempelt die Quelldatei. Fuer den Ladepfad besser
+// SetSrcFilePtr mit einem geteilten Pointer verwenden — sonst allokiert
+// jede Form ihren eigenen String-Header.
+func (c *Cell) SetSrcFile(path string) { c.srcFile = &path }
+
+// SetSrcFilePtr stempelt aus einem geteilten Pointer. Alle Formen einer
+// Datei zeigen damit auf denselben String.
+func (c *Cell) SetSrcFilePtr(p *string) { c.srcFile = p }
 
 // Singleton nil cell - vermeidet Allokationen fuer jedes ()
 // EINZIGE NIL-Instanz. Es darf keine zweite geben: eq ist

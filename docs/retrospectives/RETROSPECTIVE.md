@@ -2596,3 +2596,100 @@ ist jetzt frozen, `origin` entfernt.
 > "Ein Rename ist ein Stresstest für Doku und Annahmen. Was dabei ans Licht
 >  kommt, ist meist älter als der Rename selbst."
 > — Gerhard & Claude, 9. Juli 2026
+
+---
+
+# Session 21 – 2026-08-05: Env-Lebensdauer, eq-Semantik, Allokationen
+
+Vollständige Retrospektive:
+[`docs/retrospectives/2026-08-05-env-eq-perf.md`](2026-08-05-env-eq-perf.md)
+
+## Ziel
+
+Offene TODO ohne Ziel: „Wir wollen heute den Code von golisp2 analysieren."
+Analyse → grill-me → Spec → TODO. Daraus zehn Commits.
+
+## Korrekturen an früheren Sessions
+
+Zwei Erkenntnisse aus **Session 19** (Fib-Optimierung) haben sich als falsch
+erwiesen. Sie bleiben oben stehen — sie zeigen, was damals gedacht wurde:
+
+- **„Frame-Pooling braucht ein Ownership-Modell: `ownEnv` im Trampolin-Loop,
+  `shared`-Flag für Closures"** (§ Fazit Session 19). Korrekt formuliert,
+  falsch angewandt: `shared` ist ein Bit *pro Frame*, die Erreichbarkeit
+  einer Closure läuft transitiv über `parent`. **10 von 11**
+  frame-besitzenden Formen verloren den lexikalischen Scope — verlorene
+  Bindung oder ein `parent`-Zyklus mit unrecoverbarem
+  `fatal error: stack overflow`. Der Pool ist entfernt, die Frame-Lebensdauer
+  gehört dem Go-GC. Kosten: +2,3 % auf `fib`.
+- **„Schnitt 1 (t/nil-Singletons)"** war eine Optimierung, die Semantik
+  verändert hat. `cellT`/`cellNil` interniert genau zwei Werte; `member`/
+  `assoc` lieferten weiter `MakeNil()`. Ergebnis: zwei NIL-Instanzen und ein
+  `eq`, das je nach Primitiv anders antwortete. Symbole sind jetzt
+  vollständig interniert (`internTable` in `types.go`), `(eq 'foo 'foo)` → `t`
+  wie in CL.
+
+Eine Erkenntnis hat sich **bestätigt** und einen Fehlbefund von heute
+verhindert — allerdings erst im zweiten Versuch: **„`Update` muss den
+Child-Lock halten, während es den Parent-Chain entlangsucht"** (§ Fazit
+Session 19). Die Analyse von heute hatte das als Mangel notiert; die
+Begründung stand seit Juli hier. Bei einem Befund der Form *„warum ist das
+so gebaut?"* ist dieses Protokoll die erste Quelle, nicht die letzte.
+
+## Messung `fib 25` (Fortsetzung der Tabelle aus Session 19)
+
+| Stand | allocs/op | B/op | ns/op |
+|-------|-----------|------|-------|
+| Nachmessung 2026-08-05 (unverändert) | 1 335 430 | 32 MB | 139 ms |
+| Schnitt 7 (Env-Pool entfernt, Korrektheit) | 1 578 206 | 59 MB | 142 ms |
+| Schnitt 8 (Symbol-Interning, Korrektheit) | 1 578 205 | 59 MB | 148 ms |
+| Schnitt 9 (`evalCtx` per Value) | 242 833 | 27 MB | 115 ms |
+| Schnitt 10 (`Env` 112→88 B) | 242 828 | 23 MB | 113 ms |
+| Schnitt 11 (`Env` 80 B + Symbol-Lookup) | 242 819 | 19,4 MB | 107 ms |
+
+**Wichtig für die nächste Session:** die „3 allocs/op" aus Session 19 waren
+sechs Wochen ungültig. Das Depth-Limit-/Cancellation-Feature (`evalCtx`,
+Session vom 16.07.) hatte die Gewinne der Schnitte 3–6 überschrieben, ohne
+dass es dokumentiert wurde — 1 335 430 allocs/op statt 3. Wer gegen eine
+alte Zahl plant, plant gegen nichts.
+
+## Erkenntnisse
+
+- **Ein Pointer ist eine Aussage über den Zustand.** `evalCtx` war
+  write-once und pro Goroutine exklusiv, kostete als Pointer aber 84,9 %
+  aller Allokationen.
+- **Ein Bit pro Objekt kann keine transitive Eigenschaft ausdrücken.** Der
+  Env-Pool-Bug in einem Satz.
+- **`unsafe.Sizeof` ist nicht die allozierte Größe.** Go rundet auf
+  Size-Classes (… 64, 80, 96, 112 …). An drei Stellen dieses Tages
+  entscheidend.
+- **Der Benchmark, der eine Optimierung motiviert, ist nicht ihr Beleg.**
+  Zweimal an einem Tag. `fib` hat Schnitt 5 motiviert und dessen
+  Korrektheitsloch nicht gesehen; `MultiArgLambda` hat die
+  `entries`-Kapazität motiviert und hätte sie bestätigt. Beide Male fehlte
+  ein zweiter Blickwinkel.
+- **Halb-korrekte Identität ist schlechter als konsistent falsche.**
+  Konsistent falsch kann man dokumentieren; inkonsistent nicht, und die
+  Tests beruhigt es trotzdem.
+- **Drei Analysebefunde waren falsch**, alle aus derselben Ursache: eine
+  Beobachtung aus dem Code wurde zur Behauptung über das System, ohne den
+  einen Aufrufer zu prüfen, der sie widerlegt. Die Markierung
+  „code-reading, kein Repro" hat den Schaden begrenzt.
+
+## Fazit Session 21
+
+Zwei Fehlerklassen, die 312 grüne Tests nicht gefangen hatten, plus fünf
+`eq`-Divergenzen gegen SBCL. Beide Fehler waren **Optimierungen, die
+Semantik verändert haben** — Schnitt 5 die Frame-Lebensdauer, Schnitt 1 die
+Identität. Beide standen wochenlang im Code, ohne dass ein Test rot wurde,
+weil `fib` genau den Fall misst, für den sie gebaut wurden.
+
+Der Interpreter ist dabei nicht langsamer geworden, sondern schneller:
+−81,8 % Allokationen, −39,4 % Bytes, −23,0 % Zeit gegenüber der Nachmessung.
+Fünf neue Test-Netze und ein zweiter Benchmark-Satz für die sechs Pfade, für
+die `fib` blind war.
+
+> „Eine Optimierung, die Identität oder Lebensdauer anfasst, ändert
+>  Semantik — auch wenn sie nur schneller sein will. Der Benchmark, der sie
+>  motiviert, wird das nie zeigen."
+> — Gerhard & Claude, 5. August 2026

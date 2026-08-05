@@ -1,7 +1,7 @@
 # Aufgaben 20260805 — Env-Pooling entfernen (Variante B)
 
 Ergebnis der Code-Analyse vom 20260805. Analyse-Brief archiviert unter
-`todos/TODO.md-20260730-done`.
+`todos/TODO.md-20260805-analyse-done`.
 
 ## ✅ Hauptaufgabe ERLEDIGT (Abschnitte 1-3)
 

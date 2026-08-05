@@ -14,12 +14,6 @@ import (
   "sync/atomic"
 )
 
-// envPool wiederverwendet Frame-Envs (parent != nil), die nicht mehr
-// referenziert werden. Root-Envs (parent == nil) werden nie gepoolt.
-var envPool = sync.Pool{
-  New: func() interface{} { return &Env{} },
-}
-
 // Env ist eine verkettete Umgebung: lokaler Scope -> aeusserer Scope.
 // Root-Env (parent == nil) nutzt eine Hash-Map fuer ~80+ eingebaute Symbole.
 // Frame-Envs (parent != nil) nutzen inline singleName/singleVal fuer den
@@ -34,9 +28,6 @@ type Env struct {
   singleVal  *Cell
   names      []string
   vals       []*Cell
-  // shared == true: von mindestens einer Closure referenziert – darf nicht
-  // in den Pool zurueckgegeben werden.
-  shared     bool
   // mu schuetzt Lese-/Schreibzugriffe fuer parfunc (mehrere Goroutinen
   // koennen dasselbe Env gleichzeitig nutzen).
   mu         sync.RWMutex
@@ -114,38 +105,12 @@ func defaultOnRootRedefine(name string, old, new *Cell) error {
 }
 
 // NewEnv erzeugt ein Root-Env (parent == nil) mit Map, sonst ein Frame-Env
-// mit inline + Slice-Speicher (aus dem Pool wenn moeglich).
+// mit inline + Slice-Speicher.
 func NewEnv(parent *Env) *Env {
   if parent == nil {
     return &Env{vars: make(map[string]*Cell)}
   }
-  e := envPool.Get().(*Env)
-  e.parent = parent
-  e.singleName = ""
-  e.singleVal = nil
-  e.names = e.names[:0]
-  if cap(e.vals) > 0 {
-    for i := range e.vals { e.vals[i] = nil }
-  }
-  e.vals = e.vals[:0]
-  e.shared = false
-  return e
-}
-
-// freeEnv gibt ein Frame-Env in den Pool zurueck, sofern es nicht shared
-// ist. Root-Envs werden ignoriert.
-func freeEnv(e *Env) {
-  if e == nil || e.parent == nil || e.shared {
-    return
-  }
-  e.singleName = ""
-  e.singleVal = nil
-  for i := range e.vals { e.vals[i] = nil }
-  e.names = e.names[:0]
-  e.vals = e.vals[:0]
-  e.parent = nil
-  e.shared = false
-  envPool.Put(e)
+  return &Env{parent: parent}
 }
 
 // Get sucht einen Namen – erst lokal, dann im aeusseren Scope

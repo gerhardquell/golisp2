@@ -76,19 +76,7 @@ func Eval(expr *Cell, env *Env) (res *Cell, err error) {
 // evalWithCtx wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
 // setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
 func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
-  // ownEnv trackt den letzten Frame, den dieser Eval-Aufruf im Tail-Call
-  // angelegt hat. Er wird am Ende freigegeben; bei Tail-Calls wird der
-  // Vorgaenger vor dem Uebergang freigegeben, damit Rekursion O(1) allokiert.
-  var ownEnv *Env
-  takeEnv := func(newEnv *Env) *Env {
-    if ownEnv != nil && ownEnv != newEnv.parent && ownEnv.parent != nil && !ownEnv.shared {
-      freeEnv(ownEnv)
-    }
-    ownEnv = newEnv
-    return newEnv
-  }
   defer func() {
-    freeEnv(ownEnv)
     if r := recover(); r != nil {
       res = nil
       err = fmt.Errorf("eval: panic recovered: %v", r)
@@ -223,25 +211,24 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
-          if err != nil { freeEnv(localEnv); return nil, err }
+          if err != nil { return nil, err }
           _ = localEnv.Set(b.Car.Val, Primary(val))
           bindings = bindings.Cdr
         }
         // Handle multiple body expressions in let
         body := expr.Cdr.Cdr
         if body == nil {
-          freeEnv(localEnv)
           return MakeNil(), nil
         }
         // Evaluate all but the last expression
         for body.Cdr != nil && body.Cdr.Type == LIST {
           _, err := evalWithCtx(body.Car, localEnv, ectx.child())
-          if err != nil { freeEnv(localEnv); return nil, err }
+          if err != nil { return nil, err }
           body = body.Cdr
         }
         // Tail call optimization for the last expression
         expr = body.Car
-        env = takeEnv(localEnv)
+        env = localEnv
         continue
 
       case "let*":
@@ -251,23 +238,22 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
-          if err != nil { freeEnv(localEnv); return nil, err }
+          if err != nil { return nil, err }
           _ = localEnv.Set(b.Car.Val, Primary(val))
           bindings = bindings.Cdr
         }
         // Body ausführen
         body := expr.Cdr.Cdr
         if body == nil {
-          freeEnv(localEnv)
           return MakeNil(), nil
         }
         for body.Cdr != nil && body.Cdr.Type == LIST {
           _, err := evalWithCtx(body.Car, localEnv, ectx.child())
-          if err != nil { freeEnv(localEnv); return nil, err }
+          if err != nil { return nil, err }
           body = body.Cdr
         }
         expr = body.Car
-        env = takeEnv(localEnv)
+        env = localEnv
         continue
 
       case "cond":
@@ -336,11 +322,10 @@ func evalWithCtx(expr *Cell, env *Env, ectx *evalCtx) (res *Cell, err error) {
       }
       localEnv := NewEnv(closureEnv)
       if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv, ectx); err != nil {
-        freeEnv(localEnv)
         return nil, err
       }
       expr = fn.Cdr   // body
-      env = takeEnv(localEnv)
+      env = localEnv
       continue
     }
 

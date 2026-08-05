@@ -188,7 +188,3 @@ func TestRedefinePolicyInvalid(t *testing.T) {
   }
 }
 
-func TestFreeEnvNil(t *testing.T) {
-  freeEnv(nil) // darf nicht panicken
-}
-

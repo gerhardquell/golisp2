@@ -368,7 +368,6 @@ func evalMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("macrolet: Syntax: (macrolet ((name (params...) body...) ...) body...)")
   }
   localEnv := NewEnv(env)
-  defer freeEnv(localEnv)
   for b := args.Car; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car
     if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM ||
@@ -394,7 +393,6 @@ func evalSymbolMacrolet(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("symbol-macrolet: Syntax: (symbol-macrolet ((sym expansion) ...) body...)")
   }
   localEnv := NewEnv(env)
-  defer freeEnv(localEnv)
   for b := args.Car; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car
     if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM ||
@@ -463,7 +461,6 @@ func evalProgv(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   if err != nil { return nil, err }
   vals = Primary(vals)
   localEnv := NewEnv(env)
-  defer freeEnv(localEnv)
   for s, v := syms, vals; s != nil && s.Type == LIST; s = s.Cdr {
     if s.Car == nil || s.Car.Type != ATOM {
       return nil, fmt.Errorf("progv: Symbolliste darf nur Symbole enthalten, got %s", s.Car)

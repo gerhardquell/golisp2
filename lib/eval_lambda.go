@@ -15,8 +15,9 @@ package lib
 import "fmt"
 
 // makeLambda baut eine Closure-Cell (Type:LAMBDA, Env=Closure).
+// Der gefangene Env braucht keine Markierung: die Frame-Lebensdauer
+// gehoert dem Go-GC, und der haelt die parent-Kette transitiv am Leben.
 func makeLambda(params, body *Cell, env *Env) *Cell {
-  env.shared = true
   return &Cell{Type: LAMBDA, Car: params, Cdr: body, Env: env}
 }
 
@@ -28,7 +29,6 @@ func applyLambda(lambda *Cell, args []*Cell, ectx *evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
   }
   localEnv   := NewEnv(closureEnv)
-  defer freeEnv(localEnv)
   if err := bindArgs(lambda.Car, args, closureEnv, localEnv, ectx); err != nil {
     return nil, err
   }

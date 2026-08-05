@@ -44,7 +44,6 @@ func evalMultipleValueBind(args *Cell, env *Env, ectx *evalCtx) (*Cell, error) {
   }
   vals := ValuesToSlice(v)
   localEnv := NewEnv(env)
-  defer freeEnv(localEnv)
   i := 0
   for vars := args.Car; vars != nil && vars.Type == LIST; vars = vars.Cdr {
     if vars.Car == nil || vars.Car.Type != ATOM {

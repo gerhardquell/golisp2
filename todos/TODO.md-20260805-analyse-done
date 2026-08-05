@@ -1,0 +1,9 @@
+# Aufgaben 20260805
+
+Wir wollen heute den Code von golisp2 analysieren.
+
+## Ablauf
+1. Code analysieren ohne zu ändern - nur Analyse
+2. Das Ergebnis im grill-me-Modus mit gerhard besprechen
+3. Änderungsspec und -plan entwickeln
+4. Aus 3. eine TODO.md schreiben

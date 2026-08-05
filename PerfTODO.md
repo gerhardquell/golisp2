@@ -31,8 +31,17 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 4** (sync.Pool für FUNC-Arg-Slices) ✅ | 243 851 | 23 MB | 51 ms |
 | **Schnitt 5** (Frame-Env-Pool + Tail-Call-Freigabe) ✅ | 987 | 95 KB | 86 ms |
 | **Schnitt 6** (Small-Int-Cache auf int16-Bereich) ✅ | 3 | 641 B | 88 ms |
+| ⚠️ Nachmessung 2026-08-05 (unverändert) | 1 335 430 | 32 MB | 139 ms |
+| **Schnitt 7** (Env-Pool entfernt — Korrektheit) ✅ | 1 578 206 | 59 MB | 142 ms |
 
-**Aktuelle Baseline, die zu schlagen ist: `3 allocs/op`.**
+**Aktuelle Baseline: `1 578 206 allocs/op`, 59 MB/op, ~142 ms/op.**
+
+⚠️ **Die „3 allocs/op" aus Schnitt 6 sind Geschichte, nicht Zustand.**
+Zwischen Schnitt 6 (2026-06-26) und der Nachmessung am 2026-08-05 ist das
+Depth-Limit-/Cancellation-Feature (`evalCtx`) dazugekommen und hat die
+Allokationsgewinne der Schnitte 3–6 überschrieben — ohne dass es hier
+dokumentiert wurde. Wer diese Datei liest und „3" als Ausgangspunkt nimmt,
+plant gegen eine Zahl, die es seit sechs Wochen nicht mehr gibt.
 
 Faustregel zum Einordnen: `allocs/op ÷ 242 000 ≈ Allokationen pro Aufruf`.
 Aktuell ~0,004. Jede Allokation ist GC-Last; weniger Objekte = nichtlinear
@@ -72,6 +81,58 @@ weiter unten.
 Ownership. Einmal falsch freigegebener Frame, der noch Parent eines
 späteren Tail-Calls ist, produziert sofort wilde Pointer. Die Lösung:
 `ownEnv`-Tracking im Trampolin-Loop plus `shared`-Flag für Closures.
+
+---
+
+## 4.5b Schnitt 7: Frame-Env-Pool entfernt — Rücknahme von Schnitt 5 ✅
+
+**Anlass:** kein Performance-Ziel, sondern ein Korrektheitsloch. Schnitt 5
+hat `envPool` + `shared` + `ownEnv`-Tracking eingeführt. `shared` ist ein Bit
+**pro Frame**, die Erreichbarkeit einer Closure läuft aber transitiv über
+`parent`. Fing eine Closure einen *Nachkommen*-Frame, blieb der Zwischen-Frame
+unmarkiert, wanderte in den Pool und wurde recycelt.
+
+**10 von 11 frame-besitzenden Formen waren betroffen:** `let`, `let*`,
+Lambda-TCO, `applyLambda`, `do`, `do*`, `flet`, `macrolet`,
+`symbol-macrolet`, `progv`, `multiple-value-bind`. Nur `labels` kam durch —
+weil es `makeLambda` den `localEnv` übergibt und ihn dadurch als Nebeneffekt
+markiert. Zwei Fehlerbilder: verlorene Bindung, oder ein `parent`-Zyklus, der
+`Env.Get` in einen **unrecoverbaren** `fatal error: stack overflow` schickt
+(kein `panic` → `recover()` in `evalWithCtx` sieht ihn nie).
+
+Die Lektion aus §4.5 („verlangt klare Ownership … die Lösung: `ownEnv`-Tracking
+plus `shared`-Flag") war zu optimistisch: `ownEnv` + `shared` deckt genau den
+Fall ab, den `fib` benchmarkt — Frames ohne Closures. Sobald eine Closure
+einen Zwischen-Frame überlebt, ist die Ownership-Regel falsch, und der
+Benchmark merkt davon nichts.
+
+**Änderung:** `envPool`, `freeEnv`, `Env.shared`, `takeEnv`/`ownEnv` entfernt.
+`NewEnv(parent != nil)` gibt `&Env{parent: parent}` zurück. Frame-Lebensdauer
+gehört dem Go-GC — der kennt transitive Erreichbarkeit exakt, statt sie mit
+einem Bit zu approximieren. Das TCO-Trampolin ist unangetastet (3 Mio.
+Tail-Calls verifiziert, O(1) Stack).
+
+**Ergebnis (fib 25):**
+```
+vorher:  1 335 430 allocs/op   32 MB/op   139,1 ms/op
+nachher: 1 578 206 allocs/op   59 MB/op   142,3 ms/op
+Delta:      +242 776 (+18 %)     +85 %       +2,3 %
+```
+
+Die +242 776 sind **exakt ein Env pro fib-Aufruf** (242 785 Aufrufe) — die
+Änderung kostet genau das, was sie vorhergesagt hat, und nichts darüber.
+Der Zeitpreis von 2,3 % zeigt, dass der Pool zuletzt kaum noch etwas trug:
+`sync.Pool`-Atomics plus die `shared`-Prüfungen aßen ihren eigenen Gewinn
+weitgehend auf.
+
+**Lektion:** Ein manueller Pool über einer GC-Sprache schaltet den GC für
+einen Objekttyp ab und übernimmt die Beweislast für die Lebensdauer. Wer
+diese Beweislast mit einem Bit pro Objekt tragen will, muss zeigen, dass die
+Eigenschaft nicht transitiv ist. Bei verketteten Environments ist sie es.
+
+**Regressionsnetz:** `lib/env_closure_test.go` — Kreuzprodukt Closure ×
+Frame-Form, 10 Bug-Fälle + 7 Kontrollen + ein Subprozess-Test für den
+Stack-Overflow. Vor dem Fix rot verifiziert.
 
 ---
 
@@ -190,9 +251,45 @@ Schnitt 2–6 sind umgesetzt und verifiziert. `fib 25` allokiert nur noch
 - **Schnitt 6:** Small-Int-Cache auf int16-Bereich `-32768..32767`
   verbreitert (`lib/types.go`).
 
-### Was jetzt?
+### Schnitt 7 ✅ (erledigt, 2026-08-05)
 
-Der `fib`-Mikrobenchmark ist am Ende seines Aussagegehalts angelangt.
+Rücknahme von Schnitt 5: `envPool`/`shared`/`ownEnv` entfernt, weil das
+`shared`-Bit die transitive Erreichbarkeit von Closures nicht ausdrücken
+kann. Details in §4.5b.
+
+### Was jetzt? — `evalCtx.child()` ist der Elefant
+
+Profil vom 2026-08-05 (`-sample_index=alloc_objects`, nach Schnitt 7):
+
+| Posten | Anteil | Objekte |
+|--------|--------|---------|
+| `(*evalCtx).child` | **84,9 %** | 21 823 932 |
+| `NewEnv` | 14,8 % | 3 810 846 |
+| alles andere | 0,3 % | — |
+
+`ectx.child()` allokiert pro **Nicht-Tail**-Auswertung ein `&evalCtx{depth,
+ctx}` — 24 Byte, ~5,5 Stück pro fib-Aufruf. Das Depth-Limit- und
+Cancellation-Feature ist damit der dominante Allokationsposten des
+Interpreters, mit fast sechsfachem Volumen gegenüber den Frame-Envs, deren
+Pooling sich Schnitt 5 ein Korrektheitsloch kosten ließ.
+
+**Nächster Schnitt: `evalCtx` von der Halde nehmen.** Kandidaten, in
+aufsteigender Invasivität:
+
+1. `evalCtx` **per Value** durchreichen statt per Pointer — `depth int` +
+   `ctx context.Context` sind 24 Byte, das kopiert sich billiger als es
+   allokiert. `child()` wird `ectx.childVal()` und gibt einen Wert zurück.
+   Braucht eine Signaturänderung über den halben Interpreter — Blast-Radius
+   vor dem Anfangen prüfen.
+2. Nur allokieren, wenn `ctx != nil`: die Tiefe allein könnte als `int`-Parameter
+   mitlaufen. Die meisten Läufe haben gar keinen Context.
+3. Escape-Analyse prüfen: `go build -gcflags='-m'` auf `child()` — vielleicht
+   entkommt es nur wegen einer einzigen Speicherung.
+
+Erst messen, welche der drei greift. Erwartung vor dem Lauf formulieren
+(siehe §9), sonst wiederholt sich das Phantom aus §5.
+
+Danach ist der `fib`-Mikrobenchmark am Ende seines Aussagegehalts.
 Weitere Reduktionen bräuchten einen anderen Ansatz:
 
 - **Bytecode-VM / Compiler:** Tree-Walking-Overhead pro Aufruf reduzieren.
@@ -209,8 +306,9 @@ neuer Schnitt angelegt wird.
 
 | Datei | Was drin steckt |
 |-------|-----------------|
-| `lib/eval_core.go` | `Eval`-Trampolin, `evalArgsPooled`, Lambda-Apply-Pfad, `ownEnv`-Tracking |
-| `lib/env.go` | `Env`-Struct (Root-Map + Slice-Frames), `envPool`, `freeEnv` |
+| `lib/eval_core.go` | `Eval`-Trampolin, `evalCtx`/`child()`, `evalArgsPooled`, Lambda-Apply-Pfad |
+| `lib/env.go` | `Env`-Struct (Root-Map + Slice-Frames), Redefine-Policy |
+| `lib/env_closure_test.go` | Regressionsnetz Closure × Frame-Form (§4.5b) |
 | `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |
 | `lib/eval_control.go` | `do`/`while`/`flet`/`labels`/`block`/`return-from`/`catch`/`eval` |
 | `lib/primitives.go` | `BaseEnv` (Root-Env-Aufbau), `MakeNum`-Boxing in fnAdd/fnSub… |

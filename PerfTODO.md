@@ -37,6 +37,7 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 9** (evalCtx per Value statt Pointer) ✅ | 242 833 | 27 MB | 115 ms |
 | **Schnitt 10** (Env-Struct 112 → 88 B) ✅ | 242 828 | 23 MB | 113 ms |
 | **Schnitt 11** (Env 80 B + Symbol-Keyed Lookup) ✅ | 242 819 | 19 MB | 109 ms |
+| entries-Startkapazität ❌ (netto negativ, siehe §3) | — | — | — |
 
 **Aktuelle Baseline: `242 819 allocs/op`, 19,4 MB/op, ~109 ms/op.**
 
@@ -94,8 +95,52 @@ Parameterzahl:
 
 `fib` hat genau einen Parameter, also null `entries` — deshalb war der
 Posten elf Schnitte lang unsichtbar. Der Aufrufer kennt die Parameterzahl
-(`bindArgs`/`bindEvalArgs`) bzw. die Bindungszahl (`let`/`let*`), das ist
-also vermeidbar. Siehe §6.
+(`bindArgs`/`bindEvalArgs`) bzw. die Bindungszahl (`let`/`let*`), also
+schien es vermeidbar. **Ist es nicht** — der Versuch ist gemessen und
+abgelehnt, siehe direkt unten.
+
+---
+
+### ❌ Abgelehnt: feste Startkapazität für `entries` (gemessen 2026-08-05)
+
+**Hypothese:** der `entries`-Slice wächst aus `nil` (1→2→4→8) und kostet
+⌈log₂(n)⌉+1 Allokationen für n Einträge. Eine feste Startkapazität sollte
+das auf eine Allokation drücken.
+
+**Umgesetzt** als `entriesInitCap` in `SetSym`, drei Werte gemessen
+(MultiArgLambda / ClosureCreate / LetChain, B/op):
+
+| cap | MultiArg allocs | MultiArg B | Closure B | LetChain B |
+|---|---|---|---|---|
+| **wachsen aus nil** | 12 002 | 576 258 | **958 563** | **512 210** |
+| 2 | 10 002 | 576 270 | 990 588 | 544 231 |
+| 3 | **8 002** | **512 267** | 1 022 616 | 576 255 |
+| 4 | 8 002 | 576 301 | 1 054 647 | 608 277 |
+
+**Ergebnis: netto negativ, revertiert.** `cap=3` gewinnt bei
+`MultiArgLambda` (−33 % allocs, sogar −11 % Bytes, weil 3 × 16 B genau in
+die 48-B-Klasse passt), verliert aber bei `ClosureCreate` (+6,7 %) und
+`LetChain` (+12,5 %) — und die stehen für den Alltag.
+
+**Warum es strukturell nicht aufgeht:** der häufigste Frame hat **einen**
+`entries`-Eintrag — jede zweistellige Funktion, also das gesamte
+`(n acc)`-Akkumulator-Idiom. Dieser Fall kostet beim Wachsen aus `nil`
+bereits genau eine Allokation; da ist nichts zu holen. Eine feste
+Kapazität kann dort nur Bytes verschwenden und erst ab drei Einträgen
+(vierstellige Funktionen) Allokationen sparen. Vier von sechs Benchmarks
+werden von zweistelligen Funktionen dominiert.
+
+**Was stattdessen gehen würde:** die *exakte* Zahl reservieren. Frei
+verfügbar ist sie nur in `applyLambda` (`len(args)`) — dem funcall/apply-Pfad,
+nicht dem Trampolin-Hauptpfad. Für `bindEvalArgs` müsste die Parameterliste
+ein zweites Mal abgelaufen werden, was der häufigste Fall (ein Parameter,
+`entries` bleibt `nil`) ohne Nutzen mitbezahlt. Die Parameterzahl auf der
+LAMBDA-Cell zu cachen würde `Cell` (104 B) für alle Cells vergrößern.
+
+**Lektion:** Ein Benchmark, der eine Optimierung motiviert, taugt nicht als
+ihr Beleg. `MultiArgLambda` hat den Posten aufgedeckt und hätte den Schnitt
+auch bestätigt — erst die fünf anderen zeigten, dass er im Alltag verliert.
+Zweite Instanz derselben Regel wie §5.
 
 ---
 
@@ -590,6 +635,7 @@ aber die nächste Klasse darunter ist 64 B, also müssten **16** Byte weg.
 - **Mutex lazy allokieren.** Dieselbe Erreichbarkeitsfrage, an der das
   `shared`-Bit scheiterte — nur ist der Fehlerfall hier ein Data Race.
 - **Nur die Struct-Größe rechnen.** Es zählt die Size-Class, §4.5e.
+- **Feste Startkapazität für `entries`.** Gemessen, netto negativ, §3.
 
 **Lohnender als weitere Env-Arbeit:** `Cell` ist **104 Byte** und wird
 ungleich häufiger allokiert als `Env` — nur nicht in `fib`, weil der

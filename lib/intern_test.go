@@ -45,6 +45,11 @@ var internedCases = []eqCase{
   {"lt_liefert_nil",       "(eq (< 2 1) '())",                "t"},
   {"gt_liefert_t",         "(eq (> 2 1) 't)",                 "t"},
   {"listenliteral",        "(let ((l '(x x))) (eq (car l) (cadr l)))", "t"},
+  // (and) ohne Argumente liefert t. evalAnd baute dieses t direkt als
+  // &Cell{Type: ATOM, Val: "t"} — die letzte nicht-internierte Symbol-Cell
+  // im Code, uebersehen bei der Umstellung auf internTable.
+  {"and_ohne_args",        "(eq (and) 't)",                   "t"},
+  {"and_zweimal",          "(eq (and) (and))",                "t"},
   // Diese beiden gingen schon vorher — sie nutzten MakeNil() statt
   // cellNil. Bleiben als Konsistenzwächter drin: nach dem Fix müssen
   // ALLE nil-liefernden Primitiven dieselbe Cell liefern.

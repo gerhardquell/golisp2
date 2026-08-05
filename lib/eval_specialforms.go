@@ -309,9 +309,11 @@ func evalSetQStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   return MakeAtom(lastName), nil
 }
 
-// and: (and a b c ...) → gibt ersten falschen Wert zurück, sonst letzten
+// and: (and a b c ...) → gibt ersten falschen Wert zurück, sonst letzten.
+// (and) ohne Argumente → t (CL). cellT statt einer frischen Cell: Symbole
+// sind interniert, eine zweite t-Instanz wuerde eq brechen.
 func evalAnd(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
-  result := &Cell{Type: ATOM, Val: "t"}
+  result := cellT
   for args != nil && args.Type == LIST {
     val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }

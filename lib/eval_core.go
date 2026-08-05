@@ -107,7 +107,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO: return expr, nil
     case ATOM:
       if len(expr.Val) > 0 && expr.Val[0] == ':' { return expr, nil } // Keywords selbst-auswertend
-      v, err := env.Get(expr.Val)
+      v, err := env.GetSym(expr)
       if err != nil { return nil, err }
       if v.Type == SYMMACRO {
         // symbol-macrolet: Referenz wertet die Expansion im aktuellen
@@ -212,7 +212,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
           if err != nil { return nil, err }
-          _ = localEnv.Set(b.Car.Val, Primary(val))
+          _ = localEnv.SetSym(b.Car, Primary(val))
           bindings = bindings.Cdr
         }
         // Handle multiple body expressions in let
@@ -239,7 +239,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
           if err != nil { return nil, err }
-          _ = localEnv.Set(b.Car.Val, Primary(val))
+          _ = localEnv.SetSym(b.Car, Primary(val))
           bindings = bindings.Cdr
         }
         // Body ausführen

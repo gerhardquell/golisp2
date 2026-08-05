@@ -15,25 +15,34 @@ import (
 )
 
 // envEntry ist ein Frame-Eintrag jenseits des ersten. Ein Slice von Paaren
-// statt zweier paralleler Slices: haelt Env um 24 Byte kleiner und braucht
-// eine Allokation statt zwei, sobald ein Frame mehr als eine Bindung hat.
+// statt zweier paralleler Slices: haelt Env kleiner und braucht eine
+// Allokation statt zwei, sobald ein Frame mehr als eine Bindung hat.
+// sym ist das internierte Symbol, nicht sein Name — 16 statt 24 Byte pro
+// Eintrag, und Lookup per Pointer-Vergleich.
 type envEntry struct {
-  name string
-  val  *Cell
+  sym *Cell
+  val *Cell
 }
 
 // Env ist eine verkettete Umgebung: lokaler Scope -> aeusserer Scope.
 // Root-Env (parent == nil) nutzt eine Hash-Map fuer ~80+ eingebaute Symbole.
 // Frame-Envs (parent != nil) legen den ERSTEN Eintrag inline ab
-// (singleName/singleVal) und alle weiteren in entries. Damit fallen die
+// (singleSym/singleVal) und alle weiteren in entries. Damit fallen die
 // map-Allokationen pro Lambda-/Let-Frame weg, und der haeufigste Fall
 // (ein Parameter) allokiert ausser dem Env selbst gar nichts.
+//
+// singleSym haelt das INTERNIERTE Symbol (*Cell, 8 B) statt seines Namens
+// (string, 16 B). Erlaubt seit dem Symbol-Interning: pro Name existiert
+// genau eine Cell, also ist Pointer-Gleichheit aequivalent zu
+// Namensgleichheit. Die 8 Byte bringen Env unter die 88-Byte-Marke in die
+// 80-Byte-Size-Class des Allocators — Struct-Groesse allein reicht nicht,
+// es zaehlt die Klasse (PerfTODO §4.5e).
 type Env struct {
   parent     *Env
   // Root-Modus: parent == nil
   vars       map[string]*Cell
   // Frame-Modus: parent != nil
-  singleName string
+  singleSym  *Cell
   singleVal  *Cell
   entries    []envEntry
   // mu schuetzt Lese-/Schreibzugriffe. NICHT entfernbar, auch nicht fuer
@@ -124,6 +133,65 @@ func NewEnv(parent *Env) *Env {
   return &Env{parent: parent}
 }
 
+// GetSym sucht ein internierbares Symbol per Pointer-Vergleich. Schneller
+// als Get, weil im Frame-Modus kein String-Vergleich anfaellt; das Root-Env
+// ist per String indiziert und nutzt sym.Val. Fuer die heissen Pfade
+// (Symbol-Auswertung im Trampolin) gedacht — dort liegt die internierte
+// Cell schon vor.
+func (e *Env) GetSym(sym *Cell) (*Cell, error) {
+  e.mu.RLock()
+  if e.parent == nil {
+    if val, ok := e.vars[sym.Val]; ok {
+      e.mu.RUnlock()
+      return val, nil
+    }
+    e.mu.RUnlock()
+    return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", sym.Val)
+  }
+  if e.singleSym == sym {
+    val := e.singleVal
+    e.mu.RUnlock()
+    return val, nil
+  }
+  for i := range e.entries {
+    if e.entries[i].sym == sym {
+      val := e.entries[i].val
+      e.mu.RUnlock()
+      return val, nil
+    }
+  }
+  parent := e.parent
+  e.mu.RUnlock()
+  return parent.GetSym(sym)
+}
+
+// SetSym legt einen Wert unter einem internierten Symbol ab. Wie Set, aber
+// ohne den Namen erst internieren zu muessen.
+func (e *Env) SetSym(sym *Cell, val *Cell) error {
+  if e.parent == nil {
+    return e.Set(sym.Val, val)
+  }
+  e.mu.Lock()
+  defer e.mu.Unlock()
+  if e.singleSym == nil {
+    e.singleSym = sym
+    e.singleVal = val
+    return nil
+  }
+  if e.singleSym == sym {
+    e.singleVal = val
+    return nil
+  }
+  for i := range e.entries {
+    if e.entries[i].sym == sym {
+      e.entries[i].val = val
+      return nil
+    }
+  }
+  e.entries = append(e.entries, envEntry{sym: sym, val: val})
+  return nil
+}
+
 // Get sucht einen Namen – erst lokal, dann im aeusseren Scope
 func (e *Env) Get(name string) (*Cell, error) {
   e.mu.RLock()
@@ -135,13 +203,13 @@ func (e *Env) Get(name string) (*Cell, error) {
     e.mu.RUnlock()
     return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
   }
-  if e.singleName == name {
+  if e.singleSym != nil && e.singleSym.Val == name {
     val := e.singleVal
     e.mu.RUnlock()
     return val, nil
   }
   for i := range e.entries {
-    if e.entries[i].name == name {
+    if e.entries[i].sym.Val == name {
       val := e.entries[i].val
       e.mu.RUnlock()
       return val, nil
@@ -155,34 +223,22 @@ func (e *Env) Get(name string) (*Cell, error) {
 // Set legt einen Wert im aktuellen Scope ab.
 // Auf dem Root-Env (parent == nil) wird eine Redefinition existierender
 // FUNC-Bindungen durch die Policy gesteuert.
+//
+// Im Frame-Modus delegiert Set an SetSym und interniert den Namen dafuer.
+// Heisse Pfade sollten SetSym direkt rufen — dort liegt die internierte
+// Cell bereits vor, und MakeAtom kostet eine sync.Map-Suche.
 func (e *Env) Set(name string, val *Cell) error {
+  if e.parent != nil {
+    return e.SetSym(MakeAtom(name), val)
+  }
   e.mu.Lock()
   defer e.mu.Unlock()
-  if e.parent == nil {
-    if old, ok := e.vars[name]; ok && old != nil && old.Type == FUNC {
-      if err := onRootRedefine(name, old, val); err != nil {
-        return err
-      }
-    }
-    e.vars[name] = val
-    return nil
-  }
-  if e.singleName == "" {
-    e.singleName = name
-    e.singleVal = val
-    return nil
-  }
-  if e.singleName == name {
-    e.singleVal = val
-    return nil
-  }
-  for i := range e.entries {
-    if e.entries[i].name == name {
-      e.entries[i].val = val
-      return nil
+  if old, ok := e.vars[name]; ok && old != nil && old.Type == FUNC {
+    if err := onRootRedefine(name, old, val); err != nil {
+      return err
     }
   }
-  e.entries = append(e.entries, envEntry{name: name, val: val})
+  e.vars[name] = val
   return nil
 }
 
@@ -237,12 +293,12 @@ func (e *Env) Symbols() []string {
       cur.mu.RUnlock()
       break
     }
-    if cur.singleName != "" && !seen[cur.singleName] {
-      seen[cur.singleName] = true
-      result = append(result, cur.singleName)
+    if cur.singleSym != nil && !seen[cur.singleSym.Val] {
+      seen[cur.singleSym.Val] = true
+      result = append(result, cur.singleSym.Val)
     }
     for i := range cur.entries {
-      name := cur.entries[i].name
+      name := cur.entries[i].sym.Val
       if !seen[name] {
         seen[name] = true
         result = append(result, name)
@@ -278,12 +334,12 @@ func (e *Env) Update(name string, val *Cell) error {
     }
     return fmt.Errorf("env: set! – Symbol '%s' nicht gefunden", name)
   }
-  if e.singleName == name {
+  if e.singleSym != nil && e.singleSym.Val == name {
     e.singleVal = val
     return nil
   }
   for i := range e.entries {
-    if e.entries[i].name == name {
+    if e.entries[i].sym.Val == name {
       e.entries[i].val = val
       return nil
     }

@@ -175,6 +175,69 @@ func TestFrameSymbolsAcrossChain(t *testing.T) {
   }
 }
 
+// TestFrameSymAPIInteropWithStringAPI: SetSym/GetSym und Set/Get schreiben
+// und lesen dasselbe Feld. Weil Symbole interniert sind (internTable in
+// types.go), ist Pointer-Gleichheit aequivalent zu Namensgleichheit — beide
+// Wege muessen daher beliebig gemischt funktionieren. Ohne diese Aequivalenz
+// waere der Pointer-Vergleich im heissen Pfad still falsch.
+func TestFrameSymAPIInteropWithStringAPI(t *testing.T) {
+  f := NewEnv(NewEnv(nil))
+  sym := MakeAtom("mixed")
+
+  // per String schreiben, per Symbol lesen
+  if err := f.Set("mixed", MakeNum(1)); err != nil {
+    t.Fatal(err)
+  }
+  v, err := f.GetSym(sym)
+  if err != nil {
+    t.Fatalf("GetSym nach Set(string): %v", err)
+  }
+  if v.String() != "1" {
+    t.Fatalf("GetSym = %s, want 1", v.String())
+  }
+
+  // per Symbol schreiben, per String lesen
+  if err := f.SetSym(sym, MakeNum(2)); err != nil {
+    t.Fatal(err)
+  }
+  if got := mustGet(t, f, "mixed"); got != "2" {
+    t.Fatalf("Get(string) nach SetSym = %s, want 2", got)
+  }
+
+  // dasselbe fuer den Slice-Pfad (zweiter Eintrag)
+  sym2 := MakeAtom("second")
+  if err := f.SetSym(sym2, MakeNum(3)); err != nil {
+    t.Fatal(err)
+  }
+  if got := mustGet(t, f, "second"); got != "3" {
+    t.Fatalf("Slice-Pfad Get(string) = %s, want 3", got)
+  }
+  v2, err := f.GetSym(sym2)
+  if err != nil || v2.String() != "3" {
+    t.Fatalf("Slice-Pfad GetSym = %v, %v", v2, err)
+  }
+}
+
+// TestFrameGetSymFallsThroughToRoot: GetSym muss die Kette hochlaufen und im
+// Root-Env (Map, per String indiziert) landen.
+func TestFrameGetSymFallsThroughToRoot(t *testing.T) {
+  root := NewEnv(nil)
+  _ = root.Set("global", MakeNum(7))
+  f := NewEnv(root)
+  _ = f.SetSym(MakeAtom("local"), MakeNum(8))
+
+  v, err := f.GetSym(MakeAtom("global"))
+  if err != nil {
+    t.Fatalf("GetSym auf Root-Bindung: %v", err)
+  }
+  if v.String() != "7" {
+    t.Fatalf("GetSym(global) = %s, want 7", v.String())
+  }
+  if _, err := f.GetSym(MakeAtom("gibtsnicht")); err == nil {
+    t.Fatal("GetSym auf ungebundenes Symbol sollte fehlschlagen")
+  }
+}
+
 // TestFrameManyBindings: ueber die vermutliche Slice-Wachstumsgrenze
 // hinaus, damit ein append-Reallocation-Bug auffaellt.
 func TestFrameManyBindings(t *testing.T) {

@@ -164,6 +164,10 @@ andere Vorkommen desselben Symbols. Quellpositionen werden deshalb
 ausschließlich auf `LIST`-Cells gestempelt (`reader.go`, `eval_load.go`).
 Konsequenz: `eq` ist Pointer-Identität und für Symbole CL-korrekt —
 `(eq 'foo 'foo)` → `t`. `equal?` bleibt struktureller Vergleich.
+Das Env baut darauf: `GetSym`/`SetSym` schlagen Bindungen per
+Pointer-Vergleich nach (`lib/env.go`). Eine nicht-internierte Symbol-Cell
+würde dort still nicht gefunden — deshalb ist `MakeAtom` die **einzige**
+erlaubte Quelle für ATOM-Cells, nie `&Cell{Type: ATOM, …}`.
 Zwei bewusste Ausnahmen: Zahlen sind ausgenommen (`(eq 5 5)` → `()`,
 damit der Small-Int-Cache `eq` nicht durch die Hintertür verändert; CL
 lässt das unspezifiziert), Strings werden nicht interniert

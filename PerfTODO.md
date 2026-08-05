@@ -36,10 +36,11 @@ gebündelten Änderungen, sonst ist die Attribution verschmiert.
 | **Schnitt 8** (Symbol-Interning — Korrektheit) ✅ | 1 578 205 | 59 MB | 148 ms |
 | **Schnitt 9** (evalCtx per Value statt Pointer) ✅ | 242 833 | 27 MB | 115 ms |
 | **Schnitt 10** (Env-Struct 112 → 88 B) ✅ | 242 828 | 23 MB | 113 ms |
+| **Schnitt 11** (Env 80 B + Symbol-Keyed Lookup) ✅ | 242 819 | 19 MB | 109 ms |
 
-**Aktuelle Baseline: `242 828 allocs/op`, 23 MB/op, ~113 ms/op.**
+**Aktuelle Baseline: `242 819 allocs/op`, 19,4 MB/op, ~109 ms/op.**
 
-Die 242 828 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
+Die 242 819 sind **ein `NewEnv` pro fib-Aufruf** (242 785 Aufrufe) und machen
 95,8 % der Allokationen aus. Die Zahl der Allokationen ist damit am Boden für
 diese Architektur — ein Frame pro Aufruf ist das Minimum, solange Frames auf
 dem Heap liegen. Was noch geht, ist ihre **Größe**: siehe §4.5e und §6.
@@ -332,6 +333,68 @@ die Kette, und 64 Bindungen gegen einen append-Reallocation-Bug.
 
 ---
 
+## 4.5f Schnitt 11: Env auf 80 B + Symbol-Keyed Lookup ✅
+
+**Ziel:** die in §4.5e identifizierten 8 Byte holen, um in die
+80-Byte-Size-Class zu kommen. Diesmal die Klasse gerechnet, nicht die
+Struct-Größe.
+
+**Änderung:** `singleName string` (16 B) → `singleSym *Cell` (8 B), und
+`envEntry.name string` → `envEntry.sym *Cell` (Eintrag 24 → 16 B). Möglich
+erst seit dem Symbol-Interning (§4.5c): pro Name existiert genau eine Cell,
+also ist Pointer-Gleichheit äquivalent zu Namensgleichheit.
+
+Dazu `GetSym`/`SetSym` als Pointer-Variante. Die öffentliche String-API
+(`Get`/`Set`/`Update`) bleibt unverändert — `lib/swank` und `main.go` sind
+nicht betroffen. Beide Wege schreiben dasselbe Feld und sind beliebig
+mischbar; genau das prüft `TestFrameSymAPIInteropWithStringAPI`.
+
+**Zweistufig gemessen, weil die Effekte gegenläufig sind:**
+
+| | ns/op | B/op | allocs/op |
+|---|---|---|---|
+| Ausgangspunkt (Schnitt 10) | 112,7 ms | 23,32 MB | 242 828 |
+| **A** nur Feld verkleinert | 117,4 ms **(+4,2 %)** | 19,43 MB (−16,7 %) | unverändert |
+| **B** + heiße Pfade auf `*Sym` | **109,0 ms (−3,3 %)** | 19,43 MB (−16,7 %) | unverändert |
+
+Schritt A ist **allein eine Verschlechterung**: `Set(name string)` muss den
+Namen jetzt internieren, das sind 242k zusätzliche `sync.Map`-Suchen. Erst
+die Umstellung der fünf heißen Aufrufstellen dreht das um. Wer nur A
+gemessen und aufgehört hätte, hätte den Schnitt verworfen.
+
+Umgestellt wurden genau fünf Stellen — dort liegt die internierte Cell schon
+vor, es wurde also bisher unnötig `.Val` extrahiert:
+
+- `eval_core.go` ATOM-Auswertung: `env.Get(expr.Val)` → `env.GetSym(expr)`
+- `eval_core.go` `let` und `let*`: `Set(b.Car.Val, …)` → `SetSym(b.Car, …)`
+- `eval_lambda.go` `bindArgs` und `bindEvalArgs`, reguläre Parameter
+
+`&optional`/`&key` laufen weiter über die String-API: dort kommt der Name
+aus `parseParamSpec` als String, das umzustellen hieße die Hilfsfunktion
+mitzuändern. Kein Hot-Path-Fall, bewusst gelassen.
+
+**Modell gegen Messung:** diesmal alle drei getroffen — `Sizeof(Env)` = 80 B
+exakt, B/op = 19,43 MB exakt (242 828 × 80), ns/op mit −3,3 % im
+geschätzten Band von −1 bis −5 %. Der Unterschied zu §4.5e ist, dass dort
+gegen die Struct-Größe gerechnet wurde und hier gegen die Size-Class.
+
+**Lektion:** Zwei Änderungen mit gegenläufigem Vorzeichen gehören getrennt
+gemessen, auch wenn sie zusammen committet werden. Die Zwischenmessung ist
+der einzige Grund, warum hier belegbar ist, *warum* der Schnitt wirkt —
+und sie hätte einen Abbruch nach der falschen Hälfte verhindert.
+
+**Nebeneffekt fürs Interning:** Pointer-Keyed Lookup verlangt, dass JEDES
+Symbol interniert ist. Der Scan nach `&Cell{Type: ATOM …}` fand dabei die
+letzte Ausnahme — `evalAnd` baute sein `(and)`-Ergebnis direkt. Separat
+gefixt (`e396f4e`), war eine echte `eq`-Divergenz gegen SBCL.
+
+**Netz:** `lib/env_frame_test.go` um zwei Fälle erweitert (Sym/String-Interop
+in beiden Richtungen, `GetSym`-Durchfall bis ins Root-Env). Die sechs
+bestehenden Fälle nutzen die String-API und blieben unverändert grün — genau
+das soll ein Netz bei einem Refactoring tun.
+
+---
+
 ## 4.6 Schnitt 6: Small-Int-Cache verbreitern ✅
 
 **Ziel:** die verbleibenden ~987 Allokationen pro `fib 25` eliminieren.
@@ -460,59 +523,47 @@ Beide aus Korrektheitsgründen, nicht wegen Tempo:
   (Performance: −84,6 % allocs, −21,3 % ns)
 - **Schnitt 10:** Env-Struct 112 → 88 B. §4.5e.
   (Performance: −14,3 % B/op, −1,7 % ns; Modell lag daneben, s. dort)
+- **Schnitt 11:** Env 80 B + Symbol-Keyed Lookup. §4.5f.
+  (Performance: −16,7 % B/op, −3,3 % ns; Modell traf alle drei Größen)
 
 Netto gegenüber der Nachmessung vom 2026-08-05: **139 ms → 115 ms** bei
-**1 335 430 → 242 828 allocs/op** und **32 → 23 MB/op**. Zwei Fehlerklassen weg
-*und* schneller.
+**1 335 430 → 242 819 allocs/op**, **32 → 19,4 MB/op**, **139 → 109 ms/op**.
+Zwei Fehlerklassen weg *und* 21,6 % schneller.
 
-### Was jetzt? — `NewEnv` bleibt, aber nur noch über die Größe angreifbar
+### Was jetzt? — `Env` ist ausgereizt, `Cell` ist der nächste Kandidat
 
-Stand nach Schnitt 10: `NewEnv` ist 95,8 % der Allokationen, ein Frame pro
-Aufruf. **Die Anzahl ist am Boden** — ein Frame pro Aufruf ist das Minimum,
-solange Frames auf dem Heap liegen. Angreifbar ist nur noch die Größe, und
-die zählt in **Size-Classes**, nicht in Struct-Bytes (§4.5e):
-
-```
-aktuell   88 B Struct  -> Klasse  96  ->  23,3 MB
-Ziel      80 B Struct  -> Klasse  80  ->  19,4 MB   (−17 %)
-```
-
-Es fehlen genau 8 Byte. Brachliegend sind mehr: `vars` (8 B) ist in
-Frame-Envs immer nil, `singleName`/`singleVal`/`entries` (48 B) sind im
-Root-Env immer leer. Das Struct bezahlt beide Modi.
+Stand nach Schnitt 11: `NewEnv` bleibt mit ~95 % der dominante Posten, aber
+sowohl Anzahl (ein Frame pro Aufruf = Minimum) als auch Größe
+(80 B = Size-Class-Grenze, exakt getroffen) sind ausgereizt. Weniger geht nur
+noch mit einer Typtrennung Root/Frame — `vars` (8 B) liegt in Frames brach,
+`singleSym`/`singleVal`/`entries` im Root. Das Struct bezahlt beide Modi,
+aber die nächste Klasse darunter ist 64 B, also müssten **16** Byte weg.
 
 **Was NICHT geht — bitte nicht erneut versuchen:**
 
-- **Mutex aus Frame-Envs entfernen.** `evalParfunc` gibt sein `env` direkt
-  an jede Worker-Goroutine, ein `parfunc` in einem `let` teilt also einen
-  FRAME-Env über N Goroutinen, die ihn per `setq` auch schreiben. Verifiziert
-  mit `-race`. Details in §4.5e.
-- **Env-Pooling wiederbeleben.** Ursache für zehn kaputte Frame-Formen,
-  §4.5b.
-- **Mutex lazy allokieren** („nur wenn geteilt"). Genau die
-  Erreichbarkeits-Frage, an der das `shared`-Bit gescheitert ist — nur ist
-  der Fehlerfall hier ein Data Race statt einer verlorenen Bindung, also
-  schlimmer.
+- **Mutex aus Frame-Envs entfernen.** `evalParfunc` gibt sein `env` direkt an
+  jede Worker-Goroutine; ein `parfunc` in einem `let` teilt einen FRAME-Env
+  über N Goroutinen, die ihn per `setq` schreiben. Mit `-race` verifiziert,
+  §4.5e.
+- **Env-Pooling wiederbeleben.** Ursache für zehn kaputte Frame-Formen, §4.5b.
+- **Mutex lazy allokieren.** Dieselbe Erreichbarkeitsfrage, an der das
+  `shared`-Bit scheiterte — nur ist der Fehlerfall hier ein Data Race.
+- **Nur die Struct-Größe rechnen.** Es zählt die Size-Class, §4.5e.
 
-**Gangbare Richtungen, aufsteigend invasiv:**
+**Lohnender als weitere Env-Arbeit:** `Cell` ist **104 Byte** und wird
+ungleich häufiger allokiert als `Env` — nur nicht in `fib`, weil der
+Small-Int-Cache die Zahlen abfängt. Das Struct trägt Felder für jeden Typ
+gleichzeitig (`Fn`, `Env`, `Ht`, `SrcFile`, `SrcLine`, `Car`, `Cdr`, `Val`,
+`Num`), obwohl jede Cell nur einen Typ ist. `SrcFile`/`SrcLine` (24 B) werden
+ausschließlich auf LIST-Cells gestempelt. Vor einem Schnitt dort aber erst
+einen Benchmark bauen, der Cells tatsächlich erzeugt — Listenaufbau,
+String-Operationen, Makro-Expansion.
 
-1. **`Env` in zwei Typen trennen** (Root mit Map, Frame mit inline+entries).
-   Bringt die 8 Byte und mehr. `Env` ist exportiert und wird von
-   `lib/swank` und `main.go` benutzt — Blast-Radius vor dem Anfangen prüfen.
-   Ein Interface würde Indirektion kosten; besser ein konkreter Frame-Typ
-   und `Env` als Root.
-2. **`singleName string` (16 B) durch das internierte Symbol `*Cell` (8 B)
-   ersetzen.** Seit Schnitt 8 ist jedes Symbol genau eine Cell, also ist
-   Pointer-Vergleich gültig — und schneller als String-Vergleich. Bringt
-   die 8 Byte allein. Haken: `Get(name string)` ist die öffentliche API;
-   entweder Signatur ändern (Blast-Radius) oder `.Val` vergleichen (dann
-   nur der Größengewinn, kein Geschwindigkeitsgewinn).
-3. **Escape-Analyse prüfen:** `go build -gcflags='-m'` auf `NewEnv`.
+**Und der eigentliche Punkt:** `fib` ist am Ende seines Aussagegehalts. Es
+misst einen einstelligen Lambda-Aufruf mit Zahlen aus dem Cache. Alles was
+diese Datei ab hier noch verbessern kann, verbessert genau das. Der nächste
+sinnvolle Schritt ist ein **zweiter Benchmark**, nicht ein zwölfter Schnitt.
 
-Richtung 2 ist der kleinste Schnitt mit dem vollen Größengewinn. Vorher die
-Size-Class ausrechnen, nicht die Struct-Größe (§4.5e).
-
-Danach ist der `fib`-Mikrobenchmark am Ende seines Aussagegehalts.
 Weitere Reduktionen bräuchten einen anderen Ansatz:
 
 - **Bytecode-VM / Compiler:** Tree-Walking-Overhead pro Aufruf reduzieren.
@@ -531,7 +582,7 @@ neuer Schnitt angelegt wird.
 |-------|-----------------|
 | `lib/eval_core.go` | `Eval`-Trampolin, `evalCtx` (**per Value**), `evalArgsPooled`, Lambda-Apply-Pfad |
 | `lib/eval_depth_test.go` | Netz für Tiefe + Cancellation (§4.5d), nur öffentliche API |
-| `lib/env.go` | `Env`-Struct 88 B (Root-Map + inline/`entries`-Frames), Redefine-Policy |
+| `lib/env.go` | `Env`-Struct 80 B, `Get`/`Set` (String) + `GetSym`/`SetSym` (Pointer), Redefine-Policy |
 | `lib/env_frame_test.go` | Netz für den Frame-Pfad inline↔`entries` (§4.5e) |
 | `lib/env_closure_test.go` | Regressionsnetz Closure × Frame-Form (§4.5b) |
 | `lib/eval_lambda.go` | `bindArgs`, `bindEvalArgs`, `applyLambda`, `makeLambda` |

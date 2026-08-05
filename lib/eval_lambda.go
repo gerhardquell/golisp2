@@ -113,7 +113,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
       if argIdx >= len(args) {
         return fmt.Errorf("lambda: zu wenig Argumente (brauche '%s')", param.Val)
       }
-      _ = localEnv.Set(param.Val, args[argIdx])
+      _ = localEnv.SetSym(param, args[argIdx])
       argIdx++
 
     case 1:  // &optional
@@ -205,7 +205,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       }
       val, err := evalWithCtx(argExprs.Car, callerEnv, ectx.child())
       if err != nil { return err }
-      _ = localEnv.Set(param.Val, Primary(val))
+      _ = localEnv.SetSym(param, Primary(val))
       argExprs = argExprs.Cdr
 
     case 1:  // &optional

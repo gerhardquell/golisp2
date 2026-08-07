@@ -77,6 +77,24 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
 - **客户端 REPL**：通过 `golisp2-client --repl` 使用交互式 REPL
 
+### Web 桥接（浏览器集成）
+- **面向浏览器的 Swank 式活镜像**：`http-serve` + WebSocket RPC，双向通信
+- **静态文件服务**：`http-static` 挂载目录，不支持目录列表
+- **`ws-export`**：将 Lisp lambda 暴露为浏览器可调用的操作 —— 连接期间可**热替换**，无需重连
+- **`ws-emit`**：服务器向所有（或单个）已连接客户端推送事件
+- **`ws-call`**：服务器调用浏览器端任意 JS 并阻塞等待结果 —— 即使在调用方自身的处理器内重入调用也安全
+- **每请求一个 goroutine**：某客户端的慢速 AI 调用不会阻塞其他客户端
+- **`lib/embed/boot.js`**：轻量客户端引导脚本（`golisp.call`、`golisp.on`、自动重连），通过 `/_golisp/boot.js` 提供
+
+```lisp
+(define s (http-serve 0))
+(http-static s "/" "./public")
+(ws-export s "ask" (lambda (client frage) (string-append "Echo: " frage)))
+(browser-open (string-append "http://127.0.0.1:" (number->string (http-port s))))
+(ws-emit s 'tick 42)   ; 推送，浏览器立即可见
+(http-wait s)
+```
+
 ---
 
 ## 🚀 快速开始
@@ -428,6 +446,7 @@ my-project/
 | **AI** | `sigo`、`sigo-models`、`sigo-host` |
 | **遗传算法** | `ga-create`、`ga-init`、`ga-cross`、`ga-calc`、`ga-select`、`ga-result`、`ga-mut`、`ga-print`、`ga?` |
 | **PostgreSQL** | `pg-connect`、`pg-query`、`pg-exec`、`pg-close` |
+| **Web 桥接** | `http-serve`、`http-static`、`http-port`、`http-wait`、`http-stop`、`browser-open`、`ws-export`、`ws-unexport`、`ws-emit`、`ws-emit-to`、`ws-eval`、`ws-call`、`ws-clients` |
 | **元编程** | `gensym`、`macroexpand`、`error` |
 
 ---

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+  public/index.html — Testseite der GoLisp2 Web-Bridge (Spec TODO.md §11.4)
+  Autor: Gerhard Quell - gquell@skequell.de · CoAutor: kimi-k3
+  Aufruf: (define s (http-serve 0)) (http-static s "/" "./public")
+          (ws-export s "ask" (lambda (c frage) (string-append "Echo: " frage)))
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>GoLisp2 Web-Bridge</title>
+<script src="/_golisp/boot.js"></script>
+<style>
+  body { font-family: sans-serif; max-width: 40em; margin: 2em auto; }
+  #log { border: 1px solid #ccc; padding: 1ex; min-height: 8em;
+         white-space: pre-wrap; font-family: monospace; }
+  #status { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>GoLisp2 Web-Bridge</h1>
+<p>Status: <span id="status">verbinde…</span></p>
+<p>
+  <input id="frage" value="Was ist Bewusstsein?" size="40">
+  <button id="ask">ask aufrufen</button>
+  <button id="breite">Fensterbreite (ws-call-Reentranz)</button>
+</p>
+<div id="log"></div>
+<script>
+  var log = document.getElementById("log");
+  var status = document.getElementById("status");
+
+  function say(text) {
+    log.textContent += text + "\n";
+    log.scrollTop = log.scrollHeight;
+  }
+
+  golisp.ready.then(function () {
+    status.textContent = "verbunden";
+    say("verbunden mit " + location.host);
+  });
+  golisp.on("_reconnect", function () {
+    status.textContent = "wiederverbunden (neue Client-ID)";
+    say("— Reconnect —");
+  });
+  golisp.on("tick", function (data) { say("tick: " + JSON.stringify(data)); });
+
+  document.getElementById("ask").onclick = function () {
+    golisp.call("ask", document.getElementById("frage").value)
+      .then(function (r) { say("ask → " + JSON.stringify(r)); })
+      .catch(function (e) { say("ask Fehler: " + e.message); });
+  };
+
+  // Szenario §8.4 B: Handler "breite" ruft seinerseits ws-call auf
+  document.getElementById("breite").onclick = function () {
+    golisp.call("breite")
+      .then(function (r) { say("breite → " + JSON.stringify(r)); })
+      .catch(function (e) { say("breite Fehler: " + e.message); });
+  };
+</script>
+</body>
+</html>

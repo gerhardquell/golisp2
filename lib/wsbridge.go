@@ -17,6 +17,7 @@ package lib
 
 import (
   "encoding/json"
+  _ "embed" // //go:embed boot.js
   "fmt"
   "net/http"
   "net/url"
@@ -25,6 +26,9 @@ import (
 
   "github.com/gorilla/websocket"
 )
+
+//go:embed embed/boot.js
+var bootJS []byte
 
 // wsClient ist eine verbundene WebSocket-Verbindung.
 type wsClient struct {
@@ -73,10 +77,16 @@ func RegisterWSFuncs(env *Env) {
   _ = env.Set("ws-clients",  makeFn(fnWSClients))
 }
 
-// registerWSRoute haengt den WebSocket-Endpunkt an den Server-Mux.
+// registerWSRoute haengt WebSocket-Endpunkt und boot.js an den Server-Mux.
+// boot.js kommt per //go:embed, nicht ueber http-static — muss auch ohne
+// Static-Verzeichnis erreichbar sein (Spec §7).
 // Wird von fnHTTPServe aufgerufen.
 func (ws *WebServer) registerWSRoute() {
   ws.mux.HandleFunc("/_golisp/ws", ws.handleWS)
+  ws.mux.HandleFunc("/_golisp/boot.js", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+    w.Write(bootJS) //nolint:errcheck
+  })
 }
 
 // ---- Verbindungs-Hub ----
@@ -210,6 +220,10 @@ func (ws *WebServer) deliverCallResult(client *wsClient, msg *wsInMsg) {
   }
   if msg.Err != nil {
     ch <- wsCallResult{err: fmt.Errorf("%s", *msg.Err)}
+    return
+  }
+  if len(msg.OK) == 0 {
+    ch <- wsCallResult{val: MakeNil()} // Browser lieferte undefined
     return
   }
   val, err := JSONToCell(msg.OK)

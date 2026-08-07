@@ -123,6 +123,9 @@ func BaseEnv() *Env {
 	// PostgreSQL
 	RegisterPostgres(env)
 
+	// Web-Bridge (HTTP + WebSocket)
+	RegisterHTTPFuncs(env)
+
 	// Genetischer Algorithmus
 	RegisterGenAlg(env)
 

@@ -36,7 +36,7 @@ type WebServer struct {
   handlers map[string]*Cell   // ws-export
   clients  map[int]*wsClient  // wsbridge.go
   nextCid  int
-  pending  map[int]chan *Cell // ws-call, Key = call-id
+  pending  map[int]chan wsCallResult // ws-call, Key = call-id (Spec: chan *Cell — erweitert um Fehler-Transport)
   nextCall int
   env      *Env               // Root-Env fuer Handler-Aufrufe
   done     chan struct{}
@@ -82,12 +82,13 @@ func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
     port:     ln.Addr().(*net.TCPAddr).Port,
     handlers: make(map[string]*Cell),
     clients:  make(map[int]*wsClient),
-    pending:  make(map[int]chan *Cell),
+    pending:  make(map[int]chan wsCallResult),
     env:      env,
     done:     make(chan struct{}),
     idleAt:   time.Now(),
   }
   ws.srv = &http.Server{Handler: ws.mux}
+  ws.registerWSRoute()
   go ws.srv.Serve(ln) //nolint:errcheck // Fehler landen im done-Kanal via http-stop
   return &Cell{Type: LIST, Env: ws, Val: fmt.Sprintf("#<webserver :%d>", ws.port)}, nil
 }

@@ -125,6 +125,7 @@ func BaseEnv() *Env {
 
 	// Web-Bridge (HTTP + WebSocket)
 	RegisterHTTPFuncs(env)
+	RegisterWSFuncs(env)
 
 	// Genetischer Algorithmus
 	RegisterGenAlg(env)

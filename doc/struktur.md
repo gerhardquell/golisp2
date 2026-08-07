@@ -50,6 +50,10 @@ golisp2/
     genalg_prims.go      GA-Lisp-Primitiven
     shm_lisp.go          Shared-Memory-Primitiven
     sigorest.go          sigo, sigo-models, sigo-host (HTTP zu sigoREST)
+    httpserver.go        Web-Bridge: http-serve/-static/-port/-wait/-stop, browser-open
+    wsbridge.go          Web-Bridge: ws-export/-emit/-call u. a., WS-Hub, boot.js-Embed
+    jsoncell.go          JSON ↔ Cell (CellToJSON/JSONToCell, Alist-Objekt-Regel)
+    embed/boot.js        Browser-Client der Web-Bridge (golisp.call/on/…)
 
     defloc.go            Definition-Locations für M-. (SLIME)
     stdlib.go            //go:embed stdlib.lisp + LoadStdlib

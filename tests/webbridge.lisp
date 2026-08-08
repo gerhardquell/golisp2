@@ -46,5 +46,17 @@
           (handler-case (ws-emit 42 'tick 1)
             (error (e) :gefangen)))))
 
+(deftest webserv-smoke :suite 'webbridge
+  ;; Inline-HTML-Modus, kein Browser (Test-Umgebung)
+  (let ((srv (webserv :port 0 :html "<html><head></head><body>hi</body></html>" :open ())))
+    (is (> (http-port srv) 0))
+    ;; ws-export funktioniert unveraendert auf dem webserv-Server-Objekt
+    (is (eq t (ws-export srv "ping" (lambda (c) "pong"))))
+    (is (eq t (http-stop srv))))
+  ;; Fehlerfall: weder :html noch :htmlpath
+  (is (eq :gefangen
+          (handler-case (webserv :port 0 :open ())
+            (error (e) :gefangen)))))
+
 (let ((fails (run-tests 'webbridge)))
   (exit (if (> fails 0) 1 0)))

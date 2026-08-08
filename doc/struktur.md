@@ -52,6 +52,7 @@ golisp2/
     sigorest.go          sigo, sigo-models, sigo-host (HTTP zu sigoREST)
     httpserver.go        Web-Bridge: http-serve/-static/-port/-wait/-stop, browser-open
     wsbridge.go          Web-Bridge: ws-export/-emit/-call u. a., WS-Hub, boot.js-Embed
+    webserv.go           Web-Bridge: webserv (Ein-Aufruf-Bootstrap: Server+HTML+boot.js+Browser)
     jsoncell.go          JSON ↔ Cell (CellToJSON/JSONToCell, Alist-Objekt-Regel)
     embed/boot.js        Browser-Client der Web-Bridge (golisp.call/on/…)
 

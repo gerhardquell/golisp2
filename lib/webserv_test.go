@@ -129,6 +129,32 @@ func TestWebServHTMLPathFreshReload(t *testing.T) {
   }
 }
 
+func TestWebServHTMLPathAlreadyHasBootJS(t *testing.T) {
+  dir := t.TempDir()
+  path := filepath.Join(dir, "seite.html")
+  original := `<html><head><script src="/_golisp/boot.js"></script></head><body>x</body></html>`
+  if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+    t.Fatal(err)
+  }
+
+  env := webservTestEnv(t)
+  args := []*Cell{
+    MakeAtom(":htmlpath"), MakeStr(path),
+    MakeAtom(":open"), MakeNil(),
+  }
+  srvCell, err := fnWebServ(env, args)
+  if err != nil {
+    t.Fatal(err)
+  }
+  ws, _ := asServer("webserv", srvCell)
+  t.Cleanup(func() { fnHTTPStop([]*Cell{srvCell}) }) //nolint:errcheck
+
+  _, body := fetchBody(t, "http://127.0.0.1:"+strconv.Itoa(ws.port)+"/")
+  if strings.Count(body, "/_golisp/boot.js") != 1 {
+    t.Fatalf("boot.js-Tag doppelt eingefuegt (htmlpath-Modus): %q", body)
+  }
+}
+
 func TestWebServHTMLPathMissing404(t *testing.T) {
   env := webservTestEnv(t)
   args := []*Cell{

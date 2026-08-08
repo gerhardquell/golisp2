@@ -174,6 +174,64 @@ func TestWebServHTMLPathMissing404(t *testing.T) {
   }
 }
 
+func TestInjectBootScript(t *testing.T) {
+  cases := []struct {
+    name string
+    in   string
+  }{
+    {"head vorhanden", "<html><head></head><body>hallo</body></html>"},
+    {"HEAD grossgeschrieben", "<html><HEAD></HEAD><body>hallo</body></html>"},
+    {"whitespace vor schluss-tag", "<html><head></head ><body>hallo</body></html>"},
+    {"kein head", "<html><body>hallo</body></html>"},
+    {"boot.js bereits vorhanden", `<html><head><script src="/_golisp/boot.js"></script></head><body>x</body></html>`},
+  }
+  for _, tc := range cases {
+    t.Run(tc.name, func(t *testing.T) {
+      out := injectBootScript(tc.in)
+      switch tc.name {
+      case "boot.js bereits vorhanden":
+        if out != tc.in {
+          t.Fatalf("unveraendert erwartet, bekam: %q", out)
+        }
+      case "kein head":
+        if !strings.HasPrefix(out, bootScriptTag) {
+          t.Fatalf("Tag nicht am Dokumentanfang: %q", out)
+        }
+      default:
+        if !strings.Contains(out, bootScriptTag) {
+          t.Fatalf("boot.js-Tag fehlt: %q", out)
+        }
+        idxTag := strings.Index(out, bootScriptTag)
+        idxClose := strings.LastIndex(strings.ToLower(out), "</head")
+        if idxClose < 0 || idxTag > idxClose {
+          t.Fatalf("Tag steht nicht vor </head>: %q", out)
+        }
+      }
+    })
+  }
+}
+
+// TestInjectBootScriptUnicodeRegression: Regressionstest fuer den
+// Byte-Offset-Bug aus dem Whole-Branch-Review. strings.ToLower ist nicht
+// byte-laengenerhaltend — İ (U+0130, 2 Byte in UTF-8) wird zu i (1 Byte).
+// Der fruehere Code suchte </head> in der kleingeschriebenen Kopie und
+// schnitt das Original am selben Byte-Offset: bei diesem Zeichen vor
+// </head> landete der Schnitt mitten im Tag und zerstoerte das HTML
+// lautlos. Diese Zeile absichtlich nicht "vereinfachen" — sie ist der Beweis.
+func TestInjectBootScriptUnicodeRegression(t *testing.T) {
+  in := "<html><head><title>İstanbul</title></head><body>x</body></html>"
+  out := injectBootScript(in)
+
+  if !strings.Contains(out, "<title>İstanbul</title>") {
+    t.Fatalf("Originaltext beschaedigt, </title> nicht intakt: %q", out)
+  }
+  idxTag := strings.Index(out, bootScriptTag)
+  idxClose := strings.LastIndex(strings.ToLower(out), "</head")
+  if idxTag < 0 || idxClose < 0 || idxTag > idxClose {
+    t.Fatalf("boot.js-Tag steht nicht vor </head>: %q", out)
+  }
+}
+
 func TestWebServErrors(t *testing.T) {
   env := webservTestEnv(t)
 

@@ -19,10 +19,13 @@ import (
   "fmt"
   "net/http"
   "os"
+  "regexp"
   "strings"
 )
 
 const bootScriptTag = `<script src="/_golisp/boot.js"></script>`
+
+var headCloseRe = regexp.MustCompile(`(?i)</head\s*>`)
 
 // RegisterWebservFuncs registriert das webserv-Primitiv.
 func RegisterWebservFuncs(env *Env) {
@@ -120,14 +123,14 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
 }
 
 // injectBootScript fuegt den boot.js-Script-Tag ein, falls er im HTML
-// noch fehlt — vor </head>, sonst am Dokumentanfang.
+// noch fehlt — vor </head> (case-insensitiv, optionale Whitespace vor
+// dem Schluss-Tag), sonst am Dokumentanfang.
 func injectBootScript(html string) string {
   if strings.Contains(html, "/_golisp/boot.js") {
     return html
   }
-  lower := strings.ToLower(html)
-  if idx := strings.Index(lower, "</head>"); idx >= 0 {
-    return html[:idx] + bootScriptTag + html[idx:]
+  if loc := headCloseRe.FindStringIndex(html); loc != nil {
+    return html[:loc[0]] + bootScriptTag + html[loc[0]:]
   }
   return bootScriptTag + html
 }

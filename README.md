@@ -80,6 +80,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 
 ### Web Bridge (Browser Integration)
 - **Swank-style live image for browsers**: `http-serve` + WebSocket RPC, bidirectional
+- **`webserv`**: one-call bootstrap — server + HTML content (inline or file, re-read fresh on every request) + boot.js auto-injected + browser opened, all in one primitive
 - **Static file serving**: `http-static` mounts a directory, no directory listing
 - **`ws-export`**: expose a Lisp lambda as a callable browser-side operation — redefinable **while connected**, no reconnect needed
 - **`ws-emit`**: server-push events to all (or one) connected client
@@ -87,12 +88,22 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Per-request goroutines**: one client's slow AI call never blocks another client
 - **`lib/embed/boot.js`**: tiny client bootstrap (`golisp.call`, `golisp.on`, auto-reconnect), served at `/_golisp/boot.js`
 
+One call, single-file page (epub3-style, HTML/CSS inline), browser opens automatically:
+
+```lisp
+(define s (webserv :htmlpath "./public/index.html"))
+(ws-export s "ask" (lambda (client frage) (string-append "Echo: " frage)))
+(ws-emit s 'tick 42)   ; push, visible in the browser immediately
+(http-wait s)
+```
+
+The lower-level primitives (`http-serve`, `http-static`, `browser-open`, ...) are still there for multi-file sites or custom setups:
+
 ```lisp
 (define s (http-serve 0))
 (http-static s "/" "./public")
 (ws-export s "ask" (lambda (client frage) (string-append "Echo: " frage)))
 (browser-open (string-append "http://127.0.0.1:" (number->string (http-port s))))
-(ws-emit s 'tick 42)   ; push, visible in the browser immediately
 (http-wait s)
 ```
 
@@ -500,7 +511,7 @@ my-project/
 | **AI** | `sigo`, `sigo-models`, `sigo-host` |
 | **Genetic Algorithms** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
-| **Web Bridge** | `http-serve`, `http-static`, `http-port`, `http-wait`, `http-stop`, `browser-open`, `ws-export`, `ws-unexport`, `ws-emit`, `ws-emit-to`, `ws-eval`, `ws-call`, `ws-clients` |
+| **Web Bridge** | `webserv`, `http-serve`, `http-static`, `http-port`, `http-wait`, `http-stop`, `browser-open`, `ws-export`, `ws-unexport`, `ws-emit`, `ws-emit-to`, `ws-eval`, `ws-call`, `ws-clients` |
 | **Meta** | `gensym`, `macroexpand`, `error` |
 
 ---

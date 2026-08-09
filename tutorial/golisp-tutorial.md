@@ -1329,6 +1329,177 @@ Schließt eine PostgreSQL-Verbindung.
 (pg-close conn)
 ```
 
+## Web-Bridge
+
+### webserv
+
+**Syntax:** `(webserv &key port html htmlpath open)`
+
+Ein-Aufruf-Bootstrap für eine Browser-Anbindung: startet einen HTTP-Server,
+liefert `:html` (Inline-String) oder `:htmlpath` (Datei, bei jedem Request
+neu gelesen) aus, injiziert automatisch `boot.js` und öffnet den Browser
+(`:open` Default `t`). Genau eines von `:html`/`:htmlpath` ist Pflicht.
+Gibt das Server-Objekt zurück, auf dem `ws-export`/`ws-emit`/... normal
+weiterlaufen.
+
+```lisp
+(define s (webserv :htmlpath "./public/index.html"))
+(ws-export s "ask" (lambda (client frage) (string-append "Echo: " frage)))
+(http-wait s)
+```
+
+### http-serve
+
+**Syntax:** `(http-serve port)`
+
+Startet einen HTTP-Server auf `127.0.0.1:port` (`port` `0` → freier Port
+vom OS), kehrt sofort zurück. Tiefere Alternative zu `webserv` für
+Multi-File-Sites oder eigenes Routing.
+
+```lisp
+(define s (http-serve 0))
+(http-static s "/" "./public")
+(http-port s)
+;; => z.B. 41213
+```
+
+### http-static
+
+**Syntax:** `(http-static srv urlpath dir)`
+
+Mountet ein Verzeichnis unter `urlpath` (muss mit `/` beginnen). Kein
+Directory-Listing, mehrfach aufrufbar für weitere Pfade.
+
+```lisp
+(http-static s "/assets" "./public/assets")
+```
+
+### http-port
+
+**Syntax:** `(http-port srv)`
+
+Liefert den tatsächlich gebundenen Port — nützlich nach `(http-serve 0)`.
+
+```lisp
+(http-port s)
+;; => 41213
+```
+
+### http-wait
+
+**Syntax:** `(http-wait srv &key idle-exit)`
+
+Blockiert bis `http-stop`, SIGINT/SIGTERM (beendet dann den Prozess) oder —
+mit `:idle-exit` (ms) — bis so lange kein Client mehr verbunden war.
+Typischer Abschluss eines Skripts nach `webserv`/`http-serve`.
+
+```lisp
+(http-wait s :idle-exit 60000)   ; beendet sich nach 60s ohne Client
+```
+
+### http-stop
+
+**Syntax:** `(http-stop srv)`
+
+Graceful Shutdown (2s), idempotent — mehrfacher Aufruf ist unproblematisch.
+
+```lisp
+(http-stop s)
+```
+
+### browser-open
+
+**Syntax:** `(browser-open url)`
+
+Öffnet `url` im Browser (chromium/chrome/xdg-open, in dieser Reihenfolge),
+Prozess detached, kein Warten. `webserv` ruft das intern selbst auf, außer
+mit `:open ()`.
+
+```lisp
+(browser-open (string-append "http://127.0.0.1:" (number->string (http-port s))))
+```
+
+### ws-export
+
+**Syntax:** `(ws-export srv name fn)`
+
+Macht `fn` unter `name` als vom Browser aufrufbare Operation verfügbar
+(`golisp.call('name', ...)`). `fn` bekommt die Client-ID als erstes
+Argument. Erneutes `ws-export` überschreibt still, während der Client
+verbunden bleibt — der Kern der Live-Image-Idee.
+
+```lisp
+(ws-export s "ask" (lambda (client frage) (string-append "Echo: " frage)))
+;; spaeter, waehrend der Browser verbunden bleibt — Verhalten aendert sich live:
+(ws-export s "ask" (lambda (client frage) (string-append "Neu: " frage)))
+```
+
+### ws-unexport
+
+**Syntax:** `(ws-unexport srv name)`
+
+Entfernt eine exportierte Operation. `t`, wenn sie registriert war, sonst
+`nil`.
+
+```lisp
+(ws-unexport s "ask")
+```
+
+### ws-emit
+
+**Syntax:** `(ws-emit srv event data)`
+
+Server-Push an alle verbundenen Clients (`golisp.on('event', ...)` im
+Browser). Liefert die Anzahl der Empfänger.
+
+```lisp
+(ws-emit s 'tick 42)
+```
+
+### ws-emit-to
+
+**Syntax:** `(ws-emit-to srv client event data)`
+
+Wie `ws-emit`, aber gezielt an eine Client-ID (aus `ws-clients` oder dem
+ersten Argument eines `ws-export`-Handlers). `nil` bei unbekanntem Client.
+
+```lisp
+(ws-emit-to s 1 'private-msg "nur für dich")
+```
+
+### ws-eval
+
+**Syntax:** `(ws-eval srv js)`
+
+Feuert JavaScript-Code an alle Clients, ohne auf ein Ergebnis zu warten.
+
+```lisp
+(ws-eval s "console.log('hallo aus golisp2')")
+```
+
+### ws-call
+
+**Syntax:** `(ws-call srv client js &key timeout)`
+
+Ruft JS im Browser des angegebenen Clients auf und **blockiert** auf das
+Ergebnis (Default-Timeout 5000 ms). Reentrant-sicher, auch aus dem eigenen
+`ws-export`-Handler heraus aufrufbar.
+
+```lisp
+(ws-export s "breite" (lambda (c) (ws-call s c "return window.innerWidth")))
+```
+
+### ws-clients
+
+**Syntax:** `(ws-clients srv)`
+
+Liste der aktuell verbundenen Client-IDs.
+
+```lisp
+(ws-clients s)
+;; => (1 2)
+```
+
 ## Standardbibliothek
 
 ### cadr

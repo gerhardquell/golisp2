@@ -186,9 +186,14 @@ func fnHTTPPort(args []*Cell) (*Cell, error) {
   return MakeNum(float64(ws.port)), nil
 }
 
-// http-wait: (http-wait srv &key idle-exit) → nil. Blockiert bis http-stop,
-// SIGINT/SIGTERM oder — mit idle-exit (ms) — bis so lange kein Client mehr
-// verbunden war. Der Timer laeuft ab Serverstart, wenn nie ein Client kam.
+// http-wait: (http-wait srv &key idle-exit) → nil. Blockiert bis http-stop
+// oder — mit idle-exit (ms) — bis so lange kein Client mehr verbunden war.
+// Der Timer laeuft ab Serverstart, wenn nie ein Client kam.
+// Bei SIGINT/SIGTERM beendet sich der Prozess (os.Exit) statt nur den Call
+// zu entblocken: signal.Notify wirkt prozessweit — ein blockierendes
+// http-wait im SWANK-Daemon (golisp2d/golisp2 -swank) wuerde sonst das
+// Shutdown-Signal des ganzen Prozesses schlucken, bis systemd nach
+// TimeoutStopSec hart mit SIGKILL nachhilft.
 func fnHTTPWait(args []*Cell) (*Cell, error) {
   if len(args) < 1 {
     return nil, fmt.Errorf("http-wait: 1 Argument nötig")
@@ -214,6 +219,7 @@ func fnHTTPWait(args []*Cell) (*Cell, error) {
     select {
     case <-ws.done:
     case <-sigCh:
+      os.Exit(0)
     }
     return MakeNil(), nil
   }
@@ -224,7 +230,7 @@ func fnHTTPWait(args []*Cell) (*Cell, error) {
     case <-ws.done:
       return MakeNil(), nil
     case <-sigCh:
-      return MakeNil(), nil
+      os.Exit(0)
     case <-tick.C:
       ws.mu.RLock()
       idleSince := time.Since(ws.idleAt)

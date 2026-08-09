@@ -18,9 +18,8 @@ als eingebaute Lisp-Primitiven beherrscht.
 
 ```
 main.go              CLI: stdin / -i / -e / -t / --swank / Datei
-cmd/golisp2d/        Server-Binary (SWANK-Daemon)
 cmd/golisp2-client/  CLI-Client mit REPL
-build/               Build-Artefakte (golisp2, golisp2d, golisp2-client)
+build/               Build-Artefakte (golisp2, golisp2-client)
 lib/
   types*.go          Cell-Datenstruktur, Small-Int-Cache, Helfer
   reader.go          Parser: String → Cell-Baum
@@ -196,7 +195,7 @@ go test ./... -count=1                     # bei überraschenden Ergebnissen (Ca
 echo "(+ 1 2)" | ./build/golisp2           # stdin (Default)
 ./build/golisp2 skript.lisp                # Datei
 
-./build/golisp2d --port 4321               # SWANK-Server
+./build/golisp2 --swank 127.0.0.1:4321     # SWANK-Server
 ./build/golisp2-client --repl              # Client-REPL
 ```
 

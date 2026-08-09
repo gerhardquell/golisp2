@@ -288,18 +288,16 @@ go run . -t           # Testmodus
 
 ---
 
-## Server-Modus (golisp2d)
+## Server-Modus (`golisp2 --swank`)
 
 GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 
 ### Server starten
 
 ```bash
-./build/golisp2d --port 4321        # Default: localhost:4321
-./build/golisp2d --host 0.0.0.0     # Externe Verbindungen erlauben
+./build/golisp2 --swank 127.0.0.1:4321   # host:port Pflicht
+./build/golisp2 --swank 0.0.0.0:4321     # externe Verbindungen erlauben
 ```
-
-Umgebungsvariablen: `GOLISP_HOST`, `GOLISP_PORT`
 
 ### Client verwenden
 

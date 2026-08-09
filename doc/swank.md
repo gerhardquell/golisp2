@@ -3,24 +3,24 @@
 `lib/swank/` implementiert das **echte SWANK-Protokoll** (length-prefixed
 `:emacs-rex`-RPC). `M-x slime-connect` aus Emacs funktioniert damit direkt.
 
-`golisp2 --swank` und `golisp2d` starten **denselben** Server
-(`lib/swank/server.go` → `swank.RunServer`). Es gibt kein separates Custom-RPC.
-Der `golisp2-client` spricht ebenfalls SWANK.
+`golisp2 --swank host:port` startet den Server (`lib/swank/server.go` →
+`swank.RunServer`). Es gibt kein separates Custom-RPC. Der `golisp2-client`
+spricht ebenfalls SWANK.
 
 Status: 2026-06-21 getestet mit SLIME v2.32.
 
 ## Architektur
 
 ```
-┌─────────────┐     TCP / SWANK       ┌─────────────┐
-│   Client    │ ◄──────────────────►  │  golisp2d   │
-│ (golisp2-   │  :emacs-rex Frames    │ (SWANK-Srv) │
-│  client,    │  %06x<sexpr>          └──────┬──────┘
-│  Emacs/     │                              │
-│  SLIME)     │                       ┌──────┴──────┐
-└─────────────┘                       │  GoLisp2    │
-                                      │  Runtime    │
-                                      └─────────────┘
+┌─────────────┐     TCP / SWANK       ┌─────────────────┐
+│   Client    │ ◄──────────────────►  │ golisp2 --swank │
+│ (golisp2-   │  :emacs-rex Frames    │  (SWANK-Srv)    │
+│  client,    │  %06x<sexpr>          └────────┬────────┘
+│  Emacs/     │                                │
+│  SLIME)     │                         ┌──────┴──────┐
+└─────────────┘                         │  GoLisp2    │
+                                        │  Runtime    │
+                                        └─────────────┘
 ```
 
 | Datei | Aufgabe |
@@ -36,18 +36,8 @@ Hybrid-Design: Transport in Go, Semantik in Lisp.
 ## Server starten
 
 ```bash
-./build/golisp2d                          # Default localhost:4321
-./build/golisp2d --port 5000
-
-# Env-Vars als Default; Flags überschreiben Env (Flag > Env > Default)
-export GOLISP_HOST=0.0.0.0
-export GOLISP_PORT=5000
-./build/golisp2d
-
-GOLISP_PORT=9123 ./build/golisp2d --port 5000   # bindet auf 5000
-
-# Alternativ: Hauptbinary im SWANK-Modus
-./build/golisp2 --swank 127.0.0.1:4242
+./build/golisp2 --swank 127.0.0.1:4242    # host:port Pflicht
+./build/golisp2 --swank 5000              # kein ":" → Host defaultet auf 127.0.0.1
 ```
 
 ### Emacs

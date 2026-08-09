@@ -135,7 +135,7 @@ GoLisp 还可以作为 TCP 服务器运行，支持 IDE 集成：
 
 ```bash
 # 终端 1：启动服务器
-golisp2d --port 4321
+golisp2 --swank 127.0.0.1:4321
 
 # 终端 2：使用客户端
 golisp2-client --port 4321 --eval "(+ 1 2 3)"

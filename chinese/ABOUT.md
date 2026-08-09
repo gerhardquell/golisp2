@@ -130,7 +130,7 @@ GoLisp can also run as a TCP server for IDE integration:
 
 ```bash
 # Terminal 1: Start server
-golisp2d --port 4321
+golisp2 --swank 127.0.0.1:4321
 
 # Terminal 2: Use client
 golisp2-client --port 4321 --eval "(+ 1 2 3)"

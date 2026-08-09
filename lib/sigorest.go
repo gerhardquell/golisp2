@@ -38,8 +38,7 @@ var (
   sigoCallMutex   sync.Mutex
 )
 
-// init liest sigoREST-Konfiguration aus Umgebungsvariablen (analog
-// GOLISP_HOST/GOLISP_PORT für golisp2d):
+// init liest sigoREST-Konfiguration aus Umgebungsvariablen:
 //   GOLISP_SIGO_HOST     – sigoREST-Host (default http://127.0.0.1:9080)
 //   GOLISP_SIGO_MODEL    – Default-Modell für (sigo "prompt")
 //   GOLISP_SIGO_TIMEOUT  – Request-Timeout, z. B. "30s", "5m", "2m30s"

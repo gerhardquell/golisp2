@@ -5,9 +5,9 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260716
 //**********************************************************************
-// Integrationstest: golisp2d überlebt das Laden von gps-norvig-bugs.lisp.
-// Lädt das Skript per golisp2-client --load und prüft, ob der Server
-// danach noch auf Signal 0 antwortet (also lebt).
+// Integrationstest: der SWANK-Server (golisp2 --swank) überlebt das Laden
+// von gps-norvig-bugs.lisp. Lädt das Skript per golisp2-client --load und
+// prüft, ob der Server danach noch auf Signal 0 antwortet (also lebt).
 //**********************************************************************
 
 package swank
@@ -46,7 +46,7 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
     t.Fatalf("mkdir: %v", err)
   }
 
-  server := exec.Command(filepath.Join(repoRoot, "build", "golisp2d"), "--port", fmt.Sprintf("%d", port))
+  server := exec.Command(filepath.Join(repoRoot, "build", "golisp2"), "--swank", fmt.Sprintf("127.0.0.1:%d", port))
   server.Dir = repoRoot
   f, err := os.Create(logFile)
   if err != nil {

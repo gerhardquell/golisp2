@@ -72,7 +72,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Multi-line input**: Automatic indentation for incomplete expressions
 - **Full UTF-8 support**: Unicode strings throughout
 
-### Server Mode (golisp2d)
+### Server Mode (`golisp2 --swank`)
 - **SWANK-like TCP Server**: S-Expression-RPC for IDE integration
 - **Persistent environment**: Shared state across client connections
 - **Protocol methods**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
@@ -123,7 +123,6 @@ Binaries land in `./build/`. For manual builds:
 
 ```bash
 go build -o build/golisp2 .
-go build -o build/golisp2d ./cmd/golisp2d/
 go build -o build/golisp2-client ./cmd/golisp2-client/
 ```
 
@@ -161,14 +160,14 @@ EOF
 # => 25
 ```
 
-### Server Mode (`golisp2d` + `golisp2-client`)
+### Server Mode (`golisp2 --swank` + `golisp2-client`)
 
 GoLisp can run as a TCP server with a SWANK-like S-Expression-RPC protocol:
 
 ```bash
 # Terminal 1: Start the server
-./build/golisp2d --port 4321
-# => golisp2d läuft auf localhost:4321
+./build/golisp2 --swank 127.0.0.1:4321
+# => SWANK-Server läuft auf 127.0.0.1:4321
 
 # Terminal 2: Use the client
 ./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"

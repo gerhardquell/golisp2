@@ -5,16 +5,13 @@ Referenz. Bei Widerspruch zum Code gewinnt der Code.
 ```
 golisp2/
   build/                 Build-Artefakte (via ./build.sh)
-    golisp2              Hauptbinary: CLI + REPL + --swank-Modus
-    golisp2d             Server-Daemon (SWANK)
+    golisp2              Hauptbinary: CLI + REPL + --swank-Modus (SWANK-Server)
     golisp2-client       CLI-Client mit REPL
   main.go                Unix-Style CLI: stdin / -i / -e / -t / --swank / Datei + Exit-Codes
-  build.sh               baut alle drei Binaries nach ./build/
+  build.sh               baut beide Binaries nach ./build/
   tmp/                   temporäres Verzeichnis des Projekts (nicht /tmp !)
 
   cmd/
-    golisp2d/
-      main.go            SWANK-Server Entry Point
     golisp2-client/
       main.go            CLI-Client mit REPL (spricht SWANK, nutzt golisp2/lib)
 

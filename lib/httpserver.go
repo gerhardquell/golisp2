@@ -191,7 +191,7 @@ func fnHTTPPort(args []*Cell) (*Cell, error) {
 // Der Timer laeuft ab Serverstart, wenn nie ein Client kam.
 // Bei SIGINT/SIGTERM beendet sich der Prozess (os.Exit) statt nur den Call
 // zu entblocken: signal.Notify wirkt prozessweit — ein blockierendes
-// http-wait im SWANK-Daemon (golisp2d/golisp2 -swank) wuerde sonst das
+// http-wait im SWANK-Daemon (golisp2 -swank) wuerde sonst das
 // Shutdown-Signal des ganzen Prozesses schlucken, bis systemd nach
 // TimeoutStopSec hart mit SIGKILL nachhilft.
 func fnHTTPWait(args []*Cell) (*Cell, error) {

@@ -11,8 +11,6 @@ Implementierung: `lib/sigorest.go` — Primitiven `sigo`, `sigo-models`, `sigo-h
 
 ## Konfiguration (Umgebungsvariablen)
 
-Analog zu `GOLISP_HOST`/`GOLISP_PORT` für `golisp2d`:
-
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo …)` |

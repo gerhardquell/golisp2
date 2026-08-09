@@ -6,8 +6,9 @@
 //  Erstellt : 20260616
 //**********************************************************************
 // Zentrale Einbettung und Ladung der Standardbibliothek.
-// Sowohl die CLI (main.go) als auch der Server (cmd/golisp2d) nutzen
-// LoadStdlib – eine Quelle, keine Drift zwischen inline- und embed-Varianten.
+// Sowohl CLI- als auch SWANK-Server-Modus (main.go, beide über --swank
+// erreichbar) nutzen LoadStdlib – eine Quelle, keine Drift zwischen
+// inline- und embed-Varianten.
 //**********************************************************************
 
 package lib

@@ -71,7 +71,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **多行输入**：不完整表达式自动缩进
 - **完整 UTF-8 支持**：全 Unicode 字符串支持
 
-### 服务器模式 (golisp2d)
+### 服务器模式 (`golisp2 --swank`)
 - **SWANK 风格 TCP 服务器**：S-表达式 RPC 协议，支持 IDE 集成
 - **持久化环境**：客户端连接间共享状态
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
@@ -150,14 +150,14 @@ EOF
 # => 25
 ```
 
-### 服务器模式 (`golisp2d` + `golisp2-client`)
+### 服务器模式 (`golisp2 --swank` + `golisp2-client`)
 
 GoLisp 可以作为 TCP 服务器运行，支持类似 SWANK 的 S-表达式 RPC 协议：
 
 ```bash
 # 终端 1：启动服务器
-golisp2d --port 4321
-# => golisp2d 运行在 localhost:4321
+golisp2 --swank 127.0.0.1:4321
+# => SWANK 服务器运行在 127.0.0.1:4321
 
 # 终端 2：使用客户端
 golisp2-client --port 4321 --eval "(+ 1 2 3)"

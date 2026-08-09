@@ -5,7 +5,7 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260301 (renamed 20260709, SWANK-Protokoll 20260709)
 //**********************************************************************
-// GoLisp2 Client - CLI-Client für den golisp2d SWANK-Server.
+// GoLisp2 Client - CLI-Client für den golisp2-SWANK-Server (golisp2 --swank).
 // Spricht das echte SWANK-Protokoll (length-prefixed :emacs-rex RPC),
 // nicht mehr das alte Custom-RPC. Unterstützt eval, repl, complete, load.
 //**********************************************************************
@@ -25,7 +25,7 @@ import (
 	"golisp2/lib"
 )
 
-// Client repräsentiert die SWANK-Verbindung zum golisp2d-Server.
+// Client repräsentiert die SWANK-Verbindung zum golisp2-SWANK-Server.
 type Client struct {
 	conn   net.Conn
 	reader *bufio.Reader

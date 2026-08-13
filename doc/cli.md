@@ -42,6 +42,23 @@ echo "(+ 1 2)" | ./build/golisp2; echo $?   # → 0
 - Fehler in Pipe/Datei: weitere Expressions werden trotzdem verarbeitet,
   Exit-Code am Ende `1`
 
+## `(read-line)` – Freitext von stdin lesen (TODO.md, 20260813)
+
+`(read-line)` liest eine Zeile von `os.Stdin`, liefert sie als String ohne
+Newline (kein Parsing — `(read (read-line))` kombinieren, wer Lisp-Daten
+will).
+
+**Nur sinnvoll im Datei-Argument-Modus** (`golisp2 skript.lisp`, auch per
+Shebang direkt ausgeführt, z. B. `./skript.lisp`) — dort bleibt stdin
+unberührt und mit dem Terminal verbunden.
+
+- **NICHT** im Default-stdin-Modus (kein Datei-Argument): `runStdin` in
+  `main.go` liest bereits vor der Auswertung das komplette stdin via
+  `io.ReadAll(os.Stdin)` als Programmquelle ein — `(read-line)` trifft dort
+  zur Laufzeit auf EOF.
+- **NICHT** über `--swank`: kein Reverse-RPC zum Client, Emacs/SLIME leitet
+  Tastatureingaben nicht an golisp2s Stdin weiter.
+
 ## Multiline-Support (stdin)
 
 Eine Expression wird erst ausgewertet, wenn die Klammern ausgeglichen sind:

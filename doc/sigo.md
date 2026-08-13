@@ -38,6 +38,15 @@ falsch. Die einzige Wahrheit:
 (sigo-models)   ; ~80 Modelle, ID + Shortcode-Paare, live vom Server
 ```
 
+**Achtung — Name+Alias-Paarung (TODO.md, 20260813):** `(sigo-models)` kann
+für dasselbe Modell zwei aufeinanderfolgende Einträge liefern (voller Name +
+Kurz-Alias), z. B. `"gemini-3.1-flash-lite-image" "gem31-fltimg" ...`.
+`fnSigoModels` (`lib/sigorest.go`) gibt 1:1 weiter, was der externe
+sigoREST-Dienst unter `/v1/models` liefert — die Paarung entsteht dort, nicht
+in golisp2, ein Fix gehört ins sigoREST-Projekt. Wer z. B. "die ersten N
+Modelle" nehmen will (`(take 3 (sigo-models))`), bekommt sonst dasselbe
+Modell doppelt statt N verschiedene — muss selbst dedupen.
+
 ## Aufruf
 
 ```lisp

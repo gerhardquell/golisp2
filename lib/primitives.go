@@ -9,12 +9,15 @@
 package lib
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -67,6 +70,7 @@ func BaseEnv() *Env {
 	// Ausgabe
 	_ = env.Set("print", makeFn(fnPrint))
 	_ = env.Set("read", makeFn(fnRead))
+	_ = env.Set("read-line", makeFn(fnReadLine))
 	_ = env.Set("println", makeFn(fnPrintln))
 	_ = env.Set("warn", makeFn(fnWarn))
 
@@ -396,18 +400,25 @@ func cellEqual(a, b *Cell) bool {
 
 // ---- Listen ----
 
+// fnCar: CL-Semantik — (car '()) → nil statt Fehler (TODO.md Punkt 1,
+// 20260813). NIL zusätzlich zu LIST/LAMBDA/MACRO akzeptiert.
 func fnCar(args []*Cell) (*Cell, error) {
-	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO) {
+	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO && args[0].Type != NIL) {
 		return nil, fmt.Errorf("car: Liste erwartet")
+	}
+	if args[0].Type == NIL {
+		return MakeNil(), nil
 	}
 	return args[0].Car, nil
 }
 
+// fnCdr: CL-Semantik — (cdr '()) → nil statt Fehler (TODO.md Punkt 1,
+// 20260813). NIL zusätzlich zu LIST/LAMBDA/MACRO akzeptiert.
 func fnCdr(args []*Cell) (*Cell, error) {
-	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO) {
+	if len(args) < 1 || (args[0].Type != LIST && args[0].Type != LAMBDA && args[0].Type != MACRO && args[0].Type != NIL) {
 		return nil, fmt.Errorf("cdr: Liste erwartet")
 	}
-	if args[0].Cdr == nil {
+	if args[0].Type == NIL || args[0].Cdr == nil {
 		return MakeNil(), nil
 	}
 	return args[0].Cdr, nil
@@ -598,6 +609,58 @@ func fnRead(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("read: 1 Argument nötig")
 	}
 	return Read(args[0].Val)
+}
+
+// stdinReader/stdinMu: gepufferter Reader über die aktuelle stdin-Quelle
+// für (read-line). Package-level und mutex-geschützt, damit bereits
+// gepufferte, aber ungelesene Bytes zwischen Aufrufen nicht verloren gehen
+// (kein bufio.NewReader pro Call). Default: os.Stdin.
+var (
+	stdinMu     sync.Mutex
+	stdinReader = bufio.NewReader(os.Stdin)
+)
+
+// SetStdinReader tauscht die stdin-Quelle für (read-line) aus. Für Tests
+// gedacht (os.Pipe()) — Produktionscode ruft das nicht auf.
+func SetStdinReader(r io.Reader) {
+	stdinMu.Lock()
+	defer stdinMu.Unlock()
+	stdinReader = bufio.NewReader(r)
+}
+
+// ResetStdinReader stellt os.Stdin als Quelle für (read-line) wieder her.
+func ResetStdinReader() {
+	stdinMu.Lock()
+	defer stdinMu.Unlock()
+	stdinReader = bufio.NewReader(os.Stdin)
+}
+
+// read-line: (read-line) → liest eine Zeile von stdin, liefert String ohne
+// Newline. Kein Parsing — wer Lisp-Daten will, kombiniert selbst
+// (read (read-line)).
+//
+// EINSCHRÄNKUNG (TODO.md Punkt 3, 20260813): nur sinnvoll im
+// Datei-Argument-Modus (`golisp2 skript.lisp`, auch per Shebang direkt
+// ausgeführt, z. B. `./skript.lisp`) nutzbar. main.go liest im
+// Default-stdin-Modus (kein Datei-Argument, runStdin) bereits VOR der
+// Auswertung das komplette stdin via io.ReadAll(os.Stdin) als Programmquelle
+// ein — dort ist stdin zur Laufzeit schon leer (EOF). Über SWANK
+// (lib/swank/) ebenfalls nicht nutzbar: kein Reverse-RPC zum Client, Emacs
+// leitet Tastatureingaben nicht an golisp2s Stdin weiter. Details: doc/cli.md.
+func fnReadLine(args []*Cell) (*Cell, error) {
+	if len(args) != 0 {
+		return nil, fmt.Errorf("read-line: keine Argumente erwartet")
+	}
+	stdinMu.Lock()
+	r := stdinReader
+	stdinMu.Unlock()
+	line, err := r.ReadString('\n')
+	if err != nil && line == "" {
+		return nil, fmt.Errorf("read-line: %w", err)
+	}
+	line = strings.TrimSuffix(line, "\n")
+	line = strings.TrimSuffix(line, "\r")
+	return MakeString(line), nil
 }
 
 // gensym: global-atomarer Zähler für eindeutige Symbole.

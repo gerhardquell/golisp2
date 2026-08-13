@@ -105,9 +105,9 @@ func TestPrimitiveAppendCL(t *testing.T) {
 
 // TestPrimitiveListEdges dokumentiert IST-Verhalten an Listengrenzen.
 func TestPrimitiveListEdges(t *testing.T) {
-  // car/cdr auf leerer Liste → Fehler (NIL ist nicht LIST-Typ)
-  evalErr(t, `(car '())`)
-  evalErr(t, `(cdr '())`)
+  // car/cdr auf leerer Liste → nil (CL-Semantik, TODO.md Punkt 1, 20260813)
+  evalEq(t, `(car '())`, "()")
+  evalEq(t, `(cdr '())`, "()")
   // atom? auf leerer Liste → t! Leere Liste (NIL-Typ) gilt als Atom.
   // Überraschend, aber IST – because NIL ≠ LIST in der Cell-Typisierung.
   evalEq(t, `(atom? '())`, "t")

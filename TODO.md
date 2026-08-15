@@ -1,6 +1,6 @@
 # Aufgabe: 20260813 (Fortsetzung)
 
-**Status:** 1 + 2.1 erledigt (20260815) — Rest offen
+**Status:** 1 + 2.1 + 2.2 erledigt (20260815) — Rest offen
 
 Gefunden beim Live-Testen des sixhat-Projekts über SWANK/Emacs.
 
@@ -59,15 +59,13 @@ unterschiedlicher Semantik?
 Doku angepasst: cheatsheet, referenz.md/en/cn, cl-inventar.md.
 
 ### 2.2 IO-Streams
-**brainstorming**
-
-- Einbau von stdin,stdout,stderr als
-  sys-stdin, sys-stdout, sys-stderr
-  die als Filenamen genutzt werden können. 
-ich möchte folgendes machen können 
-gets() ==> fgets(sys-stdin) oder
-read() ==> fread(sys-stdin) oder
-err-write ==> fwrite(sys-stderr)
+**ERLEDIGT (20260815):** Pseudodateien `sys-stdin`/`sys-stdout`/`sys-stderr`
+in `file-read`/`file-write`/`file-append`. Neue Primitiven:
+`(gets)` (Zeile von stdin), `(slurp)` (stdin bis EOF), `(err-write ...)`.
+Alle Streams laufen über die Chokepoints: gemeinsamer `stdinReader`
+(geteilt mit `read-line` — `readLineFromStdin`/`slurpStdin` in
+primitives.go), `WriteOutput`/`WriteError` (SWANK-sichtbar).
+Tests: `lib/fileio_test.go:TestSysStreams`.
 
 ### 2.3 Formatierte Ausgabe
 **brainstorming**

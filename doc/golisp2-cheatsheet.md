@@ -299,6 +299,12 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (set-working-directory "./projekt") ; Arbeitsverzeichnis setzen
 (get-working-directory)            ; → Pfad oder ()
 (get-file-path "f.txt")           ; Absoluter Pfad
+(file-read "sys-stdin")           ; stdin bis EOF
+(file-write "sys-stdout" "x")     ; stdout (SWANK-sichtbar)
+(file-write "sys-stderr" "x")     ; stderr
+(gets)                            ; Zeile von stdin
+(slurp)                           ; stdin bis EOF
+(err-write "text")                ; auf stderr schreiben
 ```
 
 ### Shell

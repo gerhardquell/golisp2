@@ -27,6 +27,16 @@
 //   1. Absolute Pfade unverändert
 //   2. working-directory + Dateiname (falls gesetzt)
 //   3. Datei wie angegeben
+//
+// Pseudodateien (vor jeder Pfadauflösung erkannt):
+//   "sys-stdin"  → lesen vom gemeinsamen stdinReader (wie read-line)
+//   "sys-stdout" → schreiben über WriteOutput (SWANK-sichtbar)
+//   "sys-stderr" → schreiben über WriteError
+//
+// Stream-Primitiven (C-Emulation):
+//   (gets)               → eine Zeile von stdin (fgets)
+//   (slurp)              → stdin bis EOF (fread bis Ende)
+//   (err-write "text")   → auf stderr schreiben (fwrite)
 //**********************************************************************
 
 package lib
@@ -61,12 +71,26 @@ func RegisterFileIO(env *Env) {
   _ = env.Set("set-working-directory", makeFn(fnSetWorkingDirectory))
   _ = env.Set("get-working-directory", makeFn(fnGetWorkingDirectory))
   _ = env.Set("get-file-path",         makeFn(fnGetFilePath))
+
+  _ = env.Set("gets",      makeFn(fnGets))
+  _ = env.Set("slurp",     makeFn(fnSlurp))
+  _ = env.Set("err-write", makeFn(fnErrWrite))
 }
+
+// Pseudodateinamen für die Standard-Streams.
+const (
+  sysStdin  = "sys-stdin"
+  sysStdout = "sys-stdout"
+  sysStderr = "sys-stderr"
+)
 
 // file-write: (file-write "datei.txt" "inhalt" ...)
 // Mehrere Strings werden zusammengefügt
 func fnFileWrite(args []*Cell) (*Cell, error) {
   if len(args) < 2 { return nil, fmt.Errorf("file-write: mindestens 2 Argumente") }
+  if args[0].Val == sysStdout || args[0].Val == sysStderr {
+    return writeToSysStream(args[0].Val, joinStrings(args[1:]))
+  }
   filename := resolveWritePath(args[0].Val)
   content  := joinStrings(args[1:])
   if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
@@ -78,6 +102,9 @@ func fnFileWrite(args []*Cell) (*Cell, error) {
 // file-append: (file-append "datei.txt" "inhalt")
 func fnFileAppend(args []*Cell) (*Cell, error) {
   if len(args) < 2 { return nil, fmt.Errorf("file-append: mindestens 2 Argumente") }
+  if args[0].Val == sysStdout || args[0].Val == sysStderr {
+    return writeToSysStream(args[0].Val, joinStrings(args[1:]))
+  }
   filename := resolveWritePath(args[0].Val)
   content  := joinStrings(args[1:])
 
@@ -92,9 +119,15 @@ func fnFileAppend(args []*Cell) (*Cell, error) {
 }
 
 // file-read: (file-read "datei.txt") → String mit Inhalt
+// Pseudodatei "sys-stdin": liest stdin bis EOF.
 func fnFileRead(args []*Cell) (*Cell, error) {
   if len(args) < 1 { return nil, fmt.Errorf("file-read: 1 Argument nötig") }
   if args[0].Type != STRING { return nil, fmt.Errorf("file-read: String erwartet") }
+  if args[0].Val == sysStdin {
+    s, err := slurpStdin()
+    if err != nil { return nil, fmt.Errorf("file-read '%s': %v", sysStdin, err) }
+    return MakeStr(s), nil
+  }
   resolved, err := resolvePath(args[0].Val)
   if err != nil { return nil, fmt.Errorf("file-read '%s': %v", args[0].Val, err) }
   data, err := os.ReadFile(resolved)
@@ -246,4 +279,43 @@ func joinStrings(args []*Cell) string {
     }
   }
   return sb.String()
+}
+
+// writeToSysStream schreibt content auf sys-stdout/sys-stderr über die
+// Output-Chokepoints (SWANK-sichtbar).
+func writeToSysStream(name, content string) (*Cell, error) {
+  var err error
+  if name == sysStderr {
+    err = WriteError(content)
+  } else {
+    err = WriteOutput(content)
+  }
+  if err != nil { return nil, fmt.Errorf("file-write '%s': %v", name, err) }
+  return MakeStr(name), nil
+}
+
+// gets: (gets) → eine Zeile von stdin ohne Newline (C fgets).
+// Teilt sich den stdinReader mit read-line.
+func fnGets(args []*Cell) (*Cell, error) {
+  if len(args) != 0 { return nil, fmt.Errorf("gets: keine Argumente erwartet") }
+  line, err := readLineFromStdin()
+  if err != nil { return nil, fmt.Errorf("gets: %w", err) }
+  return MakeStr(line), nil
+}
+
+// slurp: (slurp) → stdin bis EOF als String (C fread bis Ende).
+func fnSlurp(args []*Cell) (*Cell, error) {
+  if len(args) != 0 { return nil, fmt.Errorf("slurp: keine Argumente erwartet") }
+  s, err := slurpStdin()
+  if err != nil { return nil, fmt.Errorf("slurp: %w", err) }
+  return MakeStr(s), nil
+}
+
+// err-write: (err-write "text" ...) → Strings auf stderr (C fwrite(stderr)).
+func fnErrWrite(args []*Cell) (*Cell, error) {
+  if len(args) < 1 { return nil, fmt.Errorf("err-write: mindestens 1 Argument") }
+  if err := WriteError(joinStrings(args)); err != nil {
+    return nil, fmt.Errorf("err-write: %v", err)
+  }
+  return MakeAtom("t"), nil
 }

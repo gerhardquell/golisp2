@@ -311,12 +311,15 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `iota-acc`
 - `len-acc`
 - `lib/env_test.go:meine-fn`
+- `lib/fileio.go:err-write`
 - `lib/fileio.go:file-append`
 - `lib/fileio.go:file-delete`
 - `lib/fileio.go:file-exists?`
 - `lib/fileio.go:file-read`
 - `lib/fileio.go:file-write`
 - `lib/fileio.go:get-file-path`
+- `lib/fileio.go:gets`
+- `lib/fileio.go:slurp`
 - `lib/fileio.go:get-working-directory`
 - `lib/fileio.go:set-working-directory`
 - `lib/format.go:format`

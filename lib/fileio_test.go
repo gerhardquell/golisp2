@@ -11,6 +11,7 @@ package lib
 import (
   "os"
   "path/filepath"
+  "strings"
   "testing"
 )
 
@@ -152,5 +153,68 @@ func TestWorkingDirectory(t *testing.T) {
   if err != nil { t.Fatalf("get-file-path abs: %v", err) }
   if got.Type != STRING || got.Val != abs {
     t.Fatalf("get-file-path = %q erwartet, got %q", abs, got.Val)
+  }
+}
+
+func TestSysStreams(t *testing.T) {
+  env := BaseEnv()
+
+  // stdin simulieren
+  SetStdinReader(strings.NewReader("zeile1\nzeile2\nrest ohne newline"))
+  defer ResetStdinReader()
+
+  // gets liest zeilenweise, teilt den Reader mit slurp/file-read
+  got, err := LoadString(`(gets)`, env)
+  if err != nil { t.Fatalf("gets 1: %v", err) }
+  if got.Type != STRING || got.Val != "zeile1" {
+    t.Fatalf("gets = %q erwartet, got %q", "zeile1", got.Val)
+  }
+  got, err = LoadString(`(gets)`, env)
+  if err != nil { t.Fatalf("gets 2: %v", err) }
+  if got.Val != "zeile2" {
+    t.Fatalf("gets = %q erwartet, got %q", "zeile2", got.Val)
+  }
+
+  // slurp liest den Rest bis EOF (Puffer geteilt — nichts verloren)
+  got, err = LoadString(`(slurp)`, env)
+  if err != nil { t.Fatalf("slurp: %v", err) }
+  if got.Val != "rest ohne newline" {
+    t.Fatalf("slurp = %q erwartet, got %q", "rest ohne newline", got.Val)
+  }
+
+  // file-read "sys-stdin" nach EOF der simulierten Quelle: neu befüllen
+  SetStdinReader(strings.NewReader("alles\n"))
+  got, err = LoadString(`(file-read "sys-stdin")`, env)
+  if err != nil { t.Fatalf("file-read sys-stdin: %v", err) }
+  if got.Val != "alles\n" {
+    t.Fatalf("file-read sys-stdin = %q erwartet, got %q", "alles\n", got.Val)
+  }
+
+  // stdout/stderr abfangen
+  var outBuf, errBuf strings.Builder
+  SetOutputWriter(func(s string) error { outBuf.WriteString(s); return nil })
+  SetErrorWriter(func(s string) error { errBuf.WriteString(s); return nil })
+  defer ResetOutputWriter()
+  defer ResetErrorWriter()
+
+  if _, err := LoadString(`(file-write "sys-stdout" "hallo" " " "welt")`, env); err != nil {
+    t.Fatalf("file-write sys-stdout: %v", err)
+  }
+  if outBuf.String() != "hallo welt" {
+    t.Fatalf("sys-stdout = %q erwartet, got %q", "hallo welt", outBuf.String())
+  }
+
+  if _, err := LoadString(`(file-append "sys-stderr" "fehler!")`, env); err != nil {
+    t.Fatalf("file-append sys-stderr: %v", err)
+  }
+  if errBuf.String() != "fehler!" {
+    t.Fatalf("sys-stderr = %q erwartet, got %q", "fehler!", errBuf.String())
+  }
+
+  if _, err := LoadString(`(err-write "oops" 42)`, env); err != nil {
+    t.Fatalf("err-write: %v", err)
+  }
+  if errBuf.String() != "fehler!oops42" {
+    t.Fatalf("err-write akkumuliert = %q erwartet, got %q", "fehler!oops42", errBuf.String())
   }
 }

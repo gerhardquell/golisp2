@@ -651,16 +651,39 @@ func fnReadLine(args []*Cell) (*Cell, error) {
 	if len(args) != 0 {
 		return nil, fmt.Errorf("read-line: keine Argumente erwartet")
 	}
+	line, err := readLineFromStdin()
+	if err != nil {
+		return nil, fmt.Errorf("read-line: %w", err)
+	}
+	return MakeString(line), nil
+}
+
+// readLineFromStdin liest eine Zeile (ohne Newline) vom gemeinsamen
+// stdinReader. Geteilt von read-line und gets — nie einen zweiten
+// bufio.Reader über os.Stdin legen (Puffer-Verlust).
+func readLineFromStdin() (string, error) {
 	stdinMu.Lock()
 	r := stdinReader
 	stdinMu.Unlock()
 	line, err := r.ReadString('\n')
 	if err != nil && line == "" {
-		return nil, fmt.Errorf("read-line: %w", err)
+		return "", err
 	}
 	line = strings.TrimSuffix(line, "\n")
 	line = strings.TrimSuffix(line, "\r")
-	return MakeString(line), nil
+	return line, nil
+}
+
+// slurpStdin liest den gemeinsamen stdinReader bis EOF.
+func slurpStdin() (string, error) {
+	stdinMu.Lock()
+	r := stdinReader
+	stdinMu.Unlock()
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // gensym: global-atomarer Zähler für eindeutige Symbole.

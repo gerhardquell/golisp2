@@ -127,6 +127,9 @@ func BaseEnv() *Env {
 	// C-artige Formatierung (printf/sscanf, übersetzt auf FORMAT)
 	RegisterCFormat(env)
 
+	// Kommandozeile + Environment (argv/getenv/environ)
+	RegisterSysinfo(env)
+
 	// PostgreSQL
 	RegisterPostgres(env)
 

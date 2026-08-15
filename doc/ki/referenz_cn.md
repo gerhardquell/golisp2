@@ -119,7 +119,7 @@
 - **sigoREST：** `sigo sigo-models sigo-host`
 - **Goroutine：** `chan-make chan-send chan-recv lock-make`
 - **共享内存：** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
-- **文件 I/O：** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf`
+- **文件 I/O：** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell：** `system file-stat shell-assoc`
 - **字符串：** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains`
 - **哈希表：** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`

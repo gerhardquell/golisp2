@@ -1,6 +1,6 @@
 # Aufgabe: 20260813 (Fortsetzung)
 
-**Status:** 1 + 2.1 + 2.2 + 2.3 erledigt (20260815) — Rest offen
+**Status:** 1 + 2.1–2.4 erledigt (20260815) — nur 2.5 (CLOS-light, Diskussion) offen
 
 Gefunden beim Live-Testen des sixhat-Projekts über SWANK/Emacs.
 
@@ -77,10 +77,10 @@ Lücken (laut, nicht still): `%.Ns`, linksbündige Floats → Fehler.
 Tests: `lib/cformat_test.go`.
 
 ### 2.4. CLI
-**brainstorming**
-
-Da wir shebang einsetzen können, hätte ich gern  eine Funktion, mit der
-ich die Kommandozeile und das Enviroment lesen kann.
+**ERLEDIGT (20260815):** `lib/sysinfo.go` — `(argv)` (rohe os.Args als
+String-Liste), `(getenv "NAME")` (String oder `()` wenn unset, leer ≠
+unset via LookupEnv), `(environ)` (Alist). Registriert via
+`RegisterSysinfo` in `BaseEnv`. Tests: `lib/sysinfo_test.go`.
 
 ### 2.5. CLOS-light
 **brainstorming**

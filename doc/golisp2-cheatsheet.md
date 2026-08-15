@@ -316,6 +316,13 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 ; Kern-Set: %d %i %s %f %e %g %x %o %c %%, Flags - 0 +, width, .precision
 ```
 
+### CLI & Environment
+```lisp
+(argv)                ; → ("/pfad/golisp2" "skript.lisp" "arg1" ...)
+(getenv "HOME")       ; → String oder () wenn nicht gesetzt
+(environ)             ; → Alist aller Variablen
+```
+
 ### Shell
 ```lisp
 (system "ls -la")                 ; Shell-Kommando

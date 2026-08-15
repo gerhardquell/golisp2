@@ -310,6 +310,10 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `iota`
 - `iota-acc`
 - `len-acc`
+- `lib/cformat.go:fprintf`
+- `lib/cformat.go:printf`
+- `lib/cformat.go:sprintf`
+- `lib/cformat.go:sscanf`
 - `lib/env_test.go:meine-fn`
 - `lib/fileio.go:err-write`
 - `lib/fileio.go:file-append`

@@ -124,6 +124,9 @@ func BaseEnv() *Env {
 	// FORMAT (Common-Lisp-style)
 	RegisterFormat(env)
 
+	// C-artige Formatierung (printf/sscanf, übersetzt auf FORMAT)
+	RegisterCFormat(env)
+
 	// PostgreSQL
 	RegisterPostgres(env)
 

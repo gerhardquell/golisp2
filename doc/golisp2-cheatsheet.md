@@ -307,6 +307,15 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (err-write "text")                ; auf stderr schreiben
 ```
 
+### C-Formatierung (printf-Familie)
+```lisp
+(printf "%5d %s %.2f" 42 "x" 3.14159)  ; auf stdout
+(sprintf "%05d" 42)                    ; → "00042"
+(fprintf "sys-stderr" "err:%s" "x")    ; auf stderr / Datei (append)
+(sscanf "x=7,y=8" "x=%d,y=%d")         ; → (7 8)
+; Kern-Set: %d %i %s %f %e %g %x %o %c %%, Flags - 0 +, width, .precision
+```
+
 ### Shell
 ```lisp
 (system "ls -la")                 ; Shell-Kommando

@@ -1,6 +1,6 @@
 # Aufgabe: 20260813 (Fortsetzung)
 
-**Status:** 1 + 2.1 + 2.2 erledigt (20260815) — Rest offen
+**Status:** 1 + 2.1 + 2.2 + 2.3 erledigt (20260815) — Rest offen
 
 Gefunden beim Live-Testen des sixhat-Projekts über SWANK/Emacs.
 
@@ -68,11 +68,13 @@ primitives.go), `WriteOutput`/`WriteError` (SWANK-sichtbar).
 Tests: `lib/fileio_test.go:TestSysStreams`.
 
 ### 2.3 Formatierte Ausgabe
-**brainstorming**
-
-Ich hätte gern Macros, die die C-Funktionen emulieren:
-- printf, fprintf, sprintf
-- scanf , fscanf, scanf
+**ERLEDIGT (20260815):** `lib/cformat.go` — `printf`/`sprintf`/`fprintf`/
+`sscanf` als Primitiven. C-Formatstring wird nach CL-format übersetzt
+(`cformatToCL`), Ausgabe läuft über die FORMAT-Engine (eine Quelle).
+Kern-Set: `%d %i %s %f %e %g %x %o %c %%`, Flags `- 0 +`, width,
+.precision. Alles rune-basiert (Unicode-sicher, `%c` = 1 Rune).
+Lücken (laut, nicht still): `%.Ns`, linksbündige Floats → Fehler.
+Tests: `lib/cformat_test.go`.
 
 ### 2.4. CLI
 **brainstorming**

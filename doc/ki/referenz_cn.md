@@ -144,7 +144,7 @@
 `alist-set alist-get union set-difference find-all set-nth`
 
 ### 宏
-`when unless let* dotimes dolist push pop defvar setf defstruct`
+`when unless let* dotimes dolist push pop defvar setf defstruct defgeneric defmethod`
 
 ### 迭代器
 `dotimes (var n) body` — `(dotimes (i 10) ...)`
@@ -249,9 +249,10 @@
 - 只能通过命名约定避免冲突（如 `ga-`、`shm-` 前缀）。
 
 ### 10.2 无 CLOS
-- 只有 `defstruct`（构造函数、访问器、谓词）。
-- 无类、无多方法、无方法组合。
-- `defmethod`、`defgeneric`、`defclass`、`call-method` — **不存在**。
+- `defstruct`（构造函数、访问器、谓词）。
+- CLOS-light：`defgeneric`/`defmethod` — 对结构体标签的单分派，`t` = 默认方法。
+- 无类、无继承、无 `call-next-method`、无方法组合。
+- `defclass`、`call-method` — **不存在**。
 
 ### 10.3 仅有 Condition-lite，无完整 CL 条件系统
 - 有 `define-condition`/`signal`/`handler-case`（层次结构、槽、

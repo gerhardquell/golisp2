@@ -316,6 +316,17 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 ; Kern-Set: %d %i %s %f %e %g %x %o %c %%, Flags - 0 +, width, .precision
 ```
 
+### CLOS-light (generische Funktionen)
+```lisp
+(defgeneric fläche (x))
+(defmethod fläche ((x kreis))    (* 3.14 (* (kreis-radius x) (kreis-radius x))))
+(defmethod fläche ((x rechteck)) (* (rechteck-a x) (rechteck-b x)))
+(defmethod fläche ((x t))        -1)     ; t = Default
+(fläche (make-kreis :radius 2))          ; Single-Dispatch auf Struct-Tag
+; Extra-Params: (defmethod skaliere ((x kreis) f) ...)
+; Kein: Vererbung, call-next-method, :before/:after
+```
+
 ### CLI & Environment
 ```lisp
 (argv)                ; → ("/pfad/golisp2" "skript.lisp" "arg1" ...)

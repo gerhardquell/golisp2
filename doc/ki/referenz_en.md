@@ -144,7 +144,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 `alist-set alist-get union set-difference find-all set-nth`
 
 ### Macros
-`when unless let* dotimes dolist push pop defvar setf defstruct`
+`when unless let* dotimes dolist push pop defvar setf defstruct defgeneric defmethod`
 
 ### Iterators
 `dotimes (var n) body` — `(dotimes (i 10) ...)`
@@ -251,9 +251,10 @@ to avoid guessing:
 - Avoid collisions by naming convention only (prefixes like `ga-`, `shm-`).
 
 ### 10.2 No CLOS
-- Only `defstruct` (constructor, accessors, predicate).
-- No classes, no multi-methods, no method combination.
-- `defmethod`, `defgeneric`, `defclass`, `call-method` — **not present**.
+- `defstruct` (constructor, accessors, predicate).
+- CLOS-light: `defgeneric`/`defmethod` — single dispatch on the struct tag, `t` = default method.
+- No classes, no inheritance, no `call-next-method`, no method combination.
+- `defclass`, `call-method` — **not present**.
 
 ### 10.3 Condition-lite only, no full CL condition system
 - `define-condition`/`signal`/`handler-case` present (hierarchy, slots,

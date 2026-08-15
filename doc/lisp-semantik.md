@@ -229,3 +229,20 @@ Das Root-Env bewacht Redefinitionen über `(redefine-policy 'allow|'warn|'error)
 
 Bewusste Grenzen: `setq`/`progv` am Root über LAMBDA bleiben still (kein
 Quell-Kontext). FUNC-Log-Events kennen die neue Quelle nicht (`NewFile ""`).
+
+## Generische Funktionen (CLOS-light)
+
+`defgeneric`/`defmethod` (stdlib.lisp, TODO 20260813 Punkt 2.5):
+Single-Dispatch auf den Struct-Tag (`car`) des ersten Arguments.
+
+- Erster Eintrag der Methoden-Lambda-Liste ist `(var tag)` — `var` wird
+  im Body gebunden, `tag` ist der Struct-Tag oder `t` (Default/Fallback).
+- Dispatch ruft die Methode mit **allen** Originalargumenten auf —
+  Extra-Parameter hinter dem Spec-Paar möglich:
+  `(defmethod skaliere ((x kreis) faktor) ...)`.
+- Ohne passenden Tag und ohne `t`-Methode: Fehler `keine Methode für …`.
+- Methoden sind Lambdas in einer Registry-Hashtabelle
+  (`%generic-registry`); `defmethod` desselben Tags überschreibt still
+  (Hot-Patching per SWANK).
+- Explizit nicht dabei: Vererbung, `call-next-method`, `:before`/`:after`,
+  Multi-Dispatch. Implementierung rein Lisp, kein Kernel-Eingriff.

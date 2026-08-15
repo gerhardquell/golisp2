@@ -71,4 +71,44 @@
   (is (equal? '(1)          (set-difference '(1 2) '(2 3))))
   (is (equal? '(a b)        (set--difference (make-set :difference '(a b))))))
 
+;; === Generische Funktionen (CLOS-light) =================================
+;; defgeneric/defmethod: Single-Dispatch auf Struct-Tag, t = Default,
+;; Extra-Parameter, Hot-Redefinition, Fehler ohne passende Methode.
+
+(defsuite 'clos-light)
+
+(deftest clos-dispatch :suite 'clos-light
+  (is (equal? 'gf-kreis? (eval '(defstruct gf-kreis radius))))
+  (is (equal? 'gf-rechteck? (eval '(defstruct gf-rechteck a b))))
+  (eval '(defgeneric gf-fläche (x)))
+  (eval '(defmethod gf-fläche ((x gf-kreis)) (* 3 (* (gf-kreis-radius x) (gf-kreis-radius x)))))
+  (eval '(defmethod gf-fläche ((x gf-rechteck)) (* (gf-rechteck-a x) (gf-rechteck-b x))))
+  (is (equal? 12 (gf-fläche (make-gf-kreis :radius 2))))
+  (is (equal? 12 (gf-fläche (make-gf-rechteck :a 3 :b 4)))))
+
+(deftest clos-default-t :suite 'clos-light
+  (eval '(defmethod gf-fläche ((x t)) -1))
+  (is (equal? -1 (gf-fläche '(unbekannt 1 2))))
+  ;; spezifische Methode schlägt Default
+  (is (equal? 12 (gf-fläche (make-gf-kreis :radius 2)))))
+
+(deftest clos-extra-params :suite 'clos-light
+  (eval '(defgeneric gf-skaliere (x f)))
+  (eval '(defmethod gf-skaliere ((x gf-kreis) f) (* f (gf-kreis-radius x))))
+  (is (equal? 50 (gf-skaliere (make-gf-kreis :radius 10) 5))))
+
+(deftest clos-hot-redefinition :suite 'clos-light
+  (eval '(defmethod gf-fläche ((x gf-kreis)) 99))
+  (is (equal? 99 (gf-fläche (make-gf-kreis :radius 2)))))
+
+(deftest clos-kein-tag-fehler :suite 'clos-light
+  (eval '(defgeneric gf-ohne-default (x)))
+  (eval '(defmethod gf-ohne-default ((x gf-kreis)) 1))
+  (is (equal? "kein-default"
+        (handler-case (gf-ohne-default '(fremd 1))
+          (error (e) "kein-default"))))
+  (is (equal? "kein-arg"
+        (handler-case (gf-ohne-default)
+          (error (e) "kein-arg")))))
+
 "stdlib-test: registriert"

@@ -1,6 +1,6 @@
 # Aufgabe: 20260813 (Fortsetzung)
 
-**Status:** 1 + 2.1–2.4 erledigt (20260815) — nur 2.5 (CLOS-light, Diskussion) offen
+**Status:** komplett erledigt (20260815) — 1, 2.1–2.5
 
 Gefunden beim Live-Testen des sixhat-Projekts über SWANK/Emacs.
 
@@ -83,9 +83,12 @@ unset via LookupEnv), `(environ)` (Alist). Registriert via
 `RegisterSysinfo` in `BaseEnv`. Tests: `lib/sysinfo_test.go`.
 
 ### 2.5. CLOS-light
-**brainstorming**
-
-Lass uns über eine leichtgewichtige Objektorientierung nachdenken
-**nur diskutieren**
+**ERLEDIGT (20260815):** `defgeneric`/`defmethod` in `embed/stdlib.lisp`
+(rein Lisp, kein Kernel-Eingriff). Single-Dispatch auf Struct-Tag,
+`t` = Default-Methode, Extra-Parameter möglich, Hot-Redefinition via
+Registry-Hashtabelle `%generic-registry`. Explizit nicht dabei:
+Vererbung, `call-next-method`, `:before`/`:after`, Multi-Dispatch.
+Tests: `tests/stdlib-test.lisp` Suite `clos-light`.
+Doku: `doc/lisp-semantik.md` Abschnitt "Generische Funktionen".
 
 

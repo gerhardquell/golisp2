@@ -358,3 +358,58 @@
                         (register-setf-expander ',acc-final ',setter-final))))
                  (zip slot-names (iota n)))
        (defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))
+;; === Generische Funktionen (CLOS-light, TODO 20260813 Punkt 2.5) =====
+;; defgeneric/defmethod: Single-Dispatch auf den Struct-Tag (car) des
+;; ersten Arguments. Kein Kernel-Eingriff — Methoden sind Lambdas in
+;; einer Registry-Hashtabelle. Hot-Patching: defmethod desselben Tags
+;; überschreibt still (bewusst: SWANK-Workflow).
+;; Explizit NICHT dabei: Vererbung, call-next-method, :before/:after,
+;; Multi-Dispatch. Registry-Format lässt Raum für spätere Erweiterung.
+
+;; %generic-registry: generic-name → Hashtabelle(tag → lambda)
+(defvar %generic-registry (make-hash-table))
+
+;; %generic-methods: liefert (legt ggf. an) die Methoden-Tabelle für name.
+(defun %generic-methods (name)
+  (let ((tbl (gethash name %generic-registry)))
+    (if (hash-table-p tbl)
+        tbl
+        (let ((neu (make-hash-table)))
+          (puthash name %generic-registry neu)
+          neu))))
+
+;; %generic-dispatch: Tag aus (car obj), Methode suchen, mit allen
+;; Originalargumenten aufrufen. 't-Tag = Default/Fallback.
+(defun %generic-dispatch (name args)
+  (if (null args)
+      (error (format nil "~a: generische Funktion braucht mindestens 1 Argument" name)))
+  (let* ((obj (car args))
+         (tag (if (and (list? obj) (symbol? (car obj)))
+                  (car obj)
+                  '()))
+         (tbl (%generic-methods name))
+         (fn  (gethash tag tbl)))
+    (if (null fn)
+        (let ((default (gethash 't tbl)))
+          (if (null default)
+              (error (format nil "~a: keine Methode für ~a" name
+                             (if (null tag) obj (format nil "Tag '~a'" tag))))
+              (apply default args)))
+        (apply fn args))))
+
+;; defgeneric: (defgeneric fläche (x)) — deklariert den Dispatcher.
+;; params ist aktuell nur Doku (Dispatch läuft über &rest).
+(defmacro defgeneric (name params)
+  `(defun ,name (&rest args) (%generic-dispatch ',name args)))
+
+;; defmethod: (defmethod fläche ((x kreis) . rest-params) body ...)
+;; Erster Eintrag der Methoden-Lambda-Liste ist (var tag): var wird im
+;; Body gebunden, tag ist der Struct-Tag (oder 't für die Default-Methode).
+;; Signatur flach — GoLisp-Makros destrukturieren nicht geschachtelt.
+(defmacro defmethod (name lambda-list &rest body)
+  (let ((spec   (car lambda-list))
+        (params (cdr lambda-list)))
+    (let ((var (car spec))
+          (tag (car (cdr spec))))
+      `(puthash ',tag (%generic-methods ',name)
+                (lambda (,var ,@params) ,@body)))))

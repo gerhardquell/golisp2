@@ -314,6 +314,7 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (fprintf "sys-stderr" "err:%s" "x")    ; auf stderr / Datei (append)
 (sscanf "x=7,y=8" "x=%d,y=%d")         ; → (7 8)
 ; Kern-Set: %d %i %s %f %e %g %x %o %c %%, Flags - 0 +, width, .precision
+; Rundung: half-to-even (Go), nicht half-up (C) — %.2f von 2.25 → "2.2"
 ```
 
 ### CLOS-light (generische Funktionen)

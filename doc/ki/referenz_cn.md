@@ -124,6 +124,7 @@
 - **字符串：** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains`
 - **哈希表：** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
 - **FORMAT：** `format` — CL HyperSpec 22.3，`~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
+  - 舍入：half-to-even（Go `strconv`），而非 C 的 half-up — `2.25` 的 `%.2f` → `"2.2"`
 - **PostgreSQL：** `pg-connect pg-query pg-exec pg-close`
 - **遗传算法：** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **重定义：** `redefine-policy redef-log redef-log-clear defined-in`

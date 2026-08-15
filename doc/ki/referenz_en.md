@@ -124,6 +124,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 - **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains`
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
 - **FORMAT:** `format` — CL HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
+  - Rounding: half-to-even (Go `strconv`), not half-up like C — `%.2f` of `2.25` → `"2.2"`
 - **PostgreSQL:** `pg-connect pg-query pg-exec pg-close`
 - **GenAlg:** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **Redefine:** `redefine-policy redef-log redef-log-clear defined-in`

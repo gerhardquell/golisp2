@@ -2,6 +2,9 @@
 
 **Erstellt:** 20260723 · **Quelle:** `clisp` (lokal), `rg` über `lib/`, `embed/stdlib.lisp`
 **Stand:** 978 CL-Symbole ↔ 207 golisp2-Symbole
+**Update 20260815:** `defgeneric`/`defmethod` (CLOS-light) und
+`define-condition`/`handler-case`/`signal` (condition-lite, seit 20260730)
+aus den Fehlende-Listen entfernt — implementiert in `embed/`.
 
 | Kategorie | haben | fehlt |
 |-----------|------:|------:|
@@ -67,14 +70,11 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `declaim`
 - `defclass`
 - `defconstant`
-- `defgeneric`
 - `define-compiler-macro`
-- `define-condition`
 - `define-method-combination`
 - `define-modify-macro`
 - `define-setf-expander`
 - `define-symbol-macro`
-- `defmethod`
 - `defpackage`
 - `defparameter`
 - `defsetf`
@@ -88,7 +88,6 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `etypecase`
 - `formatter`
 - `handler-bind`
-- `handler-case`
 - `ignore-errors`
 - `in-package`
 - `incf`
@@ -137,12 +136,17 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - **Setf-Infrastruktur** (braucht Konzept-Entscheidung): `defsetf`,
   `define-setf-expander`, `define-modify-macro`, `defparameter`,
   `defconstant`, `deftype`, `declaim`
-- **Kontinent CLOS** (eigenes Projekt): `defclass`, `defgeneric`, `defmethod`,
+- **Kontinent CLOS** (eigenes Projekt): `defclass`,
   `call-method`, `make-method`, `define-method-combination`, `with-accessors`,
-  `with-slots`, `defpackage`+`in-package` (Packages = eigener Kontinent)
-- **Kontinent Conditions**: `define-condition`, `handler-case`, `handler-bind`,
+  `with-slots`, `defpackage`+`in-package` (Packages = eigener Kontinent).
+  `defgeneric`/`defmethod` seit 20260815 als **CLOS-light** vorhanden
+  (Single-Dispatch auf Struct-Tag, `embed/stdlib.lisp`)
+- **Kontinent Conditions**: `handler-bind`,
   `restart-case`, `restart-bind`, `with-simple-restart`,
-  `with-condition-restarts`
+  `with-condition-restarts`.
+  `define-condition`/`handler-case`/`signal` seit 20260730 als
+  **condition-lite** vorhanden (`embed/condition.lisp`, signal unwindet
+  immer = bewusste Abweichung)
 - **Kontinent Loop**: `loop`, `loop-finish` — LOOP ist eine eigene Sprache
 - **Sonstige**: `step`, `trace`/`untrace`, `formatter`, `pprint-logical-block`,
   `print-unreadable-object`, `with-hash-table-iterator`,

@@ -317,8 +317,8 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `lib/fileio.go:file-read`
 - `lib/fileio.go:file-write`
 - `lib/fileio.go:get-file-path`
-- `lib/fileio.go:get-working-directories`
-- `lib/fileio.go:set-working-directories`
+- `lib/fileio.go:get-working-directory`
+- `lib/fileio.go:set-working-directory`
 - `lib/format.go:format`
 - `lib/genalg_prims.go:ga-calc`
 - `lib/genalg_prims.go:ga-create`

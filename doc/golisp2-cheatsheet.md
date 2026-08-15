@@ -296,8 +296,8 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (file-read "f.txt")               ; Lesen
 (file-exists? "f.txt")            ; → t ()
 (file-delete "f.txt")             ; Löschen
-(set-working-directories "a" "b") ; Suchpfade
-(get-working-directories)         ; → Liste
+(set-working-directory "./projekt") ; Arbeitsverzeichnis setzen
+(get-working-directory)            ; → Pfad oder ()
 (get-file-path "f.txt")           ; Absoluter Pfad
 ```
 

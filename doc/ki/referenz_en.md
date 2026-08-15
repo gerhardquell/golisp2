@@ -119,7 +119,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 - **sigoREST:** `sigo sigo-models sigo-host`
 - **Goroutines:** `chan-make chan-send chan-recv lock-make`
 - **Shared memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
-- **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directories get-working-directories get-file-path`
+- **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path`
 - **Shell:** `system file-stat shell-assoc`
 - **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains`
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`

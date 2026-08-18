@@ -88,6 +88,27 @@ Der Vergleich erfolgt mit `equal?` (strukturelle Gleichheit).
 
 ---
 
+## Fehlermodell: `catch`/`throw` vs. `trap`
+
+Zwei getrennte Mechanismen, leicht zu verwechseln:
+
+- **`catch`/`throw`** (`(catch tag body…)` / `(throw tag wert)`) —
+  CL-Semantik: dynamischer, nicht-lokaler Sprung zum nächsten `catch` mit
+  gleichem Tag. Fängt **ausschließlich** `throw`-Sentinels. Ein Fehler
+  (`(error …)`, Go-Primitive-Fehler) läuft **durch** ein `catch` hindurch —
+  es ist kein Error-Handler. Fehlt ein passendes `catch`, ist `throw` ein
+  Laufzeitfehler.
+- **`trap`** (`(trap body handler)`) — projekteigene Fehlerbehandlung, kein
+  CL-Konstrukt. Wertet `body` aus; bei `LispError` oder Go-Primitive-Fehler
+  wird `handler` mit der Fehlermeldung (String-Cell) aufgerufen. Kontrollfluss-
+  Sentinels (`throw`, `return-from`, `parfunc`-Signale) reicht `trap`
+  unverändert durch — es fängt nur echte Fehler.
+
+Kurz: **Fehler → `trap`. Nicht-lokaler Sprung ohne Fehler → `catch`/`throw`.**
+Quelle: `lib/eval_control.go` (`evalCatch`, `evalThrow`, `evalTrap`).
+
+---
+
 ## `(eval form)` – globales Environment
 
 `(eval form)` wertet im **globalen** Environment aus (`Env.Root()`), nicht im

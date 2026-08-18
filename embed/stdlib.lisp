@@ -271,7 +271,14 @@
 ;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
 ;; Ungebundenes Symbol wird CL-artig global definiert: eval läuft im
 ;; Root-Env, das quote um den Wert verhindert Re-Evaluierung.
-(defmacro setf (place val)
+;; Multi-Place: (setf a 1 b 2 …) — je Paar eine setf-Form, sequenziell in
+;; einem (begin …), Rückgabe ist der letzte zugewiesene Wert (CL-Semantik).
+(defmacro setf (place val &rest more)
+  (if more
+      `(begin (setf ,place ,val) (setf ,@more))
+      (%setf-one place val)))
+
+(defun %setf-one (place val)
   (let ((v (gensym)))
     (if (atom place)
         `(let ((,v ,val))
@@ -299,6 +306,15 @@
                                (set! ,arg (,(cdr entry) ,arg ,v))
                                ,v))))))))))
 
+;; === Fehlerbehandlung ============================================
+
+;; ignore-errors: (ignore-errors body…) → Wert von body, oder () bei Fehler.
+;; Dünner Wrapper über trap (siehe doc/lisp-semantik.md „Fehlermodell").
+;; throw/return-from/parfunc-Signale laufen unverändert durch (trap fängt
+;; nur echte Fehler) — ignore-errors ist kein catch-Ersatz.
+(defmacro ignore-errors (&rest body)
+  `(trap (begin ,@body) (lambda (e) ())))
+
 ;; === Strukturen =================================================
 
 ;; set-nth: Liste an Position n (0-basiert) durch val ersetzen.
@@ -320,7 +336,8 @@
 
 ;; defstruct: (defstruct name [docstring] slot…) mit slot = sym | (sym [default]).
 ;; Repräsentation als Liste (tag val1 val2 …) – golisp2 hat keine Vektoren.
-;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat,
+;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat
+;; (plus <name>-p als CL-Alias, gleiche Kollisionsvermeidung wie Accessoren),
 ;; sowie Setter-Funktionen set-<name>-<slot> und registriert sie für setf.
 ;; Kollisionsvermeidung: Ist der Primärname bereits gebunden, wird eine
 ;; freie Alternative mit zusätzlichem Bindestrich verwendet (z. B. set--difference).
@@ -332,8 +349,13 @@
          (n          (length slots))
          (mk         (intern (format nil "make-~a" name)))
          (pred       (intern (format nil "~a?" name)))
+         (pred-p     (intern (format nil "~a-p" name)))
          ;; Reload? make-name oder name? existiert bereits → keine Ausweichung.
-         (reload?    (or (bound? mk) (bound? pred))))
+         (reload?    (or (bound? mk) (bound? pred)))
+         (pred-p-final (defstruct-resolve-name "" name "p" "-" reload?))
+         (warn-pred-p  (if (equal? pred-p pred-p-final)
+                            '()
+                            `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Prädikat heißt '~a'" name pred-p pred-p-final))))))
     `(begin
        (defun ,mk (&key ,@slots) (%make-struct ',name ,@slot-names))
        ,@(mapcar (lambda (p)
@@ -357,6 +379,8 @@
                         (defun ,setter-final (obj val) (set-nth obj ,idx val))
                         (register-setf-expander ',acc-final ',setter-final))))
                  (zip slot-names (iota n)))
+       ,@warn-pred-p
+       (defun ,pred-p-final (x) (and (list? x) (equal? (car x) ',name)))
        (defun ,pred (x) (and (list? x) (equal? (car x) ',name))))))
 ;; === Generische Funktionen (CLOS-light, TODO 20260813 Punkt 2.5) =====
 ;; defgeneric/defmethod: Single-Dispatch auf den Struct-Tag (car) des

@@ -130,6 +130,9 @@ func BaseEnv() *Env {
 	// Kommandozeile + Environment (argv/getenv/environ)
 	RegisterSysinfo(env)
 
+	// CL-Kompat: sort/sqrt (Lispbuch-Lückenanalyse, TODO 20260818 Gruppe B)
+	RegisterCLCompatPrims(env)
+
 	// PostgreSQL
 	RegisterPostgres(env)
 

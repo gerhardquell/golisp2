@@ -437,3 +437,107 @@
           (tag (car (cdr spec))))
       `(puthash ',tag (%generic-methods ',name)
                 (lambda (,var ,@params) ,@body)))))
+
+;; === CL-Kompat: Lispbuch-Lücken (TODO 20260818 Gruppe A) ========
+;; Aus der Analyse von /u/golisp2-projekte/lispbuch (27 Kapitel) extrahiert:
+;; Funktionen/Makros, die das Buch beim CL-Vergleich als fehlend nennt und
+;; die sich ohne Kernel-Eingriff als dünne stdlib-Ergänzung nachrüsten
+;; lassen. Größere Kandidaten (sort, sqrt, Zeit-Primitiv) brauchen echte
+;; Go-Primitiven und sind bewusst zurückgestellt.
+
+;; --- Sequenzen ---
+
+(defun remove-if-not (pred lst) (filter pred lst))
+(defun remove-if (pred lst) (filter (lambda (x) (not (pred x))) lst))
+(defun remove (item lst) (filter (lambda (x) (not (equal? x item))) lst))
+
+;; remove-duplicates: erstes Vorkommen je Wert bleibt, Reihenfolge erhalten.
+(defun remove-duplicates (lst)
+  (defun rd-acc (l acc)
+    (cond ((null l)             (reverse acc))
+          ((member (car l) acc) (rd-acc (cdr l) acc))
+          (t                    (rd-acc (cdr l) (cons (car l) acc)))))
+  (rd-acc lst ()))
+
+(defun butlast (lst)
+  (if (or (null lst) (null (cdr lst)))
+      ()
+      (cons (car lst) (butlast (cdr lst)))))
+
+(defun copy-list (lst)
+  (if (null lst) () (cons (car lst) (copy-list (cdr lst)))))
+
+;; copy-tree: rekursiv über Cons-Struktur; Atome (inkl. nil) unverändert.
+(defun copy-tree (x)
+  (if (pair? x)
+      (cons (copy-tree (car x)) (copy-tree (cdr x)))
+      x))
+
+(defun make-list (n &key (initial-element ()))
+  (if (<= n 0)
+      ()
+      (cons initial-element (make-list (- n 1) :initial-element initial-element))))
+
+;; --- Plists ---
+
+(defun getf (plist key &optional (default ()))
+  (cond ((null plist)                 default)
+        ((equal? (car plist) key)     (cadr plist))
+        (t                            (getf (cddr plist) key default))))
+
+;; --- Zahlen ---
+
+(defun zerop (n) (zero? n))
+
+(defmacro incf (place &optional (d 1)) `(setf ,place (+ ,place ,d)))
+(defmacro decf (place &optional (d 1)) `(setf ,place (- ,place ,d)))
+
+;; --- Vergleich ---
+
+;; eql: bei Zahlen wertbasiert, sonst wie eq (Pointer-Identität) — keine
+;; strukturelle Gleichheit wie equal?. golisp2 hat keine Chars/Rationals,
+;; daher genügt die Zahlen/Rest-Unterscheidung für CL-Kompat.
+(defun eql (a b)
+  (if (and (number? a) (number? b)) (= a b) (eq a b)))
+
+;; --- Makros ---
+
+(defmacro assert (form)
+  `(if (not ,form) (error ,(format nil "assert failed: ~a" form)) t))
+
+;; macroexpand-1: reiner Namens-Alias — golisp2s macroexpand macht bereits
+;; genau eine Expansionsstufe (CLs macroexpand-1-Semantik).
+(defmacro macroexpand-1 (f) `(macroexpand ,f))
+
+;; --- Strings ---
+
+;; coerce: nur die im Buch gebrauchten Richtungen (String <-> Liste).
+(defun coerce (x type)
+  (cond ((equal? type 'list)   (string->list x))
+        ((equal? type 'string) (list->string x))
+        (t (error (format nil "coerce: Typ '~a' nicht unterstützt (nur 'list/'string)" type)))))
+
+;; string-find: Index der ersten Fundstelle von needle in haystack, sonst ().
+(defun string-find (needle haystack)
+  (defun sf-acc (i max-i)
+    (cond ((> i max-i) ())
+          ((equal? (substring haystack i (+ i (string-length needle))) needle) i)
+          (t (sf-acc (+ i 1) max-i))))
+  (sf-acc 0 (- (string-length haystack) (string-length needle))))
+
+;; --- Destrukturierung (flach) ---
+
+;; destructuring-bind: nur flaches Pattern (a b c) — verschachtelte Patterns
+;; haben dieselbe Symbol-Rebind-Grenze wie nested-setf (siehe golisp2-fehler.md
+;; B4). expr wird über ein gensym-Let genau einmal ausgewertet.
+(defun %db-bindings (vars tmp body)
+  (if (null vars)
+      `(begin ,@body)
+      `(let ((,(car vars) (car ,tmp)))
+         (let ((,tmp (cdr ,tmp)))
+           ,(%db-bindings (cdr vars) tmp body)))))
+
+(defmacro destructuring-bind (vars expr &rest body)
+  (let ((tmp (gensym)))
+    `(let ((,tmp ,expr))
+       ,(%db-bindings vars tmp body))))

@@ -3,7 +3,7 @@
 > *A Lisp interpreter in Go with native AI integration — code that extends itself.*
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
 
 GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimization**, **hygienic macros**, **goroutine-based concurrency**, and **native AI integration** via sigoREST. It combines the elegance of Lisp with the power of Go's runtime and multiple LLM providers.
@@ -288,8 +288,11 @@ This article documents the journey, the philosophy of treating AI as co-authors,
 
 ### Macros
 
+`when` already ships in the stdlib — this redefines it from scratch as a
+teaching example of `defmacro`/`gensym`/quasiquote, not because it's missing:
+
 ```lisp
-; Define a when macro
+; Define a when macro (already exists in stdlib — shown here as an example)
 (defmacro when (condition . body)
   `(if ,condition
        (begin ,@body)
@@ -493,7 +496,7 @@ my-project/
 | `defun`, `lambda` | Function definition |
 | `defmacro` | Macro definition |
 | `if`, `cond` | Conditional evaluation |
-| `let` | Local bindings |
+| `let`, `let*` | Local bindings (parallel / sequential) |
 | `begin` | Sequence expressions |
 | `while`, `do` | Loops |
 | `quote`, `quasiquote` | Code as data |
@@ -504,14 +507,19 @@ my-project/
 | `parfunc` | Parallel execution |
 | `block`, `return-from` | Non-local exits |
 | `flet`, `labels` | Local functions |
+| `multiple-value-bind`, `multiple-value-list`, `nth-value` | Multiple return values (CL) |
 
 ### Functions
 
 | Category | Functions |
 |----------|-----------|
-| **Arithmetic** | `+`, `-`, `*`, `/` |
+| **Arithmetic** | `+`, `-`, `*`, `/`, `sqrt` |
 | **Comparison** | `=`, `<`, `>`, `>=`, `<=`, `equal?` |
-| **Lists** | `car`, `cdr`, `cons`, `list`, `atom`, `null`, `apply`, `mapcar` |
+| **Lists** | `car`, `cdr`, `cons`, `list`, `atom`, `null`, `apply`, `mapcar`, `sort` |
+| **Places (generalized assignment)** | `setf` — variables, `nth`, `car`/`cdr` (symbol-rebind, not CL aliasing), `gethash`, struct accessors |
+| **Structs & CLOS-lite** | `defstruct`, `defgeneric`, `defmethod` |
+| **Hash Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
+| **Conditions** | `define-condition`, `handler-case`, `signal` |
 | **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string` |
 | **I/O** | `print`, `println`, `read`, `load` (with search path), `exec` |
 | **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete` |
@@ -520,7 +528,7 @@ my-project/
 | **Genetic Algorithms** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
 | **Web Bridge** | `webserv`, `http-serve`, `http-static`, `http-port`, `http-wait`, `http-stop`, `browser-open`, `ws-export`, `ws-unexport`, `ws-emit`, `ws-emit-to`, `ws-eval`, `ws-call`, `ws-clients` |
-| **Meta** | `gensym`, `macroexpand`, `error` |
+| **Meta** | `gensym`, `macroexpand`, `error`, `documentation` |
 
 ---
 
@@ -583,7 +591,7 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 
 ## 📜 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Unlicense (public domain) — see [LICENSE](LICENSE) for details. Free of any restrictions: use, modify, sell, distribute, no attribution required.
 
 ---
 

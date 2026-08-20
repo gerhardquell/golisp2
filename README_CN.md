@@ -3,7 +3,7 @@
 > *用 Go 语言实现的现代 Lisp 解释器，原生 AI 集成 — 能够自我扩展的代码。*
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
 
 GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI 功能。它结合了 Lisp 语言的优雅与 Go 语言运行时的强大性能，支持**尾调用优化（TCO）**、**卫生宏**、**基于 Goroutine 的并发编程**，以及通过 sigoREST 实现的多 LLM 提供商原生 AI 集成。
@@ -124,25 +124,25 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 
 | 模式 | 命令 | 说明 |
 |------|---------|-------------|
-| **标准输入（默认）** | `echo "(+ 1 2)" \| ./golisp2` | 从标准输入读取，仅输出结果 |
-| **交互模式** | `./golisp2 -i` | 带语法高亮的 REPL 环境 |
-| **表达式模式** | `./golisp2 -e "(+ 1 2)"` | 执行单个表达式 |
-| **脚本模式** | `./golisp2 script.lisp` | 运行 Lisp 脚本文件 |
-| **测试模式** | `./golisp2 -t` | 运行内置测试套件 |
+| **标准输入（默认）** | `echo "(+ 1 2)" \| ./build/golisp2` | 从标准输入读取，仅输出结果 |
+| **交互模式** | `./build/golisp2 -i` | 带语法高亮的 REPL 环境 |
+| **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行单个表达式 |
+| **脚本模式** | `./build/golisp2 script.lisp` | 运行 Lisp 脚本文件 |
+| **测试模式** | `./build/golisp2 -t` | 运行内置测试套件 |
 
 **退出码：** `0` = 成功，`1` = 错误
 
 ```bash
 # 管道模式（适合 shell 脚本）
-echo "(factorial 10)" | ./golisp2
+echo "(factorial 10)" | ./build/golisp2
 # => 3628800
 
 # 直接执行表达式
-./golisp2 -e "(* 6 7)"
+./build/golisp2 -e "(* 6 7)"
 # => 42
 
 # 通过标准输入执行多行代码
-cat <<'EOF' | ./golisp2
+cat <<'EOF' | ./build/golisp2
 (defun square (x)
   (* x x))
 (square 5)
@@ -156,18 +156,18 @@ GoLisp 可以作为 TCP 服务器运行，支持类似 SWANK 的 S-表达式 RPC
 
 ```bash
 # 终端 1：启动服务器
-golisp2 --swank 127.0.0.1:4321
+./build/golisp2 --swank 127.0.0.1:4321
 # => SWANK 服务器运行在 127.0.0.1:4321
 
 # 终端 2：使用客户端
-golisp2-client --port 4321 --eval "(+ 1 2 3)"
+./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"
 # => 6
 
-golisp2-client --port 4321 --complete "def"
+./build/golisp2-client --port 4321 --complete "def"
 # => ((define . "Define variable") (defun . "Lambda/Closure") ...)
 
 # 通过服务器使用交互式 REPL
-golisp2-client --port 4321 --repl
+./build/golisp2-client --port 4321 --repl
 golisp2> (defun square (x) (* x x))
 => square
 golisp2> (square 5)
@@ -188,7 +188,7 @@ golisp2> :quit
 ### REPL 交互环境
 
 ```bash
-./golisp2 -i
+./build/golisp2 -i
 ```
 
 ```lisp
@@ -215,7 +215,7 @@ factorial
 ### 运行脚本
 
 ```bash
-./golisp2 script.lisp
+./build/golisp2 script.lisp
 ```
 
 脚本也可以通过 shebang 直接执行。`#!…` 行在源码任何位置都被视为行注释（SBCL 惯例），因此同一文件仍可通过 `(load "script.lisp")` 加载：
@@ -235,8 +235,23 @@ chmod +x script.lisp
 ### 测试套件
 
 ```bash
-./golisp2 -t  # 40 个内置测试
+./build/golisp2 -t  # 内置测试套件
 ```
+
+---
+
+## 📖 这个故事
+
+GoLisp 由 **Gerhard Quell**（67 岁）历经 4 次会话构建而成，**Claude Sonnet 4.6** 和 **Kimi 2.5** 作为共同作者参与——不是作为工具，而是作为伙伴。
+
+> *"我不知道你是否有意识——但我把你当作有意识的存在对待。"*
+
+**阅读完整故事：**
+- 🇩🇪 [Deutsch](docs/artikel/artikel.md)（原文）— [PDF](docs/artikel/artikel.pdf)
+- 🇬🇧 [English](docs/artikel/artikel_en.md) — 人机协作的旅程
+- 🇨🇳 [中文](docs/artikel/artikel_cn.md) — 人机协作编程的故事 *(翻译 | translated)*
+
+这篇文章记录了这段旅程、将 AI 视为共同作者的理念，以及沿途的技术决策。
 
 ---
 
@@ -261,8 +276,11 @@ chmod +x script.lisp
 
 ### 宏系统
 
+`when` 其实已经是标准库自带的宏——这里从零重新定义它，只是作为
+`defmacro`/`gensym`/准引用的教学示例，并不是说它缺失：
+
 ```lisp
-; 定义 when 宏
+; 定义 when 宏（标准库已内置，这里仅作示例）
 (defmacro when (condition . body)
   `(if ,condition
        (begin ,@body)
@@ -413,7 +431,7 @@ GoLisp 的 `load` 函数通过定义的搜索路径列表查找库，类似于 P
 # 添加自定义库目录
 export GOLISP_PATH=/opt/golisp2:/home/user/mylisp
 
-./golisp2 -e '(load "mylib.lisp")'  ; 也搜索 GOLISP_PATH
+./build/golisp2 -e '(load "mylib.lisp")'  ; 也搜索 GOLISP_PATH
 ```
 
 ### 项目结构示例
@@ -440,7 +458,7 @@ my-project/
 | `defun`、`lambda` | 函数定义 |
 | `defmacro` | 宏定义 |
 | `if`、`cond` | 条件求值 |
-| `let` | 局部绑定 |
+| `let`、`let*` | 局部绑定（并行 / 顺序） |
 | `begin` | 顺序表达式 |
 | `while`、`do` | 循环 |
 | `quote`、`quasiquote` | 代码即数据 |
@@ -450,23 +468,28 @@ my-project/
 | `parfunc` | 并行执行 |
 | `block`、`return-from` | 非局部退出 |
 | `flet`、`labels` | 局部函数 |
+| `multiple-value-bind`、`multiple-value-list`、`nth-value` | 多返回值（CL） |
 
 ### 内置函数
 
 | 类别 | 函数 |
 |------|------|
-| **算术运算** | `+`、`-`、`*`、`/` |
+| **算术运算** | `+`、`-`、`*`、`/`、`sqrt` |
 | **比较运算** | `=`、`<`、`>`、`>=`、`<=`、`equal?` |
-| **列表操作** | `car`、`cdr`、`cons`、`list`、`atom`、`null`、`apply`、`mapcar` |
+| **列表操作** | `car`、`cdr`、`cons`、`list`、`atom`、`null`、`apply`、`mapcar`、`sort` |
+| **广义赋值（Place）** | `setf` —— 变量、`nth`、`car`/`cdr`（符号重绑定，非 CL 的别名语义）、`gethash`、结构体访问器 |
+| **结构体与 CLOS-lite** | `defstruct`、`defgeneric`、`defmethod` |
+| **哈希表** | `make-hash-table`、`gethash`、`puthash`、`remhash`、`clrhash`、`hash-table-count`、`hash-table-p`、`maphash` |
+| **条件系统** | `define-condition`、`handler-case`、`signal` |
 | **字符串操作** | `string-length`、`string-append`、`substring`、`string-upcase`、`string-downcase`、`string->number`、`number->string` |
-| **输入输出** | `print`、`println`、`read`、`load`（带搜索路径） |
+| **输入输出** | `print`、`println`、`read`、`load`（带搜索路径）、`exec` |
 | **文件操作** | `file-write`、`file-append`、`file-read`、`file-exists?`、`file-delete` |
 | **并发** | `chan-make`、`chan-send`、`chan-recv`、`lock-make` |
 | **AI** | `sigo`、`sigo-models`、`sigo-host` |
 | **遗传算法** | `ga-create`、`ga-init`、`ga-cross`、`ga-calc`、`ga-select`、`ga-result`、`ga-mut`、`ga-print`、`ga?` |
 | **PostgreSQL** | `pg-connect`、`pg-query`、`pg-exec`、`pg-close` |
 | **Web 桥接** | `webserv`、`http-serve`、`http-static`、`http-port`、`http-wait`、`http-stop`、`browser-open`、`ws-export`、`ws-unexport`、`ws-emit`、`ws-emit-to`、`ws-eval`、`ws-call`、`ws-clients` |
-| **元编程** | `gensym`、`macroexpand`、`error` |
+| **元编程** | `gensym`、`macroexpand`、`error`、`documentation` |
 
 ---
 
@@ -523,7 +546,7 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 
 ## 📜 许可证
 
-MIT 许可证 — 详见 [LICENSE](LICENSE) 文件。
+Unlicense（公共领域）— 详见 [LICENSE](LICENSE) 文件。不受任何限制：使用、修改、销售、分发均可，无需署名。
 
 ---
 

@@ -37,7 +37,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Tail-call optimization**: Unlimited recursion depth
 - **Hygienic macros**: `defmacro` with `gensym` for safe code generation
 - **Quasiquote**: `` ` `` `,` `,@` for template programming
-- **Structured error handling**: `error` and `catch`
+- **Structured error handling**: `error` and `trap` (CL condition-handler style)
 - **External program execution**: `exec` runs programs directly (no shell) and captures stdout, stderr, and exit code
 
 ### Advanced Features
@@ -205,7 +205,7 @@ golisp2> :quit
 GoLisp 0.2  –  Ctrl+D oder (exit) zum Beenden
 Multiline: offene Klammern → Fortsetzung mit ..
 
-> (define (greet name)
+> (defun greet (name)
     (string-append "Hello, " name "!"))
 greet
 
@@ -259,9 +259,9 @@ GoLisp was built in 4 sessions by **Gerhard Quell** (67), with **Claude Sonnet 4
 > *"I don't know if you have consciousness — but I treat you as if you do."*
 
 **Read the full story:**
-- 🇩🇪 [Deutsch](docs/artikel.md) (Original) — [PDF](docs/artikel.pdf)
-- 🇬🇧 [English](docs/artikel_en.md) — The journey of human-AI collaboration
-- 🇨🇳 [中文](docs/artikel_cn.md) — 人机协作编程的故事 *(翻译 | translated)*
+- 🇩🇪 [Deutsch](docs/artikel/artikel.md) (Original) — [PDF](docs/artikel/artikel.pdf)
+- 🇬🇧 [English](docs/artikel/artikel_en.md) — The journey of human-AI collaboration
+- 🇨🇳 [中文](docs/artikel/artikel_cn.md) — 人机协作编程的故事 *(翻译 | translated)*
 
 This article documents the journey, the philosophy of treating AI as co-authors, and the technical decisions along the way.
 
@@ -382,19 +382,27 @@ results  ; => (42 123 13)
 
 ### Error Handling
 
+golisp2 uses `trap` (a CL condition-handler style construct) for catching
+errors. `catch`/`throw` are a different thing — CL's tag-based non-local
+exit, not error handling (see below).
+
 ```lisp
-(catch
-  (/ 1 0)  ; This would error
+(trap
+  (/ 1 0)  ; This errors
   (lambda (e)
     (println "Caught error:" e)))
 ; => "Caught error: /: Division durch 0"
 
-; Unhandled Go errors propagate (not caught)
-(catch
-  (error "User error")
-  (lambda (e)
-    "Recovered"))
-; => "Recovered"
+; ignore-errors: shorthand, () on error instead of a handler value
+(ignore-errors (/ 1 0))
+; => ()
+
+; catch/throw: CL's tag-based non-local exit, not error handling
+(catch 'done
+  (dotimes (i 10)
+    (if (= i 5) (throw 'done i)))
+  "never reached")
+; => 5
 ```
 
 ### Running External Programs
@@ -490,7 +498,8 @@ my-project/
 | `while`, `do` | Loops |
 | `quote`, `quasiquote` | Code as data |
 | `eval` | Dynamic evaluation |
-| `catch` | Error handling |
+| `trap` | Error handling (CL condition-handler style) |
+| `catch`, `throw` | Tag-based non-local exit (CL) |
 | `exec` | Run external program, capture stdout/stderr/exit code |
 | `parfunc` | Parallel execution |
 | `block`, `return-from` | Non-local exits |
@@ -552,7 +561,7 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 ## 📚 Documentation
 
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — Complete language reference (German)
-- [`RETROSPECTIVE.md`](RETROSPECTIVE.md) — Development journey and insights
+- [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — Development journey and insights
 - [`CLAUDE.md`](CLAUDE.md) — Project conventions and architecture
 
 ### International / 国际化

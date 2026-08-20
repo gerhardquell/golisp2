@@ -37,7 +37,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **尾调用优化**：无限递归深度，O(1) 栈空间
 - **卫生宏系统**：`defmacro` 配合 `gensym` 实现安全的代码生成
 - **准引用支持**：`` ` `` `,` `,@` 模板编程
-- **结构化错误处理**：`error` 和 `catch` 机制
+- **结构化错误处理**：`error` 和 `trap`（类似 CL 的条件处理器）
 
 ### 高级功能
 - **Scheme 风格 `do`**：支持并行步骤求值的迭代器
@@ -195,7 +195,7 @@ golisp2> :quit
 GoLisp 0.2  –  Ctrl+D 或 (exit) 退出
 多行输入：未闭合括号 → 继续输入..
 
-> (define (greet name)
+> (defun greet (name)
     (string-append "你好, " name "!"))
 greet
 
@@ -355,19 +355,26 @@ results  ; => (42 123 6)
 
 ### 错误处理
 
+golisp2 使用 `trap`（类似 CL 的条件处理器）来捕获错误。`catch`/`throw`
+是另一回事——CL 风格的基于标签的非局部跳转，不是错误处理机制（见下文）。
+
 ```lisp
-(catch
+(trap
   (/ 1 0)  ; 此处会出错
   (lambda (e)
     (println "捕获错误:" e)))
 ; => "捕获错误: /: 除数为 0"
 
-; 未处理的 Go 错误会传播（不被捕获）
-(catch
-  (error "用户错误")
-  (lambda (e)
-    "已恢复"))
-; => "已恢复"
+; ignore-errors：简写形式，出错时返回 ()，而不是处理器的返回值
+(ignore-errors (/ 1 0))
+; => ()
+
+; catch/throw：CL 风格的基于标签的非局部跳转，不是错误处理
+(catch 'done
+  (dotimes (i 10)
+    (if (= i 5) (throw 'done i)))
+  "never reached")
+; => 5
 ```
 
 ---
@@ -438,7 +445,8 @@ my-project/
 | `while`、`do` | 循环 |
 | `quote`、`quasiquote` | 代码即数据 |
 | `eval` | 动态求值 |
-| `catch` | 错误处理 |
+| `trap` | 错误处理（类似 CL 的条件处理器） |
+| `catch`、`throw` | 基于标签的非局部跳转（CL） |
 | `parfunc` | 并行执行 |
 | `block`、`return-from` | 非局部退出 |
 | `flet`、`labels` | 局部函数 |
@@ -500,7 +508,7 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 
 - [`README.md`](README.md) — 英文项目说明
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — 完整语言参考（德文）
-- [`RETROSPECTIVE.md`](RETROSPECTIVE.md) — 开发历程与见解
+- [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — 开发历程与见解
 - [`CLAUDE.md`](CLAUDE.md) — 项目规范与架构
 
 ---

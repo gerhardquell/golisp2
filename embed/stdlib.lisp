@@ -265,6 +265,15 @@
 ;; - nth-Place: (setf (nth i xs) v) → (set! xs (set-nth xs i v))
 ;;   (immutable Cells: neue Liste, Symbol-Rebind statt In-Place-Mutation;
 ;;   Index und Wert werden je genau einmal ausgewertet)
+;; - car/cdr-Place: (setf (car xs) v) → (set! xs (cons v (cdr xs)))
+;;   (setf (cdr xs) v) → (set! xs (cons (car xs) v))
+;;   Gleiches Rebind-statt-Mutation-Prinzip wie bei nth: KEINE CL-Aliasing-
+;;   Semantik — nur das Symbol xs sieht die Änderung, andere Referenzen auf
+;;   dieselbe (ursprüngliche) Liste nicht. Verschachtelte Places wie
+;;   (setf (car (cdr x)) v) sind bewusst nicht unterstützt (wie bei nth
+;;   auch), das xs-Argument muss ein Symbol sein. xs = nil → Fehler (CL:
+;;   rplaca/rplacd verlangen eine echte Cons-Zelle, nil zählt nicht,
+;;   obwohl (car nil)/(cdr nil) lesend erlaubt sind).
 ;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9)
 ;;   → (begin (set! p (set-pt-x p 9)) 9)
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
@@ -297,14 +306,30 @@
                         `(let ((,i ,(cadr place)) (,v ,val))
                            (set! ,(caddr place) (set-nth ,(caddr place) ,i ,v))
                            ,v)))
-                  (if (not (atom arg))
-                      (error "setf: Place-Argument muss ein Symbol sein")
-                      (let ((entry (assoc accessor *setf-expanders*)))
-                        (if (null? entry)
-                            (error "setf: unbekannter Place")
-                            `(let ((,v ,val))
-                               (set! ,arg (,(cdr entry) ,arg ,v))
-                               ,v))))))))))
+                  (if (equal? accessor 'car)
+                      (if (not (atom arg))
+                          (error "setf: car-Place-Argument muss ein Symbol sein")
+                          `(let ((,v ,val))
+                             (if (null? ,arg)
+                                 (error "setf: (car nil) ist kein gueltiger Place (nil ist keine Cons-Zelle, CL: rplaca)")
+                                 (set! ,arg (cons ,v (cdr ,arg))))
+                             ,v))
+                      (if (equal? accessor 'cdr)
+                          (if (not (atom arg))
+                              (error "setf: cdr-Place-Argument muss ein Symbol sein")
+                              `(let ((,v ,val))
+                                 (if (null? ,arg)
+                                     (error "setf: (cdr nil) ist kein gueltiger Place (nil ist keine Cons-Zelle, CL: rplacd)")
+                                     (set! ,arg (cons (car ,arg) ,v)))
+                                 ,v))
+                          (if (not (atom arg))
+                              (error "setf: Place-Argument muss ein Symbol sein")
+                              (let ((entry (assoc accessor *setf-expanders*)))
+                                (if (null? entry)
+                                    (error "setf: unbekannter Place")
+                                    `(let ((,v ,val))
+                                       (set! ,arg (,(cdr entry) ,arg ,v))
+                                       ,v))))))))))))
 
 ;; === Fehlerbehandlung ============================================
 

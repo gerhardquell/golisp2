@@ -5,8 +5,9 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260711
 //**********************************************************************
-// Spezialform: (exec "prog" param: "arg" ... stdout: var stderr: var
-//               exitcd: var stdin: input)
+// Spezialform: (exec "prog" param: "arg" ... env: "KEY=WERT" ...
+//               stdout: var stderr: var exitcd: var stdin: input)
+// param: und env: koennen mehrfach angegeben werden.
 //**********************************************************************
 
 package lib
@@ -15,6 +16,7 @@ import (
   "bytes"
   "context"
   "fmt"
+  "os"
   "os/exec"
   "strings"
   "time"
@@ -37,6 +39,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   program := programCell.Val
 
   var params []string
+  var envVars []string
   var stdinStr string
   var stdoutVar, stderrVar, exitcdVar string
 
@@ -66,6 +69,18 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
         return nil, fmt.Errorf("exec: param muss String sein")
       }
       params = append(params, val.Val)
+    case "env:":
+      val, err := evalWithCtx(valueCell, env, ectx.child())
+      if err != nil {
+        return nil, fmt.Errorf("exec: %v", err)
+      }
+      if val == nil || val.Type != STRING {
+        return nil, fmt.Errorf("exec: env muss String der Form KEY=WERT sein")
+      }
+      if !strings.Contains(val.Val, "=") {
+        return nil, fmt.Errorf("exec: env erwartet Form KEY=WERT, erhalten: %s", val.Val)
+      }
+      envVars = append(envVars, val.Val)
     case "stdin:":
       val, err := evalWithCtx(valueCell, env, ectx.child())
       if err != nil {
@@ -101,6 +116,9 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   defer cancel()
 
   cmd := exec.CommandContext(ctx, program, params...)
+  if len(envVars) > 0 {
+    cmd.Env = append(os.Environ(), envVars...)
+  }
   var stdoutBuf, stderrBuf bytes.Buffer
   cmd.Stdout = &stdoutBuf
   cmd.Stderr = &stderrBuf

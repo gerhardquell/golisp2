@@ -158,6 +158,44 @@ func TestExecEmptyStdin(t *testing.T) {
   }
 }
 
+func TestExecEnv(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("sh"),
+    MakeAtom("param:"),
+    MakeStr("-c"),
+    MakeAtom("param:"),
+    MakeStr("echo $MYVAR"),
+    MakeAtom("env:"),
+    MakeStr("MYVAR=hallowelt"),
+    MakeAtom("stdout:"),
+    MakeAtom("out"),
+  )
+  _, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  out, _ := env.Get("out")
+  if out.Type != STRING || out.Val != "hallowelt\n" {
+    t.Fatalf("expected 'hallowelt\\n', got %v", out)
+  }
+}
+
+func TestExecEnvInvalidFormat(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("echo"),
+    MakeAtom("env:"),
+    MakeStr("KEINGLEICH"),
+  )
+  _, err := Eval(form, env)
+  if err == nil {
+    t.Fatalf("expected error for env without '='")
+  }
+}
+
 func TestExecUnknownProgram(t *testing.T) {
   env := BaseEnv()
   form := List(

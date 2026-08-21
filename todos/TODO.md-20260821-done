@@ -1,0 +1,75 @@
+# TODO 20260820 — golisp2web Grundgerüst + Web-Bridge-Erweiterungen
+
+**Status:** ERLEDIGT — 20260821
+
+## webserv versus http-serve — ERLEDIGT (Erklärung)
+
+`http-serve` ist das Basis-Primitiv (Port binden, Routes selbst bauen).
+`webserv` ist reiner Komfort-Wrapper obendrauf — automatischer `/`-Handler,
+boot.js-Injektion, `browser-open` — kein zweiter Server-Aufbau-Pfad, ruft
+intern `fnHTTPServe`. Kein Duplikat, sondern Schicht. Design-Doc:
+`docs/superpowers/specs/2026-08-08-webserv-design.md`.
+
+## Neues Pythonprogramm golisp2web — ERLEDIGT
+
+Eigenes Git-Repo unter `golisp2web/` (nicht Teil des golisp2-Repos).
+Commits `a631692` (init) bis `347177e`:
+- `341fe83` v1-Grundgerüst: 1 Fenster, 1 `QWebEngineView`-Tab, CLI `-t1`,
+  `lib/netGuard.py` (Host-Whitelist)
+- `beb3abc` Multi-Tab (`-tN`, aufsteigend nach N), Tab-Titel = Portnummer
+- `957bec7` Buttonleiste: Neuer Tab, Tab schließen (Rückfrage), Tab
+  sichern (Format-Dialog .mhtml/.html/.pdf — löste die unten offen
+  markierte „Formatfrage")
+- `5fb22cf` JSON-Persistenz: `~/.golisp2web/start.json`, Auto-Restore ohne
+  `-tN`, explizite `-tN` überschreiben immer
+- `985b9e8` Server-seitiges Beenden über die bestehende golisp2-WS-Bridge
+  (`ws-emit`/`golisp.on("golisp2web-quit")`) — kein neuer Go-Primitiv nötig
+- `c8cea18` https-Support: `netGuard.parseTarget` erkennt `http(s)://`-
+  Prefix, `GuardedPage.certificateError` akzeptiert selbstsignierte
+  Zertifikate nur für die eigene LAN-Whitelist
+- `347177e` Upload-Button scharf geschaltet: postet gegen die Konvention
+  `/_golisp2web/upload`
+
+## GUI-Weboberfläche — ERLEDIGT
+
+Vorlage `epubReader.py`/`epubScheme.py` (`/u/py-projekte/epubReader3`)
+übernommen: PySide6 + `QWebEngineView`, gleiches QWebChannel-Muster für
+den Python↔JS-Draht (`quitBridge.py`), gleicher Fontconfig-Fix.
+
+## Netzzugang — ERLEDIGT
+
+`netGuard.py`: nur localhost/127.0.0.1/192.168.x.x/10.x.x.x erlaubt,
+externe URLs geblockt (`GuardedPage.acceptNavigationRequest`). https für
+LAN via golisp2-seitiges `:tls`-Keyword (Commit `eb8a6d7`, golisp2-Repo:
+ephemeres selbstsigniertes Zertifikat, `lib/tlscert.go`). Standardport
+8090 als Default.
+
+## Darstellung — ERLEDIGT
+
+`QTabWidget`, Tab-Titel = Portnummer.
+
+## Buttonleiste — ERLEDIGT
+
+Alle vier Buttons fertig. „Formatfrage" beim Sichern gelöst: Dateidialog
+mit Format-Wahl (.mhtml/.html/.pdf). Upload brauchte einen neuen
+golisp2-Primitiv (`http-upload`, golisp2-Commit `d55daa0`) — generischer
+POST-only multipart/form-data-Endpunkt, `(handler filename content)` pro
+Datei, Konvention fester Pfad `/_golisp2web/upload` (analog
+`/_golisp/boot.js`/`/_golisp/ws`).
+
+## Beenden und Neustart — ERLEDIGT
+
+`start.json` wird bei jedem Fensterschluss gesichert (auch bei
+server-seitigem Fernbeenden, da derselbe `closeEvent`-Pfad). CLI-Syntax
+`-tN HOST[:PORT]` wie gefordert, Default `localhost:8090` ohne Argumente.
+
+## offene Ideen — bleibt offen, siehe aktuelle TODO.md
+
+- könnten wir golisp2web neben normalen html auch für epub3 nutzen?
+- wäre es sinnvoll, auch einen Editor (pyscintella) zu integrieren?
+
+## Ergebnis
+
+golisp2-Repo: `go test ./... -count=1` → 371 Tests grün,
+`./build/golisp2 -t` → 104 PASS, 0 FAIL. golisp2web: alle Features
+end-to-end gegen echte golisp2-Prozesse getestet (headless, offscreen).

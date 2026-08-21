@@ -24,6 +24,12 @@
 ;; hart auf xcb) -- kein Teil der normalen -t-Testsuite (main.go
 ;; runTests), laeuft nie headless/CI. Aufruf vom Repo-Root:
 ;;   ./build/golisp2 tests/golisp2web-test.lisp
+;;
+;; WICHTIG: vorher sicherstellen, dass keine andere golisp2web-Instanz
+;; laeuft (ps aux | grep golisp2web.py) -- zwei gleichzeitige Instanzen
+;; haengen reproduzierbar fest (vermutlich geteiltes QtWebEngine-
+;; Profilverzeichnis), Branch 2 kehrt dann nie zurueck, parfunc wartet
+;; ewig. Details: doc/emacs-golisp2web.md, Abschnitt "Grenzen".
 ;; ***********************************************************************
 
 (load "tests/test-framework.lisp")

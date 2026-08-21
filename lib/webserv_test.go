@@ -13,6 +13,7 @@
 package lib
 
 import (
+  "crypto/tls"
   "io"
   "net/http"
   "os"
@@ -252,6 +253,43 @@ func TestWebServCustomHost(t *testing.T) {
   status, _ := fetchBody(t, "http://127.0.0.1:"+strconv.Itoa(ws.port)+"/")
   if status != 200 {
     t.Fatalf("status = %d, erwartet 200", status)
+  }
+}
+
+func TestWebServTLS(t *testing.T) {
+  env := webservTestEnv(t)
+  args := []*Cell{
+    MakeAtom(":host"), MakeStr("127.0.0.1"),
+    MakeAtom(":tls"), MakeAtom("t"),
+    MakeAtom(":html"), MakeStr("<html><head></head><body>tls</body></html>"),
+    MakeAtom(":open"), MakeNil(),
+  }
+  srvCell, err := fnWebServ(env, args)
+  if err != nil {
+    t.Fatalf("webserv: %v", err)
+  }
+  ws, err := asServer("webserv", srvCell)
+  if err != nil {
+    t.Fatal(err)
+  }
+  t.Cleanup(func() { fnHTTPStop([]*Cell{srvCell}) }) //nolint:errcheck
+
+  // InsecureSkipVerify: Test gegen den eigenen ephemeren Prozess, siehe
+  // Begruendung in httpserver_test.go TestHTTPServeTLS.
+  client := &http.Client{Transport: &http.Transport{
+    TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+  }}
+  resp, err := client.Get("https://127.0.0.1:" + strconv.Itoa(ws.port) + "/")
+  if err != nil {
+    t.Fatalf("https-Request fehlgeschlagen: %v", err)
+  }
+  defer resp.Body.Close()
+  body, err := io.ReadAll(resp.Body)
+  if err != nil {
+    t.Fatal(err)
+  }
+  if !strings.Contains(string(body), "tls") {
+    t.Fatalf("body fehlt Inhalt: %q", string(body))
   }
 }
 

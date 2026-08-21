@@ -6,13 +6,16 @@
 //  Erstellt : 20260821
 //**********************************************************************
 // Tests fuer http-serve: :host-Keyword (Default 127.0.0.1, explizit
-// gesetzt, Fehlerfaelle).
+// gesetzt, Fehlerfaelle), :tls-Keyword (TLS-Handshake, Klartext-http
+// unveraendert ohne).
 //**********************************************************************
 
 package lib
 
 import (
+  "crypto/tls"
   "net"
+  "net/http"
   "testing"
 )
 
@@ -56,6 +59,50 @@ func TestHTTPServeCustomHost(t *testing.T) {
   }
   if host != "127.0.0.1" {
     t.Fatalf("host = %q, erwartet 127.0.0.1", host)
+  }
+}
+
+func TestHTTPServeTLS(t *testing.T) {
+  env := BaseEnv()
+  args := []*Cell{MakeNum(0), MakeAtom(":host"), MakeStr("127.0.0.1"),
+    MakeAtom(":tls"), MakeAtom("t")}
+  srvCell, err := fnHTTPServe(env, args)
+  if err != nil {
+    t.Fatalf("http-serve: %v", err)
+  }
+  ws, err := asServer("http-serve", srvCell)
+  if err != nil {
+    t.Fatal(err)
+  }
+  t.Cleanup(func() { fnHTTPStop([]*Cell{srvCell}) }) //nolint:errcheck
+
+  // InsecureSkipVerify hier bewusst: Test gegen den eigenen, gerade erst
+  // ephemer erzeugten Prozess -- kein Netzwerk, kein MITM-Risiko. Prueft
+  // nur, ob der TLS-Handshake ueberhaupt zustande kommt. Die eigentliche
+  // Vertrauensentscheidung fuer selbstsignierte Zertifikate liegt beim
+  // Client (golisp2web netGuard-Whitelist), nicht hier.
+  addr := ws.ln.Addr().String()
+  client := &http.Client{Transport: &http.Transport{
+    TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+  }}
+  resp, err := client.Get("https://" + addr + "/")
+  if err != nil {
+    t.Fatalf("https-Request fehlgeschlagen (TLS-Handshake?): %v", err)
+  }
+  resp.Body.Close() //nolint:errcheck
+
+  // net/http erkennt Klartext-Bytes gegen einen TLS-Listener und
+  // antwortet mit einer eingebauten 400-Antwort statt die Verbindung
+  // zu droppen -- err bleibt nil, StatusCode ist der Signal.
+  plainClient := &http.Client{Timeout: 2 * 1e9}
+  plainResp, err := plainClient.Get("http://" + addr + "/")
+  if err != nil {
+    t.Fatalf("unerwarteter Fehler bei Klartext-Request: %v", err)
+  }
+  defer plainResp.Body.Close() //nolint:errcheck
+  if plainResp.StatusCode != http.StatusBadRequest {
+    t.Fatalf("Klartext-http gegen TLS-Listener: StatusCode = %d, erwartet 400",
+      plainResp.StatusCode)
   }
 }
 

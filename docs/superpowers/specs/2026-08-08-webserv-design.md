@@ -127,6 +127,27 @@ Smoke-Test: `(webserv :htmlpath "...")` im REPL, Browser öffnet sich,
 Auslöser: golisp2web (Weboberflächen-Client, `golisp2web/`) braucht LAN-Bind
 für 192.168.x/10.x-Zugriff (siehe `TODO.md` §"Netzzugang"). `webserv`
 reicht `:host` an das interne `fnHTTPServe` sowie an die
-`browser-open`-URL durch — kein zweiter Bind-Pfad. HTTPS/TLS und
-IP-Range-Whitelisting (nur lokale Netze, externe URLs aussperren) bleiben
-weiterhin YAGNI für diese Spec — eigenes Thema bei der golisp2web-Umsetzung.
+`browser-open`-URL durch — kein zweiter Bind-Pfad. IP-Range-Whitelisting
+(nur lokale Netze, externe URLs aussperren) bleibt Sache des Clients
+(golisp2web `netGuard.py`), nicht dieser Spec.
+
+## Nachtrag 20260821 — `:tls`-Keyword
+
+`http-serve` und `webserv` bekommen ein `:tls`-Keyword (Default `nil`,
+weiterhin reines http ohne). Bei `:tls t` erzeugt `generateSelfSignedCert`
+(`lib/tlscert.go`) ein ephemeres ECDSA-P256-Zertifikat — SAN deckt den
+gebundenen Host sowie immer `localhost`/`127.0.0.1` ab, 24h gültig, landet
+nie auf Platte. Der `net.Listener` wird mit `tls.NewListener` gewrappt,
+`webserv`s `browser-open`-URL nutzt dann `https://` statt `http://`.
+
+golisp2 trifft dabei bewusst **keine** Vertrauensentscheidung — das
+selbstsignierte Zertifikat wird von jedem TLS-Client zunächst als
+ungültig gemeldet. Die Entscheidung, es trotzdem zu akzeptieren, liegt
+beim Client: golisp2web akzeptiert es ausschließlich für Hosts aus seiner
+eigenen `netGuard`-Whitelist (localhost/127.0.0.1/192.168.x.x/10.x.x.x),
+über `GuardedPage.certificateError` (`golisp2web/lib/mainWindow.py`) —
+für alles andere bleibt ein Zertifikatsfehler ein echter Fehler. Damit ist
+das in Zeile 115 genannte YAGNI ("HTTPS/TLS — weiterhin nicht Teil dieser
+Spec") aufgehoben; Zertifikat-Dateien (`:cert-file`/`:key-file` für eigene
+CAs wie mkcert) bleiben bewusst draußen — Ephemer-Selbstsigniert war die
+gewählte Option für den aktuellen Bedarf (golisp2web-LAN-Zugriff).

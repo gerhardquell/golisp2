@@ -14,6 +14,7 @@ package lib
 
 import (
   "context"
+  "crypto/tls"
   "fmt"
   "net"
   "net/http"
@@ -67,26 +68,43 @@ func asServer(name string, c *Cell) (*WebServer, error) {
   return ws, nil
 }
 
-// http-serve: (http-serve port &key host) → Server-Cell. port=0 → freier
-// Port vom OS. :host Default "127.0.0.1"; startet Goroutine, kehrt sofort
-// zurueck.
+// http-serve: (http-serve port &key host tls) → Server-Cell. port=0 →
+// freier Port vom OS. :host Default "127.0.0.1". :tls t bindet mit einem
+// ephemeren, selbstsignierten Zertifikat (SAN: host + localhost/127.0.0.1,
+// 24h gueltig, nur im Speicher) — Vertrauensentscheidung liegt beim
+// Client. Startet Goroutine, kehrt sofort zurueck.
 func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != NUMBER {
     return nil, fmt.Errorf("http-serve: Port (NUMBER) erwartet")
   }
   host := "127.0.0.1"
+  useTLS := false
   for i := 1; i+1 < len(args); i += 2 {
-    if args[i].Type != ATOM || args[i].Val != ":host" {
+    if args[i].Type != ATOM {
+      return nil, fmt.Errorf("http-serve: Keyword erwartet, bekam %s", args[i])
+    }
+    switch args[i].Val {
+    case ":host":
+      if args[i+1].Type != STRING {
+        return nil, fmt.Errorf("http-serve: :host muss STRING sein")
+      }
+      host = args[i+1].Val
+    case ":tls":
+      useTLS = IsTruthy(args[i+1])
+    default:
       return nil, fmt.Errorf("http-serve: unbekanntes Keyword %s", args[i])
     }
-    if args[i+1].Type != STRING {
-      return nil, fmt.Errorf("http-serve: :host muss STRING sein")
-    }
-    host = args[i+1].Val
   }
   ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, int(args[0].Num)))
   if err != nil {
     return nil, fmt.Errorf("http-serve: %v", err)
+  }
+  if useTLS {
+    cert, err := generateSelfSignedCert(host)
+    if err != nil {
+      return nil, fmt.Errorf("http-serve: %v", err)
+    }
+    ln = tls.NewListener(ln, &tls.Config{Certificates: []tls.Certificate{cert}})
   }
   ws := &WebServer{
     mux:      http.NewServeMux(),

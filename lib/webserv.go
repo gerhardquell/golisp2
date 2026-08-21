@@ -32,10 +32,11 @@ func RegisterWebservFuncs(env *Env) {
   _ = env.Set("webserv", makeFn(func(args []*Cell) (*Cell, error) { return fnWebServ(env, args) }))
 }
 
-// fnWebServ: (webserv &key port host html htmlpath open) → Server-Cell.
+// fnWebServ: (webserv &key port host tls html htmlpath open) → Server-Cell.
 // Genau eines von :html/:htmlpath ist Pflicht. :port Default 0 (freier
-// Port). :host Default "127.0.0.1". :open Default t (Browser automatisch
-// oeffnen).
+// Port). :host Default "127.0.0.1". :tls t bindet mit ephemerem,
+// selbstsigniertem Zertifikat (siehe fnHTTPServe). :open Default t
+// (Browser automatisch oeffnen).
 func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
   if len(args)%2 != 0 {
     return nil, fmt.Errorf("webserv: gerade Anzahl Argumente (Keyword-Paare) erwartet")
@@ -43,6 +44,7 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
 
   port := 0.0
   host := "127.0.0.1"
+  useTLS := false
   var html, htmlpath string
   haveHTML, haveHTMLPath := false, false
   open := true
@@ -62,6 +64,8 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
         return nil, fmt.Errorf("webserv: :host muss STRING sein")
       }
       host = args[i+1].Val
+    case ":tls":
+      useTLS = IsTruthy(args[i+1])
     case ":html":
       if args[i+1].Type != STRING {
         return nil, fmt.Errorf("webserv: :html muss STRING sein")
@@ -88,7 +92,11 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("webserv: :html oder :htmlpath erforderlich")
   }
 
-  srvCell, err := fnHTTPServe(env, []*Cell{MakeNum(port), MakeAtom(":host"), MakeStr(host)})
+  httpArgs := []*Cell{MakeNum(port), MakeAtom(":host"), MakeStr(host)}
+  if useTLS {
+    httpArgs = append(httpArgs, MakeAtom(":tls"), MakeAtom("t"))
+  }
+  srvCell, err := fnHTTPServe(env, httpArgs)
   if err != nil {
     return nil, err
   }
@@ -122,7 +130,11 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
   }
 
   if open {
-    url := fmt.Sprintf("http://%s:%d/", host, ws.port)
+    scheme := "http"
+    if useTLS {
+      scheme = "https"
+    }
+    url := fmt.Sprintf("%s://%s:%d/", scheme, host, ws.port)
     _, _ = fnBrowserOpen([]*Cell{MakeStr(url)})
   }
 

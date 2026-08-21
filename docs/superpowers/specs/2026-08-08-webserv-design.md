@@ -40,10 +40,12 @@ zweiter Server-Aufbau-Pfad. Baut intern auf `fnHTTPServe` auf.
 ## API
 
 ```lisp
-(webserv &key port html htmlpath open)
+(webserv &key port host html htmlpath open)
 ```
 
 - `:port N` — optional, Default `0` (freier Port vom OS, wie `http-serve`)
+- `:host "..."` — optional, Default `"127.0.0.1"`; ab 20260821 auch an
+  `http-serve` verfuegbar, siehe Nachtrag unten
 - `:html "<html>...</html>"` — Inline-Content (eine Datei, epub3-artig)
 - `:htmlpath "/pfad/seite.html"` — Datei-Content, frisch gelesen pro Request
 - genau eines von `:html` / `:htmlpath` nötig
@@ -110,10 +112,21 @@ Smoke-Test: `(webserv :htmlpath "...")` im REPL, Browser öffnet sich,
 
 ## Bewusst nicht (YAGNI)
 
-- HTTPS/TLS — weiterhin nur `127.0.0.1`, wie ganze Web-Bridge heute
+- HTTPS/TLS — weiterhin nicht Teil dieser Spec
 - Komponentensystem (JSF/PrimeFaces-Stil, `#{...}`-Binding, Converter,
   Renderer) — eigenes Folge-Spec
 - Mehrteilige Sites (eigene `.css`/`.js`/Bilder-Dateien) — `http-static`
   bleibt dafür die bestehende Lösung, `webserv` deckt nur Ein-Datei-Fall ab
 - Hot-Reload für `:html`-Inline-Modus (Content kommt aus laufendem
   Lisp-Prozess, ist per Definition schon "frisch")
+
+## Nachtrag 20260821 — `:host`-Keyword
+
+`http-serve` (bisher hart `127.0.0.1`) und `webserv` bekommen beide ein
+`:host`-Keyword (Default weiterhin `"127.0.0.1"`, Rückwärtskompatibel).
+Auslöser: golisp2web (Weboberflächen-Client, `golisp2web/`) braucht LAN-Bind
+für 192.168.x/10.x-Zugriff (siehe `TODO.md` §"Netzzugang"). `webserv`
+reicht `:host` an das interne `fnHTTPServe` sowie an die
+`browser-open`-URL durch — kein zweiter Bind-Pfad. HTTPS/TLS und
+IP-Range-Whitelisting (nur lokale Netze, externe URLs aussperren) bleiben
+weiterhin YAGNI für diese Spec — eigenes Thema bei der golisp2web-Umsetzung.

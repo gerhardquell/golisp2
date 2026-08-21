@@ -232,6 +232,29 @@ func TestInjectBootScriptUnicodeRegression(t *testing.T) {
   }
 }
 
+func TestWebServCustomHost(t *testing.T) {
+  env := webservTestEnv(t)
+  args := []*Cell{
+    MakeAtom(":host"), MakeStr("127.0.0.1"),
+    MakeAtom(":html"), MakeStr("<html></html>"),
+    MakeAtom(":open"), MakeNil(),
+  }
+  srvCell, err := fnWebServ(env, args)
+  if err != nil {
+    t.Fatalf("webserv: %v", err)
+  }
+  ws, err := asServer("webserv", srvCell)
+  if err != nil {
+    t.Fatal(err)
+  }
+  t.Cleanup(func() { fnHTTPStop([]*Cell{srvCell}) }) //nolint:errcheck
+
+  status, _ := fetchBody(t, "http://127.0.0.1:"+strconv.Itoa(ws.port)+"/")
+  if status != 200 {
+    t.Fatalf("status = %d, erwartet 200", status)
+  }
+}
+
 func TestWebServErrors(t *testing.T) {
   env := webservTestEnv(t)
 
@@ -248,6 +271,10 @@ func TestWebServErrors(t *testing.T) {
     {"ungerade Argumentzahl", []*Cell{MakeAtom(":html")}},
     {":port falscher Typ", []*Cell{
       MakeAtom(":port"), MakeStr("8083"),
+      MakeAtom(":html"), MakeStr("<html></html>"),
+    }},
+    {":host falscher Typ", []*Cell{
+      MakeAtom(":host"), MakeNum(1),
       MakeAtom(":html"), MakeStr("<html></html>"),
     }},
   }

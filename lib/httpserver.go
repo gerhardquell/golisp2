@@ -6,7 +6,8 @@
 //  Erstellt : 20260807
 //**********************************************************************
 // HTTP-Server-Primitiven fuer die Web-Bridge (Spec TODO.md §3.1).
-// Bindet ausschliesslich an 127.0.0.1. WebSocket-Teil: wsbridge.go.
+// Bindet standardmaessig an 127.0.0.1, per :host konfigurierbar.
+// WebSocket-Teil: wsbridge.go.
 //**********************************************************************
 
 package lib
@@ -66,13 +67,24 @@ func asServer(name string, c *Cell) (*WebServer, error) {
   return ws, nil
 }
 
-// http-serve: (http-serve port) → Server-Cell. port=0 → freier Port vom OS.
-// Bindet nur an 127.0.0.1, startet Goroutine, kehrt sofort zurueck.
+// http-serve: (http-serve port &key host) → Server-Cell. port=0 → freier
+// Port vom OS. :host Default "127.0.0.1"; startet Goroutine, kehrt sofort
+// zurueck.
 func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != NUMBER {
     return nil, fmt.Errorf("http-serve: Port (NUMBER) erwartet")
   }
-  ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", int(args[0].Num)))
+  host := "127.0.0.1"
+  for i := 1; i+1 < len(args); i += 2 {
+    if args[i].Type != ATOM || args[i].Val != ":host" {
+      return nil, fmt.Errorf("http-serve: unbekanntes Keyword %s", args[i])
+    }
+    if args[i+1].Type != STRING {
+      return nil, fmt.Errorf("http-serve: :host muss STRING sein")
+    }
+    host = args[i+1].Val
+  }
+  ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, int(args[0].Num)))
   if err != nil {
     return nil, fmt.Errorf("http-serve: %v", err)
   }

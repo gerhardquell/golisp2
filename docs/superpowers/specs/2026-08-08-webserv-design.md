@@ -151,3 +151,27 @@ das in Zeile 115 genannte YAGNI ("HTTPS/TLS — weiterhin nicht Teil dieser
 Spec") aufgehoben; Zertifikat-Dateien (`:cert-file`/`:key-file` für eigene
 CAs wie mkcert) bleiben bewusst draußen — Ephemer-Selbstsigniert war die
 gewählte Option für den aktuellen Bedarf (golisp2web-LAN-Zugriff).
+
+## Nachtrag 20260821 — `http-upload`-Primitiv
+
+`(http-upload srv urlpath handler)` (`lib/httpserver.go`, neben
+`http-static`) registriert eine POST-only-Route für
+`multipart/form-data`-Uploads. Für jede hochgeladene Datei ruft der Server
+`(handler filename content)` auf — `content` als STRING mit rohen Bytes
+(gleiche Konvention wie `file-read`: Go-Strings tragen beliebige Bytes,
+solange nichts sie durch `[]rune`-Konversion schickt). Mehrere Dateien pro
+Request rufen den Handler mehrfach auf. Max. Upload-Größe fest 32 MB
+(`http.MaxBytesReader`), kein Keyword dafür — YAGNI, bis ein echter Bedarf
+für Konfigurierbarkeit auftaucht. Scheitert ein Handler-Aufruf oder ist das
+Formular ungültig, antwortet der Server mit Fehlercode + Klartext-Fehler
+und bricht ab, sonst nach allen Dateien mit `200 "ok"`.
+
+Auslöser: golisp2web (`golisp2web/lib/mainWindow.py`) hat einen
+deaktivierten Upload-Button mit Tooltip "golisp2 hat noch keinen
+Upload-Endpunkt" — dieser Primitiv schließt die Backend-Seite der Lücke.
+Den Button selbst scharf zu schalten (POST gegen einen konkreten
+`urlpath`, den die jeweilige golisp2-Anwendung per `http-upload`
+registriert) ist ein eigener golisp2web-seitiger Schritt, kein Teil dieses
+Nachtrags — `http-upload` ist bewusst generisch (Handler entscheidet, was
+mit den Bytes passiert: speichern, verarbeiten, verwerfen), keine feste
+Policy wie "immer nach `~/uploads/` schreiben".

@@ -16,6 +16,7 @@ import (
   "context"
   "crypto/tls"
   "fmt"
+  "io"
   "net"
   "net/http"
   "os"
@@ -50,6 +51,7 @@ type WebServer struct {
 func RegisterHTTPFuncs(env *Env) {
   _ = env.Set("http-serve",   makeFn(func(args []*Cell) (*Cell, error) { return fnHTTPServe(env, args) }))
   _ = env.Set("http-static",  makeFn(fnHTTPStatic))
+  _ = env.Set("http-upload",  makeFn(fnHTTPUpload))
   _ = env.Set("http-port",    makeFn(fnHTTPPort))
   _ = env.Set("http-wait",    makeFn(fnHTTPWait))
   _ = env.Set("http-stop",    makeFn(fnHTTPStop))
@@ -149,6 +151,73 @@ func fnHTTPStatic(args []*Cell) (*Cell, error) {
   }
   prefix := strings.TrimSuffix(pattern, "/") // "/" → ""
   ws.mux.Handle(pattern, http.StripPrefix(prefix, staticHandler(dir)))
+  return cellT, nil
+}
+
+const maxUploadBytes = 32 << 20 // 32 MB
+
+// http-upload: (http-upload srv urlpath handler) → t. Registriert eine
+// POST-only-Route unter urlpath (multipart/form-data). Fuer jede
+// hochgeladene Datei wird (handler filename content) aufgerufen — content
+// als STRING mit rohen Bytes (wie file-read). Erst nach allen Handler-
+// Aufrufen antwortet der Server 200 "ok"; schlaegt ein Handler fehl oder
+// ist das Formular ungueltig, antwortet er mit einem Fehlercode und dem
+// Fehlertext, ohne weitere Dateien zu verarbeiten.
+func fnHTTPUpload(args []*Cell) (*Cell, error) {
+  if len(args) < 3 {
+    return nil, fmt.Errorf("http-upload: 3 Argumente (srv urlpath handler) nötig")
+  }
+  ws, err := asServer("http-upload", args[0])
+  if err != nil {
+    return nil, err
+  }
+  if args[1].Type != STRING {
+    return nil, fmt.Errorf("http-upload: urlpath muss STRING sein")
+  }
+  urlpath := args[1].Val
+  if !strings.HasPrefix(urlpath, "/") {
+    return nil, fmt.Errorf("http-upload: urlpath muss mit / beginnen")
+  }
+  handler := args[2]
+  if handler.Type != LAMBDA && handler.Type != FUNC {
+    return nil, fmt.Errorf("http-upload: handler muss Lambda sein")
+  }
+
+  ws.mux.HandleFunc(urlpath, func(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+      http.Error(w, "http-upload: nur POST erlaubt", http.StatusMethodNotAllowed)
+      return
+    }
+    r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+    if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+      http.Error(w, fmt.Sprintf("http-upload: %v", err), http.StatusBadRequest)
+      return
+    }
+    defer r.MultipartForm.RemoveAll() //nolint:errcheck
+
+    for _, headers := range r.MultipartForm.File {
+      for _, fh := range headers {
+        f, err := fh.Open()
+        if err != nil {
+          http.Error(w, fmt.Sprintf("http-upload: %v", err), http.StatusInternalServerError)
+          return
+        }
+        data, err := io.ReadAll(f)
+        f.Close() //nolint:errcheck
+        if err != nil {
+          http.Error(w, fmt.Sprintf("http-upload: %v", err), http.StatusInternalServerError)
+          return
+        }
+        if _, err := apply(handler, []*Cell{MakeStr(fh.Filename), MakeStr(string(data))}); err != nil {
+          http.Error(w, fmt.Sprintf("http-upload: %v", err), http.StatusInternalServerError)
+          return
+        }
+      }
+    }
+    w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+    w.Write([]byte("ok")) //nolint:errcheck
+  })
+
   return cellT, nil
 }
 

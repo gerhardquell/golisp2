@@ -6,8 +6,11 @@
 //  Erstellt : 20260711
 //**********************************************************************
 // Spezialform: (exec "prog" param: "arg" ... env: "KEY=WERT" ...
-//               stdout: var stderr: var exitcd: var stdin: input)
-// param: und env: koennen mehrfach angegeben werden.
+//               stdout: var stderr: var exitcd: var stdin: input
+//               timeout: N)
+// param: und env: koennen mehrfach angegeben werden. timeout: N (Sekunden,
+// NUMBER) ueberschreibt defaultExecTimeout; N = -1 bedeutet kein Timeout
+// (context.Background() ohne Deadline). N = 0 oder N < -1 ist ein Fehler.
 //**********************************************************************
 
 package lib
@@ -42,6 +45,8 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   var envVars []string
   var stdinStr string
   var stdoutVar, stderrVar, exitcdVar string
+  timeout := defaultExecTimeout
+  noTimeout := false
 
   rest := args.Cdr
   for rest != nil && rest.Type == LIST {
@@ -92,6 +97,21 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       if val != nil {
         stdinStr = val.Val
       }
+    case "timeout:":
+      val, err := evalWithCtx(valueCell, env, ectx.child())
+      if err != nil {
+        return nil, fmt.Errorf("exec: %v", err)
+      }
+      if val == nil || val.Type != NUMBER {
+        return nil, fmt.Errorf("exec: timeout muss NUMBER sein")
+      }
+      if val.Num == -1 {
+        noTimeout = true
+      } else if val.Num <= 0 {
+        return nil, fmt.Errorf("exec: timeout muss > 0 oder -1 (unendlich) sein")
+      } else {
+        timeout = time.Duration(val.Num * float64(time.Second))
+      }
     case "stdout:", "stderr:", "exitcd:":
       if valueCell.Type != ATOM {
         return nil, fmt.Errorf("exec: %s erwartet Variablennamen", keyword)
@@ -112,7 +132,13 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     rest = rest.Cdr.Cdr
   }
 
-  ctx, cancel := context.WithTimeout(context.Background(), defaultExecTimeout)
+  var ctx context.Context
+  var cancel context.CancelFunc
+  if noTimeout {
+    ctx, cancel = context.WithCancel(context.Background())
+  } else {
+    ctx, cancel = context.WithTimeout(context.Background(), timeout)
+  }
   defer cancel()
 
   cmd := exec.CommandContext(ctx, program, params...)

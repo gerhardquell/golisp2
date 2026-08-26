@@ -12,6 +12,7 @@ package lib
 
 import (
   "testing"
+  "time"
 )
 
 func TestExecBasicStdout(t *testing.T) {
@@ -193,6 +194,97 @@ func TestExecEnvInvalidFormat(t *testing.T) {
   _, err := Eval(form, env)
   if err == nil {
     t.Fatalf("expected error for env without '='")
+  }
+}
+
+func TestExecTimeoutOverride(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("sleep"),
+    MakeAtom("param:"),
+    MakeStr("3"),
+    MakeAtom("timeout:"),
+    MakeNum(1),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  start := time.Now()
+  _, err := Eval(form, env)
+  elapsed := time.Since(start)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  if elapsed >= 3*time.Second {
+    t.Fatalf("expected kill around 1s (timeout: override), took %v", elapsed)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != -1 {
+    t.Fatalf("expected exit code -1 (timeout), got %v", cd)
+  }
+}
+
+func TestExecTimeoutInfinite(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("sleep"),
+    MakeAtom("param:"),
+    MakeStr("2"),
+    MakeAtom("timeout:"),
+    MakeNum(-1),
+    MakeAtom("exitcd:"),
+    MakeAtom("cd"),
+  )
+  _, err := Eval(form, env)
+  if err != nil {
+    t.Fatalf("exec failed: %v", err)
+  }
+  cd, _ := env.Get("cd")
+  if cd.Type != NUMBER || cd.Num != 0 {
+    t.Fatalf("expected exit code 0 (completed, not killed), got %v", cd)
+  }
+}
+
+func TestExecTimeoutInvalidZero(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("echo"),
+    MakeAtom("timeout:"),
+    MakeNum(0),
+  )
+  _, err := Eval(form, env)
+  if err == nil {
+    t.Fatalf("expected error for timeout: 0")
+  }
+}
+
+func TestExecTimeoutInvalidNegative(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("echo"),
+    MakeAtom("timeout:"),
+    MakeNum(-2),
+  )
+  _, err := Eval(form, env)
+  if err == nil {
+    t.Fatalf("expected error for timeout: -2")
+  }
+}
+
+func TestExecTimeoutNotNumber(t *testing.T) {
+  env := BaseEnv()
+  form := List(
+    MakeAtom("exec"),
+    MakeStr("echo"),
+    MakeAtom("timeout:"),
+    MakeStr("x"),
+  )
+  _, err := Eval(form, env)
+  if err == nil {
+    t.Fatalf("expected error for timeout: \"x\" (not NUMBER)")
   }
 }
 

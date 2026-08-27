@@ -51,4 +51,4 @@ tests/conformance/run.sh --gold   # Gold via clisp neu erzeugen — bewusste Akt
 Die 18 FAIL sind Semantik-Abweichungen in **existierenden** Features
 (u. a. `cond`-Einzelelement, `catch`-Semantik, `let`-Parallelität,
 `flet`-Parallelität, `setq`-Rückgabe/Multi-Paar, `dolist`/`dotimes`-Resultat).
-Details: `doc/cl-inventar.md`, Befundliste in TODO.md.
+Details: `docs/cl-inventar.md`, Befundliste in TODO.md.

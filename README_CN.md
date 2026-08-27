@@ -115,7 +115,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 ```bash
 git clone https://github.com/gerhardquell/golisp.git
 cd golisp2
-go build .
+go build ./src/
 ```
 
 ### 命令行使用

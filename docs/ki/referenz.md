@@ -4,7 +4,8 @@
 > zu schreiben/verstehen, ohne `rg` über 50 Dateien zu werfen.
 > **Format:** Tabellen, Präfixe, kein Fluff. Menschliche Ergänzung:
 > `docs/golisp2-cheatsheet.md`.
-> **Quelle:** `eval_core.go`, `lib/primitives.go`, `embed/stdlib.lisp` (Stand 20260730).
+> **Quelle:** `eval_core.go`, `primitives.go`, `embed/stdlib.lisp`,
+> generiert via `tools/gen-reference.lisp` (Stand 20260827).
 
 ---
 
@@ -18,29 +19,35 @@
    c. FUNC/LAMBDA                        → Args eval, apply
 ```
 
-Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
-`throw`, `tagbody/go`, ...) setzen `expr`/`env` und `continue` im Eval-Loop —
-**kein neuer Stack-Frame**. Tiefe Rekursion O(1) Stack.
+Tail-Calls (`if`, `begin`/`progn`/`locally`, `let`, `let*`, `cond`, `case`)
+setzen `expr`/`env` und `continue` im Eval-Loop — **kein neuer Stack-Frame**.
+Tiefe Rekursion O(1) Stack.
 
 ---
 
-## 2. Spezialformen (55) + 2 Stdlib-Makros (`dotimes`, `dolist`)
+## 2. Spezialformen (59 Case-Zweige, 61 Schlüsselwörter) + 2 Stdlib-Makros (`dotimes`, `dolist`)
+
+Gezählt direkt aus dem `switch expr.Car.Val` in `eval_core.go` (Stand
+20260827) — `begin`/`progn`/`locally` teilen sich einen Case-Zweig (3
+Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
 
 | Form | Semantik | Anmerkung |
 |------|----------|-----------|
 | `(quote x)` | `x` unausgewertet | `'x` reader-sugar |
 | `(if c t [e])` | Conditional | Tail-fähig |
-| `(begin . body)` | Sequenz | Tail; Multi-Body via `wrapBegin` |
-| `(let (bind) . body)` | Parallel-Bindung | `let*` sequentiell (Stdlib) |
+| `(begin . body)` | Sequenz | Tail; Aliase: `progn`, `locally`; Multi-Body via `wrapBegin` |
+| `(let (bind) . body)` | Parallel-Bindung | Tail-fähig |
+| `(let* (bind) . body)` | Sequentielle Bindung | Tail-fähig; **native Spezialform** (nicht Stdlib — jede Bindung sieht die vorherigen) |
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest` |
-| `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin` |
-| `(defmacro m (p) . body)` | Globale Makro | |
-| `(define sym val)` | Var-Def | Global oder lokal |
-| `(set! sym val)` | Update | `setq` Alias |
-| `(setq* s1 v1 s2 v2 ...)` | Sequentiell setzen | |
-| `(psetq s1 v1 s2 v2 ...)` | Parallel setzen | |
-| `(macrolet ((m . spec)) . body)` | Lokale Makro | Nicht-rekursiv |
-| `(symbol-macrolet ((s expansion) . body)` | Symbol-Macro | |
+| `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin`; **kein** `(define (f p) ...)`-Zucker |
+| `(defmacro m (p) . body)` | Globales Makro | |
+| `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
+| `(set! sym val)` | Ein Paar updaten | Legt neu an, falls ungebunden |
+| `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; legt neu an, falls ungebunden (Top-Level-Verhalten) |
+| `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen | Wie `setq`, eigener Case-Zweig |
+| `(psetq v1 val1 v2 val2 ...)` | Paralleles Setzen | Erst alle Werte auswerten, dann zuweisen |
+| `(macrolet ((m . spec)) . body)` | Lokales Makro | Nicht-rekursiv |
+| `(symbol-macrolet ((s expansion)) . body)` | Symbol-Macro | |
 | `(flet ((f . spec)) . body)` | Lokale Funktion | Nicht-rekursiv |
 | `(labels ((f . spec)) . body)` | Lokale Funktion | Rekursiv (gegenseitig) |
 | `(block name . body)` | Named-Block | Lexikalisch |
@@ -52,9 +59,9 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 | `(throw tag val)` | Dynamic-Throw | |
 | `(trap expr handler)` | Einfacher Catch | `(trap expr (lambda (e) ...))`, e = Msg-String |
 | `(unwind-protect protected cleanup)` | Cleanup immer | |
+| `(lock mutex . body)` | Kritischer Abschnitt | `mutex` aus `lock-make`; Body wie `begin` |
 | `(eval form)` | Globales Eval | Immer `Env.Root()` |
 | `(load "file")` | Datei laden | **Achtung:** in `defun` → lokal gebunden! |
-| `(progn . body)` | Sequenz | Tail |
 | `(prog1 first . rest)` | Ersten Wert returnen | |
 | `(prog2 a b . rest)` | b returnen | |
 | `(cond (test result) ...)` | Conditional | `else`/`t` = Default |
@@ -70,8 +77,6 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 | `(while test . body)` | Schleife | |
 | `(do ((var step) ...) (test result) . body)` | Scheme-Iteration | Parallel step |
 | `(do* ((var step) ...) (test result) . body)` | Scheme-Iteration | Sequentiell step |
-| `(dotimes (var n) . body)` | Zählschleife | Stdlib-Makro |
-| `(dolist (var lst) . body)` | Listeniteration | Stdlib-Makro |
 | `(multiple-value-list form)` | Werte→Liste | |
 | `(multiple-value-bind (vars) form . body)` | Werte binden | |
 | `(multiple-value-call fn . forms)` | Werte übergeben | |
@@ -79,15 +84,20 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 | `(multiple-value-setq vars form)` | Werte setzen | |
 | `(nth-value n form)` | n-ter Wert | |
 | `(function fn)` | Function-Literal | `#'` reader-sugar |
-| `(macroexpand form)` | Makro expandieren | |
-| `(macroexpand-all form)` | Komplett expandieren | |
-| `(bound? sym)` | Gebunden? | |
+| `(macroexpand form)` | Makro expandieren | Nicht-tail |
+| `(macroexpand-all form)` | Komplett expandieren | Nicht-tail |
+| `(bound? sym)` | Gebunden? | sym wird ausgewertet |
 | `(makunbound sym)` | Bindung entfernen | |
 | `(exec shell-cmd)` | Shell-Kommando | |
-| `(quasiquote x)` | Quasi-Quote | `` `x ``, `,x`=unquote,`,@x`=splice |
+| `(quasiquote x)` | Quasi-Quote | `` `x ``, `,x`=unquote, `,@x`=splice |
+| `(unquote x)` | nur in Quasiquote | Fehler außerhalb |
+| `(unquote-splice x)` | nur in Quasiquote | Fehler außerhalb |
 
-**Eval-Schlüsselwörter (Tail-Position):** `if`, `begin`, `let`, `cond`, `case`,
-`prog1`, `prog2`, `catch`, `throw`, `tagbody/go`, `block/return-from`, `do`.
+**Tail-Positionen** (setzen `expr`/`env`, `continue` im Loop): `if`,
+`begin`/`progn`/`locally`, `let`, `let*`, `cond`, `case`. Alle anderen
+Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
+(z. B. `catch`, `unwind-protect`, `do`/`do*` — kein TCO, aber
+`ectx.child()`-begrenzt).
 
 ---
 
@@ -100,7 +110,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 ### Listen (klassische 7)
 `car cdr cons atom null list append`
 `atom? null? string? number? list? symbol?` — Typ-Prädikate
-`mapcar` — Primitiv (first-class: `funcall`/`apply` ok)
+`mapcar sort` — Primitiv (first-class: `funcall`/`apply` ok)
 
 ### Symbol/Atom
 `gensym intern symbol-name symbol->string`
@@ -113,7 +123,8 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 `exit` — Prozess sofort beenden, Code als Zahl (kein Cleanup!)
 
 ### Environment/Introspection
-`memstats sleep`
+`memstats sleep env-symbols` — `(env-symbols)` liefert alle Root-Env-Namen
+sortiert (Basis von `tools/gen-reference.lisp`)
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo-models sigo-host`
@@ -121,7 +132,7 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system file-stat shell-assoc`
-- **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains`
+- **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find`
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
   - Rundung: half-to-even (Go-`strconv`), nicht half-up wie C — `%.2f` von `2.25` → `"2.2"`
@@ -129,6 +140,11 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 - **GenAlg:** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **Redefine:** `redefine-policy redef-log redef-log-clear defined-in`
 - **Trace:** `trace untrace trace?`
+- **defsystem-lite:** `defsystem load-system unload-system loaded-systems system-symbols`
+- **Web-Bridge (golisp2web):** `http-serve http-static http-stop http-port http-upload http-wait webserv ws-call ws-clients ws-emit ws-emit-to ws-eval ws-export ws-unexport browser-open`
+- **Condition-lite:** `define-condition signal handler-case documentation` (siehe Abschnitt 7)
+
+Vollständige, generierte Liste (kein Ausschnitt): `docs/referenz-generiert.md`.
 
 ---
 
@@ -146,6 +162,10 @@ Tail-Calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 ### Makros
 `when unless let* dotimes dolist push pop defvar setf defstruct defgeneric defmethod`
+
+**Achtung:** `let*` steht hier nur als CL-Gewohnheits-Anker — die
+tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
+(`src/embed/stdlib.lisp` definiert sie absichtlich **nicht**).
 
 ### Iteratoren
 `dotimes (var n) body` — `(dotimes (i 10) ...)`
@@ -238,6 +258,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `the` | Typ ignoriert | Type-Checks |
 | `(eval form)` | Global | Global (ok) |
 | `macrolet` | Nicht-rekursiv | Rekursiv |
+| `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
 
 ---
 
@@ -274,9 +295,9 @@ kennen, um nicht zu raten:
 
 ### 10.6 `eq` auf Zahlen liefert immer `()`
 - `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
-- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in `lib/types.go`)
+- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in `types.go`)
   zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem bewusst als nie
-  identisch (`fnEqPtr` in `lib/primitives.go`).
+  identisch (`fnEqPtr` in `primitives.go`).
 - Immer `equal?` oder `=` für Zahlenvergleich, nie `eq`.
 
 ### 10.7 Makros nicht-rekursiv (macrolet)
@@ -304,23 +325,30 @@ kennen, um nicht zu raten:
 - Iteration nur über `dolist`, `dotimes`, `do`, `do*`, `mapcar`, `reduce`.
 - Kein `loop`-Makro, kein `series`, kein `iterate`.
 
+### 10.13 Kein Function-Definitions-Zucker bei `define`
+- `(define name value)` ist die einzige Syntax — `(define (f p) body)` ist
+  ein Syntaxfehler, nicht Sugar für `defun`.
+- Funktionen immer über `defun` oder `(define name (lambda (p) body))`.
+
 ---
 
 ## 11. Dateistruktur (KI-Scan)
 
 ```
-lib/
-  types*.go          Cell-Datenstruktur
-  reader.go          Read / ReadAll
-  env.go             Env (RWMutex, Pool)
-  eval_core.go       Eval-Trampolin + Spezialformen-Dispatch
-  eval_*.go          Spezialformen, Lambda, Control, Quasiquote
-  primitives.go      BaseEnv() — alle Go-Primitiven
-  *.go               goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
-  stdlib.go          //go:embed stdlib.lisp
-  format*.go         CL-HyperSpec 22.3
-  trace.go           trace/untrace
-main.go              CLI
+src/
+  lib/
+    types*.go          Cell-Datenstruktur
+    reader.go          Read / ReadAll
+    env.go             Env (RWMutex, Pool)
+    eval_core.go       Eval-Trampolin + Spezialformen-Dispatch
+    eval_*.go          Spezialformen, Lambda, Control, Quasiquote
+    primitives.go      BaseEnv() — alle Go-Primitiven
+    *.go               goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
+    stdlib.go          //go:embed stdlib.lisp
+    format*.go         CL-HyperSpec 22.3
+    trace.go           trace/untrace
+  embed/               //go:embed Assets (stdlib.lisp, condition.lisp, ...)
+  main.go              CLI
 ```
 
 ---
@@ -341,9 +369,12 @@ main.go              CLI
 | Datei | `file-read file-write` |
 | DB | `pg-connect pg-query` |
 | KI | `sigo` |
+| Web-Bridge | `http-serve webserv ws-emit` |
 | Debug | `trace` |
+| Alle Symbole | `(env-symbols)` bzw. `docs/referenz-generiert.md` |
 
 ---
 
 **Ende KI-Referenz.** Menschliche Version: `docs/golisp2-cheatsheet.md`.
+Vollständige generierte Funktionsreferenz: `docs/referenz-generiert.md`.
 English: `docs/ki/referenz_en.md` · 中文: `docs/ki/referenz_cn.md`.

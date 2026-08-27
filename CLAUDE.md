@@ -253,7 +253,7 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 | `doc/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `lib/sigorest.go` arbeitest |
 | `doc/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
 | `doc/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
-| `perfTodo.md` | Offene Performance-Arbeit | du optimierst |
+| `todos/PerfTODO.md` | Offene Performance-Arbeit | du optimierst |
 
 ### Was es bewusst *nicht* gibt
 

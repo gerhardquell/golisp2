@@ -56,7 +56,7 @@ Im Zweifel: `rg` statt raten.
 - **Kommentare:** sparsam — sprechende Namen bevorzugt
 - **Datei-Header:** Autor, CoAutor, Copyright, Erstellt (YYYYMMDD)
 - **Fehler:** `fmt.Errorf("funktionsname: beschreibung")`
-- **Build:** immer `./build.sh` (baut alle drei Binaries nach `./build/`)
+- **Build:** immer `./build.sh` (baut beide Binaries nach `./build/`)
 - **tmp:** `./tmp/` verwenden — **nicht** `/tmp` !
 - **Dateigröße:** Richtwert 800, hart bei 1000 Zeilen.
   *Bewusste Projektausnahme zur globalen 300/500-Regel:* Kohäsion schlägt
@@ -256,6 +256,8 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 | `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
 | `docs/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
 | `docs/referenz-generiert.md` | Vollständige Funktionsreferenz, generiert aus `(env-symbols)` | du eine konkrete Funktion nachschlägst |
+| `docs/golisp2-cheatsheet.md` | Cheatsheet + Semantik-Überblick (Mensch-Referenz); KI-Version: `docs/ki/referenz.md` | du Sprachsemantik kompakt nachschlägst |
+| `docs/golisp2-fehler.md` | Fehler- und Fallstrick-Archiv mit Status | du nach bekannten Stolperfallen suchst |
 | `todos/PerfTODO.md` | Offene Performance-Arbeit | du optimierst |
 
 ### Was es bewusst *nicht* gibt

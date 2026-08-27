@@ -2,8 +2,8 @@
 
 > **Ziel:** Ausführliche Referenz für Menschen, die GoLisp2-Code schreiben oder
 > verstehen wollen. Kompakte KI-Version: `docs/ki/referenz.md`.
-> **Stand:** 20260725 · **Quelle:** `eval_core.go`, `lib/primitives.go`,
-> `embed/stdlib.lisp`, `docs/lisp-semantik.md`.
+> **Stand:** 20260827 · **Quelle:** `src/lib/eval_core.go`,
+> `src/lib/primitives.go`, `src/embed/stdlib.lisp`, `docs/lisp-semantik.md`.
 
 ---
 
@@ -51,7 +51,7 @@ Tail-Rekursion.
 
 ## 2. Spezialformen
 
-GoLisp2 hat **55 Spezialformen** (alle in `lib/eval_core.go` dispatchend) —
+GoLisp2 hat **55 Spezialformen** (alle in `src/lib/eval_core.go` dispatchend) —
 plus `dotimes` und `dolist` als Stdlib-Makros.
 Wichtige:
 
@@ -148,7 +148,7 @@ Wichtige:
 (multiple-value-list (values 1 2 3))  ; → (1 2 3)
 (multiple-value-bind (a b c) (values 1 2 3)
   (+ a b c))                      ; → 6
-(multiple-value-call #'+ (values 1 2)) (values 3 4)  ; → 10
+(multiple-value-call #'+ (values 1 2) (values 3 4))  ; → 10
 (multiple-value-prog1 (values 1 2) (print "side"))     ; → 1, dann side-effect
 (multiple-value-setq (a b) (values 1 2))               ; a=1, b=2
 (nth-value 1 (values 10 20 30))   ; → 20 (0-basiert)
@@ -165,7 +165,8 @@ Wichtige:
 (makunbound sym)                  ; Bindung entfernen
 (function fn)                     ; Function-Literal (#' reader-sugar)
 (exec "shell-cmd")                ; Shell-Kommando ausführen
-(parfunc expr :timeout 5)         ; Parallel-Eval mit Timeout
+(parfunc ergebnis e1 e2 ...)      ; Fork-Join-Parallel-Eval (kein :timeout!)
+(documentation 'f 'function)      ; Docstring (nur Lisp-Definitionen)
 ```
 
 ### Quasiquote
@@ -180,8 +181,8 @@ Wichtige:
 
 ## 3. Primitiven
 
-GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
-`BaseEnv()` (`lib/primitives.go`).
+GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
+`BaseEnv()` (`src/lib/primitives.go`). Vollständige Liste: `(env-symbols)`.
 
 ### Arithmetik
 ```lisp
@@ -193,6 +194,7 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 (remainder 10 3)                  ; = mod
 (abs -5)                          ; → 5
 (floor 3.7)                       ; → 3
+(sqrt 16)                         ; → 4 (math.Sqrt, exakt)
 (random)                          ; → Zufallszahl [0,1)
 (values 1 2 3)                    ; Multi-Values
 ```
@@ -262,6 +264,7 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 ```lisp
 (sleep 1000)                      ; Milliseconds
 (memstats)                        ; Go-Runtime-Stats
+(get-universal-time)              ; Sekunden seit 1900-01-01 (CL)
 ```
 
 ### sigoREST (KI-Anbindung)
@@ -360,8 +363,8 @@ GoLisp2 hat **~100 eingebauten Funktionen** (Type `FUNC`), registriert in
 ### Hashtable (CL-kompatibel)
 ```lisp
 (define h (make-hash-table))
-(puthash 'key "val" h)
-(gethash 'key h)                  ; → "val"
+(puthash 'key h "val")            ; (puthash key TABELLE wert) — Tabelle 2.!
+(gethash 'key h)                  ; → "val"; als MV: (wert gefunden?)
 (remhash 'key h)
 (clrhash h)
 (hash-table-count h)              ; → Anzahl
@@ -417,11 +420,24 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 (untrace '+)                      ; Deaktivieren
 ```
 
+### Web-Bridge (Browser-Integration)
+```lisp
+(define s (webserv :port 8090 :html "<h1>Hi</h1>"))  ; 1 Aufruf: Server+Browser
+(ws-export s "echo" (lambda (c text) (string-append "Echo: " text)))
+(ws-emit s 'tick 42)              ; Push an alle Clients
+(http-upload s "/up" (lambda (name content) ...))  ; POST-Dateiupload
+(http-wait s)                     ; blockiert bis http-stop
+(http-stop s)
+; Bausteine einzeln: http-serve (:host, :tls), http-static, http-port,
+; browser-open, ws-call (Server ruft JS im Browser, blockierend)
+```
+
 ---
 
-## 4. Stdlib (embed/stdlib.lisp)
+## 4. Stdlib (src/embed/)
 
-**~50 Definitionen**, bei Start automatisch geladen.
+**~110 Definitionen** (stdlib.lisp 85 + condition.lisp 10 + defsystem.lisp 14),
+bei Start automatisch geladen.
 
 ### Accessoren
 ```lisp
@@ -463,13 +479,14 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 (square 5)                        ; → 25
 (expt 2 10)                       ; → 1024
 (gcd 12 8)                        ; → 4
+(sort '(3 1 2) <)                 ; → (1 2 3) — Prädikat ist Lisp-Fn
 ```
 
 ### Funktor-Muster
 ```lisp
 (identity 5)                      ; → 5
 (constantly 42)                   ; → (lambda (args) 42)
-(complement odd?)                 ; → even?
+(complement null)                 ; → Negation von null
 (compose car cdr)                 ; → cadr
 ```
 
@@ -501,6 +518,17 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 (defvar v 2)                      ; Erstzugriff gewinnt (idempotent)
 
 (setf (car x) 42)                 ; Generisch, defstruct registriert automatisch
+(incf x) (decf x)                 ; setf-Kurzformen (+1/-1)
+```
+
+### Systeme (defsystem)
+```lisp
+(defsystem mein-system
+  (:depends-on utils)             ; topologisch, mit Zyklenerkennung
+  (:components "teil1.lisp" "teil2.lisp"))
+(load-system 'mein-system)        ; idempotent
+(unload-system 'mein-system)
+(loaded-systems)                  ; geladene Systeme
 ```
 
 ### Strukturen
@@ -529,7 +557,7 @@ t                                  ; Wahr
 
 ### Gleichheit
 ```lisp
-(eq 'foo 'foo)                     ; → ()! Zwei verschiedene Atom-Instanzen
+(eq 'foo 'foo)                     ; → t (Symbole interniert, Pointer-identisch)
 (eq (list) (list))                 ; → t (Singleton-Nil, identischer Pointer)
 (eq 5 5)                           ; → ()! eq auf Zahlen ist immer () (Design, s. 10.6)
 
@@ -660,7 +688,6 @@ wenn Pointer-Identität *explizit* gemeint ist.
 | `the` | Typ ignoriert | Type-Checks zur Laufzeit |
 | `(macrolet ...)` | Nicht-rekursiv | Rekursiv |
 | `(eval form)` | Global (ok) | Global — identisch |
-| `(eq 'foo 'foo)` | `()` (zwei Instanzen) | `t` (interned) |
 
 ### Wichtigster Gotcha: load in defun
 ```lisp
@@ -692,16 +719,20 @@ kein CL-Port).
 **Auswirkung:** Bei großen Projekten mit mehreren Entwicklern/Modulen
 können Namenskonflikte entstehen. Workaround: Prefix-Konvention.
 
-### 10.2 Kein CLOS (Common Lisp Object System)
+### 10.2 CLOS-light statt vollem CLOS
 
-- Nur `defstruct` — erzeugt Constructor (`make-pt`), Accessoren (`pt-x`), Prädikat (`pt?`).
-- **Nicht vorhanden:** Klassen, Multi-Methoden, Method-Combination, `defmethod`, `defgeneric`, `defclass`, `call-method`.
+- `defstruct` — erzeugt Constructor (`make-pt`), Accessoren (`pt-x`), Prädikat (`pt?`).
+- `defgeneric`/`defmethod` — Single-Dispatch auf Struct-Tag (siehe §3
+  „CLOS-light"), `(eql wert)`-Specializer möglich.
+- **Nicht vorhanden:** Vererbung, `call-next-method`, `:before`/`:after`,
+  Method-Combination, `defclass`, Multi-Methoden, MOP.
 
-**Auswirkung:** Polymorphismus nur über manuelle Dispatch-Muster (z. B. `case` auf Typ-Tag) möglich.
+**Auswirkung:** Polymorphismus über generische Funktionen ja — aber ohne
+Klassen-Hierarchien; Dispatch allein auf Struct-Tag.
 
 ### 10.3 Nur Condition-lite, kein volles CL-Condition-System
 
-- **Vorhanden** (`embed/condition.lisp`, automatisch geladen):
+- **Vorhanden** (`src/embed/condition.lisp`, automatisch geladen):
   `define-condition` (Typ-Hierarchie, Slots, Reader automatisch `typ-slot`),
   `signal`, `handler-case` (Vererbungs-Dispatch, Re-Signal bei Nicht-Match).
   Go-Fehler werden zur `lisp-error`-Condition (`lisp-error-msg`).
@@ -743,8 +774,8 @@ interpretiert.
 
 - `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
 - Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in
-  `lib/types.go`) zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem
-  bewusst als nie identisch (`fnEqPtr` in `lib/primitives.go`).
+  `src/lib/types.go`) zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem
+  bewusst als nie identisch (`fnEqPtr` in `src/lib/primitives.go`).
 
 **Auswirkung:** Immer `equal?` oder `=` für Zahlenvergleich verwenden, nie `eq`.
 
@@ -802,7 +833,7 @@ ausgedrückt werden.
 |-------------|-------|
 | Zwei Zahlen addieren | `(+ 1 2)` |
 | Liste durchlaufen | `(dolist (x xs) ...)`, `(mapcar f xs)` |
-| Parallel auswerten | `(parfunc expr :timeout 5)` |
+| Parallel auswerten | `(parfunc ergebnis e1 e2 ...)` |
 | Fehler werfen | `(error "msg")` |
 | Fehler fangen | `(trap expr (lambda (e) ...))` |
 | Dynamisch springen | `(catch 'tag ... (throw 'tag val))` |
@@ -817,6 +848,8 @@ ausgedrückt werden.
 | Lokal binden | `(let ((x 1)) ...)` |
 | Iterieren (CL-style) | `(do ((i 0 (+ i 1))) ((= i 10) result) body...)` |
 | Debug-Trace | `(trace 'f)`, `(untrace 'f)` |
+| Browser-GUI | `(webserv :port 8090 :html "...")` + `ws-export` |
+| Datei-Upload (Browser) | `(http-upload s "/up" handler)` |
 
 ---
 

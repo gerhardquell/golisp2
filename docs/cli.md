@@ -74,7 +74,7 @@ EOF
 
 ---
 
-## REPL (`golisp2 -i`, `lib/readline.go`)
+## REPL (`golisp2 -i`, `src/lib/readline.go`)
 
 - **Start:** `./build/golisp2 -i` — benötigt ein TTY; im Skript/CI kommt eine
   Fehlermeldung

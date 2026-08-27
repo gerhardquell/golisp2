@@ -73,7 +73,7 @@ Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
 | `(and . exprs)` | Kurzschluss | |
 | `(or . exprs)` | Kurzschluss | |
 | `(not x)` | Negation | |
-| `(parfunc expr . opts)` | Parallel-Eval | `:timeout N`, `:workers N` |
+| `(parfunc ergebnis . exprs)` | Fork-Join-Parallel-Eval | kein :timeout/:workers — Keywords werden als Zweige evaluiert |
 | `(while test . body)` | Schleife | |
 | `(do ((var step) ...) (test result) . body)` | Scheme-Iteration | Parallel step |
 | `(do* ((var step) ...) (test result) . body)` | Scheme-Iteration | Sequentiell step |

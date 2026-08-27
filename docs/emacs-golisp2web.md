@@ -3,7 +3,7 @@
 Ein laufender `golisp2 --swank`-Prozess ist derselbe Prozess, der auch
 `webserv`/`http-serve` bedient — SWANK bringt kein eigenes, eingeschränktes
 Environment mit (`lib.BaseEnv()` + `LoadStdlib`, identisch zum CLI, siehe
-`lib/swank/server.go`). Alles, was im REPL geht, geht auch aus Emacs: die
+`src/lib/swank/server.go`). Alles, was im REPL geht, geht auch aus Emacs: die
 Web-Bridge starten, golisp2web (der PySide6-GUI-Client, eigenes Repo
 `golisp2web/`) als externen Prozess anstoßen, live gegen ihn entwickeln,
 ihn wieder fernbeenden. Für die SWANK-Verbindung selbst siehe `docs/swank.md`
@@ -45,7 +45,7 @@ nicht aus einer Skript-Datei.
 Der eigentliche Reiz: golisp2web offen lassen und Handler **während der
 Sitzung** neu definieren — kein Neustart von golisp2web nötig, der Browser-
 Tab bleibt verbunden (Live-Image-Idee der Web-Bridge, siehe Kommentar in
-`lib/wsbridge.go` zu `ws-export`).
+`src/lib/wsbridge.go` zu `ws-export`).
 
 ```lisp
 (ws-export s "echo" (lambda (c text) (string-append "Echo: " text)))
@@ -88,7 +88,7 @@ Demo-Skripte — das `parfunc`-Muster aus `tests/golisp2web-test.lisp`
 
 `parfunc` ist Fork-Join: alle drei Zweige teilen sich denselben Frame-Env
 (`set!` darauf ist ausdrücklich unterstützt und mit `-race` verifiziert,
-siehe `lib/env.go`) und `parfunc` kehrt erst zurück, wenn alle drei fertig
+siehe `src/lib/env.go`) und `parfunc` kehrt erst zurück, wenn alle drei fertig
 sind. Zweig 2 startet golisp2web *blockierend* über `system` — solange,
 bis Zweig 3 per `ws-emit ... "golisp2web-quit"` das Fernbeenden auslöst
 (die Konvention aus `golisp2web/lib/quitBridge.py`, siehe `docs/
@@ -104,8 +104,8 @@ schließen — ohne einen einzigen Klick.
 
 - SWANK-Env == CLI-Env: kein separates, abgespecktes Environment für
   Emacs-Verbindungen.
-- `system`/`exec` sind normale Primitiven (`lib/shellcmd.go`,
-  `lib/eval_exec.go`) — golisp2web ist für golisp2 einfach ein externer
+- `system`/`exec` sind normale Primitiven (`src/lib/shellcmd.go`,
+  `src/lib/eval_exec.go`) — golisp2web ist für golisp2 einfach ein externer
   Prozess, kein Sonderweg.
 - Die Web-Bridge (`ws-export`/`ws-emit`/`ws-clients`) kennt ihre Aufrufer
   nicht — ob die aus einer geladenen Datei, einem `-e`-Aufruf oder einem

@@ -14,9 +14,10 @@ hat. Kompass bei Unklarheiten ist die Common-Lisp-Semantik.
 
 ```lisp
 ;; eq prüft, ob es DASSELBE Objekt ist
-(eq 'foo 'foo)                 ; ()  – zwei verschiedene Atom-Instanzen
+(eq 'foo 'foo)                 ; t   – Symbole sind interniert (eine Cell pro Name)
 (eq (list) (list))             ; t   – Singleton-Nil, identischer Pointer
-(eq 5 5)                       ; ()  – jede Zahl ist eine neue Cell
+(eq 5 5)                       ; ()  – Zahlen bewusst nie identisch (s. u.)
+(eq "a" "a")                   ; ()  – Strings werden nicht interniert
 
 ;; equal? prüft, ob der Inhalt gleich ist
 (equal? 'foo 'foo)             ; t
@@ -69,6 +70,69 @@ x                      ; → 10
 
 ---
 
+## `setf` und Places
+
+`setf` (Stdlib-Makro) schreibt an eine *Place* — generalisierte Variable.
+Unterstützte Places:
+
+```lisp
+(setf x 42)                        ; Variable
+(define l (list 1 2))
+(setf (car l) 9)                   ; → l = (9 2)
+(defstruct pt (x 0))
+(define p (make-pt :x 1))
+(setf (pt-x p) 9)                  ; Struct-Slot (von defstruct registriert)
+(define h (make-hash-table))
+(setf (gethash 'k h) 7)            ; Hash-Eintrag (Expansion: puthash)
+```
+
+`incf`/`decf` sind setf-Kurzformen (`(incf x)` = `(setf x (+ x 1))`).
+Neue Places registriert `defstruct` automatisch — manuell geht es nicht.
+
+---
+
+## Multiple Values
+
+`(values a b c)` produziert mehrere Werte; `floor` ist eine MV-liefernde
+Primitive. Die Regel „Nicht-MV-Kontexte sehen nur den Primärwert" lebt
+genau einmal in `Primary()` (`src/lib/types.go`):
+
+```lisp
+(+ 1 (values 2 3))                  ; → 3   (nur Primärwert 2)
+(multiple-value-list (values 1 2 3)); → (1 2 3)
+(multiple-value-list (floor 7 2))   ; → (3 1)
+(nth-value 1 (values 10 20))        ; → 20  (0-basiert)
+(multiple-value-bind (a b) (values 1 2)
+  (+ a b))                          ; → 3
+(multiple-value-setq (a b) (values 1 2))  ; a=1, b=2
+```
+
+Wie in CL sehen `apply`/`funcall` nur den Primärwert — auf alle Werte kommt
+man über `multiple-value-call`:
+`(multiple-value-call #'+ (values 1 2) (values 3 4))` → `10`.
+
+---
+
+## Hash-Tables: `gethash` liefert zwei Werte
+
+`gethash` ist MV-liefernd: `(values wert gefunden?)`. Das unterscheidet
+„Key fehlt" von „Key ist auf () gebunden":
+
+```lisp
+(define h (make-hash-table))
+(puthash 'k h 5)              ; Achtung: (puthash key TABELLE wert) —
+                              ; Tabelle ist das ZWEITE Argument
+(gethash 'k h)                ; → 5 (nur Primärwert sichtbar)
+(multiple-value-list (gethash 'k h))   ; → (5 t)
+(multiple-value-list (gethash 'x h))   ; → (() ())
+(remhash 'k h)
+(clrhash h)
+```
+
+`puthash` ist die setf-Expansion von `(gethash key h)`.
+
+---
+
 ## `case` – syntaktischer Zucker für `cond`
 
 ```lisp
@@ -105,7 +169,7 @@ Zwei getrennte Mechanismen, leicht zu verwechseln:
   unverändert durch — es fängt nur echte Fehler.
 
 Kurz: **Fehler → `trap`. Nicht-lokaler Sprung ohne Fehler → `catch`/`throw`.**
-Quelle: `lib/eval_control.go` (`evalCatch`, `evalThrow`, `evalTrap`).
+Quelle: `src/lib/eval_control.go` (`evalCatch`, `evalThrow`, `evalTrap`).
 
 ---
 
@@ -159,7 +223,7 @@ stdout.
 ## FORMAT
 
 `format` folgt Common-Lisp-HyperSpec 22.3.
-Implementierung: `lib/format.go`, `format_dirs.go`, `format_blocks.go`.
+Implementierung: `src/lib/format.go`, `format_dirs.go`, `format_blocks.go`.
 
 **Direktiven:**
 `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~ ~Newline`
@@ -228,7 +292,9 @@ Einschränkungen:
 ## Rekursionstiefe und `parfunc`
 
 - `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.
-- `parfunc` mit `:timeout N` bricht laufende Worker über `context.Context` ab. Worker, die trotzdem rekursiv tiefer gehen, stoßen vorher an `MaxEvalDepth`.
+- `parfunc` kennt **keine** Keywords: `(parfunc erg e1 e2 ...)` wertet *alle*
+  weiteren Formen als parallele Zweige aus — ein `:timeout` wird als Zweig
+  evaluiert, nicht als Option. Absicherung gegen Endlos-Zweige: `MaxEvalDepth`.
 
 ---
 

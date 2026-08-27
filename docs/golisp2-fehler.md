@@ -26,7 +26,7 @@ Fehlerfänger. Tatsächlich crasht das — `catch` fängt nur `throw`-Sentinels,
 keine errors.
 **Korrektur:** CLAUDE.md-Abschnitt „Fehlermodell" auf `(trap ...)` umgestellt
 + Warnung ergänzt. Memory-Eintrag `golisp2-catch-vs-trap-fehlermodell.md`.
-**Wahrheit (Quelle `lib/eval_control.go`):**
+**Wahrheit (Quelle `src/lib/eval_control.go`):**
 - `catch`/`throw` = CL-dynamischer Kontrollsprung `(catch tag body...)` /
   `(throw tag wert)` — fängt **nur** `*throwValue`, keine errors.
 - `trap` = error-handler `(trap body handler)` — Handler kriegt Fehler-String,

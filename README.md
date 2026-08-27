@@ -73,7 +73,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Full UTF-8 support**: Unicode strings throughout
 
 ### Server Mode (`golisp2 --swank`)
-- **SWANK-like TCP Server**: S-Expression-RPC for IDE integration
+- **SWANK TCP Server**: echtes SWANK-Protokoll (`:emacs-rex`) für IDE-Integration
 - **Persistent environment**: Shared state across client connections
 - **Protocol methods**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
 - **Client REPL**: Interactive REPL via `golisp2-client --repl`
@@ -86,7 +86,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **`ws-emit`**: server-push events to all (or one) connected client
 - **`ws-call`**: server calls into the browser (arbitrary JS) and blocks for the result — reentrant-safe even from within the calling client's own handler
 - **Per-request goroutines**: one client's slow AI call never blocks another client
-- **`lib/embed/boot.js`**: tiny client bootstrap (`golisp.call`, `golisp.on`, auto-reconnect), served at `/_golisp/boot.js`
+- **`src/lib/embed/boot.js`**: tiny client bootstrap (`golisp.call`, `golisp.on`, auto-reconnect), served at `/_golisp/boot.js`
 
 One call, single-file page (epub3-style, HTML/CSS inline), browser opens automatically:
 
@@ -162,7 +162,8 @@ EOF
 
 ### Server Mode (`golisp2 --swank` + `golisp2-client`)
 
-GoLisp can run as a TCP server with a SWANK-like S-Expression-RPC protocol:
+GoLisp can run as a TCP server speaking the real SWANK protocol
+(length-prefixed `:emacs-rex` RPC — kein Custom-Protokoll):
 
 ```bash
 # Terminal 1: Start the server
@@ -189,7 +190,7 @@ golisp2> :quit
 - Shared environment across all client connections
 - Autocomplete for IDE integration
 - Multiline expression support in REPL
-- S-Expression-RPC protocol (localhost:4321 default)
+- SWANK protocol (localhost:4321 default)
 
 **Environment Variables:**
 - `GOLISP_HOST` - Server bind address (default: localhost)

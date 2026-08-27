@@ -7,7 +7,7 @@ Host:     http://127.0.0.1:9080 (Default)
 Endpoint: POST /v1/chat/completions
 ```
 
-Implementierung: `lib/sigorest.go` — Primitiven `sigo`, `sigo-models`, `sigo-host`.
+Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo-models`, `sigo-host`.
 
 ## Konfiguration (Umgebungsvariablen)
 
@@ -41,7 +41,7 @@ falsch. Die einzige Wahrheit:
 **Achtung — Name+Alias-Paarung (TODO.md, 20260813):** `(sigo-models)` kann
 für dasselbe Modell zwei aufeinanderfolgende Einträge liefern (voller Name +
 Kurz-Alias), z. B. `"gemini-3.1-flash-lite-image" "gem31-fltimg" ...`.
-`fnSigoModels` (`lib/sigorest.go`) gibt 1:1 weiter, was der externe
+`fnSigoModels` (`src/lib/sigorest.go`) gibt 1:1 weiter, was der externe
 sigoREST-Dienst unter `/v1/models` liefert — die Paarung entsteht dort, nicht
 in golisp2, ein Fix gehört ins sigoREST-Projekt. Wer z. B. "die ersten N
 Modelle" nehmen will (`(take 3 (sigo-models))`), bekommt sonst dasselbe

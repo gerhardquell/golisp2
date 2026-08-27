@@ -1,9 +1,9 @@
 # GoLisp2 – SWANK-Server & Client
 
-`lib/swank/` implementiert das **echte SWANK-Protokoll** (length-prefixed
+`src/lib/swank/` implementiert das **echte SWANK-Protokoll** (length-prefixed
 `:emacs-rex`-RPC). `M-x slime-connect` aus Emacs funktioniert damit direkt.
 
-`golisp2 --swank host:port` startet den Server (`lib/swank/server.go` →
+`golisp2 --swank host:port` startet den Server (`src/lib/swank/server.go` →
 `swank.RunServer`). Es gibt kein separates Custom-RPC. Der `golisp2-client`
 spricht ebenfalls SWANK.
 
@@ -25,11 +25,11 @@ Status: 2026-06-21 getestet mit SLIME v2.32.
 
 | Datei | Aufgabe |
 |-------|---------|
-| `lib/swank/server.go` | TCP-Listener, per-Connection `bufio.Reader`, Env-Setup |
-| `lib/swank/framing.go` | Framing `%06x<sexpr>` — `readFrame` nimmt einen persistenten `*bufio.Reader` (pipelining-safe) |
-| `lib/swank/dispatch.go` | ruft `(swank-dispatch (quote msg))` auf |
-| `lib/swank/env.go` | per-Connection Primitiven: `swank-send-event`, `swank-print`, `swank-println`, `swank--value-string` |
-| `lib/swank/swank.lisp` | semantische Handler auf Lisp-Seite (via `//go:embed`) |
+| `src/lib/swank/server.go` | TCP-Listener, per-Connection `bufio.Reader`, Env-Setup |
+| `src/lib/swank/framing.go` | Framing `%06x<sexpr>` — `readFrame` nimmt einen persistenten `*bufio.Reader` (pipelining-safe) |
+| `src/lib/swank/dispatch.go` | ruft `(swank-dispatch (quote msg))` auf |
+| `src/lib/swank/env.go` | per-Connection Primitiven: `swank-send-event`, `swank-print`, `swank-println`, `swank--value-string` |
+| `src/embed/swank.lisp` | semantische Handler auf Lisp-Seite (via `//go:embed`) |
 
 Hybrid-Design: Transport in Go, Semantik in Lisp.
 

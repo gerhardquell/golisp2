@@ -9,7 +9,7 @@ manuelles Memory-Management.
 - **Kein Object-Pooling:** keine `sync.Pool` o. ä.
 - **Zirkuläre Referenzen:** Go's GC erkennt Zyklen (Lambdas, `labels`)
 - **Singleton-Nil:** `MakeNil()` gibt immer dieselbe Instanz zurück
-- **Small-Int-Cache:** kleine Ganzzahlen werden wiederverwendet (`lib/types.go`)
+- **Small-Int-Cache:** kleine Ganzzahlen werden wiederverwendet (`src/lib/types.go`)
 
 ## Singleton-Nil
 

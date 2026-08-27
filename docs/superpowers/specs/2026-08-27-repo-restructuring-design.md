@@ -46,11 +46,11 @@ Wochen alt und wird durch dieses Vorhaben ersetzt statt neu erfunden.
 ```
 src/            main.go, main_test.go, cmd/, lib/ (84 Dateien + swank/), embed/
 docs/           Merge von doc/+docs/, doc/ki/ → docs/ki/
-unused/         experiment/, images/, libs/, pn-gps1/, tools/gen-training/, doc/files.zip
+unused/         experiment/, images/, libs/, tools/gen-training/, doc/files.zip
 Root bleibt:    CLAUDE.md, README.md, README_CN.md, BESCHREIBUNG.md, LICENSE,
                 TODO.md, go.mod, go.sum, build.sh, zeitstempel.txt, build/,
                 examples/, tests/, todos/, tutorial/, public/, chinese/,
-                extern/ (Symlink), golisp2web/ (fremdes Git-Repo)
+                pn-gps1/, extern/ (Symlink), golisp2web/ (fremdes Git-Repo)
 ```
 
 ### Cleanup-Tabelle (Begründung)
@@ -62,7 +62,7 @@ Root bleibt:    CLAUDE.md, README.md, README_CN.md, BESCHREIBUNG.md, LICENSE,
 | `experiment/` | keine Referenz | `unused/` |
 | `images/` (1,4M) | keine Referenz mehr in README* | `unused/` |
 | `libs/` | nur in einer alten Retrospektive erwähnt, Duplikat-Verdacht zu `lib/` | `unused/` |
-| `pn-gps1/` | Gerhards Nebenprojekt, kein Bezug zum golisp2-Kern | `unused/` |
+| `pn-gps1/` | **Korrektur (Task-1-Review, 2026-08-27):** ursprünglich fälschlich als "kein Bezug zum golisp2-Kern" eingestuft. Tatsächlich referenziert von `main.go:103,105` (`-t`-Testsuite) und `lib/swank/gps_bug_test.go` (`TestSwankSurvivesNorvigBugs`). Gerhards Ruling: bleibt am Root. | bleibt |
 | `tools/gen-training/` | nur in Retrospektive erwähnt | `unused/` |
 | `doc/files.zip` | Backup-Zip identischer Docs vom 13.07., redundant | `unused/` |
 

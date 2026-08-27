@@ -1,8 +1,10 @@
-# GoLisp 🦎
+# GoLisp2 🦎
+
+🇩🇪 [Deutsch](README.md) · 🇬🇧 [English](README_en.md) · 🇨🇳 中文
 
 > *用 Go 语言实现的现代 Lisp 解释器，原生 AI 集成 — 能够自我扩展的代码。*
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
 
@@ -38,6 +40,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **卫生宏系统**：`defmacro` 配合 `gensym` 实现安全的代码生成
 - **准引用支持**：`` ` `` `,` `,@` 模板编程
 - **结构化错误处理**：`error` 和 `trap`（类似 CL 的条件处理器）
+- **外部程序执行**：`exec` 直接运行程序（不经过 shell），捕获 stdout、stderr 和退出码
 
 ### 高级功能
 - **Scheme 风格 `do`**：支持并行步骤求值的迭代器
@@ -72,7 +75,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **完整 UTF-8 支持**：全 Unicode 字符串支持
 
 ### 服务器模式 (`golisp2 --swank`)
-- **SWANK 风格 TCP 服务器**：S-表达式 RPC 协议，支持 IDE 集成
+- **SWANK TCP 服务器**：真正的 SWANK 协议（`:emacs-rex`），支持 IDE 集成
 - **持久化环境**：客户端连接间共享状态
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
 - **客户端 REPL**：通过 `golisp2-client --repl` 使用交互式 REPL
@@ -81,11 +84,13 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **面向浏览器的 Swank 式活镜像**：`http-serve` + WebSocket RPC，双向通信
 - **`webserv`**：一次调用完成引导 —— 服务器 + HTML 内容（内联或文件，每次请求都重新读取）+ 自动注入 boot.js + 自动打开浏览器，全部一个原语搞定
 - **静态文件服务**：`http-static` 挂载目录，不支持目录列表
+- **文件上传**：`http-upload` 注册 POST 上传处理器（`(lambda (name content) ...)`）
 - **`ws-export`**：将 Lisp lambda 暴露为浏览器可调用的操作 —— 连接期间可**热替换**，无需重连
 - **`ws-emit`**：服务器向所有（或单个）已连接客户端推送事件
 - **`ws-call`**：服务器调用浏览器端任意 JS 并阻塞等待结果 —— 即使在调用方自身的处理器内重入调用也安全
 - **每请求一个 goroutine**：某客户端的慢速 AI 调用不会阻塞其他客户端
-- **`lib/embed/boot.js`**：轻量客户端引导脚本（`golisp.call`、`golisp.on`、自动重连），通过 `/_golisp/boot.js` 提供
+- **`:host` / `:tls`**：绑定到 LAN 接口，提供 HTTPS 服务
+- **`src/lib/embed/boot.js`**：轻量客户端引导脚本（`golisp.call`、`golisp.on`、自动重连），通过 `/_golisp/boot.js` 提供
 
 一次调用，单文件页面（epub3 风格，HTML/CSS 内联），浏览器自动打开：
 
@@ -115,7 +120,14 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 ```bash
 git clone https://github.com/gerhardquell/golisp.git
 cd golisp2
-go build ./src/
+./build.sh
+```
+
+二进制文件生成在 `./build/`。手动构建：
+
+```bash
+go build -o build/golisp2 ./src/
+go build -o build/golisp2-client ./src/cmd/golisp2-client/
 ```
 
 ### 命令行使用
@@ -126,7 +138,7 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 |------|---------|-------------|
 | **标准输入（默认）** | `echo "(+ 1 2)" \| ./build/golisp2` | 从标准输入读取，仅输出结果 |
 | **交互模式** | `./build/golisp2 -i` | 带语法高亮的 REPL 环境 |
-| **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行单个表达式 |
+| **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行一个或多个表达式；单个形式打印结果，多个形式抑制最终结果 |
 | **脚本模式** | `./build/golisp2 script.lisp` | 运行 Lisp 脚本文件 |
 | **测试模式** | `./build/golisp2 -t` | 运行内置测试套件 |
 
@@ -152,7 +164,7 @@ EOF
 
 ### 服务器模式 (`golisp2 --swank` + `golisp2-client`)
 
-GoLisp 可以作为 TCP 服务器运行，支持类似 SWANK 的 S-表达式 RPC 协议：
+GoLisp 可以作为 TCP 服务器运行，使用真正的 SWANK 协议（长度前缀 `:emacs-rex` RPC — 非自定义协议）：
 
 ```bash
 # 终端 1：启动服务器
@@ -179,7 +191,7 @@ golisp2> :quit
 - 所有客户端连接共享同一环境
 - 支持 IDE 集成的自动补全
 - REPL 支持多行表达式
-- S-表达式 RPC 协议（默认 localhost:4321）
+- SWANK 协议（默认 localhost:4321）
 
 **环境变量：**
 - `GOLISP_HOST` - 服务器绑定地址（默认：localhost）
@@ -305,7 +317,7 @@ GoLisp 由 **Gerhard Quell**（67 岁）历经 4 次会话构建而成，**Claud
   (+ 100 23)
   (string-length "你好, 世界!"))
 
-results  ; => (42 123 6)
+results  ; => (42 123 7)
 
 ; 通道通信
 (define ch (chan-make))
@@ -381,7 +393,7 @@ golisp2 使用 `trap`（类似 CL 的条件处理器）来捕获错误。`catch`
   (/ 1 0)  ; 此处会出错
   (lambda (e)
     (println "捕获错误:" e)))
-; => "捕获错误: /: 除数为 0"
+; => "捕获错误: /: Division durch 0"
 
 ; ignore-errors：简写形式，出错时返回 ()，而不是处理器的返回值
 (ignore-errors (/ 1 0))
@@ -394,6 +406,32 @@ golisp2 使用 `trap`（类似 CL 的条件处理器）来捕获错误。`catch`
   "never reached")
 ; => 5
 ```
+
+### 运行外部程序
+
+```lisp
+; 直接运行程序（不经过 shell）并捕获输出
+(exec "echo" param: "hello" stdout: out exitcd: cd)
+out   ; => "hello\n"
+cd    ; => 0
+
+; 多个参数、stderr 和非零退出码
+(exec "sh" param: "-c" param: "echo err >&2; exit 1"
+      stdout: out stderr: err exitcd: cd)
+err   ; => "err\n"
+cd    ; => 1     ; 非零退出码不是 Lisp 错误
+
+; 向程序提供 stdin
+(exec "cat" stdin: "hello world" stdout: out exitcd: cd)
+out   ; => "hello world"
+
+; 技术性失败（程序未找到、超时）返回 nil 并将 exitcd 置为 -1
+(exec "/no/such/program" stdout: out exitcd: cd)
+; => nil
+cd   ; => -1
+```
+
+默认超时：60 秒。
 
 ---
 
@@ -465,6 +503,7 @@ my-project/
 | `eval` | 动态求值 |
 | `trap` | 错误处理（类似 CL 的条件处理器） |
 | `catch`、`throw` | 基于标签的非局部跳转（CL） |
+| `exec` | 运行外部程序，捕获 stdout/stderr/退出码 |
 | `parfunc` | 并行执行 |
 | `block`、`return-from` | 非局部退出 |
 | `flet`、`labels` | 局部函数 |
@@ -488,7 +527,7 @@ my-project/
 | **AI** | `sigo`、`sigo-models`、`sigo-host` |
 | **遗传算法** | `ga-create`、`ga-init`、`ga-cross`、`ga-calc`、`ga-select`、`ga-result`、`ga-mut`、`ga-print`、`ga?` |
 | **PostgreSQL** | `pg-connect`、`pg-query`、`pg-exec`、`pg-close` |
-| **Web 桥接** | `webserv`、`http-serve`、`http-static`、`http-port`、`http-wait`、`http-stop`、`browser-open`、`ws-export`、`ws-unexport`、`ws-emit`、`ws-emit-to`、`ws-eval`、`ws-call`、`ws-clients` |
+| **Web 桥接** | `webserv`、`http-serve`、`http-static`、`http-upload`、`http-port`、`http-wait`、`http-stop`、`browser-open`、`ws-export`、`ws-unexport`、`ws-emit`、`ws-emit-to`、`ws-eval`、`ws-call`、`ws-clients` |
 | **元编程** | `gensym`、`macroexpand`、`error`、`documentation` |
 
 ---
@@ -529,7 +568,8 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 
 ## 📚 文档
 
-- [`README.md`](README.md) — 英文项目说明
+- [`README.md`](README.md) — 德文项目说明
+- [`README_en.md`](README_en.md) — 英文项目说明
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — 完整语言参考（德文）
 - [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — 开发历程与见解
 - [`CLAUDE.md`](CLAUDE.md) — 项目规范与架构
@@ -538,7 +578,7 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 
 ## 🔧 系统要求
 
-- Go 1.21 或更高版本
+- Go 1.26 或更高版本
 - 可选：sigoREST 服务器（用于 AI 功能）
 - 可选：PostgreSQL（用于数据库功能）
 

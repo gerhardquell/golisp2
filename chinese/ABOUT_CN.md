@@ -90,10 +90,11 @@ GoLisp 可以使用 AI 编写自己的代码：
 
 | 文件 | 语言 | 说明 |
 |------|------|------|
-| `README.md` | 英文 | 主要项目文档 |
+| `README.md` | 德文 | 主要项目文档（德文） |
+| `README_en.md` | 英文 | 英文项目说明 |
 | `README_CN.md` | 中文 | 完整中文翻译 |
 | `BESCHREIBUNG.md` | 德文 | 完整语言参考 |
-| `CLAUDE.md` | 英文 | 项目规范和架构 |
+| `CLAUDE.md` | 德文 | 项目规范和架构 |
 | `chinese/ABOUT.md` | 英文 | 面向中文开发者的介绍（本文档的英文版） |
 | `chinese/ABOUT_CN.md` | 中文 | 本文档 |
 

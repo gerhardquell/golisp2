@@ -85,10 +85,11 @@ Parallel AI ensemble (the "Six Thinking Hats" pattern):
 
 | File | Language | Description |
 |------|----------|-------------|
-| `README.md` | English | Main project documentation |
+| `README.md` | Deutsch | Main project documentation (German) |
+| `README_en.md` | English | English project description |
 | `README_CN.md` | 中文 | Full Chinese translation |
 | `BESCHREIBUNG.md` | Deutsch | Complete language reference |
-| `CLAUDE.md` | English | Project conventions and architecture |
+| `CLAUDE.md` | Deutsch | Project conventions and architecture |
 | `chinese/ABOUT.md` | English | This file – introduction for Chinese developers |
 | `chinese/ABOUT_CN.md` | 中文 | 本文档的中文版本 |
 

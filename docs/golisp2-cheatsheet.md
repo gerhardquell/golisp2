@@ -1,9 +1,9 @@
 # GoLisp2 — Cheatsheet + Semantik-Überblick (Mensch-Referenz)
 
 > **Ziel:** Ausführliche Referenz für Menschen, die GoLisp2-Code schreiben oder
-> verstehen wollen. Kompakte KI-Version: `doc/ki/referenz.md`.
+> verstehen wollen. Kompakte KI-Version: `docs/ki/referenz.md`.
 > **Stand:** 20260725 · **Quelle:** `eval_core.go`, `lib/primitives.go`,
-> `embed/stdlib.lisp`, `doc/lisp-semantik.md`.
+> `embed/stdlib.lisp`, `docs/lisp-semantik.md`.
 
 ---
 
@@ -820,4 +820,4 @@ ausgedrückt werden.
 
 ---
 
-**Ende Cheatsheet.** KI-Version: `doc/ki/referenz.md`.
+**Ende Cheatsheet.** KI-Version: `docs/ki/referenz.md`.

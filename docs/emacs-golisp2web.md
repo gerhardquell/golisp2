@@ -6,7 +6,7 @@ Environment mit (`lib.BaseEnv()` + `LoadStdlib`, identisch zum CLI, siehe
 `lib/swank/server.go`). Alles, was im REPL geht, geht auch aus Emacs: die
 Web-Bridge starten, golisp2web (der PySide6-GUI-Client, eigenes Repo
 `golisp2web/`) als externen Prozess anstoßen, live gegen ihn entwickeln,
-ihn wieder fernbeenden. Für die SWANK-Verbindung selbst siehe `doc/swank.md`
+ihn wieder fernbeenden. Für die SWANK-Verbindung selbst siehe `docs/swank.md`
 — hier geht es nur um das, was man **danach** im REPL damit anstellen kann.
 
 ## Voraussetzung

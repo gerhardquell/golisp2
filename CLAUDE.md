@@ -8,7 +8,7 @@ als eingebaute Lisp-Primitiven beherrscht.
 **Modul:** `golisp2` · **Sprache (Kommentare/Doku):** deutsch
 
 > Diese Datei ist ein **Briefing**, kein Handbuch. Hier steht nur, was du
-> nicht aus dem Code ableiten kannst. Alles andere: `doc/` (siehe unten).
+> nicht aus dem Code ableiten kannst. Alles andere: `docs/` (siehe unten).
 > Wenn hier etwas dem Code widerspricht, gewinnt der Code — und die Datei
 > gehört korrigiert.
 
@@ -35,7 +35,7 @@ lib/
 ```
 
 
-Vollständige Datei-für-Datei-Beschreibung: `doc/struktur.md`.
+Vollständige Datei-für-Datei-Beschreibung: `docs/struktur.md`.
 Im Zweifel: `rg` statt raten.
 
 ---
@@ -114,7 +114,7 @@ Das gefährlichste Duplikat ist keine Go-Datei. Es ist ein `define` in
   `warn`): Go-Primitiven (FUNC) immer, Lisp-Definitionen (LAMBDA/MACRO) bei
   fremder Quelle — Reload derselben Datei bleibt still. Alle Redefinitionen
   landen im Ringpuffer, abfragbar via `(redef-log)`. `(makunbound 'sym)`
-  entfernt eine Root-Bindung. Details: `doc/lisp-semantik.md`.
+  entfernt eine Root-Bindung. Details: `docs/lisp-semantik.md`.
 - **Deshalb: `rg` muss `*.lisp` einschließen.** Eine Suche nur über `*.go`
   findet die halbe Wahrheit.
 - **Spezialformen werden vor Makros geprüft** (siehe Eval-Reihenfolge). Ein
@@ -246,13 +246,13 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 
 | Datei | Inhalt | Lies das, wenn … |
 |-------|--------|------------------|
-| `doc/struktur.md` | Datei-für-Datei-Beschreibung von `lib/` | du dich neu orientierst |
-| `doc/cli.md` | Flags, Exit-Codes, Multiline-stdin, `exec`-Syntax | du an `main.go` arbeitest |
-| `doc/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `lib/swank/` arbeitest |
-| `doc/emacs-golisp2web.md` | golisp2web aus dem SLIME-REPL starten/steuern, `parfunc`+`system`-Muster, Beispiele | du golisp2web aus Emacs heraus benutzen willst |
-| `doc/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `lib/sigorest.go` arbeitest |
-| `doc/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
-| `doc/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
+| `docs/struktur.md` | Datei-für-Datei-Beschreibung von `lib/` | du dich neu orientierst |
+| `docs/cli.md` | Flags, Exit-Codes, Multiline-stdin, `exec`-Syntax | du an `main.go` arbeitest |
+| `docs/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `lib/swank/` arbeitest |
+| `docs/emacs-golisp2web.md` | golisp2web aus dem SLIME-REPL starten/steuern, `parfunc`+`system`-Muster, Beispiele | du golisp2web aus Emacs heraus benutzen willst |
+| `docs/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `lib/sigorest.go` arbeitest |
+| `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
+| `docs/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
 | `todos/PerfTODO.md` | Offene Performance-Arbeit | du optimierst |
 
 ### Was es bewusst *nicht* gibt

@@ -181,7 +181,7 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
       3 type
       3 substitute
 
-> Vollständige Liste: `tmp/fehlt-klassen.txt` (wird nach `doc/` überführt,
+> Vollständige Liste: `tmp/fehlt-klassen.txt` (wird nach `docs/` überführt,
 > sobald Schritt 2 die Prioritäten fixiert).
 > Faustregel Funktionen: reine Listen-/Zahlen-Operationen → Lisp-Schicht;
 > Typen/Arrays/Streams/Reader-intern → Go-Primitiv.

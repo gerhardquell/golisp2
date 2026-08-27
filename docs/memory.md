@@ -25,7 +25,7 @@ Jetzt teilen sich alle dieselbe `nilCell`-Instanz.
 **Thread-Sicherheit:** sicher für `parfunc` — die Singleton-Nil wird nur
 gelesen, nie modifiziert. Wer das ändert, bricht die Nebenläufigkeit.
 
-Konsequenz für Vergleiche: siehe `doc/lisp-semantik.md` (`eq` vs. `equal?`).
+Konsequenz für Vergleiche: siehe `docs/lisp-semantik.md` (`eq` vs. `equal?`).
 
 ## `(memstats)`
 

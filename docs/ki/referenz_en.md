@@ -3,7 +3,7 @@
 > **Purpose:** Give other AIs this file as *initial context* to write/understand
 > GoLisp2 code without running `rg` across 50 files.
 > **Format:** tables, prefixes, no fluff. Human companion:
-> `doc/golisp2-cheatsheet.md` (German).
+> `docs/golisp2-cheatsheet.md` (German).
 > **Source:** `eval_core.go`, `lib/primitives.go`, `embed/stdlib.lisp` (as of 20260730).
 
 ---
@@ -345,5 +345,5 @@ main.go              CLI
 
 ---
 
-**End of AI reference.** Human version (German): `doc/golisp2-cheatsheet.md`.
-German version: `doc/ki/referenz.md`. Chinese version: `doc/ki/referenz_cn.md`.
+**End of AI reference.** Human version (German): `docs/golisp2-cheatsheet.md`.
+German version: `docs/ki/referenz.md`. Chinese version: `docs/ki/referenz_cn.md`.

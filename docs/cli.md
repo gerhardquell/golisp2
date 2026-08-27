@@ -85,7 +85,7 @@ EOF
 - **Library:** `github.com/elk-language/go-prompt`
 
 Der REPL des *Clients* (`golisp2-client --repl`) ist etwas anderes und läuft
-über SWANK — siehe `doc/swank.md`.
+über SWANK — siehe `docs/swank.md`.
 
 ---
 

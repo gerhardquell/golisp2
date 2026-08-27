@@ -3,7 +3,7 @@
 > **目标：** 让其他 AI 将此文件作为*初始上下文*，无需对 50 个文件运行 `rg`
 > 即可编写/理解 GoLisp2 代码。
 > **格式：** 表格、前缀、无废话。人类版本（德语）：
-> `doc/golisp2-cheatsheet.md`。
+> `docs/golisp2-cheatsheet.md`。
 > **来源：** `eval_core.go`、`lib/primitives.go`、`embed/stdlib.lisp`（截至 20260730）。
 
 ---
@@ -343,5 +343,5 @@ main.go              CLI
 
 ---
 
-**AI 参考结束。** 人类版本（德语）：`doc/golisp2-cheatsheet.md`。
-德语版本：`doc/ki/referenz.md`。英语版本：`doc/ki/referenz_en.md`。
+**AI 参考结束。** 人类版本（德语）：`docs/golisp2-cheatsheet.md`。
+德语版本：`docs/ki/referenz.md`。英语版本：`docs/ki/referenz_en.md`。

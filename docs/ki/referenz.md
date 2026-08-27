@@ -3,7 +3,7 @@
 > **Ziel:** Andere KIs brauchen diese Datei als *Initial-Context*, um GoLisp2-Code
 > zu schreiben/verstehen, ohne `rg` über 50 Dateien zu werfen.
 > **Format:** Tabellen, Präfixe, kein Fluff. Menschliche Ergänzung:
-> `doc/golisp2-cheatsheet.md`.
+> `docs/golisp2-cheatsheet.md`.
 > **Quelle:** `eval_core.go`, `lib/primitives.go`, `embed/stdlib.lisp` (Stand 20260730).
 
 ---
@@ -345,5 +345,5 @@ main.go              CLI
 
 ---
 
-**Ende KI-Referenz.** Menschliche Version: `doc/golisp2-cheatsheet.md`.
-English: `doc/ki/referenz_en.md` · 中文: `doc/ki/referenz_cn.md`.
+**Ende KI-Referenz.** Menschliche Version: `docs/golisp2-cheatsheet.md`.
+English: `docs/ki/referenz_en.md` · 中文: `docs/ki/referenz_cn.md`.

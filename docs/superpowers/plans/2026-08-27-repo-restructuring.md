@@ -553,15 +553,19 @@ go test ./src/lib/ -run TestEnvSymbols -v
 
 Erwartung: PASS.
 
-- [ ] **Step 5: Vollen Testlauf gegen Regressionen prüfen**
+- [ ] **Step 5: Vollen Testlauf gegen Regressionen prüfen, Binary neu bauen**
 
 ```bash
 go build ./...
 go test ./... -count=1
+./build.sh
 ```
 
 Erwartung: keine Regressionen (sortierte Ausgabe von `env-symbols`
-beeinflusst kein bestehendes Verhalten, da neues Symbol).
+beeinflusst kein bestehendes Verhalten, da neues Symbol). `./build.sh` ist
+hier zwingend — Task 5 ruft `./build/golisp2 tools/gen-reference.lisp`
+auf und braucht dafür ein Binary, das `(env-symbols)` bereits enthält;
+ohne Neubau liefe dort noch das alte Binary vom Worktree-Baseline-Build.
 
 - [ ] **Step 6: Commit**
 

@@ -1,0 +1,14 @@
+# Aufgaben 20260827-1
+
+/brainstorming
+
+Ich habe begonnen das golisp2 zu überarbeiten, 
+
+lese ./docs/superpowers/plans/2026-08-27-repo-restructuring.md
+
+Stelle fest, welche Arbeiten/Tasks erledigt sind und bearbeite dann den
+Rest.
+
+## Testen
+Überprüfe alle Arbeiten, erstelle neue builds und führe alle Tests durch.
+

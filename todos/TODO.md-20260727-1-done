@@ -1,0 +1,29 @@
+# Aufgaben 20260827-1
+
+/brainstorming
+
+
+
+Ich möchte das Verzeichnis golisp2 überarbeiten. 
+
+## Ungenutzte Dateien entfernen
+Bitte überprüfe die Dateien und Verzeichnisse die älter sind, vor Aug 2026,
+ob sie noch erforderlich sind. Wenn sie nicht mehr erforderlich sind, verschiebe sie in ein Verzeichnis /unused, welches du anlegen kannst. 
+
+## Zusammenführen
+Die Verzeichnisse doc und docs sollen Dokumente enthalten. Ich möchte beide
+in ./docs zusammenführen. 
+
+## Source-Verzeichnis
+Die Quellcodes sollen in einem ./src - Verzeichnis untergebracht sein. Wenn es nicht vorhanden ist, lege es an.
+
+## Erstelle eine Dokumentation
+Erstelle eine Dokumentation für Menschen:
+- alle golisp2 - Standard-Lisp-Funktionen
+- alle golisp2 - Erweiterungen: postgresql, parfunc, ga, exec, sigo, ...
+
+Erstelle eine kompakte Dokumentation für KIs, claude-code 
+
+## Testen
+Überprüfe alle Arbeiten, erstelle neue builds und führe alle Tests durch.
+

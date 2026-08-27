@@ -107,6 +107,7 @@
 
   <script>
     window.golisp.ready.then(function () {
+
       document.getElementById('greetBtn').onclick = function () {
         var name = document.getElementById('nameInput').value;
         golisp.call('greet', name).then(function (msg) {

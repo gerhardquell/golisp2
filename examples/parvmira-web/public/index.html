@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>PARVMIRA - NEXORA</title>
+<meta name="author" content="Gerhard Quell">
+<meta name="keywords" content="PARVMIRA, PMI, Entscheidung, NEXORA">
+<link rel="stylesheet" href="parvmira.css">
+</head>
+<body>
+
+<h1>PARVMIRA-Entscheidungsmodell <span class="projekt">(NEXORA)</span></h1>
+
+<div class="block">
+  <label for="vorgabe">Vorgabe:</label><br>
+  <textarea id="vorgabe" rows="3" placeholder="Entscheidung/Vorgabe eingeben..."></textarea><br>
+  <button id="btnVorgabeSetzen">Vorgabe setzen (neue Entscheidung)</button>
+</div>
+
+<div class="block">
+  <h2>Ensemble-Konfiguration</h2>
+  <div class="ensemble-spalten">
+    <div>
+      <b>Modelle:</b>
+      <div id="modelleListe" class="checkbox-liste">&nbsp;</div>
+    </div>
+    <div>
+      <b>Persönlichkeiten:</b>
+      <div id="persoenlichkeitenListe" class="checkbox-liste">
+        <label><input type="checkbox" value="optimist" checked> optimist</label>
+        <label><input type="checkbox" value="pessimist" checked> pessimist</label>
+        <label><input type="checkbox" value="stoiker" checked> stoiker</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="kategorien">
+
+  <div class="kategorie-block" id="block-plus">
+    <h2>Plus</h2>
+    <ul class="punkte-liste" id="liste-plus"></ul>
+    <div class="hinzufuegen-form">
+      <input type="text" class="feld-kurz" placeholder="Kurzbezeichnung" maxlength="60">
+      <input type="text" class="feld-beschr" placeholder="Beschreibung" maxlength="300">
+      <input type="text" class="feld-name" placeholder="Name" maxlength="40">
+      <button class="btnHinzufuegen">Hinzufügen</button>
+    </div>
+    <button class="btnKiAbrufen">KI-Ensemble abrufen</button>
+  </div>
+
+  <div class="kategorie-block" id="block-minus">
+    <h2>Minus</h2>
+    <ul class="punkte-liste" id="liste-minus"></ul>
+    <div class="hinzufuegen-form">
+      <input type="text" class="feld-kurz" placeholder="Kurzbezeichnung" maxlength="60">
+      <input type="text" class="feld-beschr" placeholder="Beschreibung" maxlength="300">
+      <input type="text" class="feld-name" placeholder="Name" maxlength="40">
+      <button class="btnHinzufuegen">Hinzufügen</button>
+    </div>
+    <button class="btnKiAbrufen">KI-Ensemble abrufen</button>
+  </div>
+
+  <div class="kategorie-block" id="block-interessant">
+    <h2>Interessant</h2>
+    <ul class="punkte-liste" id="liste-interessant"></ul>
+    <div class="hinzufuegen-form">
+      <input type="text" class="feld-kurz" placeholder="Kurzbezeichnung" maxlength="60">
+      <input type="text" class="feld-beschr" placeholder="Beschreibung" maxlength="300">
+      <input type="text" class="feld-name" placeholder="Name" maxlength="40">
+      <button class="btnHinzufuegen">Hinzufügen</button>
+    </div>
+    <button class="btnKiAbrufen">KI-Ensemble abrufen</button>
+  </div>
+
+</div>
+
+<div class="block">
+  <button id="btnSpeichern">Speichern</button>
+  <div id="statuszeile" class="hinweis">&nbsp;</div>
+</div>
+
+<p class="hinweis">&copy; 2026 Gerhard Quell</p>
+
+<script src="/_golisp/boot.js"></script>
+<script src="parvmira.js"></script>
+</body>
+</html>

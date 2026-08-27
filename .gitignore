@@ -46,3 +46,6 @@ certs/
 # versehentliches `git add .` hat sie einmal als konfigurationslosen
 # Gitlink (Modus 160000) committet — ohne .gitmodules unauflösbar.
 .claude/worktrees/
+
+# Eigenstaendiges Git-Repo (Python/Qt Web-Bridge), nie als Gitlink committen
+golisp2web/

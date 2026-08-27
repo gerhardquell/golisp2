@@ -42,9 +42,9 @@ Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
 | `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin`; **kein** `(define (f p) ...)`-Zucker |
 | `(defmacro m (p) . body)` | Globales Makro | |
 | `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
-| `(set! sym val)` | Ein Paar updaten | Legt neu an, falls ungebunden |
+| `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
 | `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; legt neu an, falls ungebunden (Top-Level-Verhalten) |
-| `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen | Wie `setq`, eigener Case-Zweig |
+| `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen, legt neu an falls ungebunden | **Rückgabe:** letztes **Symbol** (nicht dessen Wert) — anders als `setq`, das den letzten **Wert** liefert |
 | `(psetq v1 val1 v2 val2 ...)` | Paralleles Setzen | Erst alle Werte auswerten, dann zuweisen |
 | `(macrolet ((m . spec)) . body)` | Lokales Makro | Nicht-rekursiv |
 | `(symbol-macrolet ((s expansion)) . body)` | Symbol-Macro | |

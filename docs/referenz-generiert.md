@@ -1,6 +1,6 @@
 # GoLisp2 — Generierte Funktionsreferenz
 
-> Automatisch erzeugt aus `(env-symbols)` — nicht von Hand editieren.
+> Automatisch erzeugt aus `(env-symbols)`. Die Beschreibung-Spalte ist bewusst leer (Grundgerüst) und kann von Hand ergänzt werden — ACHTUNG: dieses Skript überschreibt die Datei komplett bei jedem Lauf, von Hand ergänzte Beschreibungen gehen dabei verloren.
 > Neu generieren: `./build/golisp2 tools/gen-reference.lisp`
 
 | Symbol | Beschreibung |

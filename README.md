@@ -122,8 +122,8 @@ cd golisp2
 Binaries land in `./build/`. For manual builds:
 
 ```bash
-go build -o build/golisp2 .
-go build -o build/golisp2-client ./cmd/golisp2-client/
+go build -o build/golisp2 ./src/
+go build -o build/golisp2-client ./src/cmd/golisp2-client/
 ```
 
 ### CLI Usage

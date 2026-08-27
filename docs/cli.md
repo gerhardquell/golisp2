@@ -53,7 +53,7 @@ Shebang direkt ausgeführt, z. B. `./skript.lisp`) — dort bleibt stdin
 unberührt und mit dem Terminal verbunden.
 
 - **NICHT** im Default-stdin-Modus (kein Datei-Argument): `runStdin` in
-  `main.go` liest bereits vor der Auswertung das komplette stdin via
+  `src/main.go` liest bereits vor der Auswertung das komplette stdin via
   `io.ReadAll(os.Stdin)` als Programmquelle ein — `(read-line)` trifft dort
   zur Laufzeit auf EOF.
 - **NICHT** über `--swank`: kein Reverse-RPC zum Client, Emacs/SLIME leitet

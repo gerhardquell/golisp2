@@ -52,7 +52,7 @@ Der REPL `*slime-repl USER*` öffnet sich. Definitionen halten, Rekursion klappt
 
 ## Client (`golisp2-client`)
 
-`cmd/golisp2-client/main.go`, nutzt `golisp2/lib` für robuste Cell-Verarbeitung.
+`src/cmd/golisp2-client/main.go`, nutzt `golisp2/src/lib` für robuste Cell-Verarbeitung.
 
 | Client-Flag | SWANK-Op | Antwort |
 |-------------|----------|---------|

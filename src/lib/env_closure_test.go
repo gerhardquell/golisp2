@@ -232,7 +232,7 @@ func TestClosureScopeUnaffectedForms(t *testing.T) {
 // evalWithCtx abfangbar — der Fall muss deshalb in einem Subprozess
 // laufen, sonst reißt er die ganze Suite mit.
 func TestClosureScopeNoStackOverflow(t *testing.T) {
-  bin, err := filepath.Abs("../build/golisp2")
+  bin, err := filepath.Abs("../../build/golisp2")
   if err != nil {
     t.Fatalf("abs: %v", err)
   }

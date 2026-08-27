@@ -1,8 +1,8 @@
 # GoLisp2 – Sprachreferenz
 
 GoLisp2 ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung.
-Alle Features sind im interaktiven REPL (`go run .`) und in Skript-Dateien
-(`go run . skript.lisp`) verfügbar.
+Alle Features sind im interaktiven REPL (`go run ./src`) und in Skript-Dateien
+(`go run ./src skript.lisp`) verfügbar.
 
 ---
 
@@ -273,9 +273,9 @@ und thread-sicher sein (keine Mutation geteilter Variablen).
 ## REPL
 
 ```bash
-go run .              # REPL starten
-go run . skript.lisp  # Skript ausführen
-go run . -t           # Testmodus
+go run ./src              # REPL starten
+go run ./src skript.lisp  # Skript ausführen
+go run ./src -t           # Testmodus
 ```
 
 | Feature | Beschreibung |

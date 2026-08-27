@@ -1,5 +1,5 @@
 <!--
-  golisp2-tutorial.md
+  golisp-tutorial.md
   Autor    : Gerhard Quell - gquell@skequell.de
   CoAutor  : claude sonnet 4.6
   Copyright: 2026 Gerhard Quell - SKEQuell
@@ -9,6 +9,8 @@
 # GoLisp – Tutorial
 
 Dieses Dokument beschreibt die öffentlichen Funktionen, Spezialformen und Makros von GoLisp mit kurzen, lauffähigen Beispielen. Dateioperationen nutzen immer das Projekt-temp-Verzeichnis `./tmp`. Funktionen, die externe Dienste benötigen (sigo, PostgreSQL), enthalten beschreibende Beispiele.
+
+Stand: 20260827 — inklusive Hash-Tables, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Shared Memory, Trace.
 
 ## Spezialformen
 
@@ -62,12 +64,14 @@ Alias für define – bindet einen Wert an einen Namen.
 
 **Syntax:** `(defun name (parameter ...) body ...)`
 
-Definiert eine benannte Funktion. Mehrere Body-Ausdrücke werden implizit in begin gewrappt.
+Definiert eine benannte Funktion. Mehrere Body-Ausdrücke werden implizit in begin gewrappt. Ein String-Literal direkt nach der Parameterliste ist ein Docstring (abfragbar via `documentation`), wenn danach noch eine Form folgt.
 
 ```lisp
 (defun quadrat (x) (* x x))
 (quadrat 7)
-(defun add (a b) (print a) (+ a b))
+(defun add (a b) "addiert" (print a) (+ a b))
+(documentation 'add 'function)
+; => "addiert"
 ```
 
 ### lambda
@@ -108,11 +112,12 @@ Bindet Variablen sequentiell – jede Bindung sieht die vorherigen.
 
 **Syntax:** `(begin ausdruck ...)`
 
-Wertet Ausdrücke nacheinander aus und gibt das Ergebnis des letzten zurück.
+Wertet Ausdrücke nacheinander aus und gibt das Ergebnis des letzten zurück. `progn` und `locally` sind Aliase.
 
 ```lisp
 (begin (print 1) (print 2) 3)
 (begin (define x 1) (set! x 2) x)
+(progn 1 2 3)
 ```
 
 ### set!
@@ -160,6 +165,17 @@ Expandiert Makros einmal auf Top-Level und gibt das Ergebnis zurück.
 (macroexpand (doppelt 5))
 ```
 
+### macroexpand-1
+
+**Syntax:** `(macroexpand-1 form)`
+
+Wie macroexpand – expandiert einen Expansionsschritt.
+
+```lisp
+(macroexpand-1 '(when t 1))
+; => (if t (begin 1) ())
+```
+
 ### macroexpand-all
 
 **Syntax:** `(macroexpand-all form)`
@@ -172,12 +188,15 @@ Expandiert Makros rekursiv in allen Subformen.
 
 ### function
 
-**Syntax:** `(function ausdruck)`
+**Syntax:** `(function f)  bzw.  #'f`
 
-Wertet den übergebenen Ausdruck aus und gibt seinen Wert zurück.
+Liefert die Funktion hinter dem Symbol als Wert — nötig, um Funktionen als Argumente zu übergeben. `#'` ist die Reader-Abkürzung.
 
 ```lisp
-(function +)
+(funcall (function +) 1 2)
+; => 3
+(mapcar #'car '((1 2) (3 4)))
+; => (1 3)
 ```
 
 ### flet
@@ -218,17 +237,6 @@ Verlässt den benannten Block nicht-lokal und liefert den optionalen Wert.
 
 ```lisp
 (block outer (return-from outer 99) 'unten)
-```
-
-### mapcar
-
-**Syntax:** `(mapcar funktion liste)`
-
-Wendet eine Funktion auf jedes Element einer Liste an und liefert die Ergebnisliste.
-
-```lisp
-(mapcar (lambda (x) (* x x)) '(1 2 3))
-(mapcar atom? '(1 (2 3) "a"))
 ```
 
 ### load
@@ -337,7 +345,7 @@ Wie quote, erlaubt aber unquote (,x) und unquote-splice (,@x) innerhalb.
 
 **Syntax:** `(eval ausdruck)`
 
-Wertet einen bereits ausgewerteten Ausdruck nochmals im globalen Environment aus.
+Wertet einen bereits ausgewerteten Ausdruck nochmals im globalen Environment aus (Common-Lisp-Semantik — Definitionen aus `(eval (read ...))` bleiben global sichtbar).
 
 ```lisp
 (eval '(+ 1 2))
@@ -503,6 +511,50 @@ Liefert den absoluten Betrag einer Zahl.
 (abs -3.14)
 ```
 
+### max
+
+**Syntax:** `(max zahl ...)`
+
+Liefert die größte der übergebenen Zahlen.
+
+```lisp
+(max 1 5 3)
+; => 5
+```
+
+### min
+
+**Syntax:** `(min zahl ...)`
+
+Liefert die kleinste der übergebenen Zahlen.
+
+```lisp
+(min 4 2 9)
+; => 2
+```
+
+### sqrt
+
+**Syntax:** `(sqrt x)`
+
+Quadratwurzel.
+
+```lisp
+(sqrt 16)
+; => 4
+```
+
+### floor
+
+**Syntax:** `(floor x)`
+
+Rundet gegen die nächste ganze Zahl ab.
+
+```lisp
+(floor 3.7)
+; => 3
+```
+
 ### random
 
 **Syntax:** `(random)  bzw.  (random n)`
@@ -585,7 +637,7 @@ Strukturelle Gleichheit (rekursiv für Listen).
 
 **Syntax:** `(eq x y)`
 
-Pointer-Identität – prüft, ob beide Argumente dasselbe Objekt im Speicher sind.
+Pointer-Identität – prüft, ob beide Argumente dasselbe Objekt im Speicher sind. Für Symbole CL-korrekt: `(eq 'foo 'foo)` → `t` (Symbol-Interning). Zahlen und Strings sind nicht interniert: `(eq 5 5)` → `()`.
 
 ```lisp
 (eq nil nil)
@@ -601,6 +653,19 @@ Alias für eq.
 
 ```lisp
 (eq? nil nil)
+```
+
+### eql
+
+**Syntax:** `(eql a b)`
+
+Wie eq, aber Zahlen mit gleichem Wert gelten als eql (CL-Semantik).
+
+```lisp
+(eql 1 1)
+; => t
+(eql 'a 'a)
+; => t
 ```
 
 ## Typ-Prädikate
@@ -744,13 +809,28 @@ Erzeugt eine neue Liste aus den Argumenten.
 
 ### append
 
-**Syntax:** `(append liste element)`
+**Syntax:** `(append liste ...)`
 
-Hängt ein einzelnes Element an das Ende einer Liste an.
+Verkettet beliebig viele Listen zu einer neuen Liste. Ein Atom als letztes Argument erzeugt eine improper List (dotted pair).
 
 ```lisp
+(append '(1 2) '(3 4))
+; => (1 2 3 4)
 (append '(1 2) 3)
-(append '(a) 'b)
+; => (1 2 . 3)
+```
+
+### mapcar
+
+**Syntax:** `(mapcar funktion liste ...)`
+
+Wendet eine Funktion auf jedes Element an und liefert die Ergebnisliste. Primitiv (keine Spezialform) — Funktionen sind first-class, `#'`-Syntax funktioniert.
+
+```lisp
+(mapcar (lambda (x) (* x x)) '(1 2 3))
+; => (1 4 9)
+(mapcar #'car '((1 2) (3 4)))
+; => (1 3)
 ```
 
 ### apply
@@ -773,6 +853,181 @@ Ruft eine Funktion mit den angegebenen Argumenten auf.
 ```lisp
 (funcall + 1 2 3)
 (funcall (lambda (x) (* x x)) 6)
+```
+
+### sort
+
+**Syntax:** `(sort liste vergleich)`
+
+Liefert eine neue, nach vergleich sortierte Liste. Die Original-Liste bleibt unverändert.
+
+```lisp
+(sort '(3 1 2) <)
+; => (1 2 3)
+```
+
+### remove
+
+**Syntax:** `(remove element liste)`
+
+Entfernt alle Vorkommen von element (equal?-Vergleich).
+
+```lisp
+(remove 2 '(1 2 3 2))
+; => (1 3)
+```
+
+### remove-if
+
+**Syntax:** `(remove-if prädikat liste)`
+
+Entfernt alle Elemente, für die prädikat wahr ist.
+
+```lisp
+(remove-if (lambda (x) (= 1 (mod x 2))) '(1 2 3 4))
+; => (2 4)
+```
+
+### remove-if-not
+
+**Syntax:** `(remove-if-not prädikat liste)`
+
+Wie filter — behält alle Elemente, für die prädikat wahr ist.
+
+```lisp
+(remove-if-not (lambda (x) (= 1 (mod x 2))) '(1 2 3 4))
+; => (1 3)
+```
+
+### remove-duplicates
+
+**Syntax:** `(remove-duplicates liste)`
+
+Entfernt doppelte Elemente (behält erstes Vorkommen).
+
+```lisp
+(remove-duplicates '(1 2 2 3))
+; => (1 2 3)
+```
+
+### union
+
+**Syntax:** `(union liste-a liste-b)`
+
+Vereinigungsmenge zweier Listen.
+
+```lisp
+(union '(1 2) '(2 3))
+; => (1 2 3)
+```
+
+### set-difference
+
+**Syntax:** `(set-difference liste-a liste-b)`
+
+Elemente von liste-a ohne die aus liste-b.
+
+```lisp
+(set-difference '(1 2 3) '(2))
+; => (1 3)
+```
+
+### find-all
+
+**Syntax:** `(find-all element seq &key test)`
+
+Liefert alle Vorkommen von element in seq (Default-Test equal?).
+
+```lisp
+(find-all 2 '(1 2 2 3))
+; => (2 2)
+```
+
+### butlast
+
+**Syntax:** `(butlast liste)`
+
+Liefert die Liste ohne das letzte Element.
+
+```lisp
+(butlast '(1 2 3))
+; => (1 2)
+```
+
+### take
+
+**Syntax:** `(take n liste)`
+
+Liefert die ersten n Elemente.
+
+```lisp
+(take 2 '(1 2 3))
+; => (1 2)
+```
+
+### drop
+
+**Syntax:** `(drop n liste)`
+
+Liefert die Liste ohne die ersten n Elemente.
+
+```lisp
+(drop 2 '(1 2 3))
+; => (3)
+```
+
+### copy-list
+
+**Syntax:** `(copy-list liste)`
+
+Flache Kopie.
+
+```lisp
+(copy-list '(1 2))
+```
+
+### copy-tree
+
+**Syntax:** `(copy-tree x)`
+
+Tiefe Kopie (rekursiv auch in Sublisten).
+
+```lisp
+(copy-tree '(1 (2 3)))
+```
+
+### make-list
+
+**Syntax:** `(make-list n &key initial-element)`
+
+Erzeugt eine Liste mit n Elementen (Default nil).
+
+```lisp
+(make-list 3 :initial-element 'x)
+; => (x x x)
+```
+
+### set-nth
+
+**Syntax:** `(set-nth liste n wert)`
+
+Liefert Kopie mit n-tem Element (0-basiert) ersetzt.
+
+```lisp
+(set-nth '(1 2 3) 1 99)
+; => (1 99 3)
+```
+
+### length
+
+**Syntax:** `(length seq)`
+
+Anzahl Elemente einer Liste bzw. Zeichen (Runes) eines Strings.
+
+```lisp
+(length '(1 2 3))
+(length "abc")
+; => 3
 ```
 
 ## Strings
@@ -903,6 +1158,124 @@ Gibt t zurück, wenn sub in str enthalten ist.
 (string-contains "Hallo" "xyz")
 ```
 
+### string-find
+
+**Syntax:** `(string-find nadel heuhaufen)`
+
+Liefert die Position (0-basiert) des ersten Vorkommens oder nil.
+
+```lisp
+(string-find "ll" "hello")
+; => 2
+```
+
+### coerce
+
+**Syntax:** `(coerce x typ)`
+
+Typumwandlung. Unterstützte Typen: `'list` (String → Zeichenliste) und `'string` (Stringliste → String).
+
+```lisp
+(coerce "ab" 'list)
+; => ("a" "b")
+(coerce '("a" "b") 'string)
+; => "ab"
+```
+
+### symbol->string
+
+**Syntax:** `(symbol->string 'symbol)`
+
+Wandelt ein Symbol in seinen String-Namen um.
+
+```lisp
+(symbol->string 'foo)
+(symbol->string 'my-var)
+```
+
+### symbol-name
+
+**Syntax:** `(symbol-name symbol)`
+
+Wie symbol->string — Name des Symbols als String.
+
+```lisp
+(symbol-name 'abc)
+; => "abc"
+```
+
+### intern
+
+**Syntax:** `(intern "name")`
+
+Liefert das internierte Symbol zum String (die eine Symbol-Cell aus der Interning-Tabelle).
+
+```lisp
+(intern "foo")
+; => foo
+(eq (intern "foo") 'foo)
+; => t
+```
+
+## Formatieren
+
+### format
+
+**Syntax:** `(format ziel format-string arg ...)`
+
+CL-FORMAT-Engine (HyperSpec 22.3). Ziel `nil` → formatierter String als Rückgabe; Ziel `t` → Ausgabe auf stdout. Direktiven wie `~a` (aesthetic), `~s` (readable), `~d`, `~f`, `~%` (newline).
+
+```lisp
+(format nil "~a + ~a = ~s" 1 2 3)
+; => "1 + 2 = 3"
+(format t "Wert: ~a~%" 42)
+```
+
+### sprintf
+
+**Syntax:** `(sprintf format-string arg ...)`
+
+C-Stil (printf-Direktiven wie `%d`, `%s`, `%f`) → liefert String.
+
+```lisp
+(sprintf "%05.2f" 3.14159)
+; => "03.14"
+```
+
+### printf
+
+**Syntax:** `(printf format-string arg ...)`
+
+C-Stil, gibt direkt auf stdout aus.
+
+```lisp
+(printf "%d %s\n" 42 "text")
+```
+
+### fprintf
+
+**Syntax:** `(fprintf ziel format-string arg ...)`
+
+C-Stil, schreibt in eine Datei (Dateiname als String — appended an bestehende Datei) oder auf den Systemstream `"stdout"`/`"stderr"`.
+
+```lisp
+(system "mkdir -p ./tmp")
+(fprintf "./tmp/log.txt" "a=%d b=%s\n" 1 "x")
+(fprintf "stderr" "fehler %d\n" 7)
+(file-read "./tmp/log.txt")
+```
+
+### sscanf
+
+**Syntax:** `(sscanf string format-string)`
+
+Parst einen String nach C-scanf-Muster; liefert Liste der gelesenen Werte.
+
+```lisp
+(sscanf "42 hallo" "%d %s")
+; => (42 "hallo")
+```
+
 ## Ein-/Ausgabe
 
 ### print
@@ -938,7 +1311,49 @@ Parst einen String und gibt die entsprechende Lisp-Datenstruktur zurück.
 (car (read "(a b c)"))
 ```
 
-## Fehler
+### read-line
+
+**Syntax:** `(read-line)`
+
+Liest eine Zeile von stdin.
+
+```lisp
+;; echo "zeile1" | ./build/golisp2 -e "(read-line)"
+; => "zeile1"
+```
+
+### gets
+
+**Syntax:** `(gets)`
+
+Wie read-line — liest eine Zeile von stdin.
+
+```lisp
+(gets)
+```
+
+### slurp
+
+**Syntax:** `(slurp)`
+
+Liest stdin komplett als String.
+
+```lisp
+;; echo "hallo stdin" | ./build/golisp2 -e "(slurp)"
+; => "hallo stdin\n"
+```
+
+### err-write
+
+**Syntax:** `(err-write string)`
+
+Schreibt einen String auf stderr.
+
+```lisp
+(err-write "auf stderr\n")
+```
+
+## Fehler & Conditions
 
 ### error
 
@@ -949,6 +1364,393 @@ Signalisiert einen Lisp-Laufzeitfehler, der von catch aufgefangen werden kann.
 ```lisp
 (error "etwas ist schief")
 (catch (error 'x) (lambda (e) (println e)))
+```
+
+### assert
+
+**Syntax:** `(assert form)`
+
+Makro: signalisiert einen Fehler, wenn form nil ergibt.
+
+```lisp
+(assert (= 1 1))
+```
+
+### warn
+
+**Syntax:** `(warn string)`
+
+Gibt eine Warnung aus (kein Fehler, Auswertung läuft weiter).
+
+```lisp
+(warn "nur eine warnung")
+```
+
+### ignore-errors
+
+**Syntax:** `(ignore-errors body ...)`
+
+Makro: wertet body aus; bei Fehler liefert es nil statt des Fehlers.
+
+```lisp
+(ignore-errors (/ 1 0))
+; => ()
+```
+
+### define-condition
+
+**Syntax:** `(define-condition name (eltern ...) (slot ...) ...)`
+
+Definiert einen Condition-Typ mit Slots (Schlüsselwort-Slots wie `:msg`).
+
+```lisp
+(define-condition meine-fehler () ())
+(define-condition netz-fehler (meine-fehler) ())
+```
+
+### signal
+
+**Syntax:** `(signal typ &key slot-wert ...)`
+
+Signalisiert eine Condition des definierten Typs.
+
+```lisp
+(signal 'meine-fehler :msg "hoppla")
+```
+
+### handler-case
+
+**Syntax:** `(handler-case body (typ (var) handler-body ...) ...)`
+
+Fängt signalierte Conditions (und Laufzeitfehler) typbasiert ab.
+
+```lisp
+(define-condition meine-fehler () ())
+(handler-case (signal 'meine-fehler :msg "hoppla")
+  (meine-fehler (c) (list 'gefangen (lisp-error-msg c))))
+; => (gefangen "hoppla")
+```
+
+### lisp-error-msg
+
+**Syntax:** `(lisp-error-msg condition)`
+
+Liefert den `:msg`-Slot einer Condition.
+
+```lisp
+(lisp-error-msg c)
+```
+
+## setf & Places
+
+### setf
+
+**Syntax:** `(setf place wert)`
+
+Generalisierte Zuweisung. Places: Variablen, `(car lst)`, `(gethash key tbl)`, Struktur-Slots wie `(punkt-x p)`.
+
+```lisp
+(define x 1)
+(setf x 9)
+; => 9
+
+(define lst '(1 2 3))
+(setf (car lst) 99)
+lst
+; => (99 2 3)
+
+(define h (make-hash-table))
+(setf (gethash "k" h) 7)
+(gethash "k" h)
+; => 7
+```
+
+### incf
+
+**Syntax:** `(incf place [d])`
+
+Erhöht place um d (Default 1).
+
+```lisp
+(define z 5)
+(incf z)
+; => 6
+(incf z 10)
+; => 16
+```
+
+### decf
+
+**Syntax:** `(decf place [d])`
+
+Vermindert place um d (Default 1).
+
+```lisp
+(define z 16)
+(decf z 2)
+; => 14
+```
+
+### register-setf-expander
+
+**Syntax:** `(register-setf-expander accessor setter)`
+
+Registriert einen setf-Expander für eigene Accessor-Funktionen.
+
+```lisp
+;; Details: siehe src/embed/stdlib.lisp (*setf-expanders*)
+```
+
+## Werte & Bindung
+
+### values
+
+**Syntax:** `(values wert ...)`
+
+Liefert mehrere Werte; verwendende Stellen sehen den Hauptwert (CL-multiple-values-lite).
+
+```lisp
+(values 1 2 3)
+; => 1
+```
+
+### destructuring-bind
+
+**Syntax:** `(destructuring-bind (var ...) expr body ...)`
+
+Bindet Listenelemente an Variablen. Flache Muster — keine dotted pairs, keine Verschachtelung.
+
+```lisp
+(destructuring-bind (a b c) '(1 2 3) (list a b c))
+; => (1 2 3)
+```
+
+### defvar
+
+**Syntax:** `(defvar name [wert])`
+
+Definiert eine Variable mit Dokumentationskonvention; Neuauswertung definiert nicht neu (CL-defvar-Semantik in defsystem-Kontext).
+
+```lisp
+(defvar *zaehler* 0)
+```
+
+### documentation
+
+**Syntax:** `(documentation symbol 'function)`
+
+Liefert den Docstring einer defun/defmacro-Definition (String-Literal nach der Parameterliste) oder nil. Andere doc-types liefern nil (CL-konform).
+
+```lisp
+(defun add (a b) "addiert zwei Zahlen" (+ a b))
+(documentation 'add 'function)
+; => "addiert zwei Zahlen"
+```
+
+## Hash-Tables
+
+### make-hash-table
+
+**Syntax:** `(make-hash-table)`
+
+Erzeugt eine Hash-Table (thread-sicher).
+
+```lisp
+(define h (make-hash-table))
+```
+
+### gethash
+
+**Syntax:** `(gethash key tabelle [default])`
+
+Liefert zwei Werte: den Eintrag (oder default) und t/nil als Gefunden-Indikator.
+
+```lisp
+(puthash "a" h 1)
+(gethash "a" h)
+; => 1
+(gethash "nix" h 'default)
+; => default
+```
+
+### puthash
+
+**Syntax:** `(puthash key tabelle wert)`
+
+Setzt einen Eintrag.
+
+```lisp
+(puthash "b" h 2)
+```
+
+### remhash
+
+**Syntax:** `(remhash key tabelle)`
+
+Entfernt einen Eintrag.
+
+```lisp
+(remhash "a" h)
+```
+
+### clrhash
+
+**Syntax:** `(clrhash tabelle)`
+
+Leert die Hash-Table.
+
+```lisp
+(clrhash h)
+```
+
+### hash-table-count
+
+**Syntax:** `(hash-table-count tabelle)`
+
+Anzahl der Einträge.
+
+```lisp
+(hash-table-count h)
+```
+
+### hash-table-p
+
+**Syntax:** `(hash-table-p obj)`
+
+Prädikat: t, wenn obj eine Hash-Table ist.
+
+```lisp
+(hash-table-p h)
+; => t
+```
+
+### maphash
+
+**Syntax:** `(maphash funktion tabelle)`
+
+Wendet funktion (zwei Argumente: key, wert) auf jeden Eintrag an.
+
+```lisp
+(maphash (lambda (k v) (println k "=" v)) h)
+```
+
+## Strukturen (defstruct)
+
+### defstruct
+
+**Syntax:** `(defstruct name slot ...)`
+
+Definiert eine Struktur mit Slots. Erzeugt automatisch: `make-name` (Konstruktor mit `:slot wert`-Keywords), `name-slot`-Accessoren, `name-p`-Prädikat. Slots sind setf-Places.
+
+```lisp
+(defstruct punkt x y)
+(define p (make-punkt :x 1 :y 2))
+(punkt-x p)
+; => 1
+(setf (punkt-x p) 10)
+(punkt-x p)
+; => 10
+(punkt-p p)
+; => t
+```
+
+### defstruct-resolve-name
+
+**Syntax:** `(defstruct-resolve-name praefix name slot trennzeichen reload?)`
+
+Interner Helfer des defstruct-Makros (Namensauflösung für Accessoren).
+
+```lisp
+;; Intern — siehe src/embed/stdlib.lisp
+```
+
+## Generische Funktionen
+
+### defgeneric
+
+**Syntax:** `(defgeneric name (parameter ...))`
+
+Definiert eine generische Funktion; die Methodenauswahl erfolgt per Dispatch auf dem ersten Argument.
+
+```lisp
+(defgeneric flaeche (obj))
+```
+
+### defmethod
+
+**Syntax:** `(defmethod name (parameter) body ...)`
+
+Definiert eine Methode für eine generische Funktion. Das Dispatch-Argument wird als `(var typ)` geschrieben — typ ist ein defstruct-Name oder `(eql wert)`.
+
+```lisp
+(defstruct punkt x y)
+(defgeneric flaeche (obj))
+(defmethod flaeche ((obj punkt)) (* (punkt-x obj) (punkt-y obj)))
+(define p (make-punkt :x 10 :y 2))
+(flaeche p)
+; => 20
+
+(defmethod flaeche ((obj (eql :einheit-quadrat))) 1)
+(flaeche :einheit-quadrat)
+; => 1
+```
+
+## Systeme (defsystem)
+
+### defsystem
+
+**Syntax:** `(defsystem name &key depends-on components)`
+
+Definiert ein System aus Dateien (`:components`, Stringliste) mit Abhängigkeiten zu anderen Systemen (`:depends-on`, Symbolliste).
+
+```lisp
+;; tmp/sys/a.lisp: (defun sys-a () 1)
+;; tmp/sys/b.lisp: (defun sys-b () (+ 1 (sys-a)))
+(defsystem mein-sys :components ("tmp/sys/a.lisp" "tmp/sys/b.lisp"))
+```
+
+### load-system
+
+**Syntax:** `(load-system name)`
+
+Lädt ein System topologisch sortiert (Abhängigkeiten zuerst, mit Zyklenerkennung). Bereits geladene Dateien werden übersprungen.
+
+```lisp
+(load-system 'mein-sys)
+(sys-b)
+; => 2
+```
+
+### unload-system
+
+**Syntax:** `(unload-system name)`
+
+Entfernt ein System aus der Ladestatistik (Definitionen bleiben im Env).
+
+```lisp
+(unload-system 'mein-sys)
+```
+
+### loaded-systems
+
+**Syntax:** `(loaded-systems)`
+
+Liste der geladenen Systeme.
+
+```lisp
+(loaded-systems)
+; => (mein-sys)
+```
+
+### system-symbols
+
+**Syntax:** `(system-symbols name)`
+
+Liste der Symbole, die ein System definiert hat.
+
+```lisp
+(system-symbols 'mein-sys)
+; => (sys-b sys-a)
 ```
 
 ## Makro-Hilfe
@@ -1215,6 +2017,17 @@ Pausiert für die angegebene Anzahl Millisekunden.
 (sleep 2000)
 ```
 
+### get-universal-time
+
+**Syntax:** `(get-universal-time)`
+
+Sekunden seit 1.1.1900 00:00 UTC (CL-universal-time).
+
+```lisp
+(get-universal-time)
+; => z.B. 3996832127
+```
+
 ## Memory
 
 ### memstats
@@ -1239,6 +2052,17 @@ Führt ein Shell-Kommando aus und gibt den Exit-Code zurück (0 = OK).
 ```lisp
 (system "echo hallo")
 (system "test -f ./tmp/demo.txt")
+```
+
+### shell-assoc
+
+**Syntax:** `(shell-assoc key assoc-liste)`
+
+Sucht key in einer Assoziationsliste von Paaren (für Shell-Output-Parsing); liefert das passende Paar oder nil.
+
+```lisp
+(shell-assoc "sh" '(("bash" . "/usr/bin/bash") ("sh" . "/bin/sh")))
+; => ("sh" . "/bin/sh")
 ```
 
 ### exec
@@ -1276,15 +2100,231 @@ Liefert eine Assoziationsliste mit size und mtime oder nil, wenn die Datei nicht
 (assoc 'size (file-stat "./tmp/demo.txt"))
 ```
 
-### symbol->string
+### getenv
 
-**Syntax:** `(symbol->string 'symbol)`
+**Syntax:** `(getenv "name")`
 
-Wandelt ein Symbol in seinen String-Namen um.
+Wert einer Umgebungsvariablen (String) oder nil.
 
 ```lisp
-(symbol->string 'foo)
-(symbol->string 'my-var)
+(getenv "HOME")
+```
+
+### environ
+
+**Syntax:** `(environ)`
+
+Alle Umgebungsvariablen als Assoziationsliste `(name . wert)`.
+
+```lisp
+(car (environ))
+; => ("SHELL" . "/bin/bash")
+```
+
+### argv
+
+**Syntax:** `(argv)`
+
+Kommandozeilenargumente des golisp2-Prozesses als Liste.
+
+```lisp
+(length (argv))
+```
+
+### exit
+
+**Syntax:** `(exit [code])`
+
+Beendet den Lisp-Prozess mit Exit-Code (Default 0).
+
+```lisp
+(exit 1)
+```
+
+### get-working-directory
+
+**Syntax:** `(get-working-directory)`
+
+Aktuelles Arbeitsverzeichnis.
+
+```lisp
+(get-working-directory)
+```
+
+### set-working-directory
+
+**Syntax:** `(set-working-directory "pfad")`
+
+Wechselt das Arbeitsverzeichnis.
+
+```lisp
+(set-working-directory "/tmp")
+```
+
+### get-file-path
+
+**Syntax:** `(get-file-path "pfad")`
+
+Löst einen Pfad auf (inklusive Suchpfad-Logik von load).
+
+```lisp
+(get-file-path "stdlib.lisp")
+```
+
+## Shared Memory
+
+### shm-alloc
+
+**Syntax:** `(shm-alloc [worker-id])`
+
+Belegt einen Block im Shared-Memory-Pool; liefert ein Handle.
+
+```lisp
+(define z (shm-alloc))
+```
+
+### shm-write
+
+**Syntax:** `(shm-write handle string)`
+
+Schreibt einen String in den Block; liefert den String zurück.
+
+```lisp
+(shm-write z "daten")
+```
+
+### shm-read
+
+**Syntax:** `(shm-read handle [n])`
+
+Liest den Block (maximal n Zeichen) als String.
+
+```lisp
+(shm-read z 5)
+; => "daten"
+```
+
+### shm-free
+
+**Syntax:** `(shm-free handle)`
+
+Gibt den Block frei.
+
+```lisp
+(shm-free z)
+```
+
+### shm-status
+
+**Syntax:** `(shm-status)`
+
+Pool-Statistik als Aliste (`total`, `used`, `free`).
+
+```lisp
+(shm-status)
+; => ((total . 150) (used . 1) (free . 149))
+```
+
+### shm-cleanup
+
+**Syntax:** `(shm-cleanup)`
+
+Räumt den Shared-Memory-Pool auf.
+
+```lisp
+(shm-cleanup)
+```
+
+## Trace & Debug
+
+### trace
+
+**Syntax:** `(trace 'funktion)`
+
+Aktiviert Live-Tracing einer Funktion: jeder Aufruf und Rückgabewert wird auf stderr protokolliert.
+
+```lisp
+(defun tf (x) (* x 2))
+(trace 'tf)
+(tf 21)
+;; Ausgabe: (tf 21)
+;;          (tf 21) => 42
+```
+
+### untrace
+
+**Syntax:** `(untrace 'funktion)`
+
+Deaktiviert das Tracing.
+
+```lisp
+(untrace 'tf)
+```
+
+### trace?
+
+**Syntax:** `(trace? 'funktion)`
+
+Prädikat: t, wenn die Funktion gerade getraced wird.
+
+```lisp
+(trace? 'tf)
+```
+
+## Introspektion
+
+### env-symbols
+
+**Syntax:** `(env-symbols)`
+
+Liste aller im Root-Environment gebundenen Symbole.
+
+```lisp
+(length (env-symbols))
+; => z.B. 258
+```
+
+### defined-in
+
+**Syntax:** `(defined-in "datei.lisp")`
+
+Liste der Symbole, die in der angegebenen (geladenen) Datei definiert wurden.
+
+```lisp
+(load-system 'mein-sys)
+(defined-in "tmp/sys/a.lisp")
+; => (sys-a)
+```
+
+### redefine-policy
+
+**Syntax:** `(redefine-policy 'warn)` — lesen: `(redefine-policy)`
+
+Redifinitions-Politik des Root-Env: `'allow`, `'warn` (Default) oder `'error`. Bewacht, dass der letzte Schreiber nicht mehr lautlos gewinnt.
+
+```lisp
+(redefine-policy)
+; => warn
+```
+
+### redef-log
+
+**Syntax:** `(redef-log)`
+
+Ringpuffer der Redefinitionen.
+
+```lisp
+(redef-log)
+```
+
+### redef-log-clear
+
+**Syntax:** `(redef-log-clear)`
+
+Leert den Redefinitions-Log.
+
+```lisp
+(redef-log-clear)
 ```
 
 ## PostgreSQL
@@ -1333,14 +2373,14 @@ Schließt eine PostgreSQL-Verbindung.
 
 ### webserv
 
-**Syntax:** `(webserv &key port html htmlpath open)`
+**Syntax:** `(webserv &key port host html htmlpath open)`
 
 Ein-Aufruf-Bootstrap für eine Browser-Anbindung: startet einen HTTP-Server,
 liefert `:html` (Inline-String) oder `:htmlpath` (Datei, bei jedem Request
 neu gelesen) aus, injiziert automatisch `boot.js` und öffnet den Browser
 (`:open` Default `t`). Genau eines von `:html`/`:htmlpath` ist Pflicht.
-Gibt das Server-Objekt zurück, auf dem `ws-export`/`ws-emit`/... normal
-weiterlaufen.
+`:host` bindet das Interface (Default `127.0.0.1`). Gibt das Server-Objekt
+zurück, auf dem `ws-export`/`ws-emit`/... normal weiterlaufen.
 
 ```lisp
 (define s (webserv :htmlpath "./public/index.html"))
@@ -1350,11 +2390,11 @@ weiterlaufen.
 
 ### http-serve
 
-**Syntax:** `(http-serve port)`
+**Syntax:** `(http-serve port)` bzw. `(http-serve port :host "0.0.0.0")`
 
-Startet einen HTTP-Server auf `127.0.0.1:port` (`port` `0` → freier Port
-vom OS), kehrt sofort zurück. Tiefere Alternative zu `webserv` für
-Multi-File-Sites oder eigenes Routing.
+Startet einen HTTP-Server auf `host:port` (Default-Host `127.0.0.1`,
+`port` `0` → freier Port vom OS), kehrt sofort zurück. Tiefere
+Alternative zu `webserv` für Multi-File-Sites oder eigenes Routing.
 
 ```lisp
 (define s (http-serve 0))
@@ -1383,6 +2423,18 @@ Liefert den tatsächlich gebundenen Port — nützlich nach `(http-serve 0)`.
 ```lisp
 (http-port s)
 ;; => 41213
+```
+
+### http-upload
+
+**Syntax:** `(http-upload srv urlpath handler)`
+
+Registriert einen POST-Endpoint für Multipart-File-Uploads. handler wird pro hochgeladener Datei mit zwei Argumenten aufgerufen: Dateiname (String) und Dateiinhalt (String).
+
+```lisp
+(http-upload s "/upload"
+             (lambda (name inhalt)
+               (file-write (string-append "./tmp/" name) inhalt)))
 ```
 
 ### http-wait
@@ -1626,6 +2678,17 @@ Gibt t zurück, wenn n gleich 0 ist.
 (zero? 5)
 ```
 
+### zerop
+
+**Syntax:** `(zerop n)`
+
+CL-Name für zero?.
+
+```lisp
+(zerop 0)
+; => t
+```
+
 ### positive?
 
 **Syntax:** `(positive? n)`
@@ -1681,17 +2744,6 @@ Makro: wertet body nur aus, wenn test falsch ist.
 (unless t 'nein)
 ```
 
-### append
-
-**Syntax:** `(append lst1 lst2)`
-
-Hängt zwei Listen aneinander.
-
-```lisp
-(append '(1 2) '(3 4))
-(append '(a) '(b c d))
-```
-
 ### reverse
 
 **Syntax:** `(reverse liste)`
@@ -1701,17 +2753,6 @@ Dreht eine Liste um.
 ```lisp
 (reverse '(1 2 3))
 (reverse '(a b c d))
-```
-
-### length
-
-**Syntax:** `(length liste)`
-
-Liefert die Anzahl der Elemente einer Liste.
-
-```lisp
-(length '(1 2 3))
-(length '())
 ```
 
 ### nth
@@ -1758,6 +2799,17 @@ Sucht key in einer Assoziationsliste und gibt das erste passende (key . val)-Paa
 (assoc 'x '((a . 1)))
 ```
 
+### getf
+
+**Syntax:** `(getf plist key [default])`
+
+Sucht key in einer Property-Liste (`(key wert key wert ...)`); liefert den Wert oder default.
+
+```lisp
+(getf '(:a 1 :b 2) :b)
+; => 2
+```
+
 ### filter
 
 **Syntax:** `(filter pred liste)`
@@ -1771,13 +2823,15 @@ Liefert alle Elemente, für die die Prädikatfunktion wahr ist.
 
 ### reduce
 
-**Syntax:** `(reduce f init liste)`
+**Syntax:** `(reduce f seq &key initial-value from-end ...)`
 
-Faltet eine Liste mit einer Funktion und einem Startwert zusammen.
+Faltet eine Liste mit einer Funktion. Startwert über `:initial-value`.
 
 ```lisp
-(reduce + 0 '(1 2 3 4))
-(reduce * 1 '(1 2 3 4))
+(reduce + '(1 2 3 4) :initial-value 0)
+; => 10
+(reduce * '(1 2 3 4) :initial-value 1)
+; => 24
 ```
 
 ### for-each
@@ -1905,7 +2959,7 @@ Makro: wiederholt body für var von 0 bis n-1.
 
 **Syntax:** `(dolist (var liste) body ...)`
 
-Makro: iteriert über eine Liste.
+Makro: iteriert über eine Liste. Ergebnisform ist ().
 
 ```lisp
 (dolist (x '(1 2 3)) (print x))
@@ -2002,4 +3056,3 @@ Liefert eine Funktion, die f(g(x)) auf ein Argument anwendet.
 ((compose number->string (lambda (x) (* x 2))) 5)
 ((compose string-upcase symbol->string) 'foo)
 ```
-

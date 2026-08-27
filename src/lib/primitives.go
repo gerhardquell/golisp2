@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -96,6 +97,17 @@ func BaseEnv() *Env {
 
 	// Memory-Profiling
 	_ = env.Set("memstats", makeFn(fnMemstats))
+
+	// Introspektion
+	_ = env.Set("env-symbols", makeFn(func(args []*Cell) (*Cell, error) {
+		names := env.Symbols()
+		sort.Strings(names)
+		cells := make([]*Cell, len(names))
+		for i, n := range names {
+			cells[i] = MakeStr(n)
+		}
+		return SliceToCell(cells), nil
+	}))
 
 	// Zeitfunktionen
 	_ = env.Set("sleep", makeFn(fnSleep))

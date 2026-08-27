@@ -277,3 +277,26 @@ func TestPrimitivePrintReturnValue(t *testing.T) {
   evalEq(t, `(println 1 2 3)`, "3")
   evalEq(t, `(print)`, "()")
 }
+
+func TestEnvSymbols(t *testing.T) {
+	env := BaseEnv()
+	result, err := Eval(mustRead(t, "(env-symbols)"), env)
+	if err != nil {
+		t.Fatalf("(env-symbols): %v", err)
+	}
+	names := map[string]bool{}
+	for _, c := range CellToSlice(result) {
+		if c.Type != STRING {
+			t.Fatalf("env-symbols: String erwartet, got %v", c.Type)
+		}
+		names[c.Val] = true
+	}
+	if len(names) < 10 {
+		t.Fatalf("env-symbols: zu wenige Symbole (%d), BaseEnv() liefert deutlich mehr", len(names))
+	}
+	for _, want := range []string{"car", "cons", "print", "+"} {
+		if !names[want] {
+			t.Errorf("env-symbols: erwartetes Symbol %q fehlt", want)
+		}
+	}
+}

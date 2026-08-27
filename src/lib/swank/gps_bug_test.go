@@ -29,7 +29,7 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
     t.Skip("nur auf Linux")
   }
 
-  repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+  repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
   if err != nil {
     t.Fatalf("repo root: %v", err)
   }

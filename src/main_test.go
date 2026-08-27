@@ -13,7 +13,7 @@ import (
   "strings"
   "testing"
 
-  "golisp2/lib"
+  "golisp2/src/lib"
 )
 
 func TestRunExpressionSingleFormPrintsResult(t *testing.T) {

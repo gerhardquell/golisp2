@@ -11,7 +11,7 @@
 package lib
 
 import (
-  "golisp2/lib/shm"
+  "golisp2/src/lib/shm"
   "testing"
 )
 

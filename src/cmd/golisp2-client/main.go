@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golisp2/lib"
+	"golisp2/src/lib"
 )
 
 // Client repräsentiert die SWANK-Verbindung zum golisp2-SWANK-Server.

@@ -18,8 +18,8 @@ import (
   "syscall"
   "unsafe"
 
-  "golisp2/lib"
-  "golisp2/lib/swank"
+  "golisp2/src/lib"
+  "golisp2/src/lib/swank"
 )
 
 func test(env *lib.Env, s string) {

@@ -16,7 +16,7 @@ import (
   "net"
   "os"
 
-  "golisp2/lib"
+  "golisp2/src/lib"
 )
 
 // RunServer starts a SWANK server on the given address.

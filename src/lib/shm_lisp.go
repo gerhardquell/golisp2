@@ -12,7 +12,7 @@ package lib
 
 import (
   "fmt"
-  "golisp2/lib/shm"
+  "golisp2/src/lib/shm"
 )
 
 // shmHandle verpackt einen ShmBlock als opake Lisp-Ressource.

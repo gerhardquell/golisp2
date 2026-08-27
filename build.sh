@@ -10,13 +10,13 @@ cd "$(dirname "$0")"
 mkdir -p build
 
 echo "→ go vet"
-go vet ./lib/ ./lib/swank/ 2>/dev/null || true
+go vet ./src/lib/ ./src/lib/swank/ 2>/dev/null || true
 
 echo "→ build golisp2"
-go build -o build/golisp2 .
+go build -o build/golisp2 ./src/
 
 echo "→ build golisp2-client"
-go build -o build/golisp2-client ./cmd/golisp2-client/
+go build -o build/golisp2-client ./src/cmd/golisp2-client/
 
 echo "✓ Binaries in ./build/:"
 ls -1 build/

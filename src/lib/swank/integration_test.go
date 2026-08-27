@@ -19,7 +19,7 @@ import (
   "testing"
   "time"
 
-  "golisp2/lib"
+  "golisp2/src/lib"
 )
 
 func TestSwankServerConnectionInfo(t *testing.T) {

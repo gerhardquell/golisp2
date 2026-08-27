@@ -13,8 +13,8 @@ package swank
 import (
   _ "embed"
 
-  "golisp2/embed"
-  "golisp2/lib"
+  "golisp2/src/embed"
+  "golisp2/src/lib"
 )
 
 // LoadSwankLisp loads the embedded SWANK handler library into env.

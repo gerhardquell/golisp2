@@ -13,7 +13,7 @@ package swank
 import (
   "fmt"
 
-  "golisp2/lib"
+  "golisp2/src/lib"
 )
 
 // HandleMessage evaluates (swank-dispatch (quote msg)) in env and returns

@@ -16,7 +16,7 @@ package lib
 import (
   _ "embed"
 
-  "golisp2/embed"
+  "golisp2/src/embed"
 )
 
 // LoadStdlib lädt die eingebettete Standardbibliothek (stdlib + defsystem +

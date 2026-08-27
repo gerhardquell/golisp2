@@ -17,21 +17,23 @@ als eingebaute Lisp-Primitiven beherrscht.
 ## Orientierung
 
 ```
-main.go              CLI: stdin / -i / -e / -t / --swank / Datei
-cmd/golisp2-client/  CLI-Client mit REPL
+src/
+  main.go              CLI: stdin / -i / -e / -t / --swank / Datei
+  cmd/golisp2-client/  CLI-Client mit REPL
+  embed/               //go:embed Assets (stdlib.lisp, swank.lisp, ...)
+  lib/
+    types*.go          Cell-Datenstruktur, Small-Int-Cache, Helfer
+    reader.go          Parser: String → Cell-Baum
+    env.go             Environment: verkettete Scopes, RWMutex
+    eval_core.go       Eval-Trampolin, apply, evalArgs
+    eval_*.go          Spezialformen, Lambda, Control, Quasiquote, load, exec
+    primitives.go      Eingebaute Funktionen + BaseEnv()
+    format*.go         FORMAT-Engine (CL-HyperSpec 22.3)
+    <domäne>.go        goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
+    stdlib.go          //go:embed stdlib.lisp
+    readline.go        REPL (go-prompt, Highlighting, History)
+    swank/             SWANK-Server für Emacs/SLIME
 build/               Build-Artefakte (golisp2, golisp2-client)
-lib/
-  types*.go          Cell-Datenstruktur, Small-Int-Cache, Helfer
-  reader.go          Parser: String → Cell-Baum
-  env.go             Environment: verkettete Scopes, RWMutex
-  eval_core.go       Eval-Trampolin, apply, evalArgs
-  eval_*.go          Spezialformen, Lambda, Control, Quasiquote, load, exec
-  primitives.go      Eingebaute Funktionen + BaseEnv()
-  format*.go         FORMAT-Engine (CL-HyperSpec 22.3)
-  <domäne>.go        goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
-  stdlib.go          //go:embed stdlib.lisp
-  readline.go        REPL (go-prompt, Highlighting, History)
-  swank/             SWANK-Server für Emacs/SLIME
 ```
 
 
@@ -92,13 +94,13 @@ umgehen.
 
 | Aufgabe | Einzige Quelle |
 |---------|----------------|
-| HTTP gegen sigoREST | `lib/sigorest.go` |
-| Stdlib laden | `LoadStdlib` (`lib/stdlib.go`) |
-| Truthiness | `IsTruthy` (`lib/types_helpers.go`) |
-| Primitiven registrieren | `BaseEnv()` (`lib/primitives.go`) |
-| Parsen | `lib/reader.go` (`Read` / `ReadAll`) |
-| SWANK-Framing | `lib/swank/framing.go` |
-| Eval-Schleife | `lib/eval_core.go` |
+| HTTP gegen sigoREST | `src/lib/sigorest.go` |
+| Stdlib laden | `LoadStdlib` (`src/lib/stdlib.go`) |
+| Truthiness | `IsTruthy` (`src/lib/types_helpers.go`) |
+| Primitiven registrieren | `BaseEnv()` (`src/lib/primitives.go`) |
+| Parsen | `src/lib/reader.go` (`Read` / `ReadAll`) |
+| SWANK-Framing | `src/lib/swank/framing.go` |
+| Eval-Schleife | `src/lib/eval_core.go` |
 
 Wer anderswo einen HTTP-Client gegen `:9080` aufmacht, einen zweiten Parser
 baut oder eine eigene Truthiness-Prüfung schreibt, macht es falsch — auch wenn
@@ -123,7 +125,7 @@ Das gefährlichste Duplikat ist keine Go-Datei. Es ist ein `define` in
   Implementierungen derselben Form, die still auseinanderlaufen. Der
   Redefine-Guard fängt das *nicht*: er warnt nur bei bestehenden
   FUNC-Bindungen, und Spezialformen sind gar keine Env-Bindungen.
-  Bewacht von `TestNoLispDefineShadowsSpecialForm` (`lib/specialform_shadow_test.go`),
+  Bewacht von `TestNoLispDefineShadowsSpecialForm` (`src/lib/specialform_shadow_test.go`),
   der die Namen aus `eval_core.go` liest — Liste pflegen ist nicht nötig.
 - **`(eval (read (sigo …)))` schreibt zur Laufzeit ins globale Env.** Das ist
   das selbsterweiternde Muster und ausdrücklich gewollt — aber es ist auch der
@@ -246,11 +248,11 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 
 | Datei | Inhalt | Lies das, wenn … |
 |-------|--------|------------------|
-| `docs/struktur.md` | Datei-für-Datei-Beschreibung von `lib/` | du dich neu orientierst |
-| `docs/cli.md` | Flags, Exit-Codes, Multiline-stdin, `exec`-Syntax | du an `main.go` arbeitest |
-| `docs/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `lib/swank/` arbeitest |
+| `docs/struktur.md` | Datei-für-Datei-Beschreibung von `src/lib/` | du dich neu orientierst |
+| `docs/cli.md` | Flags, Exit-Codes, Multiline-stdin, `exec`-Syntax | du an `src/main.go` arbeitest |
+| `docs/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `src/lib/swank/` arbeitest |
 | `docs/emacs-golisp2web.md` | golisp2web aus dem SLIME-REPL starten/steuern, `parfunc`+`system`-Muster, Beispiele | du golisp2web aus Emacs heraus benutzen willst |
-| `docs/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `lib/sigorest.go` arbeitest |
+| `docs/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `src/lib/sigorest.go` arbeitest |
 | `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
 | `docs/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
 | `todos/PerfTODO.md` | Offene Performance-Arbeit | du optimierst |
@@ -259,7 +261,7 @@ Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout
 
 - **Keine Primitivenliste in der Doku.** Sie wäre ab dem nächsten
   `RegisterXxx()` falsch. Wahrheit ist der Code:
-  `rg 'env\.Set\("' lib/` bzw. `(env-symbols)` zur Laufzeit.
+  `rg 'env\.Set\("' src/lib/` bzw. `(env-symbols)` zur Laufzeit.
 - **Keine Modell-/Shortcode-Tabelle für `sigo`.** Provider deployen laufend
   neu. Wahrheit ist `(sigo-models)`.
 

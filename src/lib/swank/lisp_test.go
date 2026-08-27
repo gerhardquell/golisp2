@@ -16,7 +16,7 @@ import (
   "strings"
   "testing"
 
-  "golisp2/lib"
+  "golisp2/src/lib"
 )
 
 func TestSwankLisp(t *testing.T) {

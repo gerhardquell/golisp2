@@ -105,12 +105,16 @@ vorab `if`-Prüfung (vorzuziehen).
 `catch` fängt nur `throw`, nie `error`. Fehler → `trap`.
 **Kapitel-Lehre:** Kap15 Fallstrick 1 (der zentrale).
 
-### C3. `define (name args) body` ist ungültig  [KNOWN]
+### C3. `define (name args) body` ist ungültig  [FIXED 20260902]
 **Datum:** 20260813 (Kap13), 20260815 (Kap15)
 **Symptom:** `(define (f x) ...)` → „define: Syntax: (define name value)".
 golisp2 `define` nimmt nur `(define name value)`, keine Funktionsdefinition.
 **Fix:** `defun` nutzen. (CL/Gewohnheits-Falle.)
 **Kapitel-Lehre:** Kap13.
+**Fix 20260902:** `evalDefine` akzeptiert jetzt auch
+`(define (name params...) body...)` als Zucker für
+`(define name (lambda (params...) body...))` — Semantik identisch zu
+`defun`. Die Gewohnheits-Falle existiert nicht mehr.
 
 ### C4. Mehrfachwerte kollabieren in single-value-Kontext  [KNOWN]
 **Datum:** 20260815 (Kap15)

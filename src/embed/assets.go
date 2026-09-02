@@ -25,3 +25,6 @@ var Defsystem string
 
 //go:embed condition.lisp
 var Condition string
+
+//go:embed loop.lisp
+var Loop string

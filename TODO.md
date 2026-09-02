@@ -1,7 +1,8 @@
-# TODO - Aufgabenplanung
+# TODO - Aufgabenplanung 20260903-1
 
-Keine offenen Aufgaben.
+## Ergänzung von golisp2 um: — ERLEDIGT 20260902
+- [x] defparameter  -> defparameter wie in clisp (stdlib.lisp, CL-Rebind-Semantik)
+- [x] loop          -> loop wie in clisp (Praxis-Kern, src/embed/loop.lisp;
+                       Einschränkungen: docs/lisp-semantik.md)
 
-Zuletzt erledigt: 20260827-1 Repo-Restructuring (unused/, docs/-Merge,
-src/-Umzug, env-symbols, Funktionsreferenz) — siehe todos/TODO.md-20260827-1-done
-und docs/superpowers/plans/2026-08-27-repo-restructuring.md
+

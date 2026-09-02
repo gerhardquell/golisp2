@@ -252,6 +252,13 @@
          ',name
          (define ,name ,val))))
 
+;; defparameter: bindet eine globale Variable und überschreibt einen
+;; bestehenden Wert immer (CL-Compat). Docstring wird ignoriert.
+;; Still beim Rebind: der Redefine-Guard greift nur bei FUNC/LAMBDA/
+;; MACRO-Bindungen, Wert-Rebinds landen nur im redef-log.
+(defmacro defparameter (name val &optional doc)
+  `(define ,name ,val))
+
 ;; Registry für setf-Places: Assoc-Liste (accessor . setter).
 (define *setf-expanders* '())
 

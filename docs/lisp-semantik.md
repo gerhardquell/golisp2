@@ -333,3 +333,64 @@ Single-Dispatch auf den Struct-Tag (`car`) des ersten Arguments.
   (Hot-Patching per SWANK).
 - Explizit nicht dabei: Vererbung, `call-next-method`, `:before`/`:after`,
   Multi-Dispatch. Implementierung rein Lisp, kein Kernel-Eingriff.
+
+---
+
+## `defvar` vs. `defparameter`
+
+Beide binden eine globale Variable (CL-Compat, Makros in stdlib.lisp).
+Der Unterschied liegt im Rebind-Verhalten:
+
+| Form | bereits gebunden? | Verhalten |
+|------|-------------------|-----------|
+| `defvar` | ja | **no-op** — alter Wert bleibt |
+| `defparameter` | ja | **überschreibt immer** |
+
+```lisp
+(defvar *x* 1)
+(defvar *x* 2)         ; no-op, *x* bleibt 1
+
+(defparameter *y* 1)
+(defparameter *y* 2)   ; *y* ist jetzt 2
+```
+
+Optionaler Docstring (3. Argument) wird akzeptiert und ignoriert.
+Wert-Rebinds lösen keinen Redefine-Warn aus (der Guard greift nur bei
+FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
+
+---
+
+## `loop` — Iteration (CL-Praxis-Kern)
+
+`loop` (embed/loop.lisp) ist ein reines Lisp-Makro: die Klauseln werden
+zur Expansionszeit geparst und in `let` + `while` übersetzt — keine
+Laufzeitkosten gegenüber handgeschriebener Schleife.
+
+**Klauseln:**
+
+```lisp
+(loop for i from 1 to 5 collect i)            ; → (1 2 3 4 5)
+(loop for i from 0 below 4 by 2 collect i)    ; → (0 2)   below = exklusiv
+(loop for i from 5 downto 1 collect i)        ; → (5 4 3 2 1)
+(loop for x in '(a b c) collect x)            ; → (a b c)
+(loop repeat 3 do (tick))
+(loop for i from 1 to 6 when (= 0 (mod i 2)) sum i)   ; → 12
+(loop for x in '(3 9 1) maximize x)           ; → 9
+(loop for i from 1 to 10 until (> i 3) collect i)     ; → (1 2 3)
+(loop for i from 1 to 3 do (log i) finally (fertig))
+```
+
+- Iteration: `repeat`, `for … from [to|below|downto] [by]`, `for … in`
+- Bedingungen: `when`/`unless` (je eine Folgeklausel), `while`/`until`
+- Rumpf: `do`, `finally`
+- Akkumulation: `collect`, `append`, `sum`, `count`, `maximize`, `minimize`
+
+**Einschränkungen gegenüber CL (bewusst):**
+
+- Eine Akkumulator-Familie pro loop: `collect`/`append` **oder**
+  `sum`/`count` **oder** `maximize`/`minimize`. Familienwechsel ist ein
+  Fehler zur Expansionszeit (in CL ebenfalls ein Fehler).
+- `when`/`unless` ohne `and`-Kettung und ohne `else`.
+- Kein Destructuring in `for`, kein `across` (kein Vektor-Typ),
+  kein `initially`, kein `= / then`-Schritt, kein `named`.
+- Syntaxfehler melden sich zur Expansionszeit mit Klausel-Angabe.

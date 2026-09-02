@@ -20,7 +20,7 @@ import (
 )
 
 // LoadStdlib lädt die eingebettete Standardbibliothek (stdlib + defsystem +
-// condition) in env. Einmal pro Env aufrufen (nach BaseEnv). Fehler =
+// condition + loop) in env. Einmal pro Env aufrufen (nach BaseEnv). Fehler =
 // Syntaxfehler in den .lisp-Dateien – sollte zur Compile-Zeit nie passieren.
 func LoadStdlib(env *Env) error {
   if _, err := LoadString(assets.Stdlib, env); err != nil {
@@ -29,6 +29,9 @@ func LoadStdlib(env *Env) error {
   if _, err := LoadString(assets.Defsystem, env); err != nil {
     return err
   }
-  _, err := LoadString(assets.Condition, env)
+  if _, err := LoadString(assets.Condition, env); err != nil {
+    return err
+  }
+  _, err := LoadString(assets.Loop, env)
   return err
 }

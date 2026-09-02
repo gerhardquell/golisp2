@@ -223,6 +223,29 @@ func TestEvalClosure(t *testing.T) {
   evalEq(t, src, "15")
 }
 
+func TestDefineFunctionSyntax(t *testing.T) {
+  // (define (name args...) body...) → Zucker für
+  // (define name (lambda (args...) body...)), Semantik wie defun.
+  evalEq(t, `(define (sq x) (* x x)) (sq 7)`, "49")
+  evalEq(t, `(define (f) 42) (f)`, "42")
+  evalEq(t, `(define (g x y) (+ x y)) (g 3 4)`, "7")
+  // &rest wie bei defun
+  evalEq(t, `(define (h x &rest xs) (cons x xs)) (h 1 2 3)`, "(1 2 3)")
+  // mehrere Body-Formen: letzter Wert
+  evalEq(t, `(define (m x) (define y (* x 2)) (+ x y)) (m 5)`, "15")
+  // Rekursion
+  evalEq(t, `(define (fact n) (if (= n 0) 1 (* n (fact (- n 1))))) (fact 5)`, "120")
+  // Closure erzeugen
+  evalEq(t, `(define (make-adder n) (lambda (x) (+ x n)))
+             (define add2 (make-adder 2))
+             (add2 40)`, "42")
+  // Fehlerfälle: Name muss Symbol sein, Signatur nicht leer
+  evalErr(t, `(define (1 x) x)`)
+  evalErr(t, `(define () 42)`)
+  // Wert-Syntax bleibt unverändert
+  evalEq(t, `(define z 9) z`, "9")
+}
+
 func TestEvalQuote(t *testing.T) {
   evalEq(t, `(quote (a b c))`, "(a b c)")
   evalEq(t, `'x`, "x")

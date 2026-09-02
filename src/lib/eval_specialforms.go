@@ -18,9 +18,29 @@ import (
 
 func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   args := form.Cdr
-  if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM ||
+  if args == nil || args.Type != LIST || args.Car == nil {
+    return nil, fmt.Errorf("define: Syntax: (define name value) oder (define (name params...) body...)")
+  }
+  // Funktions-Syntax: (define (name params...) body...) — Zucker für
+  // (define name (lambda (params...) body...)), Semantik wie defun.
+  if args.Car.Type == LIST {
+    sig := args.Car
+    if sig.Car == nil || sig.Car.Type != ATOM {
+      return nil, fmt.Errorf("define: Funktionsname muss ein Symbol sein")
+    }
+    if args.Cdr == nil || args.Cdr.Type != LIST {
+      return nil, fmt.Errorf("define: Funktionsrumpf fehlt")
+    }
+    name := sig.Car.Val
+    lam  := makeLambda(sig.Cdr, wrapBegin(args.Cdr), env)
+    if err := checkRootRedefine(env, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
+    if err := env.Set(name, lam); err != nil { return nil, err }
+    RegisterDefinition(name, form.SrcFile(), form.SrcLine)
+    return MakeAtom(name), nil
+  }
+  if args.Car.Type != ATOM ||
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
-    return nil, fmt.Errorf("define: Syntax: (define name value)")
+    return nil, fmt.Errorf("define: Syntax: (define name value) oder (define (name params...) body...)")
   }
   name := args.Car.Val
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())

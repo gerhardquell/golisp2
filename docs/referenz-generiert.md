@@ -16,6 +16,15 @@
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
+| `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
+| `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
+| `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
+| `%loop-for` | Intern: loop-Parser: for-Klausel (in/from) (loop.lisp) |
+| `%loop-from` | Intern: loop-Parser: for-from/to/below/downto/by (loop.lisp) |
+| `%loop-kw?` | Intern: loop-Klausel-Schluesselwort? (loop.lisp) |
+| `%loop-parse` | Intern: loop-Parser: Klauseln -> let/while-Expansion (loop.lisp) |
+| `%loop-take-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort sammeln |
+| `%loop-when` | Intern: loop-Parser: when/unless-Klausel (loop.lisp) |
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
 | `%reduce-fold` | Intern: Faltkern von reduce |
 | `%remove-first` | Intern: erstes Vorkommen entfernen (unload-system) |
@@ -77,6 +86,7 @@
 | `define-condition` | Condition-Typ mit Slots definieren |
 | `defined-in` | Liste der Symbole, die in der geladenen Datei definiert wurden |
 | `defmethod` | Methode fuer generische Funktion definieren; Dispatch (var typ) oder (eql wert) |
+| `defparameter` | globale Variable definieren, ueberschreibt immer (CL-Compat) |
 | `defstruct` | Struktur definieren: erzeugt make-name, name-slot-Accessoren, name-p |
 | `defstruct-resolve-name` | Intern: Namensaufloesung des defstruct-Makros |
 | `defsystem` | System aus Dateien (:components) mit Abhaengigkeiten (:depends-on) definieren |
@@ -155,6 +165,7 @@
 | `load-system` | System topologisch sortiert laden (Abhaengigkeiten zuerst) |
 | `loaded-systems` | Liste der geladenen Systeme |
 | `lock-make` | Mutex fuer lock erzeugen |
+| `loop` | Iteration (CL-Praxis-Kern): for/repeat/when/collect/sum/... (loop.lisp) |
 | `macroexpand-1` | einen Makro-Expansionsschritt ausfuehren |
 | `make-hash-table` | thread-sichere Hash-Table erzeugen |
 | `make-list` | Liste mit n Elementen (:initial-element) |

@@ -85,6 +85,8 @@ golisp2/
       fileio.go          Datei-I/O: file-write/-append/-read/-exists?/-delete
       shellcmd.go        system, file-stat, shell-assoc, symbol->string
       postgres.go        PostgreSQL-Primitiven
+      maxima.go          maxima-open/-eval/-close — CAS via externen
+                         Maxima-Prozess, Sentinel-Sync statt Prompt-Parsing
       genalg.go          Genetischer Algorithmus (Core)
       genalg_prims.go    GA-Lisp-Primitiven
       shm_lisp.go        Shared-Memory-Primitiven (High-Level Pool-API)

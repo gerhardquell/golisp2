@@ -37,6 +37,9 @@ func BaseEnv() *Env {
 	_ = env.Set("abs", makeFn(fnAbs))
 	_ = env.Set("values", makeFn(fnValues))
 	_ = env.Set("floor", makeFn(fnFloor))
+	_ = env.Set("ceiling", makeFn(fnCeiling))
+	_ = env.Set("truncate", makeFn(fnTruncate))
+	_ = env.Set("round", makeFn(fnRound))
 	_ = env.Set("random", makeFn(fnRandom))
 
 	// Vergleiche
@@ -147,6 +150,9 @@ func BaseEnv() *Env {
 
 	// PostgreSQL
 	RegisterPostgres(env)
+
+	// Maxima (CAS via externen Prozess)
+	RegisterMaxima(env)
 
 	// Web-Bridge (HTTP + WebSocket)
 	RegisterHTTPFuncs(env)
@@ -390,6 +396,69 @@ func fnFloor(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("floor: Division durch Null")
 	}
 	q := math.Floor(args[0].Num / y)
+	r := args[0].Num - q*y
+	return MakeValues([]*Cell{MakeNum(q), MakeNum(r)}), nil
+}
+
+// ceiling: (ceiling x [y=1]) → zwei Werte (CL): ganzzahliger Quotient
+// (Richtung +inf gerundet) und Rest mit Vorzeichen des Divisors.
+func fnCeiling(args []*Cell) (*Cell, error) {
+	if len(args) < 1 || len(args) > 2 {
+		return nil, fmt.Errorf("ceiling: 1-2 Argumente nötig")
+	}
+	if err := checkNumbers("ceiling", args); err != nil {
+		return nil, err
+	}
+	y := 1.0
+	if len(args) == 2 {
+		y = args[1].Num
+	}
+	if y == 0 {
+		return nil, fmt.Errorf("ceiling: Division durch Null")
+	}
+	q := math.Ceil(args[0].Num / y)
+	r := args[0].Num - q*y
+	return MakeValues([]*Cell{MakeNum(q), MakeNum(r)}), nil
+}
+
+// truncate: (truncate x [y=1]) → zwei Werte (CL): ganzzahliger Quotient
+// (Richtung Null gerundet) und Rest mit Vorzeichen des Dividenden.
+func fnTruncate(args []*Cell) (*Cell, error) {
+	if len(args) < 1 || len(args) > 2 {
+		return nil, fmt.Errorf("truncate: 1-2 Argumente nötig")
+	}
+	if err := checkNumbers("truncate", args); err != nil {
+		return nil, err
+	}
+	y := 1.0
+	if len(args) == 2 {
+		y = args[1].Num
+	}
+	if y == 0 {
+		return nil, fmt.Errorf("truncate: Division durch Null")
+	}
+	q := math.Trunc(args[0].Num / y)
+	r := args[0].Num - q*y
+	return MakeValues([]*Cell{MakeNum(q), MakeNum(r)}), nil
+}
+
+// round: (round x [y=1]) → zwei Werte (CL): auf-Ganzzahl-gerundeter
+// Quotient (Rundung zum geraden Nachbarn bei .5, CL-Regel) und Rest.
+func fnRound(args []*Cell) (*Cell, error) {
+	if len(args) < 1 || len(args) > 2 {
+		return nil, fmt.Errorf("round: 1-2 Argumente nötig")
+	}
+	if err := checkNumbers("round", args); err != nil {
+		return nil, err
+	}
+	y := 1.0
+	if len(args) == 2 {
+		y = args[1].Num
+	}
+	if y == 0 {
+		return nil, fmt.Errorf("round: Division durch Null")
+	}
+	q := math.RoundToEven(args[0].Num / y)
 	r := args[0].Num - q*y
 	return MakeValues([]*Cell{MakeNum(q), MakeNum(r)}), nil
 }

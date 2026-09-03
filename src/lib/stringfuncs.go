@@ -26,6 +26,8 @@ func RegisterStringFuncs(env *Env) {
   _ = env.Set("string-downcase", makeFn(fnStringDowncase))
   _ = env.Set("string->number",  makeFn(fnStringToNumber))
   _ = env.Set("number->string",  makeFn(fnNumberToString))
+  _ = env.Set("parse-int",       makeFn(fnParseInt))
+  _ = env.Set("parse-float",     makeFn(fnParseFloat))
   _ = env.Set("string->list",    makeFn(fnStringToList))
   _ = env.Set("list->string",    makeFn(fnListToString))
   _ = env.Set("string-replace",  makeFn(fnStringReplace))
@@ -118,6 +120,28 @@ func fnStringToNumber(args []*Cell) (*Cell, error) {
   n, err := strconv.ParseFloat(args[0].Val, 64)
   if err != nil {
     return nil, fmt.Errorf("string->number: '%s' ist keine Zahl", args[0].Val)
+  }
+  return MakeNum(n), nil
+}
+
+func fnParseInt(args []*Cell) (*Cell, error) {
+  if len(args) < 1 || args[0].Type != STRING {
+    return nil, fmt.Errorf("parse-int: String erwartet")
+  }
+  n, err := strconv.ParseInt(strings.TrimSpace(args[0].Val), 10, 64)
+  if err != nil {
+    return nil, fmt.Errorf("parse-int: '%s' ist keine Ganzzahl", args[0].Val)
+  }
+  return MakeNum(float64(n)), nil
+}
+
+func fnParseFloat(args []*Cell) (*Cell, error) {
+  if len(args) < 1 || args[0].Type != STRING {
+    return nil, fmt.Errorf("parse-float: String erwartet")
+  }
+  n, err := strconv.ParseFloat(strings.TrimSpace(args[0].Val), 64)
+  if err != nil {
+    return nil, fmt.Errorf("parse-float: '%s' ist keine Fließkommazahl", args[0].Val)
   }
   return MakeNum(n), nil
 }

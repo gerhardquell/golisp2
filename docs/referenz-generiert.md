@@ -56,6 +56,9 @@
 | `append` | Listen verketten; Atom als letztes Argument ergibt dotted pair |
 | `apply` | Funktion aufrufen, letztes Argument wird als Liste gesplict |
 | `argv` | Kommandozeilenargumente des Prozesses als Liste |
+| `ash` | |
+| `ash-left` | |
+| `ash-right` | |
 | `assert` | Makro: signalisiert Fehler, wenn Form nil ergibt |
 | `assoc` | erstes (key . val)-Paar aus Assoziationsliste (equal?) |
 | `atom` | t, wenn x kein Cons ist |
@@ -70,6 +73,7 @@
 | `cdar` | (cdr (car x)) |
 | `cddr` | (cdr (cdr x)) |
 | `cdr` | Restliste ohne erstes Element |
+| `ceiling` | auf die naechste ganze Zahl aufrunden; 2 Werte (CL): Quotient, Rest |
 | `chan-make` | Channel erzeugen (optional Puffergroesse n) |
 | `chan-recv` | Wert aus Channel empfangen (blockierend) |
 | `chan-send` | Wert in Channel senden |
@@ -172,6 +176,9 @@
 | `mapcar` | Funktion elementweise anwenden, Ergebnisliste (first-class, #' moeglich) |
 | `maphash` | Funktion (key wert) auf jeden Hash-Eintrag anwenden |
 | `max` | groesste Zahl |
+| `maxima-close` | Maxima-Session beenden (maxima-close session) |
+| `maxima-eval` | Ausdruck an Maxima-Session senden, Ergebnis als String (maxima-eval session expr [timeout]) |
+| `maxima-open` | Maxima-Session starten (externer Prozess, Zustand bleibt erhalten) |
 | `member` | Restliste ab erstem Treffer |
 | `memstats` | Go-Runtime-Memory-Statistiken als Assoziationsliste |
 | `min` | kleinste Zahl |
@@ -184,6 +191,8 @@
 | `number->string` | Zahl in String umwandeln |
 | `number?` | t, wenn Zahl |
 | `pair?` | t, wenn Cons |
+| `parse-float` | String strikt als Fliesskommazahl parsen, Fehler bei ungueltigem Format |
+| `parse-int` | String strikt als Ganzzahl parsen, Fehler bei ungueltigem Format |
 | `pg-close` | PostgreSQL-Verbindung schliessen |
 | `pg-connect` | PostgreSQL-Verbindung oeffnen (Connection-String) |
 | `pg-exec` | schreibendes SQL, betroffene Zeilen zurueck |
@@ -212,6 +221,7 @@
 | `remove-if-not` | Elemente behalten, fuer die Praedikat wahr ist |
 | `rest` | Alias fuer cdr |
 | `reverse` | Liste umdrehen |
+| `round` | auf naechste ganze Zahl runden, Rundung-zum-Geraden bei .5 (CL); 2 Werte: Quotient, Rest |
 | `second` | Alias fuer cadr |
 | `set-difference` | Elemente von a ohne die aus b |
 | `set-nth` | Kopie mit n-tem Element ersetzt |
@@ -257,6 +267,7 @@
 | `third` | Alias fuer caddr |
 | `trace` | Live-Tracing einer Funktion aktivieren: Aufruf und Ergebnis auf stderr |
 | `trace?` | t, wenn Funktion gerade getraced wird |
+| `truncate` | Richtung Null runden; 2 Werte (CL): Quotient, Rest |
 | `union` | Vereinigungsmenge zweier Listen |
 | `unless` | Makro: body nur auswerten, wenn test falsch ist |
 | `unload-system` | System aus Ladestatistik entfernen (Definitionen bleiben) |

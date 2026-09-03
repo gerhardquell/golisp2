@@ -166,6 +166,21 @@
 (defun gcd (a b)
   (if (= b 0) a (gcd b (- a (* (/ a b) b)))))
 
+(defun ash-right(x n)
+	(if (<= n 0)
+		x
+		(ash-right(/ x 2)(- n 1))))
+
+(defun ash-left(x n)
+	(if (<= n 0)
+		x
+		(ash-left(* x 2)(- n 1))))
+
+(defun ash (x n)
+	(if (>= n 0)
+		(ash-left x n)
+		(ash-right x (* n -1))))
+
 ;; === Iteratoren =================================================
 
 (defmacro dotimes (var-n . body)

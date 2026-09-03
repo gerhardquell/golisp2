@@ -75,11 +75,12 @@ gibt es nur für Symbole, nicht Ausdrücke.
 `rplaca`/`rplacd` = unbekannte Symbole. `setf` simuliert Mutation via Rebinding.
 **Kapitel-Lehre:** Kap13 (Immutable Cells), Kap15 CL-Tabelle.
 
-### B6. Arithmetik-Namen: `floor`/`mod`, nicht `div`/`quotient`  [KNOWN]
-**Datum:** 20260815 (Kap15)
-**Symptom:** `div`/`quotient`/`truncate`/`ceiling`/`modulo` → unbekannt.
-**Verfügbar:** `floor` (Quotient), `mod`/`remainder` (Rest).
-**Achtung:** CL-Code-Port braucht Namensanpassung.
+### B6. Arithmetik-Namen: `floor`/`mod`, nicht `div`/`quotient`  [TEILWEISE BEHOBEN]
+**Datum:** 20260815 (Kap15), aktualisiert 20260903
+**Symptom:** `div`/`quotient`/`modulo` → unbekannt.
+**Verfügbar:** `floor`, `ceiling`, `truncate`, `round` (alle CL-Semantik, 2 Werte:
+Quotient + Rest), `mod`/`remainder` (Rest).
+**Achtung:** CL-Code-Port braucht weiterhin Namensanpassung für `div`/`quotient`/`modulo`.
 
 ### B7. Kein `ignore-errors`, kein `handler-case`  [LIMITATION]
 **Datum:** 20260815 (Kap15)

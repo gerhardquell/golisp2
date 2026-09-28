@@ -72,7 +72,7 @@ aus dem Cache gelesen (`cached-tokens`).
 |---|---|
 | `(sigo-system-prompt)` | aktuellen Vorspann lesen |
 | `(sigo-system-prompt "text")` | Vorspann setzen |
-| `(sigo-system-prompt "")` | leeren — Modell sieht nur den Prompt |
+| `(sigo-system-prompt "")` | leeren — Modell sieht nur den Prompt (plus Session-Verlauf, falls `session-id`) |
 | `(sigo-reference)` | eingebettete Referenz; `(sigo-system-prompt (sigo-reference))` setzt zurück |
 | `(sigo* prompt …)` | wie `sigo`, aber Assoc-Liste: `text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd` |
 | `(sigo-usage)` | Summen seit Start/Reset plus `calls` |
@@ -84,14 +84,17 @@ aus dem Cache gelesen (`cached-tokens`).
   (println "cached: " (cdr (assoc 'cached-tokens r))))
 ```
 
-**`cost-usd` ist eine obere Schranke:** sigoREST rechnet mit
+**`cost-usd` ist eine obere Schranke** (bei OpenAI-kompatiblen Providern —
+Anthropic-Kanäle sind derzeit nicht konfiguriert): sigoREST rechnet mit
 `input_cost`/`output_cost` ohne Cache-Rabatt. Ob der Cache greift, zeigt
 `cached-tokens > 0`.
 
 Der Vorspann ist prozessweit (alle Goroutinen, auch `parfunc`) und
 mutex-geschützt. Ein älteres sigoREST ohne `bare`-Unterstützung ignoriert
-das Feld: dann kommen Memory und Server-Prompt wieder dazu, und die
-Detailfelder bleiben 0.
+das Feld: dann kommt das Memory (global/Kanal) wieder dazu, und die
+Detailfelder bleiben 0. Ein nicht-leerer Vorspann überschreibt den
+Server-System-Prompt weiterhin — der kommt nur zurück, wenn der Vorspann
+leer ist.
 
 `finish-reason` `"length"` mit leerem `text` heißt: Das Token-Budget wurde
 vom Thinking aufgebraucht.

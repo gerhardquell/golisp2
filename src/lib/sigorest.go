@@ -49,7 +49,8 @@ var (
 )
 
 // sigoUsage: Token- und Kostenangaben eines Calls (bzw. deren Summe).
-// CostUSD ist eine obere Schranke ohne Cache-Rabatt (von sigoREST).
+// CostUSD ist eine obere Schranke ohne Cache-Rabatt (von sigoREST), gilt
+// für OpenAI-kompatible Provider — kein Anthropic-Kanal konfiguriert.
 type sigoUsage struct {
   PromptTokens     int
   CompletionTokens int
@@ -125,7 +126,15 @@ func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
   prompt    := args[0].Val
   model     := sigoDefaultModel
   sessionID := ""
-  host      := sigoGetHost()
+
+  // Host und Vorspann unter EINEM Lock am Eintritt einlesen — sonst könnte
+  // ein paralleler (sigo-system-prompt "…") zwischen Host- und
+  // Vorspann-Lesen (nach dem Rate-Limiter-Wait) einen inkonsistenten
+  // Snapshot erzeugen.
+  sigoStateMu.Lock()
+  host := sigoHost
+  systemPrompt := sigoSystemPrompt
+  sigoStateMu.Unlock()
 
   if len(args) >= 2 { model = args[1].Val }
   if len(args) >= 3 { sessionID = args[2].Val }
@@ -143,7 +152,7 @@ func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
   sigoLastCall = time.Now()
   sigoCallMutex.Unlock()
 
-  res, err := sigoCallToHost(prompt, model, sessionID, host, sigoGetSystemPrompt())
+  res, err := sigoCallToHost(prompt, model, sessionID, host, systemPrompt)
   if err != nil { return sigoResult{}, err }
 
   sigoStateMu.Lock()

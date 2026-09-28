@@ -60,6 +60,8 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Multi-Provider**: Claude, Gemini, GPT-4, lokale Ollama-Modelle
 - **Selbsterweiternd**: LLMs schreiben Code, GoLisp führt ihn aus
 - **Ensemble-Aufrufe**: Mehrere KIs parallel abfragen
+- **golisp2-Vorspann**: Jeder `sigo`-Call schickt eine eingebettete golisp2-Kurzreferenz mit (Provider-Cache: ab dem 2. Call ~99 % gecacht); lesen/setzen/leeren per `(sigo-system-prompt …)`
+- **Token- und Kostenangaben**: `(sigo* …)` liefert Text plus Prompt-, Cache-, Thinking-Tokens und `cost-usd`; `(sigo-usage)` summiert seit Start — Details: `docs/sigo.md`
 
 ### Genetische Algorithmen
 - **Eingebaute GA-Primitiven**: Population erzeugen, initialisieren, Crossover, Fitness-Bewertung, Selektion, Mutation

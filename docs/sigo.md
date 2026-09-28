@@ -56,6 +56,46 @@ Modell doppelt statt N verschiedene — muss selbst dedupen.
 (sigo "prompt" "modell" "session-id" "http://host:9080")
 ```
 
+## Vorspann, Kontext und Kosten
+
+Jeder `sigo`-Call schickt `"bare": true` und einen **Vorspann** als
+`system_prompt`. Mit `bare` legt sigoREST **nichts** davor — kein
+`memory.json`, kein Server-System-Prompt. Was das Modell sieht, bestimmt
+allein golisp2.
+
+Default-Vorspann ist die eingebettete KI-Kurzreferenz
+(`src/embed/ki-referenz.md`, ~4–5k Token). Sie liegt über der
+Cache-Schwelle der Provider; ab dem zweiten Call wird sie typischerweise
+aus dem Cache gelesen (`cached-tokens`).
+
+| Aufruf | Wirkung |
+|---|---|
+| `(sigo-system-prompt)` | aktuellen Vorspann lesen |
+| `(sigo-system-prompt "text")` | Vorspann setzen |
+| `(sigo-system-prompt "")` | leeren — Modell sieht nur den Prompt |
+| `(sigo-reference)` | eingebettete Referenz; `(sigo-system-prompt (sigo-reference))` setzt zurück |
+| `(sigo* prompt …)` | wie `sigo`, aber Assoc-Liste: `text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd` |
+| `(sigo-usage)` | Summen seit Start/Reset plus `calls` |
+| `(sigo-usage-reset)` | Summen auf 0 |
+
+```lisp
+(let ((r (sigo* "Schreibe eine Funktion quadrat.")))
+  (println (cdr (assoc 'text r)))
+  (println "cached: " (cdr (assoc 'cached-tokens r))))
+```
+
+**`cost-usd` ist eine obere Schranke:** sigoREST rechnet mit
+`input_cost`/`output_cost` ohne Cache-Rabatt. Ob der Cache greift, zeigt
+`cached-tokens > 0`.
+
+Der Vorspann ist prozessweit (alle Goroutinen, auch `parfunc`) und
+mutex-geschützt. Ein älteres sigoREST ohne `bare`-Unterstützung ignoriert
+das Feld: dann kommen Memory und Server-Prompt wieder dazu, und die
+Detailfelder bleiben 0.
+
+`finish-reason` `"length"` mit leerem `text` heißt: Das Token-Budget wurde
+vom Thinking aufgebraucht.
+
 ## Rate-Limiting
 
 `sigo` bringt automatisches Rate-Limiting mit — Schutz vor dem Circuit-Breaker

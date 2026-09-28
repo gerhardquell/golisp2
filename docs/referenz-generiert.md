@@ -236,8 +236,13 @@
 | `shm-write` | String in Shared-Memory-Block schreiben |
 | `signal` | Condition des definierten Typs signalisieren (:msg ...) |
 | `sigo` | Prompt an sigoREST senden, Antwort als String |
+| `sigo*` | Wie sigo, Ergebnis als Assoc-Liste (text, model, finish-reason, prompt-/completion-/cached-/reasoning-tokens, cost-usd) |
 | `sigo-host` | sigoREST-Host setzen oder lesen |
 | `sigo-models` | Liste der verfuegbaren sigoREST-Modelle |
+| `sigo-reference` | Eingebettete KI-Kurzreferenz (Default-Vorspann von sigo) |
+| `sigo-system-prompt` | Vorspann fuer sigo lesen, setzen oder mit leerem String leeren |
+| `sigo-usage` | Summe der sigo-Tokens und -Kosten seit Start, plus calls |
+| `sigo-usage-reset` | sigo-usage-Summen auf 0 setzen |
 | `sleep` | Millisekunden pausieren |
 | `slurp` | stdin komplett als String lesen |
 | `sort` | Liste nach Vergleich sortieren (neue Liste) |

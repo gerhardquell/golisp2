@@ -75,7 +75,7 @@ Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
 | `(and . exprs)` | Kurzschluss | |
 | `(or . exprs)` | Kurzschluss | |
 | `(not x)` | Negation | |
-| `(parfunc ergebnis . exprs)` | Fork-Join-Parallel-Eval | kein :timeout/:workers — Keywords werden als Zweige evaluiert |
+| `(parfunc name [:timeout N] . exprs)` | Fork-Join-Parallel-Eval | `name` = Symbol (kein Kombinierer!), wird im aktuellen Env an die Ergebnisliste gebunden und zurückgegeben; `:timeout` in Sekunden, Zweig über Zeit → `()` |
 | `(while test . body)` | Schleife | |
 | `(do ((var step) ...) (test result) . body)` | Scheme-Iteration | Parallel step |
 | `(do* ((var step) ...) (test result) . body)` | Scheme-Iteration | Sequentiell step |
@@ -125,7 +125,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 `exit` — Prozess sofort beenden, Code als Zahl (kein Cleanup!)
 
 ### Environment/Introspection
-`memstats sleep env-symbols` — `(env-symbols)` liefert alle Root-Env-Namen
+`memstats sleep env-symbols` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
 sortiert (Basis von `tools/gen-reference.lisp`)
 
 ### Domänen (eigene Register-Xxx)
@@ -174,7 +174,7 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 `dolist (var lst) body` — `(dolist (x xs) ...)`
 
 ### Strukturen
-`(defstruct name (slot default) ...)` — erzeugt: `make-name`, `name-slot`, `name?`
+`(defstruct name [doc] slot|(slot default) ...)` — erzeugt: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)
 `(setf place val)` — generisch, `(defstruct ...)` registriert Accessoren automatisch
 
 ---

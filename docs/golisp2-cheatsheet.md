@@ -165,7 +165,7 @@ Wichtige:
 (makunbound sym)                  ; Bindung entfernen
 (function fn)                     ; Function-Literal (#' reader-sugar)
 (exec "shell-cmd")                ; Shell-Kommando ausführen
-(parfunc ergebnis e1 e2 ...)      ; Fork-Join-Parallel-Eval (kein :timeout!)
+(parfunc name [:timeout N] e1 ...) ; bindet name an Ergebnisliste; :timeout in s
 (documentation 'f 'function)      ; Docstring (nur Lisp-Definitionen)
 ```
 
@@ -833,7 +833,7 @@ ausgedrückt werden.
 |-------------|-------|
 | Zwei Zahlen addieren | `(+ 1 2)` |
 | Liste durchlaufen | `(dolist (x xs) ...)`, `(mapcar f xs)` |
-| Parallel auswerten | `(parfunc ergebnis e1 e2 ...)` |
+| Parallel auswerten | `(parfunc name [:timeout N] e1 e2 ...)` |
 | Fehler werfen | `(error "msg")` |
 | Fehler fangen | `(trap expr (lambda (e) ...))` |
 | Dynamisch springen | `(catch 'tag ... (throw 'tag val))` |

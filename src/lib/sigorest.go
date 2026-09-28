@@ -38,11 +38,14 @@ var (
   sigoLastCall    time.Time
   sigoCallMutex   sync.Mutex
 
-  // sigoStateMu schützt sigoHost und sigoSystemPrompt — parfunc ruft
-  // sigo aus mehreren Goroutinen, (sigo-host …) schreibt parallel.
+  // sigoStateMu schützt sigoHost, sigoSystemPrompt, sigoUsageSum und
+  // sigoCalls — parfunc ruft sigo aus mehreren Goroutinen.
   sigoStateMu      sync.Mutex
   // Vorspann jedes Calls (system_prompt). Leer = Modell sieht nur den Prompt.
   sigoSystemPrompt = assets.KiReferenz
+  // Summe aller erfolgreichen Calls seit Start bzw. (sigo-usage-reset)
+  sigoUsageSum     sigoUsage
+  sigoCalls        int
 )
 
 // sigoUsage: Token- und Kostenangaben eines Calls (bzw. deren Summe).
@@ -53,6 +56,14 @@ type sigoUsage struct {
   CachedTokens     int
   ReasoningTokens  int
   CostUSD          float64
+}
+
+func (u *sigoUsage) add(o sigoUsage) {
+  u.PromptTokens     += o.PromptTokens
+  u.CompletionTokens += o.CompletionTokens
+  u.CachedTokens     += o.CachedTokens
+  u.ReasoningTokens  += o.ReasoningTokens
+  u.CostUSD          += o.CostUSD
 }
 
 type sigoResult struct {
@@ -87,6 +98,9 @@ func RegisterSigo(env *Env) {
   _ = env.Set("sigo-host",          makeFn(fnSigoHost))
   _ = env.Set("sigo-system-prompt", makeFn(fnSigoSystemPrompt))
   _ = env.Set("sigo-reference",     makeFn(fnSigoReference))
+  _ = env.Set("sigo*",              makeFn(fnSigoStar))
+  _ = env.Set("sigo-usage",         makeFn(fnSigoUsage))
+  _ = env.Set("sigo-usage-reset",   makeFn(fnSigoUsageReset))
 }
 
 func sigoGetHost() string {
@@ -129,7 +143,14 @@ func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
   sigoLastCall = time.Now()
   sigoCallMutex.Unlock()
 
-  return sigoCallToHost(prompt, model, sessionID, host, sigoGetSystemPrompt())
+  res, err := sigoCallToHost(prompt, model, sessionID, host, sigoGetSystemPrompt())
+  if err != nil { return sigoResult{}, err }
+
+  sigoStateMu.Lock()
+  sigoUsageSum.add(res.Usage)
+  sigoCalls++
+  sigoStateMu.Unlock()
+  return res, nil
 }
 
 // fnSigo: (sigo "prompt" [model] [session-id] [host]) → Antworttext
@@ -137,6 +158,55 @@ func fnSigo(args []*Cell) (*Cell, error) {
   res, err := sigoRequest(args, "sigo")
   if err != nil { return nil, err }
   return MakeStr(res.Text), nil
+}
+
+// sigoAlist baut ((key . val) …) in der gegebenen Reihenfolge.
+func sigoAlist(keys []string, vals []*Cell) *Cell {
+  result := MakeNil()
+  for i := len(keys) - 1; i >= 0; i-- {
+    result = Cons(Cons(MakeAtom(keys[i]), vals[i]), result)
+  }
+  return result
+}
+
+func sigoUsageCells(u sigoUsage) ([]string, []*Cell) {
+  return []string{"prompt-tokens", "completion-tokens", "cached-tokens", "reasoning-tokens", "cost-usd"},
+    []*Cell{
+      MakeNum(float64(u.PromptTokens)),
+      MakeNum(float64(u.CompletionTokens)),
+      MakeNum(float64(u.CachedTokens)),
+      MakeNum(float64(u.ReasoningTokens)),
+      MakeNum(u.CostUSD),
+    }
+}
+
+// fnSigoStar: (sigo* "prompt" [model] [session-id] [host]) → Assoc-Liste
+// ((text . "…") (model . "…") (finish-reason . "…") (prompt-tokens . n) …)
+func fnSigoStar(args []*Cell) (*Cell, error) {
+  res, err := sigoRequest(args, "sigo*")
+  if err != nil { return nil, err }
+  keys, vals := sigoUsageCells(res.Usage)
+  keys = append([]string{"text", "model", "finish-reason"}, keys...)
+  vals = append([]*Cell{MakeStr(res.Text), MakeStr(res.Model), MakeStr(res.FinishReason)}, vals...)
+  return sigoAlist(keys, vals), nil
+}
+
+// fnSigoUsage: (sigo-usage) → Summen seit Start/Reset plus (calls . n)
+func fnSigoUsage(args []*Cell) (*Cell, error) {
+  sigoStateMu.Lock()
+  u, n := sigoUsageSum, sigoCalls
+  sigoStateMu.Unlock()
+  keys, vals := sigoUsageCells(u)
+  return sigoAlist(append(keys, "calls"), append(vals, MakeNum(float64(n)))), nil
+}
+
+// fnSigoUsageReset: (sigo-usage-reset) → Summen auf 0
+func fnSigoUsageReset(args []*Cell) (*Cell, error) {
+  sigoStateMu.Lock()
+  sigoUsageSum = sigoUsage{}
+  sigoCalls = 0
+  sigoStateMu.Unlock()
+  return MakeNil(), nil
 }
 
 // fnSigoModels: (sigo-models) → Liste der verfügbaren Modelle

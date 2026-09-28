@@ -64,11 +64,11 @@ func fakeSigo(t *testing.T, got *map[string]interface{}) *httptest.Server {
 func withSigoState(t *testing.T) {
   t.Helper()
   sigoStateMu.Lock()
-  host, sp := sigoHost, sigoSystemPrompt
+  host, sp, sum, calls := sigoHost, sigoSystemPrompt, sigoUsageSum, sigoCalls
   sigoStateMu.Unlock()
   t.Cleanup(func() {
     sigoStateMu.Lock()
-    sigoHost, sigoSystemPrompt = host, sp
+    sigoHost, sigoSystemPrompt, sigoUsageSum, sigoCalls = host, sp, sum, calls
     sigoStateMu.Unlock()
   })
 }
@@ -150,5 +150,95 @@ func TestSigoState_ConcurrentAccess(t *testing.T) {
   wg.Wait()
   if h := sigoGetHost(); h != "http://h:1" {
     t.Fatalf("Host: erwartet http://h:1, bekommen %s", h)
+  }
+}
+
+// alistGet sucht key in einer Assoc-Liste ((key . val) …).
+func alistGet(t *testing.T, alist *Cell, key string) *Cell {
+  t.Helper()
+  for c := alist; c != nil && c.Type == LIST; c = c.Cdr {
+    if c.Car != nil && c.Car.Car != nil && c.Car.Car.Val == key {
+      return c.Car.Cdr
+    }
+  }
+  t.Fatalf("Schlüssel %s fehlt in %s", key, alist.String())
+  return nil
+}
+
+func sigoArgs(url string) []*Cell {
+  return []*Cell{MakeStr("hi"), MakeStr("m"), MakeStr(""), MakeStr(url)}
+}
+
+func TestSigoStar_ReturnsAlist(t *testing.T) {
+  withSigoState(t)
+  srv := fakeSigo(t, nil)
+  r, err := fnSigoStar(sigoArgs(srv.URL))
+  if err != nil {
+    t.Fatal(err)
+  }
+  for key, want := range map[string]string{"text": "(+ 1 2)", "model": "test-m", "finish-reason": "stop"} {
+    if got := alistGet(t, r, key).Val; got != want {
+      t.Errorf("%s: erwartet %q, bekommen %q", key, want, got)
+    }
+  }
+  for key, want := range map[string]float64{"prompt-tokens": 5210, "completion-tokens": 115,
+    "cached-tokens": 5120, "reasoning-tokens": 98, "cost-usd": 0.0031} {
+    if got := alistGet(t, r, key).Num; got != want {
+      t.Errorf("%s: erwartet %v, bekommen %v", key, want, got)
+    }
+  }
+}
+
+func TestSigoStar_Lisp(t *testing.T) {
+  withSigoState(t)
+  srv := fakeSigo(t, nil)
+  evalEq(t, `(car (car (sigo* "hi" "m" "" "`+srv.URL+`")))`, "text")
+}
+
+func TestSigoUsage_SumsAndResets(t *testing.T) {
+  withSigoState(t)
+  srv := fakeSigo(t, nil)
+  if _, err := fnSigoUsageReset(nil); err != nil {
+    t.Fatal(err)
+  }
+  for i := 0; i < 2; i++ {
+    if _, err := fnSigo(sigoArgs(srv.URL)); err != nil {
+      t.Fatal(err)
+    }
+  }
+  u, _ := fnSigoUsage(nil)
+  if got := alistGet(t, u, "calls").Num; got != 2 {
+    t.Errorf("calls: erwartet 2, bekommen %v", got)
+  }
+  if got := alistGet(t, u, "cached-tokens").Num; got != 10240 {
+    t.Errorf("cached-tokens: erwartet 10240, bekommen %v", got)
+  }
+  if got := alistGet(t, u, "cost-usd").Num; got < 0.0062-1e-9 || got > 0.0062+1e-9 {
+    t.Errorf("cost-usd: erwartet 0.0062, bekommen %v", got)
+  }
+  if _, err := fnSigoUsageReset(nil); err != nil {
+    t.Fatal(err)
+  }
+  u, _ = fnSigoUsage(nil)
+  if got := alistGet(t, u, "calls").Num; got != 0 {
+    t.Errorf("calls nach Reset: erwartet 0, bekommen %v", got)
+  }
+}
+
+func TestSigoStar_ParallelCallsAreRaceFree(t *testing.T) {
+  withSigoState(t)
+  srv := fakeSigo(t, nil)
+  _, _ = fnSigoUsageReset(nil)
+  var wg sync.WaitGroup
+  for i := 0; i < 4; i++ {
+    wg.Add(3)
+    go func() { defer wg.Done(); _, _ = fnSigoStar(sigoArgs(srv.URL)) }()
+    go func() { defer wg.Done(); _, _ = fnSigoUsage(nil) }()
+    go func() { defer wg.Done(); _, _ = fnSigoSystemPrompt([]*Cell{MakeStr("p")}) }()
+  }
+  wg.Wait()
+  u, _ := fnSigoUsage(nil)
+  if got := alistGet(t, u, "calls").Num; got != 4 {
+    t.Errorf("calls: erwartet 4, bekommen %v", got)
   }
 }

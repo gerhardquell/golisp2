@@ -346,4 +346,4 @@ main.go              CLI
 ---
 
 **End of AI reference.** Human version (German): `docs/golisp2-cheatsheet.md`.
-German version: `docs/ki/referenz.md`. Chinese version: `docs/ki/referenz_cn.md`.
+German version: `src/embed/ki-referenz.md`. Chinese version: `docs/ki/referenz_cn.md`.

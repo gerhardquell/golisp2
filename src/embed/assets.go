@@ -28,3 +28,6 @@ var Condition string
 
 //go:embed loop.lisp
 var Loop string
+
+//go:embed ki-referenz.md
+var KiReferenz string

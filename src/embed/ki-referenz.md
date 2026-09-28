@@ -1,11 +1,13 @@
 # GoLisp2 — KI-Kurzreferenz (tokenoptimiert)
 
-> **Ziel:** Andere KIs brauchen diese Datei als *Initial-Context*, um GoLisp2-Code
-> zu schreiben/verstehen, ohne `rg` über 50 Dateien zu werfen.
-> **Format:** Tabellen, Präfixe, kein Fluff. Menschliche Ergänzung:
-> `docs/golisp2-cheatsheet.md`.
-> **Quelle:** `eval_core.go`, `primitives.go`, `embed/stdlib.lisp`,
-> generiert via `tools/gen-reference.lisp` (Stand 20260827).
+> **Ziel:** Initial-Context für KIs, die GoLisp2-Code schreiben oder verstehen.
+> Wird per `go:embed` als Default-Vorspann jedes `(sigo …)`-Calls
+> mitgeschickt (`(sigo-reference)`, `(sigo-system-prompt)`).
+> **Cache-Regel:** Der Anfang dieser Datei muss stabil bleiben — kein Datum,
+> keine Version, nichts Wechselndes in den ersten Zeilen, sonst verfällt der
+> Prompt-Cache der Provider.
+> **Format:** Tabellen, Präfixe, kein Fluff. Handgepflegt, nicht generiert;
+> Vollständigkeitsliste: `docs/referenz-generiert.md`.
 
 ---
 

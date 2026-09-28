@@ -344,4 +344,4 @@ main.go              CLI
 ---
 
 **AI 参考结束。** 人类版本（德语）：`docs/golisp2-cheatsheet.md`。
-德语版本：`docs/ki/referenz.md`。英语版本：`docs/ki/referenz_en.md`。
+德语版本：`src/embed/ki-referenz.md`。英语版本：`docs/ki/referenz_en.md`。

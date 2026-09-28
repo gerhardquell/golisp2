@@ -19,6 +19,8 @@ import (
   "strings"
   "sync"
   "time"
+
+  "golisp2/src/embed"
 )
 
 var (
@@ -27,16 +29,38 @@ var (
   // Default 120s. Überschreibbar via GOLISP_SIGO_TIMEOUT.
   sigoTimeout = 120 * time.Second
   // Default-Modell wenn (sigo "prompt") ohne Modell aufgerufen wird.
-  // Überschreibbar via GOLISP_SIGO_MODEL. Fallback gem25-flt (live,
-  // schnell/billig) – alter Default ollama-gemma3-4b ist nicht mehr
-  // verfügbar (Session 6).
-  sigoDefaultModel = "gem25-flt"
+  // Überschreibbar via GOLISP_SIGO_MODEL. Fallback zai-glm53
+  // (Thinking-Modell; Wahl wird in TODO.md Schritt 2 neu entschieden).
+  sigoDefaultModel = "zai-glm53"
   // Rate-Limiting: max 1 Request pro 2 Sekunden pro Model
   sigoRateLimiter = time.Tick(2 * time.Second)
   // Circuit-Breaker Schutz
   sigoLastCall    time.Time
   sigoCallMutex   sync.Mutex
+
+  // sigoStateMu schützt sigoHost und sigoSystemPrompt — parfunc ruft
+  // sigo aus mehreren Goroutinen, (sigo-host …) schreibt parallel.
+  sigoStateMu      sync.Mutex
+  // Vorspann jedes Calls (system_prompt). Leer = Modell sieht nur den Prompt.
+  sigoSystemPrompt = assets.KiReferenz
 )
+
+// sigoUsage: Token- und Kostenangaben eines Calls (bzw. deren Summe).
+// CostUSD ist eine obere Schranke ohne Cache-Rabatt (von sigoREST).
+type sigoUsage struct {
+  PromptTokens     int
+  CompletionTokens int
+  CachedTokens     int
+  ReasoningTokens  int
+  CostUSD          float64
+}
+
+type sigoResult struct {
+  Text         string
+  Model        string
+  FinishReason string
+  Usage        sigoUsage
+}
 
 // init liest sigoREST-Konfiguration aus Umgebungsvariablen:
 //   GOLISP_SIGO_HOST     – sigoREST-Host (default http://127.0.0.1:9080)
@@ -56,24 +80,38 @@ func init() {
   }
 }
 
-// RegisterSigo fügt (sigo prompt model session-id) in die Umgebung ein
+// RegisterSigo registriert die sigoREST-Primitiven
 func RegisterSigo(env *Env) {
-  _ = env.Set("sigo",        makeFn(fnSigo))
-  _ = env.Set("sigo-models", makeFn(fnSigoModels))
-  _ = env.Set("sigo-host",   makeFn(fnSigoHost))
+  _ = env.Set("sigo",               makeFn(fnSigo))
+  _ = env.Set("sigo-models",        makeFn(fnSigoModels))
+  _ = env.Set("sigo-host",          makeFn(fnSigoHost))
+  _ = env.Set("sigo-system-prompt", makeFn(fnSigoSystemPrompt))
+  _ = env.Set("sigo-reference",     makeFn(fnSigoReference))
 }
 
-// fnSigo: (sigo "prompt")
-//         (sigo "prompt" "model")
-//         (sigo "prompt" "model" "session-id")
-//         (sigo "prompt" "model" "session-id" "host")
-func fnSigo(args []*Cell) (*Cell, error) {
-  if len(args) < 1 { return nil, fmt.Errorf("sigo: mindestens 1 Argument") }
+func sigoGetHost() string {
+  sigoStateMu.Lock()
+  defer sigoStateMu.Unlock()
+  return sigoHost
+}
+
+func sigoGetSystemPrompt() string {
+  sigoStateMu.Lock()
+  defer sigoStateMu.Unlock()
+  return sigoSystemPrompt
+}
+
+// sigoRequest: gemeinsamer Pfad für sigo und sigo*
+//   (fname "prompt" [model] [session-id] [host])
+func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
+  if len(args) < 1 {
+    return sigoResult{}, fmt.Errorf("%s: mindestens 1 Argument", fname)
+  }
 
   prompt    := args[0].Val
   model     := sigoDefaultModel
   sessionID := ""
-  host      := sigoHost
+  host      := sigoGetHost()
 
   if len(args) >= 2 { model = args[1].Val }
   if len(args) >= 3 { sessionID = args[2].Val }
@@ -91,14 +129,19 @@ func fnSigo(args []*Cell) (*Cell, error) {
   sigoLastCall = time.Now()
   sigoCallMutex.Unlock()
 
-  result, err := sigoCallToHost(prompt, model, sessionID, host)
+  return sigoCallToHost(prompt, model, sessionID, host, sigoGetSystemPrompt())
+}
+
+// fnSigo: (sigo "prompt" [model] [session-id] [host]) → Antworttext
+func fnSigo(args []*Cell) (*Cell, error) {
+  res, err := sigoRequest(args, "sigo")
   if err != nil { return nil, err }
-  return MakeStr(result), nil
+  return MakeStr(res.Text), nil
 }
 
 // fnSigoModels: (sigo-models) → Liste der verfügbaren Modelle
 func fnSigoModels(args []*Cell) (*Cell, error) {
-  resp, err := http.Get(sigoHost + "/v1/models")
+  resp, err := http.Get(sigoGetHost() + "/v1/models")
   if err != nil { return nil, fmt.Errorf("sigo-models: %v", err) }
   defer resp.Body.Close()
 
@@ -120,30 +163,53 @@ func fnSigoModels(args []*Cell) (*Cell, error) {
 
 // fnSigoHost: (sigo-host "http://192.168.1.10:9080") → Host ändern
 func fnSigoHost(args []*Cell) (*Cell, error) {
-  if len(args) < 1 { return MakeStr(sigoHost), nil }
-  sigoHost = strings.TrimRight(args[0].Val, "/")
+  sigoStateMu.Lock()
+  defer sigoStateMu.Unlock()
+  if len(args) >= 1 {
+    sigoHost = strings.TrimRight(args[0].Val, "/")
+  }
   return MakeStr(sigoHost), nil
 }
 
-// sigoCall sendet einen Chat-Request an sigoREST
-func sigoCall(prompt, model, sessionID string) (string, error) {
-  return sigoCallToHost(prompt, model, sessionID, sigoHost)
+// fnSigoSystemPrompt: (sigo-system-prompt) lesen, (sigo-system-prompt "…")
+// setzen, (sigo-system-prompt "") leeren. Liefert den (neuen) Vorspann.
+func fnSigoSystemPrompt(args []*Cell) (*Cell, error) {
+  sigoStateMu.Lock()
+  defer sigoStateMu.Unlock()
+  if len(args) >= 1 {
+    if args[0].Type != STRING {
+      return nil, fmt.Errorf("sigo-system-prompt: String erwartet")
+    }
+    sigoSystemPrompt = args[0].Val
+  }
+  return MakeStr(sigoSystemPrompt), nil
 }
 
-// sigoCallToHost sendet einen Chat-Request an einen bestimmten Host
-func sigoCallToHost(prompt, model, sessionID, host string) (string, error) {
+// fnSigoReference: (sigo-reference) → eingebettete KI-Kurzreferenz
+func fnSigoReference(args []*Cell) (*Cell, error) {
+  return MakeStr(assets.KiReferenz), nil
+}
+
+// sigoCallToHost sendet einen Chat-Request an einen bestimmten Host.
+// Immer bare:true — sigoREST legt dann weder Memory noch Server-Prompt
+// davor; der Kontext besteht nur aus systemPrompt (falls nicht leer).
+func sigoCallToHost(prompt, model, sessionID, host, systemPrompt string) (sigoResult, error) {
   reqBody := map[string]interface{}{
     "model": model,
+    "bare":  true,
     "messages": []map[string]string{
       {"role": "user", "content": prompt},
     },
+  }
+  if systemPrompt != "" {
+    reqBody["system_prompt"] = systemPrompt
   }
   if sessionID != "" {
     reqBody["session_id"] = sessionID
   }
 
   data, err := json.Marshal(reqBody)
-  if err != nil { return "", fmt.Errorf("sigo marshal: %v", err) }
+  if err != nil { return sigoResult{}, fmt.Errorf("sigo marshal: %v", err) }
 
   ctx, cancel := context.WithTimeout(context.Background(), sigoTimeout)
   defer cancel()
@@ -152,32 +218,59 @@ func sigoCallToHost(prompt, model, sessionID, host string) (string, error) {
     host+"/v1/chat/completions",
     bytes.NewReader(data),
   )
-  if err != nil { return "", fmt.Errorf("sigo request: %v", err) }
+  if err != nil { return sigoResult{}, fmt.Errorf("sigo request: %v", err) }
   req.Header.Set("Content-Type", "application/json")
 
   client := &http.Client{}
   resp, err := client.Do(req)
-  if err != nil { return "", fmt.Errorf("sigo connect: %v", err) }
+  if err != nil { return sigoResult{}, fmt.Errorf("sigo connect: %v", err) }
   defer resp.Body.Close()
 
   body, _ := io.ReadAll(resp.Body)
 
   if resp.StatusCode != 200 {
-    return "", fmt.Errorf("sigo HTTP %d: %s", resp.StatusCode, string(body))
+    return sigoResult{}, fmt.Errorf("sigo HTTP %d: %s", resp.StatusCode, string(body))
   }
 
   var result struct {
+    Model   string `json:"model"`
     Choices []struct {
       Message struct {
         Content string `json:"content"`
       } `json:"message"`
+      FinishReason string `json:"finish_reason"`
     } `json:"choices"`
+    Usage struct {
+      PromptTokens        int `json:"prompt_tokens"`
+      CompletionTokens    int `json:"completion_tokens"`
+      PromptTokensDetails struct {
+        CachedTokens int `json:"cached_tokens"`
+      } `json:"prompt_tokens_details"`
+      CompletionTokensDetails struct {
+        ReasoningTokens int `json:"reasoning_tokens"`
+      } `json:"completion_tokens_details"`
+      CostUSD float64 `json:"cost_usd"`
+    } `json:"usage"`
   }
   if err := json.Unmarshal(body, &result); err != nil {
-    return "", fmt.Errorf("sigo parse: %v", err)
+    return sigoResult{}, fmt.Errorf("sigo parse: %v", err)
   }
   if len(result.Choices) == 0 {
-    return "", fmt.Errorf("sigo: leere Antwort")
+    return sigoResult{}, fmt.Errorf("sigo: leere Antwort")
   }
-  return result.Choices[0].Message.Content, nil
+  if result.Model == "" {
+    result.Model = model
+  }
+  return sigoResult{
+    Text:         result.Choices[0].Message.Content,
+    Model:        result.Model,
+    FinishReason: result.Choices[0].FinishReason,
+    Usage: sigoUsage{
+      PromptTokens:     result.Usage.PromptTokens,
+      CompletionTokens: result.Usage.CompletionTokens,
+      CachedTokens:     result.Usage.PromptTokensDetails.CachedTokens,
+      ReasoningTokens:  result.Usage.CompletionTokensDetails.ReasoningTokens,
+      CostUSD:          result.Usage.CostUSD,
+    },
+  }, nil
 }

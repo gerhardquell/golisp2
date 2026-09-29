@@ -177,6 +177,9 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 `(defstruct name [doc] slot|(slot default) ...)` — erzeugt: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)
 `(setf place val)` — generisch, `(defstruct ...)` registriert Accessoren automatisch
 
+### Typen
+- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table`, Struct- oder Condition-Name. `(typep x spec)` mit Typnamen, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exklusiv, `*` = offen). `3.0` ist `integer`. Kein `deftype`/`typecase`.
+
 ---
 
 ## 5. Wahrheitswerte / Nil
@@ -261,6 +264,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(eval form)` | Global | Global (ok) |
 | `macrolet` | Nicht-rekursiv | Rekursiv |
 | `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
+| Structs sind Listen | `(typep p 'cons)` → `t`; `(type-of 3.0)` → `integer` | Structs sind eigener Typ, kein `float`-Subtyp |
 
 ---
 

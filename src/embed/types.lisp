@@ -81,3 +81,93 @@
           ((eq k 'func)   'compiled-function)
           ((eq k 'cons)   (%cons-type x))
           (t              k))))
+
+;; === typep ===========================================================
+
+(defun %bad-spec (spec)
+  (error (format nil "typep: ungültige Typangabe ~a" spec)))
+
+;; %type-start: Einstieg in *type-parents* für x. Structs starten bei
+;; structure-object, Conditions bei cons.
+(defun %type-start (x)
+  (let ((k (type-of x)))
+    (cond ((%builtin-type? k) k)
+          ((%cond? x)         'cons)
+          (t                  'structure-object))))
+
+;; Auflösung: eingebaut → Struct → Condition → Fehler (Spec).
+(defun %typep-name (x name)
+  (cond ((eq name t)                    t)
+        ((eq name 'atom)                (not (pair? x)))
+        ((%builtin-type? name)          (%builtin-subtype? (%type-start x) name))
+        ((assoc name *struct-types*)    (%struct-instance? x name))
+        ((assoc name *condition-types*) (if (%cond-type? x name) t ()))
+        (t (error (format nil "typep: unbekannter Typ '~a'" name)))))
+
+(defun %valid-bound? (b)
+  (or (eq b '*)
+      (number? b)
+      (and (pair? b) (number? (car b)) (null (cdr b)))))
+
+(defun %lower-ok? (x b)
+  (cond ((eq b '*)   t)
+        ((number? b) (>= x b))
+        (t           (> x (car b)))))
+
+(defun %upper-ok? (x b)
+  (cond ((eq b '*)   t)
+        ((number? b) (<= x b))
+        (t           (< x (car b)))))
+
+;; (integer lo hi) u. ä.: Grenze = Zahl (inklusiv), (zahl) (exklusiv),
+;; * oder weggelassen (unbegrenzt). Grenzen werden vor dem Typ geprüft,
+;; damit eine kaputte Angabe immer auffällt.
+(defun %typep-range (x head args spec)
+  (if (or (> (length args) 2) (not (every %valid-bound? args)))
+      (%bad-spec spec)
+      (if (and (%typep-name x head)
+               (%lower-ok? x (if (null args) '* (car args)))
+               (%upper-ok? x (if (null (cdr args)) '* (cadr args))))
+          t
+          ())))
+
+;; (satisfies f): f ist Symbol; (eval f) löst auf, weil funcall
+;; Symbole nicht auflöst.
+(defun %typep-satisfies (x spec)
+  (let ((args (cdr spec)))
+    (if (not (and (pair? args) (symbol? (car args)) (null (cdr args))))
+        (%bad-spec spec)
+        (let* ((f  (car args))
+               (fn (if (bound? f) (eval f) ())))
+          (if (not (member (%cell-type fn) '(lambda func)))
+              (error (format nil "typep: satisfies: '~a' ist keine Funktion" f))
+              (if (funcall fn x) t ()))))))
+
+(defun %one-arg? (args)
+  (and (pair? args) (null (cdr args))))
+
+(defun %typep-spec (x spec)
+  (cond ((null spec)        ())
+        ((symbol? spec)     (%typep-name x spec))
+        ((not (pair? spec)) (%bad-spec spec))
+        (t
+         (let ((head (car spec))
+               (args (cdr spec)))
+           (cond ((eq head 'or)
+                  (any (lambda (s) (%typep-spec x s)) args))
+                 ((eq head 'and)
+                  (every (lambda (s) (%typep-spec x s)) args))
+                 ((eq head 'not)
+                  (if (%one-arg? args) (not (%typep-spec x (car args))) (%bad-spec spec)))
+                 ((eq head 'member)
+                  (any (lambda (v) (eql x v)) args))
+                 ((eq head 'eql)
+                  (if (%one-arg? args) (eql x (car args)) (%bad-spec spec)))
+                 ((eq head 'satisfies)
+                  (%typep-satisfies x spec))
+                 ((member head '(integer float real rational))
+                  (%typep-range x head args spec))
+                 (t (%bad-spec spec)))))))
+
+(defun typep (x spec)
+  (%typep-spec x spec))

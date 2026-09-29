@@ -77,6 +77,16 @@ func TestPrimitiveListOps(t *testing.T) {
   evalEq(t, `(funcall + 1 2 3)`, "6")
 }
 
+// TestFuncallSymbol: (funcall 'f …) löst das Symbol wie CL global auf —
+// eine lexikalische Bindung gleichen Namens zählt nicht.
+func TestFuncallSymbol(t *testing.T) {
+  evalEq(t, `(funcall 'car '(1 2))`, "1")
+  evalEq(t, `(funcall '+ 1 2 3)`, "6")
+  evalEq(t, `(progn (defun fs-quadrat (x) (* x x)) (funcall 'fs-quadrat 3))`, "9")
+  evalEq(t, `(let ((car cdr)) (funcall 'car '(1 2)))`, "1")
+  evalErr(t, `(funcall 'fs-gibts-nicht 1)`)
+}
+
 // TestPrimitiveAppendCL: append folgt Common-Lisp-Semantik (Listen-
 // konkatenation, variadisch). Bisher war append single-element ("snoc"),
 // was swank.lisp/flatten (CL-Stil) silent gebrochen hat.

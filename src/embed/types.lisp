@@ -147,8 +147,8 @@
           t
           ())))
 
-;; (satisfies f): f ist Symbol; (eval f) löst im Root-Env auf, weil funcall
-;; Symbole nicht auflöst. (bound? f) wäre falsch: bound? prüft env lexikalisch
+;; (satisfies f): f ist Symbol; (eval f) löst im Root-Env auf und erlaubt
+;; per trap den Spec-Fehlertext (funcall 'f hätte eigenen Text). (bound? f) wäre falsch: bound? prüft env lexikalisch
 ;; und sähe hier die eigenen let*-Locals (x, spec, args, f) statt global
 ;; aufzulösen — deshalb direkt (eval f) mit trap statt bound?-Vorprüfung.
 (defun %typep-satisfies (x spec)

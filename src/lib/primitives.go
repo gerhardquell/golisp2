@@ -84,7 +84,9 @@ func BaseEnv() *Env {
 
 	// apply, funcall
 	_ = env.Set("apply", makeFn(fnApply))
-	_ = env.Set("funcall", makeFn(fnFuncall))
+	_ = env.Set("funcall", makeFn(func(args []*Cell) (*Cell, error) {
+		return fnFuncall(env, args)
+	}))
 	_ = env.Set("mapcar", makeFn(fnMapcar))
 	_ = env.Set("exit", makeFn(fnExit))
 
@@ -657,12 +659,21 @@ func fnApply(args []*Cell) (*Cell, error) {
 	return apply(fn, combined)
 }
 
-// funcall: (funcall fn arg1 arg2 ...) → fn auf Argumente anwenden
-func fnFuncall(args []*Cell) (*Cell, error) {
+// funcall: (funcall fn arg1 arg2 ...) → fn auf Argumente anwenden.
+// Ein Symbol wird wie in CL global aufgelöst (Root-Env), nicht lexikalisch.
+func fnFuncall(env *Env, args []*Cell) (*Cell, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("funcall: mindestens 1 Argument nötig")
 	}
-	return apply(args[0], args[1:])
+	fn := args[0]
+	if fn.Type == ATOM {
+		resolved, err := env.Root().GetSym(fn)
+		if err != nil {
+			return nil, fmt.Errorf("funcall: '%s' ist keine Funktion", fn)
+		}
+		fn = resolved
+	}
+	return apply(fn, args[1:])
 }
 
 // exit: (exit [code]) → beendet den Prozess sofort mit Exit-Code (Default 0).

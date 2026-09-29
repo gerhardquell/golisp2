@@ -47,26 +47,42 @@
 
 ;; === type-of =========================================================
 
+;; %infinite?: +Inf/-Inf verdoppeln sich zu sich selbst (x≠0 ausgenommen,
+;; sonst verdoppelt sich auch 0 zu sich selbst). NaN fällt schon vorher aus
+;; (= x (floor x)) raus, weil NaN nie sich selbst gleich ist.
+(defun %infinite? (x)
+  (and (not (= x 0)) (= x (* 2 x))))
+
 (defun %number-type (x)
-  (if (= x (floor x)) 'integer 'float))
+  (if (and (= x (floor x)) (not (%infinite? x))) 'integer 'float))
 
 (defun %symbol-type (x)
-  (cond ((eq x t)                                        'boolean)
-        ((equal? (substring (symbol-name x) 0 1) ":")    'keyword)
-        (t                                               'symbol)))
+  (cond ((eq x t)                                                     'boolean)
+        ((and (> (string-length (symbol-name x)) 0)
+              (equal? (substring (symbol-name x) 0 1) ":"))          'keyword)
+        (t                                                            'symbol)))
+
+;; %proper-length: Länge einer echten Liste, -1 bei improper list — schützt
+;; vor dem length-Crash (cdr: Liste erwartet) auf z. B. (cons 'punkt 2).
+(defun %proper-length (x)
+  (cond ((null x)        0)
+        ((not (pair? x)) -1)
+        (t (let ((n (%proper-length (cdr x))))
+             (if (= n -1) -1 (+ n 1))))))
 
 ;; %struct-instance?: x ist Struct name — registriert UND Länge passt.
 (defun %struct-instance? (x name)
   (let ((entry (assoc name *struct-types*)))
     (if (and entry (pair? x) (eq (car x) name)
-             (= (length x) (+ (cadr entry) 1)))
+             (= (%proper-length x) (+ (cadr entry) 1)))
         t
         ())))
 
 ;; Struct-/Condition-Namen, die eingebaute Typen verdecken würden, zählen
 ;; nicht (Kollision wird bei der Definition gewarnt).
 (defun %cons-type (x)
-  (cond ((and (%cond? x) (not (%builtin-type? (cadr x))))
+  (cond ((and (%cond? x) (pair? (cdr x)) (symbol? (cadr x))
+              (not (%builtin-type? (cadr x))))
          (cadr x))
         ((and (symbol? (car x)) (not (%builtin-type? (car x)))
               (%struct-instance? x (car x)))
@@ -131,20 +147,27 @@
           t
           ())))
 
-;; (satisfies f): f ist Symbol; (eval f) löst auf, weil funcall
-;; Symbole nicht auflöst.
+;; (satisfies f): f ist Symbol; (eval f) löst im Root-Env auf, weil funcall
+;; Symbole nicht auflöst. (bound? f) wäre falsch: bound? prüft env lexikalisch
+;; und sähe hier die eigenen let*-Locals (x, spec, args, f) statt global
+;; aufzulösen — deshalb direkt (eval f) mit trap statt bound?-Vorprüfung.
 (defun %typep-satisfies (x spec)
   (let ((args (cdr spec)))
     (if (not (and (pair? args) (symbol? (car args)) (null (cdr args))))
         (%bad-spec spec)
         (let* ((f  (car args))
-               (fn (if (bound? f) (eval f) ())))
+               (fn (trap (eval f) (lambda (e) ()))))
           (if (not (member (%cell-type fn) '(lambda func)))
               (error (format nil "typep: satisfies: '~a' ist keine Funktion" f))
               (if (funcall fn x) t ()))))))
 
 (defun %one-arg? (args)
   (and (pair? args) (null (cdr args))))
+
+;; %proper-list?: keine dotted list — schützt or/and/member/integer & co.
+;; vor rohem car/cdr-Fehler bei z. B. (or . x), (integer 0 . 5).
+(defun %proper-list? (x)
+  (or (null x) (and (pair? x) (%proper-list? (cdr x)))))
 
 (defun %typep-spec (x spec)
   (cond ((null spec)        ())
@@ -153,21 +176,23 @@
         (t
          (let ((head (car spec))
                (args (cdr spec)))
-           (cond ((eq head 'or)
-                  (any (lambda (s) (%typep-spec x s)) args))
-                 ((eq head 'and)
-                  (every (lambda (s) (%typep-spec x s)) args))
-                 ((eq head 'not)
-                  (if (%one-arg? args) (not (%typep-spec x (car args))) (%bad-spec spec)))
-                 ((eq head 'member)
-                  (any (lambda (v) (eql x v)) args))
-                 ((eq head 'eql)
-                  (if (%one-arg? args) (eql x (car args)) (%bad-spec spec)))
-                 ((eq head 'satisfies)
-                  (%typep-satisfies x spec))
-                 ((member head '(integer float real rational))
-                  (%typep-range x head args spec))
-                 (t (%bad-spec spec)))))))
+           (if (not (%proper-list? args))
+               (%bad-spec spec)
+               (cond ((eq head 'or)
+                      (any (lambda (s) (%typep-spec x s)) args))
+                     ((eq head 'and)
+                      (every (lambda (s) (%typep-spec x s)) args))
+                     ((eq head 'not)
+                      (if (%one-arg? args) (not (%typep-spec x (car args))) (%bad-spec spec)))
+                     ((eq head 'member)
+                      (any (lambda (v) (eql x v)) args))
+                     ((eq head 'eql)
+                      (if (%one-arg? args) (eql x (car args)) (%bad-spec spec)))
+                     ((eq head 'satisfies)
+                      (%typep-satisfies x spec))
+                     ((member head '(integer float real rational))
+                      (%typep-range x head args spec))
+                     (t (%bad-spec spec))))))))
 
 (defun typep (x spec)
   (%typep-spec x spec))

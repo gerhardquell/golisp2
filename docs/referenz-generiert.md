@@ -21,6 +21,7 @@
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
+| `%infinite?` | Intern: Pruefung auf +/-Inf (types.lisp) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
@@ -34,6 +35,8 @@
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
 | `%number-type` | Intern: type-of fuer Zahlen: integer oder float (types.lisp) |
 | `%one-arg?` | Intern: Pruefung auf genau ein Argument (types.lisp) |
+| `%proper-length` | Intern: Laenge einer echten Liste, -1 bei Dotted Pair (types.lisp) |
+| `%proper-list?` | Intern: Pruefung auf echte (nicht gepunktete) Liste (types.lisp) |
 | `%reduce-fold` | Intern: Faltkern von reduce |
 | `%remove-first` | Intern: erstes Vorkommen entfernen (unload-system) |
 | `%setf-one` | Intern: einzelne setf-Zuweisung ausfuehren |
@@ -62,7 +65,7 @@
 | `*systems*` | Registry der definierten Systeme (defsystem) |
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
 | `+` | Addition aller Argumente |
-| `-` | Subtraktion (erstes minus Rest); unär 0 |
+| `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0 |
 | `/` | Division; Fehler bei Division durch 0 |
 | `<` | numerisch kleiner |
 | `<=` | numerisch kleiner oder gleich |

@@ -127,10 +127,10 @@ Kollisionen werden **laut** gemeldet, nicht still aufgelöst:
 - Struct- und Condition-Name gleich → `WARN:` bei der zweiten
   Definition; Struct gewinnt in `typep`.
 
-Die Prüfung nutzt `%builtin-type?` aus `types.lisp`. Da `defstruct` in
+Die Prüfung nutzt `%type-name-warnings` aus `types.lisp`. Da `defstruct` in
 `stdlib.lisp` vor `types.lisp` geladen wird, aber erst zur
 Benutzungszeit expandiert, ist die Funktion dann gebunden; zur
-Sicherheit mit `(bound? '%builtin-type?)` geschützt.
+Sicherheit mit `(bound? '%type-name-warnings)` geschützt.
 
 ## Fehler
 
@@ -144,7 +144,8 @@ Sicherheit mit `(bound? '%builtin-type?)` geschützt.
 
 | Datei | Änderung |
 |---|---|
-| `src/lib/primitives.go` | neu `%cell-type` (1 Arg → Symbol: `number`, `string`, `symbol`, `cons`, `null`, `lambda`, `func`, `macro`, `hash-table`), registriert in `BaseEnv()` |
+| `src/lib/celltype.go` | **neu**: `%cell-type` (1 Arg → Symbol: `number`, `string`, `symbol`, `cons`, `null`, `lambda`, `func`, `macro`, `hash-table`, sonst `t`) + `RegisterCellType(env)` — eigene Datei, weil `primitives.go` mit 943 Zeilen an der harten 1000er-Grenze steht |
+| `src/lib/primitives.go` | `BaseEnv()` ruft `RegisterCellType(env)` |
 | `src/embed/stdlib.lisp` | `(defvar *struct-types* '())`; `defstruct` registriert `(name slot-anzahl)` und warnt bei Kollision |
 | `src/embed/condition.lisp` | `define-condition` warnt bei Kollision mit eingebautem Typ oder Struct |
 | `src/embed/types.lisp` | **neu**: `*type-parents*`, `%builtin-type?`, `%struct-instance?`, `type-of`, `typep`, `%typep-spec`, Bereichsprüfung |

@@ -163,8 +163,9 @@
     ((= exp 1) base)
     (t         (* base (expt base (- exp 1))))))
 
+;; Euklid über mod — / ist Float-Division und taugt hier nicht
 (defun gcd (a b)
-  (if (= b 0) a (gcd b (- a (* (/ a b) b)))))
+  (if (= b 0) (abs a) (gcd b (mod a b))))
 
 ;; floor statt / : CL-ash rundet beim Rechtsshift Richtung -unendlich
 (defun ash-right (x n)

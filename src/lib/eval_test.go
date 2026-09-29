@@ -72,7 +72,8 @@ func TestEvalArith(t *testing.T) {
     {"(/ 10 2)", "5"},
     {"(+ 1 2 3 4)", "10"},         // Variadisch
     {"(+ (* 2 3) (- 10 5))", "11"}, // Verschachtelt
-    {"(- 5)", "5"},                 // IST: kein unäres Minus – fnSub(1 Arg)=args[0]
+    {"(- 5)", "-5"},                // unäres Minus negiert (CL)
+    {"(- -3)", "3"},
     {"(- 0 5)", "-5"},              // Negation explizit via 0
     {"(/ 1 3)", "0.3333333333333333"},
   }

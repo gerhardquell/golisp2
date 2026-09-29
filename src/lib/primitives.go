@@ -214,6 +214,9 @@ func fnSub(args []*Cell) (*Cell, error) {
 	if len(args) == 0 {
 		return MakeNum(0), nil
 	}
+	if len(args) == 1 {
+		return MakeNum(-args[0].Num), nil // (- x) negiert (CL)
+	}
 	n := args[0].Num
 	for _, a := range args[1:] {
 		n -= a.Num

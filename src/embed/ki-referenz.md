@@ -264,7 +264,8 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(eval form)` | Global | Global (ok) |
 | `macrolet` | Nicht-rekursiv | Rekursiv |
 | `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
-| Structs sind Listen | `(typep p 'cons)` → `t`; `(type-of 3.0)` → `integer` | Structs sind eigener Typ, kein `float`-Subtyp |
+| Structs sind Listen | `(typep p 'cons)` → `t` | eigener Typ, nicht `cons` |
+| Kein Float-Typ | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 ist ein Float) |
 
 ---
 

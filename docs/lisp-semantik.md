@@ -385,6 +385,8 @@ Condition.
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
 - Keine Characters, keine Vektoren.
+
+**Nicht vorhanden / keine Typen:**
 - Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
 - Noch nicht vorhanden: `deftype`, `check-type`, `subtypep`, `typecase`.
 

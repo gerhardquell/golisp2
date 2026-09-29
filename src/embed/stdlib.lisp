@@ -409,6 +409,7 @@
                             '()
                             `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Prädikat heißt '~a'" name pred-p pred-p-final))))))
     `(begin
+       ,@(if (bound? '%type-name-warnings) (%type-name-warnings 'defstruct name) '())
        (set! *struct-types* (alist-set ',name ,n *struct-types*))
        (defun ,mk (&key ,@slots) (%make-struct ',name ,@slot-names))
        ,@(mapcar (lambda (p)

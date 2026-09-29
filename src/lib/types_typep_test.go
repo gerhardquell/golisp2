@@ -16,7 +16,51 @@ import (
   "testing"
 )
 
-var _ = strings.Contains // wird ab Task 5 gebraucht
+func stderrVon(t *testing.T, src string) string {
+  t.Helper()
+  return captureStderr(t, func() {
+    if _, err := evalStdlib(t, src); err != nil {
+      t.Fatalf("eval: %v", err)
+    }
+  })
+}
+
+func TestKollisionStructEingebauterTyp(t *testing.T) {
+  out := stderrVon(t, `(defstruct integer a)`)
+  if !strings.Contains(out, "WARN: defstruct integer: Name ist ein eingebauter Typ") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  // eingebauter Typ gewinnt
+  evalStdlibEq(t, `(defstruct integer a) (type-of (make-integer :a 1))`, "cons")
+  evalStdlibEq(t, `(defstruct integer a) (typep (make-integer :a 1) 'integer)`, "()")
+}
+
+func TestKollisionStructCondition(t *testing.T) {
+  out := stderrVon(t, `(define-condition mein-fehler (error) ()) (defstruct mein-fehler a)`)
+  if !strings.Contains(out, "WARN: defstruct mein-fehler: Name ist auch ein Condition-Typ") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  out = stderrVon(t, `(defstruct punkt x y) (define-condition punkt (error) ())`)
+  if !strings.Contains(out, "WARN: define-condition punkt: Name ist auch ein Struct") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  // Struct gewinnt
+  evalStdlibEq(t, `(define-condition mein-fehler (error) ()) (defstruct mein-fehler a) (typep (make-mein-fehler :a 1) 'mein-fehler)`, "t")
+}
+
+func TestKollisionConditionEingebauterTyp(t *testing.T) {
+  out := stderrVon(t, `(define-condition string (error) ())`)
+  if !strings.Contains(out, "WARN: define-condition string: Name ist ein eingebauter Typ") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+}
+
+func TestKeineWarnungOhneKollision(t *testing.T) {
+  out := stderrVon(t, `(defstruct punkt x y) (define-condition datei-fehler (error) (pfad))`)
+  if strings.Contains(out, "WARN") {
+    t.Errorf("unerwartete Warnung: %q", out)
+  }
+}
 
 func TestStructRegistry(t *testing.T) {
   evalStdlibEq(t, `(defstruct punkt x y) *struct-types*`, "((punkt 2))")

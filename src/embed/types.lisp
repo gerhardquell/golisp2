@@ -171,3 +171,22 @@
 
 (defun typep (x spec)
   (%typep-spec x spec))
+
+;; === Kollisionen =====================================================
+
+;; %type-name-warnings: (warn …)-Formen für defstruct/define-condition,
+;; wenn name einen eingebauten Typ oder die jeweils andere Registry trifft.
+;; Wird zur Expansionszeit aufgerufen; kind = 'defstruct | 'define-condition.
+(defun %type-name-warnings (kind name)
+  (mapcar (lambda (m) (list 'warn m))
+          (filter identity
+            (list
+              (if (%builtin-type? name)
+                  (format nil "WARN: ~a ~a: Name ist ein eingebauter Typ → typep/type-of sehen den eingebauten Typ" kind name)
+                  ())
+              (if (and (eq kind 'defstruct) (assoc name *condition-types*))
+                  (format nil "WARN: defstruct ~a: Name ist auch ein Condition-Typ → typep sieht den Struct" name)
+                  ())
+              (if (and (eq kind 'define-condition) (assoc name *struct-types*))
+                  (format nil "WARN: define-condition ~a: Name ist auch ein Struct → typep sieht den Struct" name)
+                  ())))))

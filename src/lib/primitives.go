@@ -136,6 +136,9 @@ func BaseEnv() *Env {
 	// Hashtables (CL)
 	RegisterHashtables(env)
 
+	// Kern-Typ für type-of/typep (types.lisp)
+	RegisterCellType(env)
+
 	// FORMAT (Common-Lisp-style)
 	RegisterFormat(env)
 

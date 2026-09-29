@@ -223,6 +223,8 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ```lisp
 (string? "a") (number? 42) (list? '(1))
 (symbol? 'foo) (atom? 'foo) (null? '())
+(type-of x)                       ; Typ als Symbol: integer, string, cons, Struct-Name …
+(typep x 'typ)                    ; Typprüfung inkl. (or …), (and …), (not …), (integer lo hi), (satisfies f)
 ```
 
 ### Symbol-Konstruktion

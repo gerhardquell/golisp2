@@ -360,6 +360,38 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
 
 ---
 
+## Typen: `type-of` und `typep`
+
+```lisp
+(type-of 3)                        ; → integer
+(type-of 3.5)                      ; → float
+(type-of :k)                       ; → keyword
+(typep 3 'number)                  ; → t   (integer → rational → real → number)
+(typep x '(or string symbol))
+(typep n '(integer 0 (10)))        ; 0 ≤ n < 10
+(typep x '(satisfies gerade?))     ; eigenes Prädikat
+```
+
+Hierarchie und Typnamen stehen an genau einer Stelle: `*type-parents*`
+in `src/embed/types.lisp`. Structs (`defstruct`) und Conditions
+(`define-condition`) sind eigene Typen; ihre Namen kollidieren laut
+(`WARN:`), nie still — der eingebaute Typ gewinnt vor Struct, Struct vor
+Condition.
+
+**Bewusste Abweichungen von CL:**
+- `3.0` ist `integer` — der Kern kennt nur `float64`.
+- `type-of` liefert `integer`/`float`, nicht `fixnum`/`double-float`.
+- Structs sind Listen: `(typep p 'cons)` → `t`. Ein Literal `'(punkt 1 2)`
+  gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
+- Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
+- Keine Characters, keine Vektoren.
+
+**Nicht vorhanden / keine Typen:**
+- Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
+- Noch nicht vorhanden: `deftype`, `check-type`, `subtypep`, `typecase`.
+
+---
+
 ## `loop` — Iteration (CL-Praxis-Kern)
 
 `loop` (embed/loop.lisp) ist ein reines Lisp-Makro: die Klauseln werden

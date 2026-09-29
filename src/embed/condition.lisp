@@ -96,6 +96,7 @@
   (if (not (every (lambda (s) (symbol? s)) slots))
       (error "define-condition: Slots müssen Symbole sein"))
   `(progn
+     ,@(if (bound? '%type-name-warnings) (%type-name-warnings 'define-condition name) '())
      (set! *condition-types*
            (alist-set ',name ',parents *condition-types*))
      ,@(mapcar (lambda (s)

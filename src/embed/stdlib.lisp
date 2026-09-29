@@ -371,6 +371,10 @@
       (cons val (cdr lst))
       (cons (car lst) (set-nth (cdr lst) (- n 1) val))))
 
+;; *struct-types*: Registry (name slot-anzahl) für type-of/typep (types.lisp).
+;; defvar: Mehrfach-Load darf registrierte Structs nicht löschen.
+(defvar *struct-types* '())
+
 ;; Hilfsfunktion für defstruct: finde einen freien Namen, falls der Primärname
 ;; bereits gebunden ist. Bei Reload (reload? = t) wird der Primärname beibehalten.
 ;; Kollisionsvermeidung fügt Bindestriche zwischen name und slot ein:
@@ -405,6 +409,8 @@
                             '()
                             `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Prädikat heißt '~a'" name pred-p pred-p-final))))))
     `(begin
+       ,@(if (bound? '%type-name-warnings) (%type-name-warnings 'defstruct name) '())
+       (set! *struct-types* (alist-set ',name ,n *struct-types*))
        (defun ,mk (&key ,@slots) (%make-struct ',name ,@slot-names))
        ,@(mapcar (lambda (p)
                    (let* ((s (car p))

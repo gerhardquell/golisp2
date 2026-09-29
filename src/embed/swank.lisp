@@ -83,6 +83,8 @@
     ("sigo-reference" . "(sigo-reference)")
     ("sigo-usage" . "(sigo-usage)")
     ("sigo-usage-reset" . "(sigo-usage-reset)")
+    ("type-of" . "(type-of x)")
+    ("typep" . "(typep x type-spec)")
     ("sleep" . "(sleep ms)")
     ("memstats" . "(memstats)")
     ("system" . "(system command)")

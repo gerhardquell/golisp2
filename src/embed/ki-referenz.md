@@ -177,6 +177,10 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 `(defstruct name [doc] slot|(slot default) ...)` — erzeugt: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)
 `(setf place val)` — generisch, `(defstruct ...)` registriert Accessoren automatisch
 
+### Typen
+- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table`, Struct- oder Condition-Name. `(typep x spec)` mit Typnamen, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exklusiv, `*` = offen). `3.0` ist `integer`.
+  Als Typnamen zusätzlich gültig (nicht von `type-of` geliefert, aber `typep`-Obertypen): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Nicht vorhanden → `typep: unbekannter Typ '…'`: `fixnum` `character` `vector` `double-float` `single-float`. Typnamen sind case-sensitiv — `'INTEGER` ist unbekannt, nur `'integer`. Kein `check-type`/`subtypep`/`typecase`/`etypecase`/`deftype`.
+
 ---
 
 ## 5. Wahrheitswerte / Nil
@@ -261,6 +265,8 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(eval form)` | Global | Global (ok) |
 | `macrolet` | Nicht-rekursiv | Rekursiv |
 | `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
+| Structs sind Listen | `(typep p 'cons)` → `t` | eigener Typ, nicht `cons` |
+| Ganzzahlige Floats sind integer | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 ist ein Float) |
 
 ---
 

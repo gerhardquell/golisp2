@@ -5,12 +5,17 @@
 
 | Symbol | Beschreibung |
 |---|---|
+| `%bad-spec` | Intern: Fehler bei ungueltiger typep-Spec (types.lisp) |
+| `%builtin-subtype?` | Intern: Subtyp-Pruefung in *type-parents* (types.lisp) |
+| `%builtin-type?` | Intern: Pruefung ob Name ein eingebauter Typ ist (types.lisp) |
+| `%cell-type` | Intern: Kern-Typ einer Cell als Symbol (celltype.go) |
 | `%cond-coerce` | Intern: Argument in Condition umwandeln (condition.lisp) |
 | `%cond-get` | Intern: Key aus Property-Liste lesen |
 | `%cond-slot` | Intern: Slot-Wert einer Condition |
 | `%cond-subtype?` | Intern: Subtyp-Pruefung in der Condition-Hierarchie |
 | `%cond-type?` | Intern: Typ-Pruefung einer Condition |
 | `%cond?` | Intern: Pruefung ob Objekt eine Condition ist |
+| `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
 | `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
@@ -25,14 +30,27 @@
 | `%loop-parse` | Intern: loop-Parser: Klauseln -> let/while-Expansion (loop.lisp) |
 | `%loop-take-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort sammeln |
 | `%loop-when` | Intern: loop-Parser: when/unless-Klausel (loop.lisp) |
+| `%lower-ok?` | Intern: Untergrenze einer typep-Range pruefen (types.lisp) |
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
+| `%number-type` | Intern: type-of fuer Zahlen: integer oder float (types.lisp) |
+| `%one-arg?` | Intern: Pruefung auf genau ein Argument (types.lisp) |
 | `%reduce-fold` | Intern: Faltkern von reduce |
 | `%remove-first` | Intern: erstes Vorkommen entfernen (unload-system) |
 | `%setf-one` | Intern: einzelne setf-Zuweisung ausfuehren |
+| `%struct-instance?` | Intern: Pruefung ob x eine Instanz des Structs name ist (types.lisp) |
+| `%symbol-type` | Intern: type-of fuer Symbole: boolean, keyword oder symbol (types.lisp) |
 | `%sys-entry` | Intern: Systemeintrag aus *systems* holen |
 | `%sys-get` | Intern: Key aus System-Property-Liste lesen |
 | `%sys-loaded?` | Intern: System bereits geladen? |
 | `%topo` | Intern: topologische Sortierung mit Zyklenerkennung (defsystem) |
+| `%type-name-warnings` | Intern: WARN-Formen bei Typnamen-Kollisionen (defstruct/define-condition) (types.lisp) |
+| `%type-start` | Intern: Einstiegstyp in *type-parents* fuer x (types.lisp) |
+| `%typep-name` | Intern: typep-Aufloesung eines Typnamens: eingebaut, Struct, Condition (types.lisp) |
+| `%typep-range` | Intern: typep fuer (integer lo hi) u. ae. (types.lisp) |
+| `%typep-satisfies` | Intern: typep fuer (satisfies f) (types.lisp) |
+| `%typep-spec` | Intern: typep-Dispatch ueber die Typangabe (or/and/not/member/eql/satisfies/Range/Name) (types.lisp) |
+| `%upper-ok?` | Intern: Obergrenze einer typep-Range pruefen (types.lisp) |
+| `%valid-bound?` | Intern: Pruefung ob eine typep-Range-Grenze gueltig ist (types.lisp) |
 | `*` | Multiplikation aller Argumente |
 | `*condition-types*` | Registry der definierten Condition-Typen |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
@@ -40,7 +58,9 @@
 | `*ref-docs*` | Beschreibungstabelle des Referenz-Generators (Symbol -> Text) |
 | `*ref-out*` | Ausgabedatei des Referenz-Generators |
 | `*setf-expanders*` | Registry der setf-Expander |
+| `*struct-types*` | Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp) |
 | `*systems*` | Registry der definierten Systeme (defsystem) |
+| `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
 | `+` | Addition aller Argumente |
 | `-` | Subtraktion (erstes minus Rest); unär 0 |
 | `/` | Division; Fehler bei Division durch 0 |
@@ -273,6 +293,8 @@
 | `trace` | Live-Tracing einer Funktion aktivieren: Aufruf und Ergebnis auf stderr |
 | `trace?` | t, wenn Funktion gerade getraced wird |
 | `truncate` | Richtung Null runden; 2 Werte (CL): Quotient, Rest |
+| `type-of` | Typ eines Werts als Symbol (integer, string, cons, Struct-/Condition-Name …) |
+| `typep` | Typprüfung: (typep x 'number), (or …), (and …), (not …), (member …), (satisfies f), (integer lo hi) |
 | `union` | Vereinigungsmenge zweier Listen |
 | `unless` | Makro: body nur auswerten, wenn test falsch ist |
 | `unload-system` | System aus Ladestatistik entfernen (Definitionen bleiben) |

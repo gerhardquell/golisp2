@@ -29,5 +29,8 @@ var Condition string
 //go:embed loop.lisp
 var Loop string
 
+//go:embed types.lisp
+var Types string
+
 //go:embed ki-referenz.md
 var KiReferenz string

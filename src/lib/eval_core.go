@@ -38,19 +38,20 @@ func SetMaxEvalDepth(v int) {
 // evalCtx trägt pro Eval-Lauf: Rekursionstiefe und Cancellation.
 // Eine Instanz gehört immer nur einer Goroutine an.
 //
-// Wird per VALUE durchgereicht, nicht per Pointer. Der Wert ist 24 Byte
-// (int + Interface), passt damit in Register und wird nie geschrieben —
-// child() erzeugt immer eine neue Instanz, niemand mutiert eine
-// bestehende. Als Pointer kostete jedes child() eine Heap-Allokation und
-// machte 84,9 % aller Allokationen des Interpreters aus (PerfTODO §4.5d).
+// Wird per VALUE durchgereicht, nicht per Pointer. Der Wert ist 32 Byte
+// (int + Interface + Pointer), passt damit in Register und wird nie
+// geschrieben — child() erzeugt immer eine neue Instanz, niemand mutiert
+// eine bestehende. Als Pointer kostete jedes child() eine Heap-Allokation
+// und machte 84,9 % aller Allokationen des Interpreters aus (PerfTODO §4.5d).
 type evalCtx struct {
-  depth int
-  ctx   context.Context
+  depth  int
+  ctx    context.Context
+  script *mainScriptState // nur während RunScript die Hauptdatei lädt; sonst nil
 }
 
 // child liefert einen neuen Kontext für einen nicht-tail-rekursiven Aufruf.
 func (e evalCtx) child() evalCtx {
-  return evalCtx{depth: e.depth + 1, ctx: e.ctx}
+  return evalCtx{depth: e.depth + 1, ctx: e.ctx, script: e.script}
 }
 
 // check prüft Depth-Limit und Cancellation.
@@ -138,6 +139,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
       case "setq":         return evalSetq(expr.Cdr, env, ectx)
       case "psetq":        return evalPsetq(expr.Cdr, env, ectx)
       case "defun":        return evalDefun(expr, env, ectx)
+      case "defmain":      return evalDefmain(expr, env, ectx)
       case "defmacro":     return evalDefmacro(expr, env, ectx)
       case "macrolet":     return evalMacrolet(expr.Cdr, env, ectx)
       case "symbol-macrolet": return evalSymbolMacrolet(expr.Cdr, env, ectx)

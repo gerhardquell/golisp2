@@ -24,7 +24,11 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if filenameCell == nil || filenameCell.Type != STRING {
     return nil, fmt.Errorf("load: Dateiname muss String sein")
   }
-  return loadFile(filenameCell.Val, env, ectx)
+  // Nachgeladene Dateien sind nie Hauptprogramm: defmain darin bleibt
+  // wirkungslos (eval_script.go).
+  inner := ectx
+  inner.script = nil
+  return loadFile(filenameCell.Val, env, inner)
 }
 
 // loadFile ist der einzige Dateilade-Pfad: genutzt von evalLoad und

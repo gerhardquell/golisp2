@@ -60,6 +60,10 @@ golisp2/
 
       primitives.go      Eingebaute Funktionen + BaseEnv() (Chokepoint:
                          Neues immer hier registrieren)
+      arith_prims.go     Arithmetik, CL-Rundung (floor/ceiling/truncate/
+                         round), Vergleiche, equal?/eq, cellEqual (RegisterArith)
+      stdin.go           Gemeinsamer stdin-Reader: read-line, gets,
+                         Set/ResetStdinReader für Tests
       stringfuncs.go     String-Primitiven (RegisterStringFuncs)
       hashtable.go       CL-Hashtables: make-hash-table, gethash (MV!),
                          puthash, maphash, remhash, clrhash …

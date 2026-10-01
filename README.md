@@ -75,6 +75,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 
 ### Entwickler-Erlebnis
 - **Unix-artige CLI**: Pipe-fähiger stdin-Modus, konsistente Exit-Codes
+- **Skripte mit `defmain`**: Einstiegspunkt, der nur als Hauptprogramm (Shebang / `golisp2 datei.lisp`) läuft — Rückgabewert wird Exit-Code, per `(load …)` eingebunden bleibt er wirkungslos
 - **Syntax-Highlighting-REPL**: Regenbogen-Klammern, persistente History (`-i`)
 - **Mehrzeilige Eingabe**: Automatische Einrückung bei unvollständigen Ausdrücken
 - **Volle UTF-8-Unterstützung**: Unicode-Strings überall
@@ -145,10 +146,10 @@ GoLisp verhält sich wie ein Standard-Unix-Werkzeug mit mehreren Modi:
 | **stdin (Default)** | `echo "(+ 1 2)" \| ./build/golisp2` | Von stdin lesen, nur das Ergebnis ausgeben |
 | **Interaktiv** | `./build/golisp2 -i` | REPL mit Syntax-Highlighting |
 | **Ausdruck** | `./build/golisp2 -e "(+ 1 2)"` | Ausdruck/Ausdrücke ausführen; einzelne Form druckt das Ergebnis, mehrere Formen unterdrücken das Endergebnis |
-| **Skript** | `./build/golisp2 skript.lisp` | Lisp-Datei ausführen |
+| **Skript** | `./build/golisp2 skript.lisp [args…]` | Lisp-Datei ausführen (auch direkt per Shebang); mit `defmain` siehe unten |
 | **Tests** | `./build/golisp2 -t` | Eingebaute Testsuite ausführen |
 
-**Exit-Codes:** `0` = Erfolg, `1` = Fehler
+**Exit-Codes:** `0` = Erfolg, `1` = Fehler; bei Skripten mit `defmain` der Rückgabewert (0–255)
 
 **Mehrfach-`-e`:** Enthält `-e` mehrere Formen, werden nur Seiteneffekte ausgegeben; das Endergebnis wird unterdrückt, damit Skripte wie `(exec ...) (println out)` eine saubere Ausgabe produzieren.
 
@@ -169,6 +170,36 @@ cat <<'EOF' | ./build/golisp2
 EOF
 # => 25
 ```
+
+### Skripte mit `defmain`
+
+`defmain` legt fest, was ein Skript tut, wenn es **als Hauptprogramm**
+gestartet wird — per Shebang oder `golisp2 datei.lisp`. Wird dieselbe Datei
+per `(load …)` eingebunden, liefert `defmain` nur `nil`; die übrigen
+Definitionen stehen dann als Bibliothek zur Verfügung.
+
+```lisp
+#!/usr/local/bin/golisp2
+(defun greet (name) (format t "Hallo, ~a!~%" name))
+
+(defmain (args)
+  (if (null args)
+      (begin (warn "Aufruf: greet.lisp NAME") 2)
+      (begin (greet (car args)) 0)))
+```
+
+```bash
+./greet.lisp Anna    # => Hallo, Anna!            (Exit 0)
+./greet.lisp         # => "Aufruf: …" auf stderr  (Exit 2)
+./build/golisp2 -e '(begin (load "greet.lisp") (greet "Bob"))'   # => Hallo, Bob!
+```
+
+- Der Körper läuft **nach** dem Laden der ganzen Datei — die Position von `defmain` ist egal.
+- `args` sind nur die Skript-Argumente (ohne Binary und Dateiname); Umgebung über `(getenv …)` / `(environ)`.
+- Rückgabewert = Exit-Code: ganze Zahl 0–255, `nil`/Nicht-Zahl → 0, alles andere → Fehler mit Exit 1. Kein Ergebnis-Echo auf stdout.
+- Ein zweites `defmain` in derselben Datei ist ein Fehler.
+
+Details: `docs/cli.md`.
 
 ### Server-Modus (`golisp2 --swank` + `golisp2-client`)
 

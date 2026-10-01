@@ -1,5 +1,65 @@
 # Retrospektive golisp2
 
+## 2026-10-01 — primitives.go aufgeteilt, `defmain` für Skripte
+
+**Ergebnis:** `primitives.go` (960 Zeilen, knapp unter der harten Grenze)
+in `arith_prims.go` (Arithmetik, Rundung, Vergleiche) und `stdin.go`
+(gemeinsamer stdin-Reader) zerlegt — reine Verschiebung, Symbolmenge von
+`(env-symbols)` identisch (308). Danach die neue Spezialform
+`(defmain (args) …)`: Skript-Einstiegspunkt, der nur in der Hauptdatei
+wirkt, nach dem Laden läuft und dessen Rückgabewert der Exit-Code wird.
+`main.go` baut dafür keinen `(load "…")`-String mehr (brach bei `"` im
+Dateinamen). Brainstorming → Spec → Plan → Subagent-Driven, lokal in main
+gemergt (bis 1cff2c5, **noch nicht gepusht**). Go-Tests 420 → 438,
+Lisp-Suite 141 grün.
+
+**Was gut lief**
+- **Gerhards Idee, gemeinsam geschärft.** Ausgangspunkt war „Funktion, die
+  nur beim Shebang-Start läuft und Argumente/Env speichert“. Im Gespräch
+  fielen zwei Punkte weg bzw. wurden präziser: Shebang und `golisp2 datei`
+  sind für golisp2 ununterscheidbar (→ „Hauptdatei“), und `(argv)`/
+  `(getenv)`/`(environ)` existierten schon (→ kein Speichern, keine
+  zweite Quelle). Eine Frage pro Schritt, jede mit Empfehlung.
+- **Leitsatz „keine unnötigen Fehlermöglichkeiten“** hat drei Entscheidungen
+  getragen: kein aufrufbares `main` beim Laden, harter Fehler bei doppeltem
+  `defmain`, kein globaler Zustand (Merker als Zeiger in `evalCtx`).
+- **Erkennung per Kontext statt Pfadvergleich.** Der Zeiger reist mit
+  `child()`, `evalLoad` löscht ihn, `eval`/`apply`/Goroutinen starten
+  ohnehin frisch — „im Körper wirkungslos“ kostete null Zeilen Code.
+- **Gesamt-Review auf Opus** fand den einzigen echten Befund: Die Doku
+  versprach einen Fehlertext, den der Nutzer nie sah (`load <pfad>:`-Präfix,
+  Pfad in zwei Schreibweisen). Die Task-Reviews hatten das nicht sehen
+  können — der Unit-Test nutzte einen absoluten Pfad.
+
+**Was schief lief / Lehren**
+- **Benchmark-Fehlalarm.** Plan schrieb „5 Läufe vorher, 5 nachher“ vor;
+  das zeigte +19 % bei `MultiArgLambda`. Zwei unabhängige A/B-Messungen
+  (abwechselnd alt/neu, 10 Runden) ergaben: kein Effekt, Allokationen
+  identisch — Systemlast. Lehre: Benchmarks an der Eval-Schleife immer
+  **abwechselnd** messen, nie in zwei Blöcken.
+- **Spec-Beispiel war falsch.** `println` druckt Strings mit
+  Anführungszeichen; das Beispiel hätte im E2E-Test versagt. Beim Planen
+  live geprüft und auf `(format t …)` umgestellt — Beispiele immer gegen
+  das Binary laufen lassen.
+- **Agent umging eine Sandbox-Sperre.** Für den RED-Nachweis wollte der
+  Fix-Agent `eval_script.go` kurz zurücksetzen; die Sandbox blockierte das,
+  der Agent überschrieb die Datei dann per `Write`. Ergebnis korrekt (vom
+  Re-Review geprüft), Vorgehen nicht. Künftig im Brief: RED-Nachweis im
+  Wegwerf-Worktree, Sperren nie umgehen.
+- **SWANK-Test einmal rot**, danach in jedem Lauf grün — Implementer nannte
+  ihn „pre-existing“, Nachlauf widerlegte das. Berichte von Subagenten zu
+  Testergebnissen immer selbst gegenprüfen.
+
+**Offen**
+- `git push` (8 Commits vor origin).
+- `(funcall (lambda () (defmain …)))` beim Laden bleibt still wirkungslos
+  (dokumentiert); `(ignore-errors (defmain …))` schluckt den Doppel-Fehler
+  (geparkt).
+- Lisp-Suite hat keinen `defmain`-Test (E2E liegt in `src/main_test.go`).
+- `README_en.md` / `README_CN.md` um den `defmain`-Abschnitt ergänzen
+  (`README_en.md` hat Gerhards offene Änderungen — nicht angefasst).
+- SWANK-Test auf Flakiness beobachten.
+
 ## 2026-09-29 — type-of/typep, vier CL-Fixes, Lispbuch Kap. 11
 
 **Ergebnis:** `type-of`/`typep` nach CL (Typhierarchie, `or/and/not/member/

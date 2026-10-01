@@ -81,6 +81,63 @@ func evalOverFrames(t *testing.T, addr, src string) []string {
   }
 }
 
+// waitForSetup wartet, bis ServeEnvs einmaliges Setup (RegisterSwankEnv)
+// gelaufen ist: swank-send-event ist erst danach in env gebunden. Env.Get
+// ist mutex-geschützt (env.go), daher kein Data Race mit der parallel
+// laufenden ServeEnv-Goroutine.
+func waitForSetup(t *testing.T, env *lib.Env) {
+  t.Helper()
+  deadline := time.Now().Add(3 * time.Second)
+  for {
+    if _, err := env.Get("swank-send-event"); err == nil {
+      return
+    }
+    if time.Now().After(deadline) {
+      t.Fatal("ServeEnv-Setup (swank-send-event) nicht rechtzeitig sichtbar")
+    }
+    time.Sleep(time.Millisecond)
+  }
+}
+
+// captureStdout leitet Datei-Deskriptor 1 für die Dauer von fn per dup2 auf
+// OS-Ebene in eine Pipe um (gleiche Technik wie captureStderr, s.u.).
+func captureStdout(t *testing.T, fn func()) string {
+  t.Helper()
+  r, w, err := os.Pipe()
+  if err != nil {
+    t.Fatalf("pipe: %v", err)
+  }
+  savedFd, err := syscall.Dup(1)
+  if err != nil {
+    t.Fatalf("dup stdout fd: %v", err)
+  }
+  if err := syscall.Dup2(int(w.Fd()), 1); err != nil {
+    t.Fatalf("dup2 stdout -> pipe: %v", err)
+  }
+  w.Close()
+
+  restored := false
+  restore := func() {
+    if restored {
+      return
+    }
+    restored = true
+    syscall.Dup2(savedFd, 1)
+    syscall.Close(savedFd)
+  }
+  defer restore()
+
+  fn()
+  restore()
+
+  out, err := io.ReadAll(r)
+  r.Close()
+  if err != nil {
+    t.Fatalf("read captured stdout: %v", err)
+  }
+  return string(out)
+}
+
 // captureStderr leitet Datei-Deskriptor 2 für die Dauer von fn per dup2 auf
 // OS-Ebene in eine Pipe um und gibt das Mitgeschnittene zurück. Bewusst
 // KEINE Zuweisung an die Paketvariable os.Stderr: ServeEnv läuft in einer
@@ -171,6 +228,103 @@ func TestServeEnvNoRedefOnReconnect(t *testing.T) {
   }
 }
 
+// TestServeEnvOutputFallsBackToStdoutBeforeConnect belegt Finding 1: solange
+// noch keine Emacs-Verbindung angenommen wurde (sender.current == nil),
+// muss (println ...) trotzdem sichtbar sein — über den os.Stdout-Fallback
+// in swankSender.send, nicht stillschweigend verschluckt werden.
+func TestServeEnvOutputFallsBackToStdoutBeforeConnect(t *testing.T) {
+  env := lib.BaseEnv()
+  if err := lib.LoadStdlib(env); err != nil {
+    t.Fatalf("LoadStdlib: %v", err)
+  }
+  defer lib.ResetOutputWriter()
+
+  exec := func(f func()) { f() }
+
+  l, err := net.Listen("tcp", "127.0.0.1:0")
+  if err != nil {
+    t.Fatalf("listen: %v", err)
+  }
+  defer l.Close()
+  go ServeEnv(l, env, exec)
+
+  waitForSetup(t, env)
+
+  var loadErr error
+  stdout := captureStdout(t, func() {
+    _, loadErr = lib.LoadString(`(println "pre-connect")`, env)
+  })
+  if loadErr != nil {
+    t.Fatalf("LoadString: %v", loadErr)
+  }
+  if !strings.Contains(stdout, "pre-connect") {
+    t.Fatalf("stdout = %q, want it to contain %q", stdout, "pre-connect")
+  }
+}
+
+// TestServeEnvOutputFallsBackToStdoutAfterDisconnect belegt Finding 1b:
+// nach dem Schließen der einzigen Verbindung darf (println ...) nicht mehr
+// mit "use of closed network connection" fehlschlagen — sender.current
+// muss auf nil zurückgesetzt worden sein, Ausgabe fällt auf stdout zurück.
+func TestServeEnvOutputFallsBackToStdoutAfterDisconnect(t *testing.T) {
+  env := lib.BaseEnv()
+  if err := lib.LoadStdlib(env); err != nil {
+    t.Fatalf("LoadStdlib: %v", err)
+  }
+  defer lib.ResetOutputWriter()
+
+  exec := func(f func()) { f() }
+
+  l, err := net.Listen("tcp", "127.0.0.1:0")
+  if err != nil {
+    t.Fatalf("listen: %v", err)
+  }
+  defer l.Close()
+  go ServeEnv(l, env, exec)
+
+  addr := l.Addr().String()
+  evalOver(t, addr, "(define discon-probe 1)")
+
+  conn, err := net.Dial("tcp", addr)
+  if err != nil {
+    t.Fatalf("dial: %v", err)
+  }
+  if err := writeFrame(conn, rexEval("(define discon-probe-2 2)", 2)); err != nil {
+    t.Fatalf("writeFrame: %v", err)
+  }
+  conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+  br := bufio.NewReader(conn)
+  for {
+    resp, err := readFrame(br)
+    if err != nil {
+      t.Fatalf("readFrame: %v", err)
+    }
+    if strings.HasPrefix(resp.String(), "(:return") {
+      break
+    }
+  }
+  conn.Close()
+
+  deadline := time.Now().Add(3 * time.Second)
+  var stdout string
+  for {
+    var loadErr error
+    stdout = captureStdout(t, func() {
+      _, loadErr = lib.LoadString(`(println "post-disconnect")`, env)
+    })
+    if loadErr == nil {
+      break
+    }
+    if time.Now().After(deadline) {
+      t.Fatalf("println blieb nach Disconnect fehlerhaft: %v", loadErr)
+    }
+    time.Sleep(10 * time.Millisecond)
+  }
+  if !strings.Contains(stdout, "post-disconnect") {
+    t.Fatalf("stdout = %q, want it to contain %q", stdout, "post-disconnect")
+  }
+}
+
 func TestServeEnvSharesEnvAndUsesExec(t *testing.T) {
   env := lib.BaseEnv()
   if err := lib.LoadStdlib(env); err != nil {
@@ -198,7 +352,7 @@ func TestServeEnvSharesEnvAndUsesExec(t *testing.T) {
   if y.Num != 8 {
     t.Fatalf("shared-y = %s, want 8", y)
   }
-  if calls.Load() < 2 {
-    t.Fatalf("exec %d-mal aufgerufen, want >= 2", calls.Load())
+  if calls.Load() != 3 {
+    t.Fatalf("exec %d-mal aufgerufen, want 3 (1 Setup + 2 Nachrichten)", calls.Load())
   }
 }

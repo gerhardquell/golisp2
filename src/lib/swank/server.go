@@ -49,6 +49,7 @@ func RunServerEnv(addr string, env *lib.Env, exec func(func())) error {
   if err != nil {
     return fmt.Errorf("RunServerEnv: %w", err)
   }
+  defer listener.Close()
   fmt.Fprintf(os.Stderr, "SWANK server on %s\n", listener.Addr())
   return ServeEnv(listener, env, exec)
 }
@@ -91,26 +92,62 @@ func ServeEnv(l net.Listener, env *lib.Env, exec func(func())) error {
 // swankSender forwards swank events to whichever connection connected
 // last. current is guarded by mu: set by each new connection's goroutine,
 // read by Lisp-side sends that may run on the exec thread (e.g. the GUI
-// main thread) — both sides can touch it concurrently.
+// main thread) — both sides can touch it concurrently. gen counts
+// setCurrent calls so a disconnecting connection can tell, via clear,
+// whether it is still the current one (and not clobber a newer connection
+// that has since taken over).
 type swankSender struct {
   mu      sync.Mutex
   current func(*lib.Cell) error
+  gen     uint64
 }
 
+// send forwards event to the current connection. While no connection is
+// current (current == nil: before the first connect, or after the last
+// one disconnected), a (:write-string s) event falls back to os.Stdout
+// directly — NOT via lib.WriteOutput, which would recurse back into this
+// sender (RegisterSwankEnv points the output writer here). Other events
+// have no stdout equivalent and are dropped.
 func (s *swankSender) send(event *lib.Cell) error {
   s.mu.Lock()
   cur := s.current
   s.mu.Unlock()
   if cur == nil {
-    return nil
+    return writeStringFallback(event)
   }
   return cur(event)
 }
 
-func (s *swankSender) setCurrent(f func(*lib.Cell) error) {
+// setCurrent registers f as the sender for a newly connected connection
+// and returns a generation token to pass to clear on disconnect.
+func (s *swankSender) setCurrent(f func(*lib.Cell) error) uint64 {
   s.mu.Lock()
+  defer s.mu.Unlock()
+  s.gen++
   s.current = f
-  s.mu.Unlock()
+  return s.gen
+}
+
+// clear resets current to nil when a connection ends — but only if gen is
+// still the latest generation, so a connection that has already been
+// superseded by a newer one does not clobber it.
+func (s *swankSender) clear(gen uint64) {
+  s.mu.Lock()
+  defer s.mu.Unlock()
+  if s.gen == gen {
+    s.current = nil
+  }
+}
+
+// writeStringFallback writes the string of a (:write-string s) event
+// directly to os.Stdout; any other event is dropped (nil, no error).
+func writeStringFallback(event *lib.Cell) error {
+  if event == nil || event.Type != lib.LIST || event.Car == nil ||
+    event.Car.Val != ":write-string" || event.Cdr == nil || event.Cdr.Car == nil {
+    return nil
+  }
+  _, err := os.Stdout.WriteString(event.Cdr.Car.Val)
+  return err
 }
 
 func handleConn(conn net.Conn) {
@@ -152,8 +189,10 @@ func serveConn(conn net.Conn, env *lib.Env, exec func(func())) {
 
 // serveSharedConn runs one shared-env connection: no setup (ServeEnv did
 // that once), just point sender at this connection and run the message
-// loop. Does not clear sender.current on exit — last-connected-wins stays
-// in effect until the next connection arrives, same as before this fix.
+// loop. On exit, clears sender.current — but only if no newer connection
+// has since taken over (see swankSender.clear) — so that after this
+// connection closes, send falls back to stdout (fix 1) instead of writing
+// to this connection's now-closed conn.
 func serveSharedConn(conn net.Conn, env *lib.Env, exec func(func()), sender *swankSender) {
   defer func() {
     if r := recover(); r != nil {
@@ -163,9 +202,10 @@ func serveSharedConn(conn net.Conn, env *lib.Env, exec func(func()), sender *swa
   }()
   fmt.Fprintf(os.Stderr, "swank conn from %s\n", conn.RemoteAddr())
 
-  sender.setCurrent(func(event *lib.Cell) error {
+  gen := sender.setCurrent(func(event *lib.Cell) error {
     return writeFrame(conn, event)
   })
+  defer sender.clear(gen)
 
   runMessageLoop(conn, env, exec)
 }

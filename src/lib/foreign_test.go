@@ -8,7 +8,10 @@
 
 package lib
 
-import "testing"
+import (
+	"testing"
+	"unsafe"
+)
 
 type fooObj struct{ n int }
 
@@ -46,5 +49,15 @@ func TestForeignTypeOf(t *testing.T) {
 	}
 	if got := res.String(); got != "(foreign t t)" {
 		t.Fatalf("got %s, want (foreign t t)", got)
+	}
+}
+
+// TestCellSize belegt die Size-Class-Optimierung aus types.go:49-52: Cell
+// darf nicht über 96 Byte wachsen (sonst vergibt der Allocator 112 Byte
+// pro Cell). FOREIGN darf dafür kein eigenes Feld bekommen (siehe
+// MakeForeign/ForeignObj, die das bestehende Env-Feld mitbenutzen).
+func TestCellSize(t *testing.T) {
+	if got := unsafe.Sizeof(Cell{}); got != 96 {
+		t.Fatalf("unsafe.Sizeof(Cell{}) = %d, want 96", got)
 	}
 }

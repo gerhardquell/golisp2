@@ -44,8 +44,6 @@ type Cell struct {
 	Env interface{} // *Env – interface{} um Zirkelimport zu vermeiden
 	// HASHTABLE: Zeiger auf die mutable Tabelle (hashtable.go)
 	Ht *HashTable
-	// FOREIGN: verpacktes Go-Objekt
-	Obj any
 	// Quellposition. srcFile ist ein *string statt string: 8 statt 16 Byte,
 	// und das bringt Cell von 104 auf 96 Byte — genau die Size-Class-Grenze
 	// des Allocators, der sonst 112 Byte pro Cell vergibt (PerfTODO §4.5e).
@@ -140,9 +138,11 @@ func MakeNum(n float64) *Cell {
 func MakeStr(s string) *Cell     { return &Cell{Type: STRING, Val: s} }
 
 // MakeForeign verpackt ein Go-Objekt als Lisp-Wert. tag nennt die Art
-// (z. B. "view", "window") und erscheint in der Ausgabe.
+// (z. B. "view", "window") und erscheint in der Ausgabe. obj wird im
+// bestehenden Env-Feld abgelegt (wie gaHandle/goChannel/pgConn u. a.) —
+// kein eigenes Feld, damit Cell bei 96 statt 112 Byte bleibt.
 func MakeForeign(tag string, obj any) *Cell {
-  return &Cell{Type: FOREIGN, Val: tag, Obj: obj}
+  return &Cell{Type: FOREIGN, Val: tag, Env: obj}
 }
 
 // ForeignObj liefert das Go-Objekt, wenn c eine FOREIGN-Cell mit
@@ -151,7 +151,7 @@ func ForeignObj(c *Cell, tag string) (any, bool) {
   if c == nil || c.Type != FOREIGN || c.Val != tag {
     return nil, false
   }
-  return c.Obj, true
+  return c.Env, true
 }
 
 func MakeNil() *Cell             { return nilCell }

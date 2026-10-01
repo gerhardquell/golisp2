@@ -396,6 +396,16 @@ func apply(fn *Cell, args []*Cell) (*Cell, error) {
   return applyWithCtx(fn, args, evalCtx{depth: 0})
 }
 
+// Apply ruft fn (FUNC oder LAMBDA) mit bereits ausgewerteten Argumenten
+// auf. Öffentlicher Einstieg für Go-Code außerhalb von lib, z. B.
+// GUI-Callbacks in gogui.
+func Apply(fn *Cell, args []*Cell) (*Cell, error) {
+  if fn == nil {
+    return nil, fmt.Errorf("apply: nil ist keine Funktion")
+  }
+  return apply(fn, args)
+}
+
 func applyWithCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   switch fn.Type {
   case FUNC: return fn.Fn(args)

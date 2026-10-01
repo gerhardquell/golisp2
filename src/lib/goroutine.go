@@ -7,6 +7,7 @@
 //**********************************************************************
 // Go-Nebenläufigkeit als Lisp-Primitiven:
 //   (parfunc ergebnis expr1 expr2 ...)  → parallel auswerten
+//   (spawn fn)                           → fn in neuer Goroutine, sofort zurück
 //   (chan-make)                          → neuen Channel erstellen
 //   (chan-send ch wert)                  → Wert senden
 //   (chan-recv ch)                       → Wert empfangen
@@ -18,6 +19,7 @@ package lib
 
 import (
   "fmt"
+  "os"
   "sync"
 )
 
@@ -83,6 +85,7 @@ func RegisterGoroutines(env *Env) {
   _ = env.Set("chan-send", makeFn(fnChanSend))
   _ = env.Set("chan-recv", makeFn(fnChanRecv))
   _ = env.Set("lock-make", makeFn(fnLockMake))
+  _ = env.Set("spawn", makeFn(fnSpawn))
 }
 
 // ---- Channel-Funktionen ----
@@ -117,4 +120,28 @@ func fnChanRecv(args []*Cell) (*Cell, error) {
 // lock-make: (lock-make)
 func fnLockMake(args []*Cell) (*Cell, error) {
   return makeMutexCell(), nil
+}
+
+// spawn: (spawn fn) → startet fn ohne Argumente in einer neuen Goroutine
+// und kehrt sofort mit nil zurück (Fire-and-forget, Gegenstück zu
+// parfunc, das wartet). Fehler und panics von fn landen auf stderr.
+func fnSpawn(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("spawn: genau 1 Argument nötig (Funktion)")
+  }
+  fn := args[0]
+  if fn == nil || (fn.Type != FUNC && fn.Type != LAMBDA) {
+    return nil, fmt.Errorf("spawn: '%s' ist keine Funktion", fn)
+  }
+  go func() {
+    defer func() {
+      if r := recover(); r != nil {
+        fmt.Fprintf(os.Stderr, "spawn: panic: %v\n", r)
+      }
+    }()
+    if _, err := apply(fn, nil); err != nil {
+      fmt.Fprintf(os.Stderr, "spawn: %v\n", err)
+    }
+  }()
+  return MakeNil(), nil
 }

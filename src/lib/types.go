@@ -27,6 +27,7 @@ const (
 	MVALUES                // (values ...) – Träger mehrerer Werte (CL)
 	HASHTABLE              // CL-Hashtabelle (mutable, Pointer-Identität)
 	SYMMACRO               // symbol-macrolet-Marker: Car = unausgewertete Expansion
+	FOREIGN                // Go-Objekt (Obj), Val = Art-Tag z. B. "view"
 )
 
 type Cell struct {
@@ -135,6 +136,24 @@ func MakeNum(n float64) *Cell {
   return &Cell{Type: NUMBER, Num: n}
 }
 func MakeStr(s string) *Cell     { return &Cell{Type: STRING, Val: s} }
+
+// MakeForeign verpackt ein Go-Objekt als Lisp-Wert. tag nennt die Art
+// (z. B. "view", "window") und erscheint in der Ausgabe. obj wird im
+// bestehenden Env-Feld abgelegt (wie gaHandle/goChannel/pgConn u. a.) —
+// kein eigenes Feld, damit Cell bei 96 statt 112 Byte bleibt.
+func MakeForeign(tag string, obj any) *Cell {
+  return &Cell{Type: FOREIGN, Val: tag, Env: obj}
+}
+
+// ForeignObj liefert das Go-Objekt, wenn c eine FOREIGN-Cell mit
+// passendem tag ist.
+func ForeignObj(c *Cell, tag string) (any, bool) {
+  if c == nil || c.Type != FOREIGN || c.Val != tag {
+    return nil, false
+  }
+  return c.Env, true
+}
+
 func MakeNil() *Cell             { return nilCell }
 func Cons(car, cdr *Cell) *Cell  { return &Cell{Type: LIST, Car: car, Cdr: cdr} }
 
@@ -220,6 +239,8 @@ func (c *Cell) String() string {
 		return Primary(c).String()
 	case HASHTABLE:
 		return "#<hash-table>"
+	case FOREIGN:
+		return "#<foreign " + c.Val + ">"
 	case SYMMACRO:
 		return "#<symbol-macro>"
 	}

@@ -45,6 +45,8 @@ func cellTypeName(c *Cell) string {
     return "macro"
   case HASHTABLE:
     return "hash-table"
+  case FOREIGN:
+    return "foreign"
   default:
     return "t"
   }

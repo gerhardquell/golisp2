@@ -12,6 +12,7 @@ package swank
 
 import (
   "bufio"
+  "errors"
   "fmt"
   "net"
   "os"
@@ -20,6 +21,7 @@ import (
 )
 
 // RunServer starts a SWANK server on the given address.
+// Each connection gets its own environment.
 func RunServer(addr string) error {
   listener, err := net.Listen("tcp", addr)
   if err != nil {
@@ -37,7 +39,45 @@ func RunServer(addr string) error {
   }
 }
 
+// RunServerEnv starts a SWANK server whose connections all share env.
+// exec runs each env access synchronously (gogui: on the GUI thread).
+func RunServerEnv(addr string, env *lib.Env, exec func(func())) error {
+  listener, err := net.Listen("tcp", addr)
+  if err != nil {
+    return fmt.Errorf("RunServerEnv: %w", err)
+  }
+  fmt.Fprintf(os.Stderr, "SWANK server on %s\n", listener.Addr())
+  return ServeEnv(listener, env, exec)
+}
+
+// ServeEnv accepts connections on l; all share env, every env access
+// goes through exec. Returns when l is closed.
+func ServeEnv(l net.Listener, env *lib.Env, exec func(func())) error {
+  for {
+    conn, err := l.Accept()
+    if err != nil {
+      if errors.Is(err, net.ErrClosed) {
+        return nil
+      }
+      fmt.Fprintf(os.Stderr, "swank accept error: %v\n", err)
+      continue
+    }
+    go serveConn(conn, env, exec)
+  }
+}
+
 func handleConn(conn net.Conn) {
+  env := lib.BaseEnv()
+  if err := lib.LoadStdlib(env); err != nil {
+    fmt.Fprintf(os.Stderr, "swank stdlib error: %v\n", err)
+    conn.Close()
+    return
+  }
+  serveConn(conn, env, func(f func()) { f() })
+}
+
+// serveConn runs the SWANK message loop for one connection.
+func serveConn(conn net.Conn, env *lib.Env, exec func(func())) {
   defer func() {
     if r := recover(); r != nil {
       fmt.Fprintf(os.Stderr, "swank conn panic: %v\n", r)
@@ -46,16 +86,15 @@ func handleConn(conn net.Conn) {
   }()
   fmt.Fprintf(os.Stderr, "swank conn from %s\n", conn.RemoteAddr())
 
-  env := lib.BaseEnv()
-  if err := lib.LoadStdlib(env); err != nil {
-    fmt.Fprintf(os.Stderr, "swank stdlib error: %v\n", err)
-    return
-  }
-  RegisterSwankEnv(env, func(event *lib.Cell) error {
-    return writeFrame(conn, event)
+  var setupErr error
+  exec(func() {
+    RegisterSwankEnv(env, func(event *lib.Cell) error {
+      return writeFrame(conn, event)
+    })
+    setupErr = LoadSwankLisp(env)
   })
-  if err := LoadSwankLisp(env); err != nil {
-    fmt.Fprintf(os.Stderr, "swank lisp error: %v\n", err)
+  if setupErr != nil {
+    fmt.Fprintf(os.Stderr, "swank lisp error: %v\n", setupErr)
     return
   }
 
@@ -66,7 +105,8 @@ func handleConn(conn net.Conn) {
       fmt.Fprintf(os.Stderr, "swank read error from %s: %v\n", conn.RemoteAddr(), err)
       return
     }
-    events, err := HandleMessage(env, msg)
+    var events *lib.Cell
+    exec(func() { events, err = HandleMessage(env, msg) })
     if err != nil {
       fmt.Fprintf(os.Stderr, "swank handle error: %v\n", err)
       continue

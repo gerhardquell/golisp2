@@ -154,3 +154,10 @@ func TestRunEvalErrorExits1(t *testing.T) {
     t.Fatalf("code = %d, want 1", code)
   }
 }
+
+func TestRunHelpExits0(t *testing.T) {
+  var out, errOut bytes.Buffer
+  if code := run([]string{"-h"}, &out, &errOut); code != 0 {
+    t.Fatalf("code = %d, want 0, stderr = %q", code, errOut.String())
+  }
+}

@@ -29,6 +29,11 @@ type Extension func(env *lib.Env) error
 
 // Run führt golisp2 mit args (ohne Programmnamen) aus und liefert den
 // Exit-Code: 0 ok, 1 Fehler, 2 ungültige Flags.
+//
+// --swank startet RunServer: jede Verbindung bekommt eine eigene, frische
+// Env (BaseEnv + LoadStdlib) — ext wird dort NICHT angewendet, Extensions
+// sind in diesem Modus also unsichtbar. Für eine geteilte Env mit
+// Extensions siehe swank.ServeEnv/RunServerEnv (gogui).
 func Run(args []string, ext ...Extension) int {
   return run(args, os.Stdout, os.Stderr, ext...)
 }
@@ -41,6 +46,9 @@ func run(args []string, out, errOut io.Writer, ext ...Extension) int {
   testFlag := fs.Bool("t", false, "Tests ausführen")
   swankFlag := fs.String("swank", "", "SWANK-Server starten (Format: host:port, z.B. 127.0.0.1:4005)")
   if err := fs.Parse(args); err != nil {
+    if errors.Is(err, flag.ErrHelp) {
+      return 0
+    }
     return 2
   }
 

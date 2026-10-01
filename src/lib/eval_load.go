@@ -24,8 +24,13 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if filenameCell == nil || filenameCell.Type != STRING {
     return nil, fmt.Errorf("load: Dateiname muss String sein")
   }
+  return loadFile(filenameCell.Val, env, ectx)
+}
 
-  resolvedPath, err := resolvePath(filenameCell.Val)
+// loadFile ist der einzige Dateilade-Pfad: genutzt von evalLoad und
+// RunScript (eval_script.go). Pfadauflösung zentral über resolvePath.
+func loadFile(filename string, env *Env, ectx evalCtx) (*Cell, error) {
+  resolvedPath, err := resolvePath(filename)
   if err != nil {
     return nil, fmt.Errorf("load: %v", err)
   }

@@ -32,6 +32,7 @@
     (function         (t))
     (macro            (t))
     (hash-table       (t))
+    (foreign          (t))
     (structure-object (cons))
     (atom             (t))
     (t                ())))

@@ -27,6 +27,7 @@ const (
 	MVALUES                // (values ...) – Träger mehrerer Werte (CL)
 	HASHTABLE              // CL-Hashtabelle (mutable, Pointer-Identität)
 	SYMMACRO               // symbol-macrolet-Marker: Car = unausgewertete Expansion
+	FOREIGN                // Go-Objekt (Obj), Val = Art-Tag z. B. "view"
 )
 
 type Cell struct {
@@ -43,6 +44,8 @@ type Cell struct {
 	Env interface{} // *Env – interface{} um Zirkelimport zu vermeiden
 	// HASHTABLE: Zeiger auf die mutable Tabelle (hashtable.go)
 	Ht *HashTable
+	// FOREIGN: verpacktes Go-Objekt
+	Obj any
 	// Quellposition. srcFile ist ein *string statt string: 8 statt 16 Byte,
 	// und das bringt Cell von 104 auf 96 Byte — genau die Size-Class-Grenze
 	// des Allocators, der sonst 112 Byte pro Cell vergibt (PerfTODO §4.5e).
@@ -135,6 +138,22 @@ func MakeNum(n float64) *Cell {
   return &Cell{Type: NUMBER, Num: n}
 }
 func MakeStr(s string) *Cell     { return &Cell{Type: STRING, Val: s} }
+
+// MakeForeign verpackt ein Go-Objekt als Lisp-Wert. tag nennt die Art
+// (z. B. "view", "window") und erscheint in der Ausgabe.
+func MakeForeign(tag string, obj any) *Cell {
+  return &Cell{Type: FOREIGN, Val: tag, Obj: obj}
+}
+
+// ForeignObj liefert das Go-Objekt, wenn c eine FOREIGN-Cell mit
+// passendem tag ist.
+func ForeignObj(c *Cell, tag string) (any, bool) {
+  if c == nil || c.Type != FOREIGN || c.Val != tag {
+    return nil, false
+  }
+  return c.Obj, true
+}
+
 func MakeNil() *Cell             { return nilCell }
 func Cons(car, cdr *Cell) *Cell  { return &Cell{Type: LIST, Car: car, Cdr: cdr} }
 
@@ -220,6 +239,8 @@ func (c *Cell) String() string {
 		return Primary(c).String()
 	case HASHTABLE:
 		return "#<hash-table>"
+	case FOREIGN:
+		return "#<foreign " + c.Val + ">"
 	case SYMMACRO:
 		return "#<symbol-macro>"
 	}

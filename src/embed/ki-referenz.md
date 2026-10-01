@@ -27,11 +27,11 @@ Tiefe Rekursion O(1) Stack.
 
 ---
 
-## 2. Spezialformen (59 Case-Zweige, 61 Schlüsselwörter) + 2 Stdlib-Makros (`dotimes`, `dolist`)
+## 2. Spezialformen (60 Case-Zweige, 62 Schlüsselwörter) + 2 Stdlib-Makros (`dotimes`, `dolist`)
 
 Gezählt direkt aus dem `switch expr.Car.Val` in `eval_core.go` (Stand
-20260827) — `begin`/`progn`/`locally` teilen sich einen Case-Zweig (3
-Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
+20261001) — `begin`/`progn`/`locally` teilen sich einen Case-Zweig (3
+Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 
 | Form | Semantik | Anmerkung |
 |------|----------|-----------|
@@ -43,6 +43,7 @@ Namen, 1 Implementierung), daher 59 Zweige aber 61 Namen.
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest` |
 | `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin`; **kein** `(define (f p) ...)`-Zucker |
 | `(defmacro m (p) . body)` | Globales Makro | |
+| `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname |
 | `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
 | `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; legt neu an, falls ungebunden (Top-Level-Verhalten) |

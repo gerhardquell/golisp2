@@ -66,6 +66,7 @@ Wichtige:
 
 (defun f (params) body...)        ; Funktion definieren
 (defmacro m (params) body...)     ; Makro definieren
+(defmain (args) body...)          ; Skript-Einstieg: nur als Hauptprogramm, Rückgabe = Exit-Code
 (lambda (params) body...)         ; Closure erzeugen
 
 (let ((x 1) (y 2) ...) body...)   ; Parallel binden

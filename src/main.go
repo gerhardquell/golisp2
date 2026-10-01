@@ -361,15 +361,10 @@ func main() {
     os.Exit(exitCode)
   }
 
-  // Datei laden: golisp2 script.lisp
+  // Datei laden: golisp2 script.lisp [args…] (auch per Shebang).
+  // Mit defmain: kein Ergebnis-Echo, Exit-Code = Rückgabewert.
   if flag.NArg() > 0 {
-    filename := flag.Arg(0)
-    cell, err := lib.Read(`(load "` + filename + `")`)
-    if err != nil {
-      fmt.Fprintln(os.Stderr, "ERR:", err)
-      os.Exit(1)
-    }
-    result, err := lib.Eval(cell, env)
+    exitCode, result, hasMain, err := lib.RunScript(flag.Arg(0), flag.Args()[1:], env)
     if err != nil {
       var le *lib.LispError
       if errors.As(err, &le) {
@@ -379,8 +374,10 @@ func main() {
       }
       os.Exit(1)
     }
-    fmt.Println(result)
-    os.Exit(0)
+    if !hasMain {
+      fmt.Println(result)
+    }
+    os.Exit(exitCode)
   }
 
   // Default: stdin lesen

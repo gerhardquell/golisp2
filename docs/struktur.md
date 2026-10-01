@@ -57,6 +57,7 @@ golisp2/
       eval_load.go       load-Spezialform + Source-Locations (SrcFile/SrcLine)
       eval_exec.go       exec-Spezialform (Subprocess: stdout/stderr/exitcd/
                          stdin-Variablen, env-Keys)
+      eval_script.go     RunScript (Datei als Hauptprogramm) + defmain
 
       primitives.go      Eingebaute Funktionen + BaseEnv() (Chokepoint:
                          Neues immer hier registrieren)

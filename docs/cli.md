@@ -19,6 +19,33 @@ Fehler nach stderr, Exit-Code sagt die Wahrheit.
 Skripte sind damit direkt ausführbar (`chmod +x script.lisp`) und bleiben
 gleichzeitig per `(load "script.lisp")` ladbar.
 
+### Skripte mit `defmain`
+
+`(defmain (args) body…)` bzw. `(defmain () body…)` legt den
+Einstiegspunkt eines Skripts fest. Er läuft **nur**, wenn die Datei
+Hauptprogramm ist (`golisp2 datei.lisp …` oder `./datei.lisp …` per
+Shebang — beides ist für golisp2 dasselbe).
+
+```lisp
+#!/usr/local/bin/golisp2
+(defun greet (name) (format t "Hallo, ~a!~%" name))
+
+(defmain (args)
+  (if (null args)
+      (begin (warn "Aufruf: greet.lisp NAME") 2)
+      (begin (greet (car args)) 0)))
+```
+
+- Der Körper läuft **nach** dem Laden der ganzen Datei — Position egal.
+- `args` = Skript-Argumente ohne Binary und Dateinamen
+  (`./greet.lisp Anna` → `("Anna")`). Environment: `(getenv)`/`(environ)`.
+- Rückgabewert = Exit-Code: ganze Zahl 0–255 → dieser Code; `nil`/Nicht-
+  Zahl → 0; andere Zahl → `ERR`, Exit 1. Kein Ergebnis-Echo auf stdout.
+- Zweites `defmain` in der Hauptdatei → `ERR: defmain: bereits definiert in …`, Exit 1.
+- Wirkungslos (liefert `nil`, prüft nichts): in per `(load …)`
+  nachgeladenen Dateien, REPL, SWANK, `-e`, stdin, `(eval …)`, Goroutinen.
+- Ohne `defmain` bleibt alles wie bisher (Wert der letzten Form wird ausgegeben).
+
 **Hinweis zu `-e`:** Eine einzelne Form gibt ihr Ergebnis aus. Bei mehreren
 Formen wird das letzte Ergebnis unterdrückt, damit rein seiteneffektbehaftete
 Skripte saubere Ausgabe erzeugen.
@@ -27,6 +54,7 @@ Skripte saubere Ausgabe erzeugen.
 
 - **0** – Erfolg
 - **1** – Fehler (Parser, Eval, unbekanntes Symbol, …)
+- **Datei mit `defmain`:** Rückgabewert des Körpers (0–255), siehe oben
 - **-t:** Anzahl fehlgeschlagener Framework-Tests (`run-tests`), 0 = grün
 - Lisp-seitig: `(exit n)` beendet den Prozess sofort mit Code `n`
 

@@ -75,8 +75,8 @@ werden wie bei `defun` per `wrapBegin` verpackt.
      Exit 1 (laut statt stilles `256 → 0` des Kernels).
 4. Keine zusätzliche stdout-Ausgabe.
 5. Zweites `defmain` in der Hauptdatei →
-   `ERR: defmain: bereits definiert in <datei>:<zeile>`, Exit 1; kein
-   Körper läuft.
+   `ERR: load <datei>: defmain: bereits definiert in <datei>:<zeile>`, Exit 1;
+   kein Körper läuft.
 6. Fehler im Körper → `ERR: …` auf stderr, Exit 1.
 
 **Überall sonst** — per `(load …)` nachgeladene Datei, REPL, SWANK,

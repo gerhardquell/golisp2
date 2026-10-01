@@ -14,6 +14,7 @@ package lib
 import (
   "fmt"
   "math"
+  "path/filepath"
   "strings"
 )
 
@@ -21,7 +22,7 @@ import (
 // Er reist als Zeiger in evalCtx.script mit — kein globaler Zustand,
 // unsichtbar für Goroutinen, (eval …) und nachgeladene Dateien.
 type mainScriptState struct {
-  path      string // Hauptdatei, wie an RunScript übergeben (für Fehlermeldungen)
+  path      string // Hauptdatei, absolut aufgelöst (für Fehlermeldungen, wie loadFile)
   body      *Cell  // Closure aus defmain; nil = kein defmain gesehen
   takesArgs bool   // (defmain (args) …) statt (defmain () …)
   srcLine   int    // Zeile des ersten defmain
@@ -32,8 +33,20 @@ type mainScriptState struct {
 // Ohne defmain: result = Wert der letzten Form, hasMain = false.
 // Jeder Fehler (Laden, Körper, ungültiger Exit-Code) → exitCode 1.
 func RunScript(path string, args []string, env *Env) (exitCode int, result *Cell, hasMain bool, err error) {
-  st := &mainScriptState{path: path}
-  result, err = loadFile(path, env, evalCtx{script: st})
+  // Pfad VOR loadFile auflösen (derselbe Chokepoint wie loadFile:
+  // resolvePath + filepath.Abs) — sonst steht st.path in einer anderen
+  // Schreibweise als der Pfad, den loadFile für Fehlermeldungen nutzt.
+  // Scheitert die Auflösung: Pfad unverändert lassen, loadFile erzeugt
+  // dann seinen gewohnten `load: …`-Fehler.
+  resolvedPath := path
+  if rp, rerr := resolvePath(path); rerr == nil {
+    if abs, aerr := filepath.Abs(rp); aerr == nil {
+      rp = abs
+    }
+    resolvedPath = rp
+  }
+  st := &mainScriptState{path: resolvedPath}
+  result, err = loadFile(resolvedPath, env, evalCtx{script: st})
   if err != nil {
     return 1, nil, st.body != nil, err
   }

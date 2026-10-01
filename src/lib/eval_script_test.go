@@ -77,13 +77,26 @@ func TestDefmainNonNumberIsExitZero(t *testing.T) {
 }
 
 func TestDefmainBadExitCode(t *testing.T) {
-  for _, body := range []string{`256`, `-1`, `2.5`} {
-    code, _, _, err := runScriptSrc(t, "(defmain () "+body+")")
+  for _, tc := range []struct{ body, got string }{
+    {`256`, "got 256"},
+    {`-1`, "got -1"},
+    {`2.5`, "got 2.5"},
+  } {
+    code, _, _, err := runScriptSrc(t, "(defmain () "+tc.body+")")
     if err == nil || !strings.Contains(err.Error(), "Exit-Code muss ganze Zahl 0–255 sein") {
-      t.Fatalf("%s: err = %v, want Exit-Code-Fehler", body, err)
+      t.Fatalf("%s: err = %v, want Exit-Code-Fehler", tc.body, err)
     }
-    if code != 1 { t.Fatalf("%s: exitCode = %d, want 1", body, code) }
+    if !strings.Contains(err.Error(), tc.got) {
+      t.Fatalf("%s: err = %v, want Substring %q", tc.body, err, tc.got)
+    }
+    if code != 1 { t.Fatalf("%s: exitCode = %d, want 1", tc.body, code) }
   }
+}
+
+func TestDefmainMultipleValuesUsesPrimary(t *testing.T) {
+  code, _, hasMain, err := runScriptSrc(t, `(defmain () (values 3 4))`)
+  if err != nil { t.Fatalf("err = %v", err) }
+  if !hasMain || code != 3 { t.Fatalf("hasMain=%v code=%d, want true/3", hasMain, code) }
 }
 
 func TestDefmainDuplicateIsError(t *testing.T) {
@@ -99,6 +112,18 @@ func TestDefmainDuplicateIsError(t *testing.T) {
   ran, gerr := env.Get("ran")
   if gerr != nil { t.Fatalf("Get ran: %v", gerr) }
   if ran.Type != NIL { t.Fatalf("Körper ist gelaufen (ran = %s), darf nicht", ran) }
+
+  // F1: relativer Pfad in der Meldung muss trotzdem zum absoluten Pfad
+  // auflösen (derselbe Schreibweise, die loadFile für seine Fehler nutzt).
+  t.Chdir(dir)
+  code, _, _, err = RunScript("main.lisp", nil, scriptEnv(t))
+  if err == nil || !strings.Contains(err.Error(), "defmain: bereits definiert in "+path+":2") {
+    t.Fatalf("relativer Pfad: err = %v, want 'bereits definiert in %s:2'", err, path)
+  }
+  if strings.Contains(err.Error(), "bereits definiert in main.lisp") {
+    t.Fatalf("relativer Pfad: err = %v, relativer Pfad darf nicht als Ort auftauchen", err)
+  }
+  if code != 1 { t.Fatalf("relativer Pfad: exitCode = %d, want 1", code) }
 }
 
 func TestDefmainBadSyntax(t *testing.T) {

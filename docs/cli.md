@@ -41,9 +41,13 @@ Shebang — beides ist für golisp2 dasselbe).
   (`./greet.lisp Anna` → `("Anna")`). Environment: `(getenv)`/`(environ)`.
 - Rückgabewert = Exit-Code: ganze Zahl 0–255 → dieser Code; `nil`/Nicht-
   Zahl → 0; andere Zahl → `ERR`, Exit 1. Kein Ergebnis-Echo auf stdout.
-- Zweites `defmain` in der Hauptdatei → `ERR: defmain: bereits definiert in …`, Exit 1.
+- Zweites `defmain` in der Hauptdatei → `ERR: load <pfad>: defmain: bereits definiert in <pfad>:<zeile>`, Exit 1.
 - Wirkungslos (liefert `nil`, prüft nichts): in per `(load …)`
   nachgeladenen Dateien, REPL, SWANK, `-e`, stdin, `(eval …)`, Goroutinen.
+- `defmain` wirkt nur auf oberster Ebene bzw. in Spezialformen/Makros der
+  Hauptdatei (`when`, `dolist`, `catch`, `unwind-protect`, …) — über
+  `funcall`/`apply`/`mapcar` oder andere Funktionsaufrufe aufgerufen, wird
+  es beim Laden still ignoriert (`apply` startet einen frischen Kontext).
 - Ohne `defmain` bleibt alles wie bisher (Wert der letzten Form wird ausgegeben).
 
 **Hinweis zu `-e`:** Eine einzelne Form gibt ihr Ergebnis aus. Bei mehreren

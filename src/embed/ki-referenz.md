@@ -43,7 +43,7 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest` |
 | `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin`; **kein** `(define (f p) ...)`-Zucker |
 | `(defmacro m (p) . body)` | Globales Makro | |
-| `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname |
+| `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname; wirkt nur auf oberster Ebene/in Spezialformen der Hauptdatei, nicht über `funcall`/`apply`/`mapcar` |
 | `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
 | `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; legt neu an, falls ungebunden (Top-Level-Verhalten) |

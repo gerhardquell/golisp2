@@ -13,6 +13,7 @@ import (
   "os"
   "os/exec"
   "path/filepath"
+  "runtime"
   "strings"
   "testing"
 
@@ -124,8 +125,14 @@ func TestDefmainShebangEndToEnd(t *testing.T) {
   if testing.Short() {
     t.Skip("baut Binary — nicht im -short-Modus")
   }
+  if runtime.GOOS == "windows" {
+    t.Skip("Shebang braucht Unix")
+  }
   dir := t.TempDir()
   bin := filepath.Join(dir, "golisp2")
+  if len(bin) > 200 {
+    t.Skipf("Binary-Pfad zu lang für Shebang-Zeile (%d Byte)", len(bin))
+  }
   build := exec.Command("go", "build", "-o", bin, ".")
   if out, err := build.CombinedOutput(); err != nil {
     t.Fatalf("go build: %v\n%s", err, out)

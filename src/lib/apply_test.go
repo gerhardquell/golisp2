@@ -45,3 +45,9 @@ func TestApplyNoFunction(t *testing.T) {
     t.Fatal("Apply(1) ohne Fehler, want Fehler")
   }
 }
+
+func TestApplyNilFn(t *testing.T) {
+  if _, err := Apply(nil, nil); err == nil {
+    t.Fatal("Apply(nil) ohne Fehler, want Fehler")
+  }
+}

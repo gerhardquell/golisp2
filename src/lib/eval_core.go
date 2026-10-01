@@ -400,6 +400,9 @@ func apply(fn *Cell, args []*Cell) (*Cell, error) {
 // auf. Öffentlicher Einstieg für Go-Code außerhalb von lib, z. B.
 // GUI-Callbacks in gogui.
 func Apply(fn *Cell, args []*Cell) (*Cell, error) {
+  if fn == nil {
+    return nil, fmt.Errorf("apply: nil ist keine Funktion")
+  }
   return apply(fn, args)
 }
 

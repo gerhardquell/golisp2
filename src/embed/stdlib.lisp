@@ -569,9 +569,12 @@
 ;; coerce: nur die im Buch gebrauchten Richtungen (String <-> Liste).
 ;; Wie CL: Zieltyp schon erfüllt → x unverändert; Nicht-Sequenz → Fehler.
 (defun coerce (x type)
-  (cond ((equal? type 'list)   (if (list? x) x (string->list x)))
-        ((equal? type 'string) (if (string? x) x (list->string x)))
-        (t (error (format nil "coerce: Typ '~a' nicht unterstützt (nur 'list/'string)" type)))))
+  (cond ((not (or (equal? type 'list) (equal? type 'string)))
+         (error (format nil "coerce: Typ '~a' nicht unterstützt (nur 'list/'string)" type)))
+        ((not (or (list? x) (string? x)))
+         (error (format nil "coerce: ~s ist keine Sequenz, nicht nach '~a wandelbar" x type)))
+        ((equal? type 'list)   (if (list? x) x (string->list x)))
+        (t                     (if (string? x) x (list->string x)))))
 
 ;; string-find: Index der ersten Fundstelle von needle in haystack, sonst ().
 (defun string-find (needle haystack)

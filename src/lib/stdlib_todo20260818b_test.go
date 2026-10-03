@@ -9,7 +9,10 @@
 // projekte/lispbuch): CL-Kompat-Ergänzungen in embed/stdlib.lisp.
 package lib
 
-import "testing"
+import (
+  "strings"
+  "testing"
+)
 
 func TestBuchluecken20260818Sequenzen(t *testing.T) {
   evalStdlibEq(t, `(remove-if-not (lambda (x) (> x 2)) '(1 2 3 4))`, "(3 4)")
@@ -70,6 +73,11 @@ func TestCoerceCL(t *testing.T) {
   evalStdlibEq(t, `(coerce () 'string)`, `""`)
   evalStdlibErr(t, `(coerce 1 'string)`)
   evalStdlibErr(t, `(coerce 1 'list)`)
+  for _, src := range []string{`(coerce 1 'string)`, `(coerce 1 'list)`} {
+    if _, err := evalStdlib(t, src); err == nil || !strings.Contains(err.Error(), "coerce:") {
+      t.Errorf("%s: Fehler soll coerce nennen, got %v", src, err)
+    }
+  }
 }
 
 func TestBuchluecken20260818DestructuringBind(t *testing.T) {

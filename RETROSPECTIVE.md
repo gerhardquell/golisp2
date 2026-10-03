@@ -1,5 +1,78 @@
 # Retrospektive golisp2
 
+## 2026-10-03 — Lückenliste aus ai-vergleiche: coerce, Zeit, Shell, Strings, Verzeichnisse, JSON
+
+**Ergebnis:** Grundlage war `TODO-20261003-luecken.md`, entstanden bei
+der Arbeit am Projekt ai-vergleiche. Zuerst die 21 liegengebliebenen
+Commits gepusht (defmain, gogui-API), dann fünf Commits, alle gepusht
+(bis 0952814):
+- `coerce`/`list->string`: kein stilles `""` mehr, eigene Fehlertexte,
+  Identität nach CL.
+- `now` (Unix-Sekunden als Float), `format-time` (Teilmenge von strftime,
+  Ortszeit oder `:utc`), `shell-output` (Fassade über `exec`).
+- `string-split`, `string-join` (Trenner Pflicht), `directory-files`.
+- `json-parse`/`json-encode`; die Web-Bridge nutzt dieselbe Abbildung,
+  jetzt Objekt ↔ Hash-Tabelle (**Breaking Change**).
+
+Go-Tests 438 → 472, Lisp-Suite 141 grün.
+
+**Was gut lief**
+- **Erst suchen hat zweimal ein Duplikat verhindert.** `shell-output` war
+  durch `exec` schon da (stdout/stderr/exitcd), und JSON gab es als
+  `jsoncell.go` für die Web-Bridge. Beides wurde erweitert, kein zweiter
+  Weg ist entstanden.
+- **Behauptungen der Lückenliste live geprüft.** Die offene Frage zur
+  Epoche ließ sich in einer Zeile klären (`get-universal-time` − Unix =
+  2208988800, also exakt CL). Das doppelte Echo bei `-e` erwies sich als
+  gewollt.
+- **Erst Wirkung prüfen, dann entscheiden.** Vor der JSON-Entscheidung
+  alle Nutzer der Bridge durchsucht (golisp2, nexora, space_beagle). Es
+  gab genau eine betroffene Funktion. Damit konnte Gerhard den harten
+  Schnitt wählen (Heuristik raus) statt eines Kompatibilitäts-Duplikats.
+- **Fragen mit Preview** bei jeder Ausweitung des Designs (Signaturen,
+  `nil`-Abbildung) — kurze Runden, klare Antworten.
+
+**Was schief lief / Lehren**
+- **Der Fehler lag eine Ebene tiefer.** Den `coerce`-Fehler verursachte
+  `list->string`, das Nicht-Listen still übersprang. Ursache in der
+  Primitive suchen, nicht im Symptom-Wrapper.
+- **Doku-Fehler mit Folgen.** `ki-referenz.md` beschrieb `exec` als
+  `(exec shell-cmd)`. Deshalb kannte die ai-vergleiche-Session es nicht
+  und lagerte Arbeit nach Python/Go aus. Die Referenz ist Vorspann jedes
+  `sigo`-Calls und damit Code, kein Begleittext.
+- **JSON-Heuristik war schon kaputt, ohne dass es auffiel.**
+  `{"a":"x","b":[1,2]}` ließ sich gar nicht kodieren. Kein Test deckte
+  Objekte mit Array-Werten ab. Round-Trip-Tests sollten die typischen
+  API-Formen enthalten, nicht nur Grundtypen.
+- **`[]` ist in JS truthy.** Seit `()` als `[]` kodiert wird, muss
+  „nicht gesetzt“ explizit `:null` sein (`punkt->hash`). Beim Wechsel der
+  Kodierung immer die Truthiness des Empfängers prüfen.
+- **Testerwartung falsch:** `String()` gibt `\n` escaped aus — der erste
+  `shell-output`-Test scheiterte an der Erwartung, nicht am Code.
+
+**Nachtrag: sigo-request entworfen (Umsetzung 20261004)**
+- Brainstorming → Spec (`docs/superpowers/specs/2026-10-03-sigo-request-design.md`)
+  → Plan (`docs/superpowers/plans/2026-10-03-sigo-request.md`, 4 Tasks).
+  Kern: `(sigo-request h [host])` mit Whitelist der sigoREST-Felder,
+  `elapsed`, `sigo*`/`sigo-usage` als Hash-Tabelle, dazu `sigo-costs`,
+  `sigo-budget`, `sigo-model-info`.
+- Funde dabei: sigoREST verwirft unbekannte Request-Felder still (kein
+  `response_format`); nur 89 von 192 Modellen haben einen Preis (0 =
+  unbekannt). Beides steht im sigoREST-`TODO.md`.
+
+**Offen**
+- **Nächster Schritt:** Plan `2026-10-03-sigo-request.md` Subagent-Driven
+  umsetzen (Gerhard: auf das Budget achten).
+- sigoREST-`TODO.md` hat zwei neue, uncommittete Punkte
+  (`response_format`, `cost_usd: null`).
+- `nexora/exp/archiv/parvmira-web/server.lisp` braucht dieselbe Umstellung
+  `punkt->alist` → `punkt->hash`, falls es wieder gestartet wird.
+- Lückenliste: Regex, Vektoren, Doku `~/.claude/zutaten/sprachen/golisp2.md`
+  (Hash-Maps, `sigo*`), `the` mit „kein Typsystem“ in ki-referenz prüfen,
+  `get-working-directory` → `()`, Name `shell-assoc`, Printer gibt große
+  Floats in Exponentialschreibweise aus, `sigo*` mit Timeout pro Aufruf
+  und Streaming.
+
 ## 2026-10-01 — primitives.go aufgeteilt, `defmain` für Skripte
 
 **Ergebnis:** `primitives.go` (960 Zeilen, knapp unter der harten Grenze)

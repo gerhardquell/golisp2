@@ -89,6 +89,7 @@ golisp2/
 
       goroutine.go       parfunc, chan-make/send/recv, lock-make
       fileio.go          Datei-I/O: file-write/-append/-read/-exists?/-delete
+                         directory-files (Verzeichnis auflisten)
       shellcmd.go        system, file-stat, shell-assoc, symbol->string
       postgres.go        PostgreSQL-Primitiven
       maxima.go          maxima-open/-eval/-close — CAS via externen

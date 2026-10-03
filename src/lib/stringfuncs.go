@@ -33,6 +33,58 @@ func RegisterStringFuncs(env *Env) {
   _ = env.Set("string-replace",  makeFn(fnStringReplace))
   _ = env.Set("string-trim",     makeFn(fnStringTrim))
   _ = env.Set("string-contains", makeFn(fnStringContains))
+  _ = env.Set("string-split",    makeFn(fnStringSplit))
+  _ = env.Set("string-join",     makeFn(fnStringJoin))
+}
+
+// string-split: (string-split s [sep]) → Liste von Strings
+// Mit sep: wörtlich trennen, leere Felder bleiben. Ohne sep: an Whitespace,
+// leere Felder entfallen (wie awk).
+func fnStringSplit(args []*Cell) (*Cell, error) {
+  if len(args) < 1 || len(args) > 2 {
+    return nil, fmt.Errorf("string-split: 1 oder 2 Argumente erwartet (s [sep])")
+  }
+  if args[0].Type != STRING {
+    return nil, fmt.Errorf("string-split: String erwartet, got %s", args[0])
+  }
+  var parts []string
+  if len(args) == 1 {
+    parts = strings.Fields(args[0].Val)
+  } else {
+    if args[1].Type != STRING || args[1].Val == "" {
+      return nil, fmt.Errorf("string-split: Trenner muss nichtleerer String sein, got %s", args[1])
+    }
+    parts = strings.Split(args[0].Val, args[1].Val)
+  }
+  cells := make([]*Cell, len(parts))
+  for i, p := range parts {
+    cells[i] = MakeStr(p)
+  }
+  return SliceToCell(cells), nil
+}
+
+// string-join: (string-join liste sep) → String; sep Pflicht — ohne
+// Trenner ist das list->string.
+func fnStringJoin(args []*Cell) (*Cell, error) {
+  if len(args) != 2 {
+    return nil, fmt.Errorf("string-join: 2 Argumente erwartet (liste sep); ohne Trenner: list->string")
+  }
+  if args[1].Type != STRING {
+    return nil, fmt.Errorf("string-join: Trenner muss String sein, got %s", args[1])
+  }
+  var parts []string
+  lst := args[0]
+  for lst != nil && lst.Type == LIST {
+    if lst.Car.Type != STRING {
+      return nil, fmt.Errorf("string-join: Alle Elemente müssen Strings sein, got %s", lst.Car)
+    }
+    parts = append(parts, lst.Car.Val)
+    lst = lst.Cdr
+  }
+  if lst != nil && lst.Type != NIL {
+    return nil, fmt.Errorf("string-join: echte Liste erwartet, got %s", args[0])
+  }
+  return MakeStr(strings.Join(parts, args[1].Val)), nil
 }
 
 // string-replace: (string-replace str old new) → str mit allen Ersetzungen

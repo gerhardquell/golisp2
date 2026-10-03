@@ -133,10 +133,10 @@ sortiert (Basis von `tools/gen-reference.lisp`)
 - **sigoREST:** `sigo sigo* sigo-models sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `sigo*` → Assoc-Liste mit Tokens/Cache/Kosten; `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
 - **Goroutinen:** `chan-make chan-send chan-recv lock-make`
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
-- **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
+- **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → nur Exit-Code; `(shell-output "cmd")` → stdout als String (wie `$(…)`), Exit ≠ 0 → Fehler; `shell-assoc` ist nur `assoc`, kein Shell-Aufruf
 - **Zeit:** `now format-time get-universal-time sleep` — `(now)` → Unix-Sekunden als Float; `(format-time "%F %T" [zeit] [:utc])` strftime-artig (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, Namen englisch); `get-universal-time` zählt ab 1900
-- **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find`
+- **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find string-split string-join` — `(string-split s [sep])`: mit sep wörtlich (leere Felder bleiben), ohne an Whitespace; `(string-join liste sep)` sep Pflicht; Argumentreihenfolge: `string-contains`/`string-split` Heuhaufen zuerst, `string-find` Nadel zuerst
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
   - Rundung: half-to-even (Go-`strconv`), nicht half-up wie C — `%.2f` von `2.25` → `"2.2"`

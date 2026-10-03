@@ -16,6 +16,7 @@
 //   (set-working-directory "./projekt")  → Arbeitsverzeichnis setzen
 //   (get-working-directory)              → aktuelles Arbeitsverzeichnis oder ()
 //   (get-file-path "datei.txt")          → erster existierender Pfad
+//   (directory-files "dir" ["*.lisp"])   → sortierte Namen, Verzeichnisse mit "/"
 //
 // Suchreihenfolge beim Lesen:
 //   1. Absolute Pfade (immer Vorrang)
@@ -71,6 +72,7 @@ func RegisterFileIO(env *Env) {
   _ = env.Set("set-working-directory", makeFn(fnSetWorkingDirectory))
   _ = env.Set("get-working-directory", makeFn(fnGetWorkingDirectory))
   _ = env.Set("get-file-path",         makeFn(fnGetFilePath))
+  _ = env.Set("directory-files",       makeFn(fnDirectoryFiles))
 
   _ = env.Set("gets",      makeFn(fnGets))
   _ = env.Set("slurp",     makeFn(fnSlurp))
@@ -193,6 +195,38 @@ func fnGetFilePath(args []*Cell) (*Cell, error) {
   resolved, err := resolvePath(args[0].Val)
   if err != nil { return nil, fmt.Errorf("get-file-path '%s': %v", args[0].Val, err) }
   return MakeStr(resolved), nil
+}
+
+// directory-files: (directory-files "dir" [muster]) → sortierte Namen
+// Dotfiles inklusive, Unterverzeichnisse mit "/" am Ende. muster ist ein
+// Glob (* ? [..]) nur auf den Namen. dir wird wie bei file-read aufgelöst.
+func fnDirectoryFiles(args []*Cell) (*Cell, error) {
+  if len(args) < 1 || len(args) > 2 {
+    return nil, fmt.Errorf("directory-files: 1 oder 2 Argumente erwartet (dir [muster])")
+  }
+  if args[0].Type != STRING { return nil, fmt.Errorf("directory-files: Verzeichnis muss String sein, got %s", args[0]) }
+  pattern := ""
+  if len(args) == 2 {
+    if args[1].Type != STRING { return nil, fmt.Errorf("directory-files: Muster muss String sein, got %s", args[1]) }
+    pattern = args[1].Val
+    if _, err := filepath.Match(pattern, ""); err != nil {
+      return nil, fmt.Errorf("directory-files: ungültiges Muster '%s'", pattern)
+    }
+  }
+  dir, err := resolvePath(args[0].Val)
+  if err != nil { return nil, fmt.Errorf("directory-files '%s': %v", args[0].Val, err) }
+  entries, err := os.ReadDir(dir) // bereits nach Name sortiert
+  if err != nil { return nil, fmt.Errorf("directory-files '%s': %v", dir, err) }
+  var names []*Cell
+  for _, e := range entries {
+    if pattern != "" {
+      if ok, _ := filepath.Match(pattern, e.Name()); !ok { continue }
+    }
+    name := e.Name()
+    if e.IsDir() { name += "/" }
+    names = append(names, MakeStr(name))
+  }
+  return SliceToCell(names), nil
 }
 
 // resolvePath löst einen Dateinamen nach der dokumentierten Reihenfolge auf.

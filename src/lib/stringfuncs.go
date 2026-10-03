@@ -184,5 +184,8 @@ func fnListToString(args []*Cell) (*Cell, error) {
     sb.WriteString(elem.Val)
     lst = lst.Cdr
   }
+  if lst != nil && lst.Type != NIL {
+    return nil, fmt.Errorf("list->string: echte Liste erwartet, got %s", lst.String())
+  }
   return MakeStr(sb.String()), nil
 }

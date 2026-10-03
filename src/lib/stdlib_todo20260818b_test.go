@@ -63,6 +63,15 @@ func TestBuchluecken20260818Strings(t *testing.T) {
   evalStdlibEq(t, `(string-find "xy" "abcdef")`, "()")
 }
 
+// coerce nach CL: Zieltyp schon erfüllt → Identität; Nicht-Sequenz → Fehler.
+func TestCoerceCL(t *testing.T) {
+  evalStdlibEq(t, `(coerce "ab" 'string)`, `"ab"`)
+  evalStdlibEq(t, `(coerce '(1 2) 'list)`, "(1 2)")
+  evalStdlibEq(t, `(coerce () 'string)`, `""`)
+  evalStdlibErr(t, `(coerce 1 'string)`)
+  evalStdlibErr(t, `(coerce 1 'list)`)
+}
+
 func TestBuchluecken20260818DestructuringBind(t *testing.T) {
   evalStdlibEq(t, `(destructuring-bind (a b c) '(1 2 3) (list c b a))`, "(3 2 1)")
   // expr wird genau einmal ausgewertet

@@ -150,6 +150,11 @@ func TestPrimitiveStringConvert(t *testing.T) {
   evalEq(t, `(string->list "ab")`, `("a" "b")`)
   // list->string: umgekehrt
   evalEq(t, `(list->string (list "a" "b"))`, `"ab"`)
+  evalEq(t, `(list->string ())`, `""`)
+  // Kein stilles "" bei Nicht-Liste oder Dotted-Tail
+  evalErr(t, `(list->string 5)`)
+  evalErr(t, `(list->string "ab")`)
+  evalErr(t, `(list->string (cons "a" "b"))`)
 }
 
 func TestPrimitiveStringSearch(t *testing.T) {

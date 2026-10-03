@@ -80,6 +80,7 @@ golisp2/
       docstring.go       Docstring-Registry für (documentation 'name 'function)
       trace.go           trace, untrace, trace? (Live-Tracing von Funktionen)
       sysinfo.go         argv, getenv, environ
+      timefuncs.go       now (Unix-Sekunden), format-time (strftime-Teilmenge)
       defloc.go          Definition-Locations für M-. (SLIME)
 
       redefguard.go      Redefine-Policy: allow/warn/error für Root-Redefinitionen

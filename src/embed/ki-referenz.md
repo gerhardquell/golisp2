@@ -91,7 +91,7 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(macroexpand-all form)` | Komplett expandieren | Nicht-tail |
 | `(bound? sym)` | Gebunden? | sym wird ausgewertet |
 | `(makunbound sym)` | Bindung entfernen | |
-| `(exec shell-cmd)` | Shell-Kommando | |
+| `(exec "prog" param: "arg" … stdout: var stderr: var exitcd: var)` | Programm starten (kein Shell!) | `stdout:`/`stderr:`/`exitcd:` sind Variablennamen; `timeout: N` s (Default 60); Exit ≠ 0 kein Fehler |
 | `(quasiquote x)` | Quasi-Quote | `` `x ``, `,x`=unquote, `,@x`=splice |
 | `(unquote x)` | nur in Quasiquote | Fehler außerhalb |
 | `(unquote-splice x)` | nur in Quasiquote | Fehler außerhalb |
@@ -134,7 +134,8 @@ sortiert (Basis von `tools/gen-reference.lisp`)
 - **Goroutinen:** `chan-make chan-send chan-recv lock-make`
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
-- **Shell:** `system file-stat shell-assoc`
+- **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → nur Exit-Code; `(shell-output "cmd")` → stdout als String (wie `$(…)`), Exit ≠ 0 → Fehler; `shell-assoc` ist nur `assoc`, kein Shell-Aufruf
+- **Zeit:** `now format-time get-universal-time sleep` — `(now)` → Unix-Sekunden als Float; `(format-time "%F %T" [zeit] [:utc])` strftime-artig (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, Namen englisch); `get-universal-time` zählt ab 1900
 - **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find`
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`

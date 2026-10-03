@@ -576,6 +576,25 @@
         ((equal? type 'list)   (if (list? x) x (string->list x)))
         (t                     (if (string? x) x (list->string x)))))
 
+;; shell-output: stdout von "/bin/sh -c cmd" als String — Fassade über exec.
+;; Wie $(…): abschließende Newlines weg. Exit ≠ 0 oder Timeout (exec-Default
+;; 60 s) → Fehler, der stderr zeigt. Exit-Code ohne Fehler: exec direkt.
+(defun %strip-trailing-newlines (s)
+  (let ((n (string-length s)))
+    (if (and (> n 0) (equal? (substring s (- n 1) n) "\n"))
+        (%strip-trailing-newlines (substring s 0 (- n 1)))
+        s)))
+
+(defun shell-output (cmd)
+  (unless (string? cmd)
+    (error (format nil "shell-output: Kommando muss String sein, got ~s" cmd)))
+  (let ((out "") (err "") (rc 0))
+    (unless (exec "/bin/sh" param: "-c" param: cmd stdout: out stderr: err exitcd: rc)
+      (error (format nil "shell-output: ~s nicht gestartet oder Timeout" cmd)))
+    (if (= rc 0)
+        (%strip-trailing-newlines out)
+        (error (format nil "shell-output: Exit ~a: ~a" rc (%strip-trailing-newlines err))))))
+
 ;; string-find: Index der ersten Fundstelle von needle in haystack, sonst ().
 (defun string-find (needle haystack)
   (defun sf-acc (i max-i)

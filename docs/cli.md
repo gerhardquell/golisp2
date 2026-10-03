@@ -139,3 +139,7 @@ Der REPL des *Clients* (`golisp2-client --repl`) ist etwas anderes und läuft
   (z. B. Programm nicht gefunden).
 - Ein Exit-Code ≠ 0 ist **kein** Fehler — er landet in `exitcd:`.
 - Standard-Timeout: 60 Sekunden.
+
+Nur die Ausgabe eines Shell-Kommandos gebraucht? `(shell-output "cmd")`
+(stdlib) ruft `exec "/bin/sh" param: "-c"` auf, liefert stdout ohne
+abschließende Newlines und macht aus Exit ≠ 0 einen Fehler mit stderr.

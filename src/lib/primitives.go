@@ -91,6 +91,7 @@ func BaseEnv() *Env {
 
 	// Zeitfunktionen
 	_ = env.Set("sleep", makeFn(fnSleep))
+	RegisterTime(env)
 
 	// sigoREST
 	RegisterSigo(env)

@@ -65,6 +65,8 @@
     ("string-contains" . "(string-contains str sub)")
     ("string-split" . "(string-split str &optional sep)")
     ("string-join" . "(string-join list sep)")
+    ("json-parse" . "(json-parse text)")
+    ("json-encode" . "(json-encode value)")
     ("error" . "(error msg)")
     ("trap" . "(trap body handler)")
     ("gensym" . "(gensym)")

@@ -55,13 +55,18 @@
         ((eq kat 'interessant) (set! aktuelle-liste (set-pmi-liste-interessant aktuelle-liste neue)))
         (t (error "kategorie-liste-setzen!: unbekannt"))))
 
-(defun punkt->alist (p)
-  (list (cons "kurzbezeichnung" (punkt-kurzbezeichnung p))
-        (cons "beschreibung" (punkt-beschreibung p))
-        (cons "kategorie" (symbol->string (punkt-kategorie p)))
-        (cons "erstellerTyp" (symbol->string (punkt-ersteller-typ p)))
-        (cons "erstellerName" (punkt-ersteller-name p))
-        (cons "persoenlichkeit" (punkt-persoenlichkeit p))))
+;; JSON-Objekt fuer den Browser: Hash-Tabelle (Alists sind fuer die
+;; Web-Bridge keine Objekte). Fehlende Persoenlichkeit (Mensch) -> :null,
+;; denn () wuerde [] und waere in JS truthy.
+(defun punkt->hash (p)
+  (let ((h (make-hash-table :test 'equal)))
+    (puthash "kurzbezeichnung" h (punkt-kurzbezeichnung p))
+    (puthash "beschreibung" h (punkt-beschreibung p))
+    (puthash "kategorie" h (symbol->string (punkt-kategorie p)))
+    (puthash "erstellerTyp" h (symbol->string (punkt-ersteller-typ p)))
+    (puthash "erstellerName" h (punkt-ersteller-name p))
+    (puthash "persoenlichkeit" h (or (punkt-persoenlichkeit p) :null))
+    h))
 
 (defun vorgabe-setzen (client-id text)
   (set! aktuelle-liste (make-pmi-liste :vorgabe text))
@@ -71,19 +76,19 @@
 
 (defun punkte-abrufen (client-id kategorie)
   ;; golisp2 ist ein Lisp-1: Funktionsreferenzen als Wert MUESSEN unquotiert
-  ;; sein (der Symbolwert IST die Funktion) - 'punkt->alist waere nur das
+  ;; sein (der Symbolwert IST die Funktion) - 'punkt->hash waere nur das
   ;; Symbol-Atom, kein Funktions-Cell, und apply schlaegt fehl. Empirisch
   ;; verifiziert 20260826 (Testlauf brach mit "apply: 'X' ist keine
   ;; Funktion" ab, obwohl (bound? 'X) t liefert) - neuer Fallstrick,
   ;; noch nicht in CLAUDE.md dokumentiert.
-  (mapcar punkt->alist (kategorie-liste aktuelle-liste (kategorie-symbol kategorie))))
+  (mapcar punkt->hash (kategorie-liste aktuelle-liste (kategorie-symbol kategorie))))
 
 (defun punkt-hinzufuegen (client-id kategorie kurzbezeichnung beschreibung name)
   (let* ((kat (kategorie-symbol kategorie))
          (p (make-punkt :kurzbezeichnung kurzbezeichnung :beschreibung beschreibung
                          :kategorie kat :ersteller-typ 'mensch :ersteller-name name)))
     (kategorie-liste-setzen! kat (append (kategorie-liste aktuelle-liste kat) (list p)))
-    (punkt->alist p)))
+    (punkt->hash p)))
 
 ;; sigo-models kann Alias+Kanonischen-Namen doppelt liefern (Fallstrick 8,
 ;; CLAUDE.md) - remove-duplicates (stdlib, equal?-basiert) genuegt hier.
@@ -99,7 +104,7 @@
          (ensemble (mapcar (lambda (paar) (cons (car paar) (cadr paar))) ensemble-roh))
          (neue (ki-punkte (pmi-liste-vorgabe aktuelle-liste) kat ensemble)))
     (kategorie-liste-setzen! kat (append (kategorie-liste aktuelle-liste kat) neue))
-    (mapcar punkt->alist neue)))
+    (mapcar punkt->hash neue)))
 
 (defun vorgabeSlug (vorgabe)
   (let ((kurz (if (> (string-length vorgabe) 40) (substring vorgabe 0 40) vorgabe)))

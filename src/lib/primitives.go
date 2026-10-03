@@ -114,6 +114,9 @@ func BaseEnv() *Env {
 	// Hashtables (CL)
 	RegisterHashtables(env)
 
+	// JSON (Objekt <-> Hash-Tabelle, jsoncell.go)
+	RegisterJSON(env)
+
 	// Kern-Typ für type-of/typep (types.lisp)
 	RegisterCellType(env)
 

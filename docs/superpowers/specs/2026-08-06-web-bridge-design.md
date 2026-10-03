@@ -227,6 +227,10 @@ läuft. Diese Zusage muss in einem Test abgesichert werden (siehe 8.4).
 
 ## 6. JSON ↔ Cell
 
+> **Überholt seit 20261003:** Objekte ↔ Hash-Tabellen statt Alists,
+> `null` → `:null`, `()` → `[]`. Gültige Abbildung: Kopf von
+> `src/lib/jsoncell.go`.
+
 Das ist die Stelle mit den meisten stillen Fallen. Deshalb explizit.
 
 ### JSON → Cell

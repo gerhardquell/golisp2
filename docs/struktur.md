@@ -107,7 +107,8 @@ golisp2/
                          boot.js-Embed
       webserv.go         Web-Bridge: webserv (Ein-Aufruf-Bootstrap:
                          Server+HTML+boot.js+Browser; :host seit 20260821)
-      jsoncell.go        JSON ↔ Cell (CellToJSON/JSONToCell)
+      jsoncell.go        JSON ↔ Cell (CellToJSON/JSONToCell), json-parse/json-encode;
+                         Objekt ↔ Hash-Tabelle, einzige Abbildung (auch Web-Bridge)
       embed/boot.js      Browser-Client der Web-Bridge (golisp.call/on/…)
 
       stdlib.go          //go:embed + LoadStdlib (Chokepoint: eine Quelle)

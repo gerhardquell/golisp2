@@ -5,32 +5,76 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260807
 //**********************************************************************
-// JSON <-> Cell-Konvertierung fuer die Web-Bridge (Spec TODO.md §6).
-// Bewusste Asymmetrien: false/null -> Nil; leere Liste -> null (nicht {}
-// oder []). Zyklische Strukturen werden ueber eine Tiefenbegrenzung
-// abgefangen.
+// JSON <-> Cell — einzige Abbildung, genutzt von json-parse/json-encode
+// und der Web-Bridge (wsbridge.go). Seit 20261003:
+//
+//   JSON      → Cell                 Cell                → JSON
+//   Objekt    → Hash-Tabelle (equal) Hash-Tabelle        → Objekt
+//   Array     → Liste                Liste (proper)      → Array
+//   true      → t                    t                   → true
+//   false     → ()                   () / NIL            → []
+//   null      → :null                :null / :false      → null / false
+//   Zahl/Text → NUMBER/STRING        anderes Symbol      → Name als String
+//
+// Bewusste Asymmetrie: false kommt als [] zurück. Alists sind keine
+// Objekte (mehrdeutig: (("a" "x")) wäre {"a":["x"]} und [["a","x"]]).
+// Zyklen fängt die Tiefenbegrenzung ab.
 //**********************************************************************
 
 package lib
 
 import (
+  "bytes"
   "encoding/json"
   "fmt"
-  "sort"
 )
 
 const jsonMaxDepth = 64
 
-// CellToJSON kodiert eine Cell als JSON. NIL -> null, t -> true, NUMBER ->
-// Zahl (Ganzzahlen ohne .0), STRING -> String, sonstige ATOMs -> Symbolname
-// als String. LIST wird Objekt, wenn jedes Element ein dotted pair mit
-// STRING/ATOM-Car ist (Cdr kein LIST) — sonst Array.
+// RegisterJSON hängt json-parse und json-encode ins Environment ein.
+func RegisterJSON(env *Env) {
+  _ = env.Set("json-parse",  makeFn(fnJSONParse))
+  _ = env.Set("json-encode", makeFn(fnJSONEncode))
+}
+
+// json-parse: (json-parse "text") → Cell
+func fnJSONParse(args []*Cell) (*Cell, error) {
+  if len(args) != 1 || args[0].Type != STRING {
+    return nil, fmt.Errorf("json-parse: 1 String erwartet")
+  }
+  c, err := JSONToCell([]byte(args[0].Val))
+  if err != nil {
+    return nil, fmt.Errorf("json-parse: %v", err)
+  }
+  return c, nil
+}
+
+// json-encode: (json-encode wert) → kompakter JSON-String
+func fnJSONEncode(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("json-encode: 1 Argument erwartet")
+  }
+  js, err := CellToJSON(Primary(args[0]))
+  if err != nil {
+    return nil, fmt.Errorf("json-encode: %v", err)
+  }
+  return MakeStr(string(js)), nil
+}
+
+// CellToJSON kodiert eine Cell als kompaktes JSON (Keys sortiert, kein
+// HTML-Escaping).
 func CellToJSON(c *Cell) ([]byte, error) {
   v, err := cellToJSONValue(c, 0)
   if err != nil {
     return nil, err
   }
-  return json.Marshal(v)
+  var buf bytes.Buffer
+  enc := json.NewEncoder(&buf)
+  enc.SetEscapeHTML(false)
+  if err := enc.Encode(v); err != nil {
+    return nil, fmt.Errorf("CellToJSON: %v", err)
+  }
+  return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
 func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
@@ -38,34 +82,29 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
     return nil, fmt.Errorf("CellToJSON: Tiefe %d überschritten", jsonMaxDepth)
   }
   if c == nil {
-    return nil, nil
+    return []interface{}{}, nil
   }
   switch c.Type {
   case NIL:
-    return nil, nil
+    return []interface{}{}, nil
   case NUMBER:
     return c.Num, nil
   case STRING:
     return c.Val, nil
   case ATOM:
-    if c == cellT {
+    switch {
+    case c == cellT:
       return true, nil
+    case c.Val == ":false":
+      return false, nil
+    case c.Val == ":null":
+      return nil, nil
     }
     return c.Val, nil
+  case HASHTABLE:
+    return hashToJSONObject(c.Ht, depth)
   case LIST:
-    if isAlistObject(c) {
-      m := make(map[string]interface{})
-      for p := c; p != nil && p.Type == LIST; p = p.Cdr {
-        pair := p.Car
-        val, err := cellToJSONValue(pair.Cdr, depth+1)
-        if err != nil {
-          return nil, err
-        }
-        m[pair.Car.Val] = val
-      }
-      return m, nil
-    }
-    var arr []interface{}
+    arr := []interface{}{}
     p := c
     for ; p != nil && p.Type == LIST; p = p.Cdr {
       v, err := cellToJSONValue(p.Car, depth+1)
@@ -75,7 +114,7 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
       arr = append(arr, v)
     }
     if p != nil && p.Type != NIL {
-      return nil, fmt.Errorf("CellToJSON: improper Liste nicht darstellbar")
+      return nil, fmt.Errorf("CellToJSON: improper Liste nicht darstellbar (Objekte als Hash-Tabelle)")
     }
     return arr, nil
   default:
@@ -83,43 +122,34 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
   }
 }
 
-// isAlistObject: LIST wird genau dann JSON-Objekt, wenn sie nicht leer ist
-// und jedes Element ein Cons mit STRING/ATOM-Car ist, dessen Cdr kein LIST
-// oder selbst ein Alist-Objekt ist (Rekursion fuer verschachtelte Alists).
-// (("a" . 1)) -> Objekt, (("a" 1)) -> Array. Improper Listen -> false.
-func isAlistObject(c *Cell) bool {
-  if c == nil || c.Type != LIST {
-    return false
+// hashToJSONObject: Keys müssen Strings oder Symbole (Name) sein; zwei
+// Keys mit gleichem Namen ("a" und 'a) sind ein Fehler, kein stilles
+// Überschreiben.
+func hashToJSONObject(ht *HashTable, depth int) (interface{}, error) {
+  ht.mu.RLock()
+  entries := make([]hashEntry, 0, len(ht.m))
+  for _, e := range ht.m {
+    entries = append(entries, e)
   }
-  for p := c; p != nil && p.Type == LIST; p = p.Cdr {
-    elem := p.Car
-    if elem == nil || elem.Type != LIST {
-      return false
+  ht.mu.RUnlock()
+  m := make(map[string]interface{}, len(entries))
+  for _, e := range entries {
+    if e.key.Type != STRING && e.key.Type != ATOM {
+      return nil, fmt.Errorf("CellToJSON: Objekt-Key muss String oder Symbol sein, got %s", e.key)
     }
-    if elem.Car == nil || (elem.Car.Type != STRING && elem.Car.Type != ATOM) {
-      return false
+    if _, dup := m[e.key.Val]; dup {
+      return nil, fmt.Errorf("CellToJSON: Objekt-Key '%s' doppelt", e.key.Val)
     }
-    // Cdr darf LIST sein, wenn es selbst ein Alist-Objekt ist —
-    // sonst waeren verschachtelte Alists ({"a":{"b":2}}) unmoeglich.
-    if elem.Cdr != nil && elem.Cdr.Type == LIST && !isAlistObject(elem.Cdr) {
-      return false
+    v, err := cellToJSONValue(e.val, depth+1)
+    if err != nil {
+      return nil, err
     }
+    m[e.key.Val] = v
   }
-  // kommen wir hier an, war der Rest NIL (proper) oder die Schleife endete
-  // an einem Nicht-LIST-Cdr — letzteres ist improper, kein Objekt.
-  return alistProperTail(c)
+  return m, nil
 }
 
-func alistProperTail(c *Cell) bool {
-  p := c
-  for p != nil && p.Type == LIST {
-    p = p.Cdr
-  }
-  return p == nil || p.Type == NIL
-}
-
-// JSONToCell parst JSON in eine Cell. null/false -> Nil, true -> t, Objekt
-// -> Alist mit STRING-Keys als dotted pairs, Array -> LIST.
+// JSONToCell parst genau einen JSON-Wert (Abbildung siehe Dateikopf).
 func JSONToCell(data []byte) (*Cell, error) {
   var v interface{}
   if err := json.Unmarshal(data, &v); err != nil {
@@ -134,7 +164,7 @@ func jsonValueToCell(v interface{}, depth int) (*Cell, error) {
   }
   switch x := v.(type) {
   case nil:
-    return MakeNil(), nil
+    return MakeAtom(":null"), nil
   case bool:
     if x {
       return cellT, nil
@@ -155,20 +185,16 @@ func jsonValueToCell(v interface{}, depth int) (*Cell, error) {
     }
     return SliceToCell(items), nil
   case map[string]interface{}:
-    keys := make([]string, 0, len(x))
-    for k := range x {
-      keys = append(keys, k)
-    }
-    sort.Strings(keys) // deterministisch: Go-Maps iterieren zufaellig
-    result := MakeNil()
-    for i := len(keys) - 1; i >= 0; i-- {
-      val, err := jsonValueToCell(x[keys[i]], depth+1)
+    ht := &HashTable{m: make(map[string]hashEntry, len(x)), test: "equal"}
+    for k, raw := range x {
+      val, err := jsonValueToCell(raw, depth+1)
       if err != nil {
         return nil, err
       }
-      result = Cons(Cons(MakeStr(keys[i]), val), result)
+      key := MakeStr(k)
+      ht.m[ht.keyOf(key)] = hashEntry{key: key, val: val}
     }
-    return result, nil
+    return &Cell{Type: HASHTABLE, Ht: ht}, nil
   default:
     return nil, fmt.Errorf("JSONToCell: Typ %T nicht darstellbar", v)
   }

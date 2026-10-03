@@ -185,6 +185,8 @@
 | `incf` | Makro: place um d (Default 1) erhoehen |
 | `intern` | interniertes Symbol zum String liefern |
 | `iota` | Liste (0 1 ... n-1) |
+| `json-encode` | Wert als JSON-String: Hash-Tabelle->Objekt, Liste->Array, ()->[], :null/:false |
+| `json-parse` | JSON-Text lesen: Objekt->Hash-Tabelle (equal), Array->Liste, null->:null, false->() |
 | `last` | letztes Element einer Liste |
 | `length` | Elementzahl einer Liste bzw. Zeichenzahl eines Strings |
 | `lisp-error-msg` | :msg-Slot einer Condition liefern |

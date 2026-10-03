@@ -138,6 +138,7 @@ sortiert (Basis von `tools/gen-reference.lisp`)
 - **Zeit:** `now format-time get-universal-time sleep` — `(now)` → Unix-Sekunden als Float; `(format-time "%F %T" [zeit] [:utc])` strftime-artig (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, Namen englisch); `get-universal-time` zählt ab 1900
 - **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find string-split string-join` — `(string-split s [sep])`: mit sep wörtlich (leere Felder bleiben), ohne an Whitespace; `(string-join liste sep)` sep Pflicht; Argumentreihenfolge: `string-contains`/`string-split` Heuhaufen zuerst, `string-find` Nadel zuerst
 - **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
+- **JSON:** `json-parse json-encode` — Objekt ↔ Hash-Tabelle (`:test 'equal`, String-Keys), Array ↔ Liste, `true` ↔ `t`, `null` ↔ `:null`, `false` → `()`, `()` → `[]`, `:false` → `false`. Alists sind **keine** Objekte (Fehler beim Kodieren). Gilt auch für `ws-call`/`ws-export`/`ws-emit`
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
   - Rundung: half-to-even (Go-`strconv`), nicht half-up wie C — `%.2f` von `2.25` → `"2.2"`
 - **PostgreSQL:** `pg-connect pg-query pg-exec pg-close`

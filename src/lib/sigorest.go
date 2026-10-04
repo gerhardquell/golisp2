@@ -14,6 +14,7 @@ import (
   "encoding/json"
   "fmt"
   "io"
+  "math"
   "net/http"
   "os"
   "strings"
@@ -57,6 +58,7 @@ type sigoUsage struct {
   CachedTokens     int
   ReasoningTokens  int
   CostUSD          float64
+  Elapsed          float64 // Sekunden, nur HTTP-Aufruf
 }
 
 func (u *sigoUsage) add(o sigoUsage) {
@@ -65,6 +67,7 @@ func (u *sigoUsage) add(o sigoUsage) {
   u.CachedTokens     += o.CachedTokens
   u.ReasoningTokens  += o.ReasoningTokens
   u.CostUSD          += o.CostUSD
+  u.Elapsed          += o.Elapsed
 }
 
 type sigoResult struct {
@@ -102,6 +105,7 @@ func RegisterSigo(env *Env) {
   _ = env.Set("sigo*",              makeFn(fnSigoStar))
   _ = env.Set("sigo-usage",         makeFn(fnSigoUsage))
   _ = env.Set("sigo-usage-reset",   makeFn(fnSigoUsageReset))
+  _ = env.Set("sigo-request",       makeFn(fnSigoRequest))
 }
 
 func sigoGetHost() string {
@@ -140,17 +144,7 @@ func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
   if len(args) >= 3 { sessionID = args[2].Val }
   if len(args) >= 4 { host = strings.TrimRight(args[3].Val, "/") }
 
-  // Rate-Limiting: Warte auf Token im Ticker
-  <-sigoRateLimiter
-
-  // Circuit-Breaker Schutz: mindestens 500ms zwischen Calls
-  sigoCallMutex.Lock()
-  sinceLast := time.Since(sigoLastCall)
-  if sinceLast < 500*time.Millisecond {
-    time.Sleep(500*time.Millisecond - sinceLast)
-  }
-  sigoLastCall = time.Now()
-  sigoCallMutex.Unlock()
+  sigoThrottle()
 
   res, err := sigoCallToHost(prompt, model, sessionID, host, systemPrompt)
   if err != nil { return sigoResult{}, err }
@@ -267,6 +261,187 @@ func fnSigoSystemPrompt(args []*Cell) (*Cell, error) {
 // fnSigoReference: (sigo-reference) → eingebettete KI-Kurzreferenz
 func fnSigoReference(args []*Cell) (*Cell, error) {
   return MakeStr(assets.KiReferenz), nil
+}
+
+// sigoThrottle: Rate-Limiter plus mindestens 500 ms zwischen Calls.
+func sigoThrottle() {
+  <-sigoRateLimiter
+  sigoCallMutex.Lock()
+  sinceLast := time.Since(sigoLastCall)
+  if sinceLast < 500*time.Millisecond {
+    time.Sleep(500*time.Millisecond - sinceLast)
+  }
+  sigoLastCall = time.Now()
+  sigoCallMutex.Unlock()
+}
+
+// sigoRequestFields: genau die Felder von sigoREST ChatRequest
+// (sigoREST/main.go:513). sigoREST verwirft andere still — hier Fehler.
+var sigoRequestFields = map[string]bool{
+  "model": true, "messages": true, "temperature": true, "max_tokens": true,
+  "session_id": true, "timeout": true, "retries": true,
+  "system_prompt": true, "bare": true, "channel": true,
+}
+
+// hashAt: Wert unter key, wenn c eine Hash-Tabelle ist, sonst nil.
+func hashAt(c *Cell, key string) *Cell {
+  if c == nil || c.Type != HASHTABLE {
+    return nil
+  }
+  v, _ := c.Ht.getStr(key)
+  return v
+}
+
+// numAt: Zahl unter key, sonst 0 (fehlende Usage-Felder zählen als 0).
+func numAt(c *Cell, key string) float64 {
+  v := hashAt(c, key)
+  if v == nil || v.Type != NUMBER {
+    return 0
+  }
+  return v.Num
+}
+
+// sigoBuildRequest prüft h gegen die Whitelist und liefert eine Kopie mit
+// Defaults (bare, system_prompt, timeout) plus den HTTP-Timeout.
+func sigoBuildRequest(h *Cell, systemPrompt string) (*Cell, time.Duration, error) {
+  if h == nil || h.Type != HASHTABLE {
+    return nil, 0, fmt.Errorf("sigo-request: Hash-Tabelle erwartet, got %s", h)
+  }
+  req := newStringHash()
+  for _, e := range h.Ht.snapshot() {
+    if e.key.Type != STRING {
+      return nil, 0, fmt.Errorf("sigo-request: Key muss String sein, got %s", e.key)
+    }
+    k := e.key.Val
+    if k == "stream" {
+      return nil, 0, fmt.Errorf("sigo-request: 'stream' ist gesperrt (sigoREST bucht Streaming-Kosten falsch)")
+    }
+    if !sigoRequestFields[k] {
+      return nil, 0, fmt.Errorf("sigo-request: Feld '%s' kennt sigoREST nicht", k)
+    }
+    req.Ht.putStr(k, e.val)
+  }
+  if m, ok := req.Ht.getStr("model"); !ok || m.Type != STRING {
+    return nil, 0, fmt.Errorf("sigo-request: 'model' (String) fehlt")
+  }
+  if m, ok := req.Ht.getStr("messages"); !ok || m.Type != LIST {
+    return nil, 0, fmt.Errorf("sigo-request: 'messages' (Liste) fehlt")
+  }
+  if _, ok := req.Ht.getStr("bare"); !ok {
+    req.Ht.putStr("bare", cellT)
+  }
+  if _, ok := req.Ht.getStr("system_prompt"); !ok && systemPrompt != "" {
+    req.Ht.putStr("system_prompt", MakeStr(systemPrompt))
+  }
+  timeout := sigoTimeout
+  if v, ok := req.Ht.getStr("timeout"); ok {
+    if v.Type != NUMBER || v.Num <= 0 {
+      return nil, 0, fmt.Errorf("sigo-request: 'timeout' muss Zahl > 0 sein, got %s", v)
+    }
+    timeout = time.Duration(v.Num * float64(time.Second))
+  }
+  req.Ht.putStr("timeout", MakeNum(math.Ceil(timeout.Seconds())))
+  return req, timeout, nil
+}
+
+// sigoDo ist der einzige HTTP-Aufruf gegen sigoREST. Liefert Body und
+// Dauer (Senden bis Antwort gelesen); HTTP ≠ 200 ist ein Fehler mit Body.
+func sigoDo(fname, method, url string, body []byte, timeout time.Duration) ([]byte, time.Duration, error) {
+  ctx, cancel := context.WithTimeout(context.Background(), timeout)
+  defer cancel()
+  var rd io.Reader
+  if body != nil {
+    rd = bytes.NewReader(body)
+  }
+  req, err := http.NewRequestWithContext(ctx, method, url, rd)
+  if err != nil { return nil, 0, fmt.Errorf("%s: %v", fname, err) }
+  if body != nil {
+    req.Header.Set("Content-Type", "application/json")
+  }
+  timedOut := func() error { return fmt.Errorf("%s: Timeout nach %g s", fname, timeout.Seconds()) }
+  start := time.Now()
+  resp, err := http.DefaultClient.Do(req)
+  if err != nil {
+    if ctx.Err() == context.DeadlineExceeded { return nil, 0, timedOut() }
+    return nil, 0, fmt.Errorf("%s: %v", fname, err)
+  }
+  defer resp.Body.Close()
+  data, err := io.ReadAll(resp.Body)
+  elapsed := time.Since(start)
+  if err != nil {
+    if ctx.Err() == context.DeadlineExceeded { return nil, 0, timedOut() }
+    return nil, 0, fmt.Errorf("%s: Antwort lesen: %v", fname, err)
+  }
+  if resp.StatusCode != http.StatusOK {
+    return nil, elapsed, fmt.Errorf("%s: HTTP %d: %s", fname, resp.StatusCode, strings.TrimSpace(string(data)))
+  }
+  return data, elapsed, nil
+}
+
+// sigoUsageFromResponse liest usage aus der Antwort (fehlend → 0).
+func sigoUsageFromResponse(resp *Cell) sigoUsage {
+  usage := hashAt(resp, "usage")
+  return sigoUsage{
+    PromptTokens:     int(numAt(usage, "prompt_tokens")),
+    CompletionTokens: int(numAt(usage, "completion_tokens")),
+    CachedTokens:     int(numAt(hashAt(usage, "prompt_tokens_details"), "cached_tokens")),
+    ReasoningTokens:  int(numAt(hashAt(usage, "completion_tokens_details"), "reasoning_tokens")),
+    CostUSD:          numAt(usage, "cost_usd"),
+  }
+}
+
+// sigoRequestCell: gemeinsamer Chat-Pfad für sigo-request, sigo und sigo*.
+// host "" = (sigo-host). Fehlgeschlagene Calls zählen nicht in sigo-usage.
+func sigoRequestCell(fname string, h *Cell, host string) (*Cell, error) {
+  sigoStateMu.Lock()
+  defHost, systemPrompt := sigoHost, sigoSystemPrompt
+  sigoStateMu.Unlock()
+  if host == "" {
+    host = defHost
+  }
+  host = strings.TrimRight(host, "/")
+
+  req, timeout, err := sigoBuildRequest(h, systemPrompt)
+  if err != nil { return nil, err }
+  body, err := CellToJSON(req)
+  if err != nil { return nil, fmt.Errorf("%s: %v", fname, err) }
+
+  sigoThrottle()
+  data, elapsed, err := sigoDo(fname, "POST", host+"/v1/chat/completions", body, timeout)
+  if err != nil { return nil, err }
+
+  resp, err := JSONToCell(data)
+  if err != nil { return nil, fmt.Errorf("%s: Antwort kein JSON: %v", fname, err) }
+  if resp.Type != HASHTABLE { return nil, fmt.Errorf("%s: Antwort ist kein Objekt", fname) }
+  if c := hashAt(resp, "choices"); c == nil || c.Type != LIST {
+    return nil, fmt.Errorf("%s: leere Antwort (keine choices)", fname)
+  }
+
+  secs := elapsed.Seconds()
+  resp.Ht.putStr("elapsed", MakeNum(secs))
+  u := sigoUsageFromResponse(resp)
+  u.Elapsed = secs
+  sigoStateMu.Lock()
+  sigoUsageSum.add(u)
+  sigoCalls++
+  sigoStateMu.Unlock()
+  return resp, nil
+}
+
+// fnSigoRequest: (sigo-request h [host]) → Antwort als Hash-Tabelle
+// plus "elapsed".
+func fnSigoRequest(args []*Cell) (*Cell, error) {
+  if len(args) < 1 || len(args) > 2 {
+    return nil, fmt.Errorf("sigo-request: 1 oder 2 Argumente erwartet (h [host])")
+  }
+  host := ""
+  if len(args) == 2 {
+    if args[1].Type != STRING {
+      return nil, fmt.Errorf("sigo-request: Host muss String sein, got %s", args[1])
+    }
+    host = args[1].Val
+  }
+  return sigoRequestCell("sigo-request", args[0], host)
 }
 
 // sigoCallToHost sendet einen Chat-Request an einen bestimmten Host.

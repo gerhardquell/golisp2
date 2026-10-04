@@ -126,12 +126,7 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
 // Keys mit gleichem Namen ("a" und 'a) sind ein Fehler, kein stilles
 // Überschreiben.
 func hashToJSONObject(ht *HashTable, depth int) (interface{}, error) {
-  ht.mu.RLock()
-  entries := make([]hashEntry, 0, len(ht.m))
-  for _, e := range ht.m {
-    entries = append(entries, e)
-  }
-  ht.mu.RUnlock()
+  entries := ht.snapshot()
   m := make(map[string]interface{}, len(entries))
   for _, e := range entries {
     if e.key.Type != STRING && e.key.Type != ATOM {
@@ -185,16 +180,15 @@ func jsonValueToCell(v interface{}, depth int) (*Cell, error) {
     }
     return SliceToCell(items), nil
   case map[string]interface{}:
-    ht := &HashTable{m: make(map[string]hashEntry, len(x)), test: "equal"}
+    obj := newStringHash()
     for k, raw := range x {
       val, err := jsonValueToCell(raw, depth+1)
       if err != nil {
         return nil, err
       }
-      key := MakeStr(k)
-      ht.m[ht.keyOf(key)] = hashEntry{key: key, val: val}
+      obj.Ht.putStr(k, val)
     }
-    return &Cell{Type: HASHTABLE, Ht: ht}, nil
+    return obj, nil
   default:
     return nil, fmt.Errorf("JSONToCell: Typ %T nicht darstellbar", v)
   }

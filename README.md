@@ -43,7 +43,8 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Hygienische Makros**: `defmacro` mit `gensym` für sichere Codegenerierung
 - **Quasiquote**: `` ` `` `,` `,@` für Template-Programmierung
 - **Strukturierte Fehlerbehandlung**: `error` und `trap` (CL-Condition-Handler-Stil)
-- **Externe Programme**: `exec` startet Programme direkt (ohne Shell) und fängt stdout, stderr und Exit-Code ab
+- **Externe Programme**: `exec` startet Programme direkt (ohne Shell) und fängt stdout, stderr und Exit-Code ab; `shell-output` ist die Kurzform für „Shell-Befehl → Ausgabe als String“
+- **Typen**: `type-of` und `typep` nach Common Lisp — Typhierarchie, `or`/`and`/`not`/`member`/`satisfies`, Zahlbereiche, Structs und Conditions
 
 ### Erweiterte Features
 - **Scheme-`do`**: Iterator mit paralleler Schritt-Auswertung
@@ -51,8 +52,17 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Lexikalische Bindung**: `flet`, `labels`, `block`, `return-from`
 - **Strukturelle Gleichheit**: `equal?` für tiefen Vergleich
 
+### Daten, Text und Zeit
+- **JSON**: `json-parse` / `json-encode` — Objekt ↔ Hash-Tabelle (`equal`), Array ↔ Liste, `null` ↔ `:null`
+- **Strings**: `string-split`, `string-join`, `string-find`, `string-contains`, `format` mit der CL-FORMAT-Engine
+- **Zeit**: `(now)` liefert Unix-Sekunden als Float, `(format-time "%F %T" [zeit] [:utc])` formatiert strftime-artig
+- **Dateien und Verzeichnisse**: `file-read`, `file-write`, …, `directory-files` (sortiert, Verzeichnisse mit `/`)
+- **Hash-Tabellen**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (Argumentreihenfolge wie CL: `(puthash KEY TABLE VALUE)`)
+- **Mathematik**: `truncate`, `ceiling`, `round`, `gcd`, `ash`, `parse-int`, `parse-float`; CAS über Maxima per Subprozess (`maxima-open`, `maxima-eval`, `maxima-close`)
+
 ### Parallelität (Go-Power)
 - **`parfunc`**: Ausdrücke in parallelen Goroutinen auswerten
+- **`spawn`**: Fire-and-forget-Goroutine
 - **Channels**: `chan-make`, `chan-send`, `chan-recv`
 - **Locks**: `lock-make`, `lock` für kritische Abschnitte
 
@@ -61,7 +71,9 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Selbsterweiternd**: LLMs schreiben Code, GoLisp führt ihn aus
 - **Ensemble-Aufrufe**: Mehrere KIs parallel abfragen
 - **golisp2-Vorspann**: Jeder `sigo`-Call schickt eine eingebettete golisp2-Kurzreferenz mit (Provider-Cache: ab dem 2. Call ~99 % gecacht); lesen/setzen/leeren per `(sigo-system-prompt …)`
-- **Token- und Kostenangaben**: `(sigo* …)` liefert Text plus Prompt-, Cache-, Thinking-Tokens und `cost-usd`; `(sigo-usage)` summiert seit Start — Details: `docs/sigo.md`
+- **Token- und Kostenangaben**: `(sigo* …)` liefert eine Hash-Tabelle mit Text, Modell, Prompt-, Cache-, Thinking-Tokens, `cost-usd` und `elapsed`; `(sigo-usage)` summiert seit Start
+- **Freie Requests**: `(sigo-request h)` schickt einen selbst gebauten Chat-Request (Whitelist der sigoREST-Felder, `timeout` pro Call) und liefert die volle Antwort samt `elapsed`
+- **Kosten und Budget**: `sigo-costs` (serverweit, Zeitfenster), `sigo-budget`, `sigo-model-info` (Preise pro Modell) — Details: `docs/sigo.md`
 
 ### Genetische Algorithmen
 - **Eingebaute GA-Primitiven**: Population erzeugen, initialisieren, Crossover, Fitness-Bewertung, Selektion, Mutation
@@ -384,7 +396,20 @@ results  ; => (42 123 11)
   "claude-h")))
 
 (fib 20)  ; => 6765
+
+; Antwort samt Tokens, Kosten und Laufzeit (Hash-Tabelle)
+(let ((r (sigo* "Was ist 2+2?" "claude-h")))
+  (list (gethash "text" r) (gethash "cost-usd" r) (gethash "elapsed" r)))
+
+; Freier Request mit eigenem Timeout
+(let ((h (make-hash-table :test 'equal)))
+  (puthash "model" h "claude-h")
+  (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
+  (puthash "timeout" h 300)
+  (gethash "elapsed" (sigo-request h)))
 ```
+
+**Hinweis:** `sigo*` und `sigo-usage` liefern Hash-Tabellen statt Assoziationslisten.
 
 ### Genetische Algorithmen
 
@@ -565,15 +590,21 @@ my-project/
 | **Structs & CLOS-light** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash-Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
 | **Conditions** | `define-condition`, `handler-case`, `signal` |
-| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string` |
-| **I/O** | `print`, `println`, `read`, `load` (mit Suchpfad), `exec` |
-| **Dateien** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete` |
-| **Parallelität** | `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
-| **KI** | `sigo`, `sigo-models`, `sigo-host` |
+| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains` |
+| **JSON** | `json-parse`, `json-encode` |
+| **Zeit** | `now`, `format-time`, `get-universal-time`, `sleep` |
+| **Typen** | `type-of`, `typep` |
+| **I/O** | `print`, `println`, `read`, `load` (mit Suchpfad), `exec`, `shell-output` |
+| **Dateien** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete`, `directory-files` |
+| **Parallelität** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
+| **KI** | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-usage`, `sigo-usage-reset`, `sigo-system-prompt`, `sigo-reference`, `sigo-costs`, `sigo-budget`, `sigo-model-info` |
 | **Genetische Algorithmen** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
 | **Web-Bridge** | `webserv`, `http-serve`, `http-static`, `http-upload`, `http-port`, `http-wait`, `http-stop`, `browser-open`, `ws-export`, `ws-unexport`, `ws-emit`, `ws-emit-to`, `ws-eval`, `ws-call`, `ws-clients` |
-| **Meta** | `gensym`, `macroexpand`, `error`, `documentation` |
+| **Meta** | `gensym`, `macroexpand`, `error`, `documentation`, `env-symbols` |
+
+Die vollständige, aus dem Interpreter generierte Liste steht in
+[`docs/referenz-generiert.md`](docs/referenz-generiert.md).
 
 ---
 
@@ -594,7 +625,7 @@ my-project/
 - **Reader**: Rekursive-Descent-Parser mit voller Unicode-Unterstützung
 - **Eval**: Trampolin-basierte TCO, Makro-Expansion, Spezialformen
 - **Env**: Hierarchische Variablen-Scopes mit lexikalischer Bindung
-- **Types**: `Cell`-Struct mit `LispType` (ATOM, NUMBER, STRING, LIST, FUNC, MACRO, NIL)
+- **Types**: `Cell`-Struct mit `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN)
 
 ---
 
@@ -618,6 +649,8 @@ KIs als Spezialisten. Die Sprache soll sein:
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — Vollständige Sprachreferenz
 - [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — Entwicklungsreise und Erkenntnisse
 - [`CLAUDE.md`](CLAUDE.md) — Projektkonventionen und Architektur
+- [`docs/sigo.md`](docs/sigo.md) — sigoREST-Anbindung: Vorspann, `sigo-request`, Kosten
+- [`docs/referenz-generiert.md`](docs/referenz-generiert.md) — Funktionsreferenz, generiert aus `(env-symbols)`
 
 ### International / 国际化
 

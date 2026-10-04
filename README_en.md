@@ -40,7 +40,8 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Hygienic macros**: `defmacro` with `gensym` for safe code generation
 - **Quasiquote**: `` ` `` `,` `,@` for template programming
 - **Structured error handling**: `error` and `trap` (CL condition-handler style)
-- **External program execution**: `exec` runs programs directly (no shell) and captures stdout, stderr, and exit code
+- **External program execution**: `exec` runs programs directly (no shell) and captures stdout, stderr, and exit code; `shell-output` is the short form for "shell command → output as string"
+- **Types**: `type-of` and `typep` after Common Lisp — type hierarchy, `or`/`and`/`not`/`member`/`satisfies`, numeric ranges, structs and conditions
 
 ### Advanced Features
 - **Scheme-style `do`**: Iterator with parallel step evaluation
@@ -48,8 +49,17 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Lexical scoping**: `flet`, `labels`, `block`, `return-from`
 - **Structural equality**: `equal?` for deep comparison
 
+### Data, Text and Time
+- **JSON**: `json-parse` / `json-encode` — object ↔ hash table (`equal`), array ↔ list, `null` ↔ `:null`
+- **Strings**: `string-split`, `string-join`, `string-find`, `string-contains`, `format` with the CL FORMAT engine
+- **Time**: `(now)` returns Unix seconds as a float, `(format-time "%F %T" [time] [:utc])` formats strftime-style
+- **Files and directories**: `file-read`, `file-write`, …, `directory-files` (sorted, directories end in `/`)
+- **Hash tables**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (CL argument order: `(puthash KEY TABLE VALUE)`)
+- **Math**: `truncate`, `ceiling`, `round`, `gcd`, `ash`, `parse-int`, `parse-float`; CAS via Maxima subprocess (`maxima-open`, `maxima-eval`, `maxima-close`)
+
 ### Concurrency (Go-powered)
 - **`parfunc`**: Evaluate expressions in parallel goroutines
+- **`spawn`**: Fire-and-forget goroutine
 - **Channels**: `chan-make`, `chan-send`, `chan-recv`
 - **Locks**: `lock-make`, `lock` for critical sections
 
@@ -57,6 +67,10 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Multi-provider**: Claude, Gemini, GPT-4, local Ollama models
 - **Self-extending**: LLMs write code, GoLisp executes it
 - **Ensemble calls**: Query multiple AIs in parallel
+- **golisp2 preamble**: Every `sigo` call sends an embedded golisp2 quick reference (provider cache: ~99 % cached from the 2nd call on); read/set/clear with `(sigo-system-prompt …)`
+- **Token and cost data**: `(sigo* …)` returns a hash table with text, model, prompt/cache/thinking tokens, `cost-usd` and `elapsed`; `(sigo-usage)` sums since start
+- **Free-form requests**: `(sigo-request h)` sends a hand-built chat request (whitelist of sigoREST fields, per-call `timeout`) and returns the full response plus `elapsed`
+- **Costs and budget**: `sigo-costs` (server-wide, time window), `sigo-budget`, `sigo-model-info` (per-model prices) — details: `docs/sigo.md`
 
 ### Genetic Algorithms
 - **Built-in GA primitives**: Population creation, initialization, crossover, fitness evaluation, selection, mutation
@@ -70,6 +84,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 
 ### Developer Experience
 - **Unix-style CLI**: Pipe-friendly stdin mode, consistent exit codes
+- **Scripts with `defmain`**: entry point that runs only as the main program (shebang / `golisp2 file.lisp`) — its return value becomes the exit code, and it is inert when the file is pulled in via `(load …)`
 - **Syntax-highlighted REPL**: Rainbow parentheses, persistent history (`-i` flag)
 - **Multi-line input**: Automatic indentation for incomplete expressions
 - **Full UTF-8 support**: Unicode strings throughout
@@ -139,10 +154,10 @@ GoLisp works like a standard Unix tool with multiple modes:
 | **Stdin (default)** | `echo "(+ 1 2)" \| ./build/golisp2` | Read from stdin, output result only |
 | **Interactive** | `./build/golisp2 -i` | REPL with syntax highlighting |
 | **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
-| **Script** | `./build/golisp2 script.lisp` | Run a Lisp file |
+| **Script** | `./build/golisp2 script.lisp [args…]` | Run a Lisp file (also via shebang); with `defmain` see below |
 | **Tests** | `./build/golisp2 -t` | Run built-in test suite |
 
-**Exit codes:** `0` = success, `1` = error
+**Exit codes:** `0` = success, `1` = error; for scripts with `defmain`, its return value (0–255)
 
 **Multi-expression `-e`:** When `-e` contains multiple forms, only side effects are emitted; the final result is suppressed so scripts like `(exec ...) (println out)` produce clean output.
 
@@ -163,6 +178,30 @@ cat <<'EOF' | ./build/golisp2
 EOF
 # => 25
 ```
+
+### Scripts with `defmain`
+
+`defmain` defines what a script does when it is started **as the main
+program** — via shebang or `golisp2 file.lisp`. If the same file is pulled in
+with `(load …)`, `defmain` only returns `nil`; the remaining definitions are
+then available as a library.
+
+```lisp
+#!/usr/local/bin/golisp2
+(defun greet (name) (format t "Hello, ~a!~%" name))
+
+(defmain (args)
+  (if (null args)
+      (begin (warn "usage: greet.lisp NAME") 2)
+      (begin (greet (car args)) 0)))
+```
+
+- The body runs **after** the whole file is loaded — the position of `defmain` does not matter.
+- `args` are only the script arguments (no binary, no file name); environment via `(getenv …)` / `(environ)`.
+- Return value = exit code: integer 0–255, `nil`/non-number → 0, anything else → error with exit 1. No result echo on stdout.
+- A second `defmain` in the same file is an error.
+
+Details: `docs/cli.md`.
 
 ### Server Mode (`golisp2 --swank` + `golisp2-client`)
 
@@ -345,7 +384,20 @@ results  ; => (42 123 13)
   "claude-h")))
 
 (fib 20)  ; => 6765
+
+; Response with tokens, cost and runtime (hash table)
+(let ((r (sigo* "What is 2+2?" "claude-h")))
+  (list (gethash "text" r) (gethash "cost-usd" r) (gethash "elapsed" r)))
+
+; Free-form request with its own timeout
+(let ((h (make-hash-table :test 'equal)))
+  (puthash "model" h "claude-h")
+  (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
+  (puthash "timeout" h 300)
+  (gethash "elapsed" (sigo-request h)))
 ```
+
+**Note:** `sigo*` and `sigo-usage` return hash tables, not association lists.
 
 ### Genetic Algorithms
 
@@ -525,15 +577,21 @@ my-project/
 | **Structs & CLOS-lite** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
 | **Conditions** | `define-condition`, `handler-case`, `signal` |
-| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string` |
-| **I/O** | `print`, `println`, `read`, `load` (with search path), `exec` |
-| **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete` |
-| **Concurrency** | `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
-| **AI** | `sigo`, `sigo-models`, `sigo-host` |
+| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains` |
+| **JSON** | `json-parse`, `json-encode` |
+| **Time** | `now`, `format-time`, `get-universal-time`, `sleep` |
+| **Types** | `type-of`, `typep` |
+| **I/O** | `print`, `println`, `read`, `load` (with search path), `exec`, `shell-output` |
+| **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete`, `directory-files` |
+| **Concurrency** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
+| **AI** | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-usage`, `sigo-usage-reset`, `sigo-system-prompt`, `sigo-reference`, `sigo-costs`, `sigo-budget`, `sigo-model-info` |
 | **Genetic Algorithms** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
 | **Web Bridge** | `webserv`, `http-serve`, `http-static`, `http-upload`, `http-port`, `http-wait`, `http-stop`, `browser-open`, `ws-export`, `ws-unexport`, `ws-emit`, `ws-emit-to`, `ws-eval`, `ws-call`, `ws-clients` |
-| **Meta** | `gensym`, `macroexpand`, `error`, `documentation` |
+| **Meta** | `gensym`, `macroexpand`, `error`, `documentation`, `env-symbols` |
+
+The complete list, generated from the interpreter, is in
+[`docs/referenz-generiert.md`](docs/referenz-generiert.md).
 
 ---
 
@@ -554,7 +612,7 @@ my-project/
 - **Reader**: Recursive descent parser with full Unicode support
 - **Eval**: Trampoline-based TCO, macro expansion, special forms
 - **Env**: Hierarchical variable scopes with lexical binding
-- **Types**: `Cell` struct with `LispType` (ATOM, NUMBER, STRING, LIST, FUNC, MACRO, NIL)
+- **Types**: `Cell` struct with `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN)
 
 ---
 
@@ -577,6 +635,8 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — Complete language reference (German)
 - [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — Development journey and insights
 - [`CLAUDE.md`](CLAUDE.md) — Project conventions and architecture
+- [`docs/sigo.md`](docs/sigo.md) — sigoREST integration: preamble, `sigo-request`, costs (German)
+- [`docs/referenz-generiert.md`](docs/referenz-generiert.md) — function reference, generated from `(env-symbols)`
 
 ### International / 国际化
 
@@ -605,5 +665,4 @@ Unlicense (public domain) — see [LICENSE](LICENSE) for details. Free of any re
 ## 🙏 Acknowledgments
 
 Created by **Gerhard Quell** with **Claude Sonnet 4.6** as co-author.
-
-*February 2026 — A submarine project surfacing.*
+*August 2026 — A submarine project surfacing.*

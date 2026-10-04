@@ -222,13 +222,7 @@ func fnMaphash(args []*Cell) (*Cell, error) {
   // Snapshot unter Lock, Callbacks außerhalb — fn darf die Tabelle
   // selbst modifizieren, ohne den Lock zu verklemmen (CL erlaubt
   // add/remove des aktuellen Keys).
-  ht.mu.RLock()
-  entries := make([]hashEntry, 0, len(ht.m))
-  for _, e := range ht.m {
-    entries = append(entries, e)
-  }
-  ht.mu.RUnlock()
-  for _, e := range entries {
+  for _, e := range ht.snapshot() {
     if _, err := apply(args[0], []*Cell{e.key, e.val}); err != nil {
       return nil, err
     }

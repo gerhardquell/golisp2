@@ -391,7 +391,7 @@ func sigoBuildRequest(fname string, h *Cell, systemPrompt string) (*Cell, time.D
   }
   timeout := sigoTimeout
   if v, ok := req.Ht.getStr("timeout"); ok {
-    if v.Type != NUMBER || v.Num <= 0 {
+    if v.Type != NUMBER || !(v.Num > 0) || v.Num > 1e6 {
       return nil, 0, fmt.Errorf("%s: 'timeout' muss Zahl > 0 sein, got %s", fname, v)
     }
     timeout = time.Duration(v.Num * float64(time.Second))

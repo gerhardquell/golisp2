@@ -7,14 +7,14 @@ Host:     http://127.0.0.1:9080 (Default)
 Endpoint: POST /v1/chat/completions
 ```
 
-Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo-models`, `sigo-host`.
+Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-costs`, `sigo-budget`, `sigo-model-info`, `sigo-usage`, `sigo-system-prompt`.
 
 ## Konfiguration (Umgebungsvariablen)
 
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo …)` |
-| `GOLISP_SIGO_MODEL` | `gem25-flt` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
+| `GOLISP_SIGO_MODEL` | `zai-glm53` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
 | `GOLISP_SIGO_TIMEOUT` | `120s` | Request-Timeout; z. B. `30s`, `5m`, `2m30s` |
 
 ```bash
@@ -26,7 +26,8 @@ GOLISP_SIGO_TIMEOUT=300s ./build/golisp2 -e '(sigo "schreib fib in lisp" "ollama
 ```
 
 Zur Laufzeit änderbar: `(sigo-host "http://…")` oder als 4. Parameter pro Call.
-**Das Timeout ist nur per Env-Var konfigurierbar.**
+Das Timeout ist für `sigo`/`sigo*` nur per Env-Var konfigurierbar;
+`sigo-request` nimmt `timeout` (Sekunden) pro Call.
 
 ## Modelle
 
@@ -170,7 +171,9 @@ system_prompt bare channel`. Jedes andere Feld ist ein Fehler — sigoREST
 würde es still verwerfen (z. B. `response_format`). `stream` ist gesperrt,
 solange sigoREST Streaming-Kosten falsch bucht. Fehlen `bare`,
 `system_prompt` oder `timeout`, setzt golisp2 die Defaults (`t`, aktueller
-Vorspann, `GOLISP_SIGO_TIMEOUT`). Ergebnis: die volle Antwort als
+Vorspann, `GOLISP_SIGO_TIMEOUT`). Abschalten geht nur mit `:false`
+(`(puthash "bare" h :false)`); `()` würde als `[]` gesendet und von sigoREST
+abgewiesen. Ergebnis: die volle Antwort als
 Hash-Tabelle plus `"elapsed"` — Sekunden nur für den HTTP-Aufruf, ohne
 golisp2s eigene Drossel.
 
@@ -191,7 +194,7 @@ Kosten und Budget:
 |---|---|
 | `(sigo-usage)` / `(sigo-usage-reset)` | Summen dieses Prozesses (Tokens, `cost-usd`, `elapsed`, `calls`) |
 | `(sigo-costs [seit [bis]])` | `/api/costs` — serverweit, `seit`/`bis` in Unix-Sekunden wie `(now)`; ohne Argument: heute |
-| `(sigo-budget)` | `/api/budget` — Tageslimit, Verbrauch, `blocked` |
+| `(sigo-budget)` | `/api/budget` — Hash mit `config` (Tageslimit) und `status` (Verbrauch, `blocked`), z. B. `(gethash "blocked" (gethash "status" (sigo-budget)))` |
 | `(sigo-model-info [modell])` | `/api/models` — alle Modelle oder eins per `id`/`shortcode`; `input_cost`/`output_cost` in USD pro 1 Mio. Tokens |
 
 **Preis 0 heißt „unbekannt“, nicht „gratis“.** Rund die Hälfte der Modelle

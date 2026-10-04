@@ -159,15 +159,16 @@
   (ws-emit s "golisp2web-new-tab" (format nil "127.0.0.1:~a" (http-port s)))
   t))
 
-(ws-export s "quit-app" (lambda (c)
-  (ws-emit s "golisp2web-quit" ())
-  (http-stop s)
-  t))
+(ws-export s "quit-app"
+	(lambda (c) (ws-emit s "golisp2web-quit" ())
+    (http-stop s)
+    t) )
 
 (parfunc ret
   (exec "python3" param: golisp2web-py
-                   param: "-t1" param: (format nil "localhost:~a" (http-port s))
-                   timeout: -1)
+        param: "-t1"
+				param: (format nil "localhost:~a" (http-port s))
+        timeout: -1)
   (http-wait s))
 
 (println "golisp2web_demo: golisp2web beendet, Server gestoppt.")

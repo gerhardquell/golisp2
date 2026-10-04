@@ -70,13 +70,6 @@ func (u *sigoUsage) add(o sigoUsage) {
   u.Elapsed          += o.Elapsed
 }
 
-type sigoResult struct {
-  Text         string
-  Model        string
-  FinishReason string
-  Usage        sigoUsage
-}
-
 // init liest sigoREST-Konfiguration aus Umgebungsvariablen:
 //   GOLISP_SIGO_HOST     – sigoREST-Host (default http://127.0.0.1:9080)
 //   GOLISP_SIGO_MODEL    – Default-Modell für (sigo "prompt")
@@ -120,87 +113,97 @@ func sigoGetSystemPrompt() string {
   return sigoSystemPrompt
 }
 
-// sigoRequest: gemeinsamer Pfad für sigo und sigo*
-//   (fname "prompt" [model] [session-id] [host])
-func sigoRequest(args []*Cell, fname string) (sigoResult, error) {
-  if len(args) < 1 {
-    return sigoResult{}, fmt.Errorf("%s: mindestens 1 Argument", fname)
+// sigoPromptRequest: (fname "prompt" [model] [session-id] [host]) über
+// sigoRequestCell. Liefert Antwort-Hash und angefragtes Modell.
+func sigoPromptRequest(fname string, args []*Cell) (*Cell, string, error) {
+  if len(args) < 1 || len(args) > 4 {
+    return nil, "", fmt.Errorf("%s: 1 bis 4 Argumente erwartet (prompt [model] [session-id] [host])", fname)
   }
-
-  prompt    := args[0].Val
-  model     := sigoDefaultModel
-  sessionID := ""
-
-  // Host und Vorspann unter EINEM Lock am Eintritt einlesen — sonst könnte
-  // ein paralleler (sigo-system-prompt "…") zwischen Host- und
-  // Vorspann-Lesen (nach dem Rate-Limiter-Wait) einen inkonsistenten
-  // Snapshot erzeugen.
-  sigoStateMu.Lock()
-  host := sigoHost
-  systemPrompt := sigoSystemPrompt
-  sigoStateMu.Unlock()
-
+  for i, a := range args {
+    if a.Type != STRING {
+      return nil, "", fmt.Errorf("%s: Argument %d muss String sein, got %s", fname, i+1, a)
+    }
+  }
+  model := sigoDefaultModel
   if len(args) >= 2 { model = args[1].Val }
-  if len(args) >= 3 { sessionID = args[2].Val }
-  if len(args) >= 4 { host = strings.TrimRight(args[3].Val, "/") }
+  msg := newStringHash()
+  msg.Ht.putStr("role", MakeStr("user"))
+  msg.Ht.putStr("content", args[0])
+  h := newStringHash()
+  h.Ht.putStr("model", MakeStr(model))
+  h.Ht.putStr("messages", List(msg))
+  if len(args) >= 3 && args[2].Val != "" {
+    h.Ht.putStr("session_id", args[2])
+  }
+  host := ""
+  if len(args) >= 4 { host = args[3].Val }
+  resp, err := sigoRequestCell(fname, h, host)
+  return resp, model, err
+}
 
-  sigoThrottle()
+// sigoFirstChoice: content und finish_reason der ersten Antwort.
+func sigoFirstChoice(resp *Cell) (text, finish string) {
+  choices := hashAt(resp, "choices")
+  if choices == nil || choices.Type != LIST {
+    return "", ""
+  }
+  first := choices.Car
+  if c := hashAt(hashAt(first, "message"), "content"); c != nil && c.Type == STRING {
+    text = c.Val
+  }
+  if f := hashAt(first, "finish_reason"); f != nil && f.Type == STRING {
+    finish = f.Val
+  }
+  return text, finish
+}
 
-  res, err := sigoCallToHost(prompt, model, sessionID, host, systemPrompt)
-  if err != nil { return sigoResult{}, err }
-
-  sigoStateMu.Lock()
-  sigoUsageSum.add(res.Usage)
-  sigoCalls++
-  sigoStateMu.Unlock()
-  return res, nil
+// sigoUsageHash: Token-/Kosten-/Zeit-Keys mit Bindestrich (sigo*, sigo-usage).
+func sigoUsageHash(u sigoUsage) *Cell {
+  h := newStringHash()
+  h.Ht.putStr("prompt-tokens", MakeNum(float64(u.PromptTokens)))
+  h.Ht.putStr("completion-tokens", MakeNum(float64(u.CompletionTokens)))
+  h.Ht.putStr("cached-tokens", MakeNum(float64(u.CachedTokens)))
+  h.Ht.putStr("reasoning-tokens", MakeNum(float64(u.ReasoningTokens)))
+  h.Ht.putStr("cost-usd", MakeNum(u.CostUSD))
+  h.Ht.putStr("elapsed", MakeNum(u.Elapsed))
+  return h
 }
 
 // fnSigo: (sigo "prompt" [model] [session-id] [host]) → Antworttext
 func fnSigo(args []*Cell) (*Cell, error) {
-  res, err := sigoRequest(args, "sigo")
+  resp, _, err := sigoPromptRequest("sigo", args)
   if err != nil { return nil, err }
-  return MakeStr(res.Text), nil
+  text, _ := sigoFirstChoice(resp)
+  return MakeStr(text), nil
 }
 
-// sigoAlist baut ((key . val) …) in der gegebenen Reihenfolge.
-func sigoAlist(keys []string, vals []*Cell) *Cell {
-  result := MakeNil()
-  for i := len(keys) - 1; i >= 0; i-- {
-    result = Cons(Cons(MakeAtom(keys[i]), vals[i]), result)
-  }
-  return result
-}
-
-func sigoUsageCells(u sigoUsage) ([]string, []*Cell) {
-  return []string{"prompt-tokens", "completion-tokens", "cached-tokens", "reasoning-tokens", "cost-usd"},
-    []*Cell{
-      MakeNum(float64(u.PromptTokens)),
-      MakeNum(float64(u.CompletionTokens)),
-      MakeNum(float64(u.CachedTokens)),
-      MakeNum(float64(u.ReasoningTokens)),
-      MakeNum(u.CostUSD),
-    }
-}
-
-// fnSigoStar: (sigo* "prompt" [model] [session-id] [host]) → Assoc-Liste
-// ((text . "…") (model . "…") (finish-reason . "…") (prompt-tokens . n) …)
+// fnSigoStar: (sigo* "prompt" [model] [session-id] [host]) → Hash-Tabelle
+// text model finish-reason prompt-/completion-/cached-/reasoning-tokens
+// cost-usd elapsed
 func fnSigoStar(args []*Cell) (*Cell, error) {
-  res, err := sigoRequest(args, "sigo*")
+  resp, model, err := sigoPromptRequest("sigo*", args)
   if err != nil { return nil, err }
-  keys, vals := sigoUsageCells(res.Usage)
-  keys = append([]string{"text", "model", "finish-reason"}, keys...)
-  vals = append([]*Cell{MakeStr(res.Text), MakeStr(res.Model), MakeStr(res.FinishReason)}, vals...)
-  return sigoAlist(keys, vals), nil
+  if m := hashAt(resp, "model"); m != nil && m.Type == STRING && m.Val != "" {
+    model = m.Val
+  }
+  text, finish := sigoFirstChoice(resp)
+  u := sigoUsageFromResponse(resp)
+  u.Elapsed = numAt(resp, "elapsed")
+  out := sigoUsageHash(u)
+  out.Ht.putStr("text", MakeStr(text))
+  out.Ht.putStr("model", MakeStr(model))
+  out.Ht.putStr("finish-reason", MakeStr(finish))
+  return out, nil
 }
 
-// fnSigoUsage: (sigo-usage) → Summen seit Start/Reset plus (calls . n)
+// fnSigoUsage: (sigo-usage) → Summen seit Start/Reset plus calls
 func fnSigoUsage(args []*Cell) (*Cell, error) {
   sigoStateMu.Lock()
   u, n := sigoUsageSum, sigoCalls
   sigoStateMu.Unlock()
-  keys, vals := sigoUsageCells(u)
-  return sigoAlist(append(keys, "calls"), append(vals, MakeNum(float64(n)))), nil
+  h := sigoUsageHash(u)
+  h.Ht.putStr("calls", MakeNum(float64(n)))
+  return h, nil
 }
 
 // fnSigoUsageReset: (sigo-usage-reset) → Summen auf 0
@@ -303,29 +306,29 @@ func numAt(c *Cell, key string) float64 {
 
 // sigoBuildRequest prüft h gegen die Whitelist und liefert eine Kopie mit
 // Defaults (bare, system_prompt, timeout) plus den HTTP-Timeout.
-func sigoBuildRequest(h *Cell, systemPrompt string) (*Cell, time.Duration, error) {
+func sigoBuildRequest(fname string, h *Cell, systemPrompt string) (*Cell, time.Duration, error) {
   if h == nil || h.Type != HASHTABLE {
-    return nil, 0, fmt.Errorf("sigo-request: Hash-Tabelle erwartet, got %s", h)
+    return nil, 0, fmt.Errorf("%s: Hash-Tabelle erwartet, got %s", fname, h)
   }
   req := newStringHash()
   for _, e := range h.Ht.snapshot() {
     if e.key.Type != STRING {
-      return nil, 0, fmt.Errorf("sigo-request: Key muss String sein, got %s", e.key)
+      return nil, 0, fmt.Errorf("%s: Key muss String sein, got %s", fname, e.key)
     }
     k := e.key.Val
     if k == "stream" {
-      return nil, 0, fmt.Errorf("sigo-request: 'stream' ist gesperrt (sigoREST bucht Streaming-Kosten falsch)")
+      return nil, 0, fmt.Errorf("%s: 'stream' ist gesperrt (sigoREST bucht Streaming-Kosten falsch)", fname)
     }
     if !sigoRequestFields[k] {
-      return nil, 0, fmt.Errorf("sigo-request: Feld '%s' kennt sigoREST nicht", k)
+      return nil, 0, fmt.Errorf("%s: Feld '%s' kennt sigoREST nicht", fname, k)
     }
     req.Ht.putStr(k, e.val)
   }
   if m, ok := req.Ht.getStr("model"); !ok || m.Type != STRING {
-    return nil, 0, fmt.Errorf("sigo-request: 'model' (String) fehlt")
+    return nil, 0, fmt.Errorf("%s: 'model' (String) fehlt", fname)
   }
   if m, ok := req.Ht.getStr("messages"); !ok || m.Type != LIST {
-    return nil, 0, fmt.Errorf("sigo-request: 'messages' (Liste) fehlt")
+    return nil, 0, fmt.Errorf("%s: 'messages' (Liste) fehlt", fname)
   }
   if _, ok := req.Ht.getStr("bare"); !ok {
     req.Ht.putStr("bare", cellT)
@@ -336,7 +339,7 @@ func sigoBuildRequest(h *Cell, systemPrompt string) (*Cell, time.Duration, error
   timeout := sigoTimeout
   if v, ok := req.Ht.getStr("timeout"); ok {
     if v.Type != NUMBER || v.Num <= 0 {
-      return nil, 0, fmt.Errorf("sigo-request: 'timeout' muss Zahl > 0 sein, got %s", v)
+      return nil, 0, fmt.Errorf("%s: 'timeout' muss Zahl > 0 sein, got %s", fname, v)
     }
     timeout = time.Duration(v.Num * float64(time.Second))
   }
@@ -401,7 +404,7 @@ func sigoRequestCell(fname string, h *Cell, host string) (*Cell, error) {
   }
   host = strings.TrimRight(host, "/")
 
-  req, timeout, err := sigoBuildRequest(h, systemPrompt)
+  req, timeout, err := sigoBuildRequest(fname, h, systemPrompt)
   if err != nil { return nil, err }
   body, err := CellToJSON(req)
   if err != nil { return nil, fmt.Errorf("%s: %v", fname, err) }
@@ -442,89 +445,4 @@ func fnSigoRequest(args []*Cell) (*Cell, error) {
     host = args[1].Val
   }
   return sigoRequestCell("sigo-request", args[0], host)
-}
-
-// sigoCallToHost sendet einen Chat-Request an einen bestimmten Host.
-// Immer bare:true — sigoREST legt dann weder Memory noch Server-Prompt
-// davor; der Kontext besteht nur aus systemPrompt (falls nicht leer).
-func sigoCallToHost(prompt, model, sessionID, host, systemPrompt string) (sigoResult, error) {
-  reqBody := map[string]interface{}{
-    "model": model,
-    "bare":  true,
-    "messages": []map[string]string{
-      {"role": "user", "content": prompt},
-    },
-  }
-  if systemPrompt != "" {
-    reqBody["system_prompt"] = systemPrompt
-  }
-  if sessionID != "" {
-    reqBody["session_id"] = sessionID
-  }
-
-  data, err := json.Marshal(reqBody)
-  if err != nil { return sigoResult{}, fmt.Errorf("sigo marshal: %v", err) }
-
-  ctx, cancel := context.WithTimeout(context.Background(), sigoTimeout)
-  defer cancel()
-
-  req, err := http.NewRequestWithContext(ctx, "POST",
-    host+"/v1/chat/completions",
-    bytes.NewReader(data),
-  )
-  if err != nil { return sigoResult{}, fmt.Errorf("sigo request: %v", err) }
-  req.Header.Set("Content-Type", "application/json")
-
-  client := &http.Client{}
-  resp, err := client.Do(req)
-  if err != nil { return sigoResult{}, fmt.Errorf("sigo connect: %v", err) }
-  defer resp.Body.Close()
-
-  body, _ := io.ReadAll(resp.Body)
-
-  if resp.StatusCode != 200 {
-    return sigoResult{}, fmt.Errorf("sigo HTTP %d: %s", resp.StatusCode, string(body))
-  }
-
-  var result struct {
-    Model   string `json:"model"`
-    Choices []struct {
-      Message struct {
-        Content string `json:"content"`
-      } `json:"message"`
-      FinishReason string `json:"finish_reason"`
-    } `json:"choices"`
-    Usage struct {
-      PromptTokens        int `json:"prompt_tokens"`
-      CompletionTokens    int `json:"completion_tokens"`
-      PromptTokensDetails struct {
-        CachedTokens int `json:"cached_tokens"`
-      } `json:"prompt_tokens_details"`
-      CompletionTokensDetails struct {
-        ReasoningTokens int `json:"reasoning_tokens"`
-      } `json:"completion_tokens_details"`
-      CostUSD float64 `json:"cost_usd"`
-    } `json:"usage"`
-  }
-  if err := json.Unmarshal(body, &result); err != nil {
-    return sigoResult{}, fmt.Errorf("sigo parse: %v", err)
-  }
-  if len(result.Choices) == 0 {
-    return sigoResult{}, fmt.Errorf("sigo: leere Antwort")
-  }
-  if result.Model == "" {
-    result.Model = model
-  }
-  return sigoResult{
-    Text:         result.Choices[0].Message.Content,
-    Model:        result.Model,
-    FinishReason: result.Choices[0].FinishReason,
-    Usage: sigoUsage{
-      PromptTokens:     result.Usage.PromptTokens,
-      CompletionTokens: result.Usage.CompletionTokens,
-      CachedTokens:     result.Usage.PromptTokensDetails.CachedTokens,
-      ReasoningTokens:  result.Usage.CompletionTokensDetails.ReasoningTokens,
-      CostUSD:          result.Usage.CostUSD,
-    },
-  }, nil
 }

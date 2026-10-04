@@ -1,0 +1,13 @@
+claude-Ende: Do 3. Sep 12:27:21 CEST 2026
+claude-Start: Mo 28. Sep 11:17:51 CEST 2026
+claude-Ende: Mo 28. Sep 13:37:17 CEST 2026
+claude-Ende: Mo 28. Sep 13:38:26 CEST 2026
+OMNIR-Start: Mo 28. Sep 17:24:27 CEST 2026
+OMNIR-Ende: Mo 28. Sep 17:45:11 CEST 2026
+claude-Start: Di 29. Sep 12:19:20 CEST 2026
+claude-Ende: Di 29. Sep 14:21:43 CEST 2026
+claude-Start: Sa 3. Okt 18:42:43 CEST 2026
+claude-Ende: Sa 3. Okt 19:47:58 CEST 2026
+OMNIR-Start: So 4. Okt 11:11:58 CEST 2026
+OMNIR-Ende: So 4. Okt 11:24:42 CEST 2026
+OMNIR-Start: So 4. Okt 11:24:45 CEST 2026

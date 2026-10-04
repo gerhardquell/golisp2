@@ -7,14 +7,14 @@ Host:     http://127.0.0.1:9080 (Default)
 Endpoint: POST /v1/chat/completions
 ```
 
-Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo-models`, `sigo-host`.
+Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-costs`, `sigo-budget`, `sigo-model-info`, `sigo-usage`, `sigo-system-prompt`.
 
 ## Konfiguration (Umgebungsvariablen)
 
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo …)` |
-| `GOLISP_SIGO_MODEL` | `gem25-flt` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
+| `GOLISP_SIGO_MODEL` | `zai-glm53` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
 | `GOLISP_SIGO_TIMEOUT` | `120s` | Request-Timeout; z. B. `30s`, `5m`, `2m30s` |
 
 ```bash
@@ -26,7 +26,8 @@ GOLISP_SIGO_TIMEOUT=300s ./build/golisp2 -e '(sigo "schreib fib in lisp" "ollama
 ```
 
 Zur Laufzeit änderbar: `(sigo-host "http://…")` oder als 4. Parameter pro Call.
-**Das Timeout ist nur per Env-Var konfigurierbar.**
+Das Timeout ist für `sigo`/`sigo*` nur per Env-Var konfigurierbar;
+`sigo-request` nimmt `timeout` (Sekunden) pro Call.
 
 ## Modelle
 
@@ -74,14 +75,14 @@ aus dem Cache gelesen (`cached-tokens`).
 | `(sigo-system-prompt "text")` | Vorspann setzen |
 | `(sigo-system-prompt "")` | leeren — Modell sieht nur den Prompt (plus Session-Verlauf, falls `session-id`) |
 | `(sigo-reference)` | eingebettete Referenz; `(sigo-system-prompt (sigo-reference))` setzt zurück |
-| `(sigo* prompt …)` | wie `sigo`, aber Assoc-Liste: `text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd` |
-| `(sigo-usage)` | Summen seit Start/Reset plus `calls` |
+| `(sigo* prompt …)` | wie `sigo`, aber Hash-Tabelle: `text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed` |
+| `(sigo-usage)` | Summen seit Start/Reset (Tokens, `cost-usd`, `elapsed`) plus `calls` |
 | `(sigo-usage-reset)` | Summen auf 0 |
 
 ```lisp
 (let ((r (sigo* "Schreibe eine Funktion quadrat.")))
-  (println (cdr (assoc 'text r)))
-  (println "cached: " (cdr (assoc 'cached-tokens r))))
+  (println (gethash "text" r))
+  (println "cached: " (gethash "cached-tokens" r) "  Sekunden: " (gethash "elapsed" r)))
 ```
 
 **`cost-usd` ist eine obere Schranke** (bei OpenAI-kompatiblen Providern —
@@ -160,3 +161,51 @@ zurückgibt, ohne Erklärungen und ohne Markdown-Fences:
 ```lisp
 (sigo "Schreibe nur den Lisp-Code, keine Erklärungen, kein Markdown: defun fib …")
 ```
+
+## Messen und Kosten
+
+`(sigo-request h [host])` schickt einen frei gebauten Chat-Request. `h` ist
+eine Hash-Tabelle mit **genau** den Feldern, die sigoREST kennt:
+`model messages temperature max_tokens session_id timeout retries
+system_prompt bare channel`. Jedes andere Feld ist ein Fehler — sigoREST
+würde es still verwerfen (z. B. `response_format`). `stream` ist gesperrt,
+solange sigoREST Streaming-Kosten falsch bucht. Fehlen `bare`,
+`system_prompt` oder `timeout`, setzt golisp2 die Defaults (`t`, aktueller
+Vorspann, `GOLISP_SIGO_TIMEOUT`). Abschalten geht nur mit `:false`
+(`(puthash "bare" h :false)`); `()` würde als `[]` gesendet und von sigoREST
+abgewiesen. Ergebnis: die volle Antwort als
+Hash-Tabelle plus `"elapsed"` — Sekunden nur für den HTTP-Aufruf, ohne
+golisp2s eigene Drossel.
+
+```lisp
+(let ((h (make-hash-table :test 'equal)))
+  (puthash "model" h "ci-gpt-6-luna")
+  (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
+  (puthash "max_tokens" h 50)
+  (puthash "temperature" h 0)
+  (puthash "timeout" h 300)
+  (let ((r (sigo-request h)))
+    (list (gethash "elapsed" r) (gethash "cost_usd" (gethash "usage" r)))))
+```
+
+Kosten und Budget:
+
+| Aufruf | Wirkung |
+|---|---|
+| `(sigo-usage)` / `(sigo-usage-reset)` | Summen dieses Prozesses (Tokens, `cost-usd`, `elapsed`, `calls`) |
+| `(sigo-costs [seit [bis]])` | `/api/costs` — serverweit, `seit`/`bis` in Unix-Sekunden wie `(now)`; ohne Argument: heute |
+| `(sigo-budget)` | `/api/budget` — Hash mit `config` (Tageslimit) und `status` (Verbrauch, `blocked`), z. B. `(gethash "blocked" (gethash "status" (sigo-budget)))` |
+| `(sigo-model-info [modell])` | `/api/models` — alle Modelle oder eins per `id`/`shortcode`; `input_cost`/`output_cost` in USD pro 1 Mio. Tokens |
+
+**Preis 0 heißt „unbekannt“, nicht „gratis“.** Rund die Hälfte der Modelle
+hat in sigoREST keinen Preis; für sie ist `cost-usd` immer 0. Wer sparen
+will, prüft vorher `(sigo-model-info m)`. Messfenster:
+
+```lisp
+(let ((t0 (now)))
+  (sigo* "…" "ci-gpt-6-luna")
+  (gethash "total_cost_usd" (sigo-costs t0)))
+```
+
+HTTP 402 von sigoREST (Budget-Stopp) kommt als Fehler
+`sigo-request: HTTP 402: …` an.

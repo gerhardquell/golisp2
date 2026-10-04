@@ -222,16 +222,47 @@ func fnMaphash(args []*Cell) (*Cell, error) {
   // Snapshot unter Lock, Callbacks außerhalb — fn darf die Tabelle
   // selbst modifizieren, ohne den Lock zu verklemmen (CL erlaubt
   // add/remove des aktuellen Keys).
-  ht.mu.RLock()
-  entries := make([]hashEntry, 0, len(ht.m))
-  for _, e := range ht.m {
-    entries = append(entries, e)
-  }
-  ht.mu.RUnlock()
-  for _, e := range entries {
+  for _, e := range ht.snapshot() {
     if _, err := apply(args[0], []*Cell{e.key, e.val}); err != nil {
       return nil, err
     }
   }
   return MakeNil(), nil
+}
+
+// newStringHash: leere Hash-Tabelle mit :test equal — Form der
+// JSON-Objekte (jsoncell.go) und der sigo-Ergebnisse.
+func newStringHash() *Cell {
+  return &Cell{Type: HASHTABLE, Ht: &HashTable{m: make(map[string]hashEntry), test: "equal"}}
+}
+
+// getStr liest den Wert zum String-Key.
+func (ht *HashTable) getStr(key string) (*Cell, bool) {
+  k := MakeStr(key)
+  ht.mu.RLock()
+  e, ok := ht.m[ht.keyOf(k)]
+  ht.mu.RUnlock()
+  if !ok {
+    return nil, false
+  }
+  return e.val, true
+}
+
+// putStr setzt den Wert zum String-Key.
+func (ht *HashTable) putStr(key string, val *Cell) {
+  k := MakeStr(key)
+  ht.mu.Lock()
+  ht.m[ht.keyOf(k)] = hashEntry{key: k, val: val}
+  ht.mu.Unlock()
+}
+
+// snapshot: alle Einträge, unter Lock kopiert.
+func (ht *HashTable) snapshot() []hashEntry {
+  ht.mu.RLock()
+  defer ht.mu.RUnlock()
+  entries := make([]hashEntry, 0, len(ht.m))
+  for _, e := range ht.m {
+    entries = append(entries, e)
+  }
+  return entries
 }

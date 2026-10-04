@@ -73,49 +73,6 @@ func withSigoState(t *testing.T) {
   })
 }
 
-func TestSigoCallToHost_SendsBareAndSystemPrompt(t *testing.T) {
-  var got map[string]interface{}
-  srv := fakeSigo(t, &got)
-  res, err := sigoCallToHost("hi", "m", "", srv.URL, "VORSPANN")
-  if err != nil {
-    t.Fatal(err)
-  }
-  if got["bare"] != true {
-    t.Errorf("bare: erwartet true, bekommen %v", got["bare"])
-  }
-  if got["system_prompt"] != "VORSPANN" {
-    t.Errorf("system_prompt: erwartet VORSPANN, bekommen %v", got["system_prompt"])
-  }
-  msgs, _ := got["messages"].([]interface{})
-  if len(msgs) != 1 {
-    t.Fatalf("erwartet 1 Message, bekommen %v", got["messages"])
-  }
-  m, _ := msgs[0].(map[string]interface{})
-  if m["role"] != "user" || m["content"] != "hi" {
-    t.Errorf("Message falsch: %v", m)
-  }
-  want := sigoResult{Text: "(+ 1 2)", Model: "test-m", FinishReason: "stop",
-    Usage: sigoUsage{PromptTokens: 5210, CompletionTokens: 115,
-      CachedTokens: 5120, ReasoningTokens: 98, CostUSD: 0.0031}}
-  if res != want {
-    t.Errorf("Ergebnis:\n got  %+v\n want %+v", res, want)
-  }
-}
-
-func TestSigoCallToHost_EmptySystemPromptOmitsField(t *testing.T) {
-  var got map[string]interface{}
-  srv := fakeSigo(t, &got)
-  if _, err := sigoCallToHost("hi", "m", "", srv.URL, ""); err != nil {
-    t.Fatal(err)
-  }
-  if _, present := got["system_prompt"]; present {
-    t.Errorf("system_prompt darf bei leerem Vorspann nicht gesendet werden: %v", got)
-  }
-  if got["bare"] != true {
-    t.Errorf("bare muss auch bei leerem Vorspann true sein: %v", got)
-  }
-}
-
 func TestSigoSystemPrompt_Lisp(t *testing.T) {
   withSigoState(t)
   evalEq(t, `(equal? (sigo-system-prompt) (sigo-reference))`, "t")
@@ -153,23 +110,56 @@ func TestSigoState_ConcurrentAccess(t *testing.T) {
   }
 }
 
-// alistGet sucht key in einer Assoc-Liste ((key . val) …).
-func alistGet(t *testing.T, alist *Cell, key string) *Cell {
-  t.Helper()
-  for c := alist; c != nil && c.Type == LIST; c = c.Cdr {
-    if c.Car != nil && c.Car.Car != nil && c.Car.Car.Val == key {
-      return c.Car.Cdr
-    }
-  }
-  t.Fatalf("Schlüssel %s fehlt in %s", key, alist.String())
-  return nil
-}
-
 func sigoArgs(url string) []*Cell {
   return []*Cell{MakeStr("hi"), MakeStr("m"), MakeStr(""), MakeStr(url)}
 }
 
-func TestSigoStar_ReturnsAlist(t *testing.T) {
+// hashGet liest key aus einer Hash-Tabelle oder bricht den Test ab.
+func hashGet(t *testing.T, h *Cell, key string) *Cell {
+  t.Helper()
+  if h == nil || h.Type != HASHTABLE {
+    t.Fatalf("Hash-Tabelle erwartet, got %s", h)
+  }
+  v, ok := h.Ht.getStr(key)
+  if !ok {
+    t.Fatalf("Schlüssel %s fehlt", key)
+  }
+  return v
+}
+
+func TestSigo_SendsOneUserMessage(t *testing.T) {
+  withSigoState(t)
+  var got map[string]interface{}
+  srv := fakeSigo(t, &got)
+  r, err := fnSigo(sigoArgs(srv.URL))
+  if err != nil {
+    t.Fatal(err)
+  }
+  if r.Val != "(+ 1 2)" {
+    t.Errorf("Text: got %q", r.Val)
+  }
+  msgs, _ := got["messages"].([]interface{})
+  if len(msgs) != 1 {
+    t.Fatalf("erwartet 1 Message, bekommen %v", got["messages"])
+  }
+  m, _ := msgs[0].(map[string]interface{})
+  if m["role"] != "user" || m["content"] != "hi" || got["model"] != "m" {
+    t.Errorf("Request falsch: %v", got)
+  }
+  if _, present := got["session_id"]; present {
+    t.Errorf("leere session-id darf nicht gesendet werden: %v", got)
+  }
+}
+
+func TestSigo_TypeErrors(t *testing.T) {
+  evalErr(t, `(sigo)`)
+  evalErr(t, `(sigo 5)`)
+  evalErr(t, `(sigo "x" 5)`)
+  evalErr(t, `(sigo "a" "b" "c" "d" "e")`)
+  evalErr(t, `(sigo* 5)`)
+}
+
+func TestSigoStar_ReturnsHash(t *testing.T) {
   withSigoState(t)
   srv := fakeSigo(t, nil)
   r, err := fnSigoStar(sigoArgs(srv.URL))
@@ -177,27 +167,31 @@ func TestSigoStar_ReturnsAlist(t *testing.T) {
     t.Fatal(err)
   }
   for key, want := range map[string]string{"text": "(+ 1 2)", "model": "test-m", "finish-reason": "stop"} {
-    if got := alistGet(t, r, key).Val; got != want {
+    if got := hashGet(t, r, key).Val; got != want {
       t.Errorf("%s: erwartet %q, bekommen %q", key, want, got)
     }
   }
   for key, want := range map[string]float64{"prompt-tokens": 5210, "completion-tokens": 115,
     "cached-tokens": 5120, "reasoning-tokens": 98, "cost-usd": 0.0031} {
-    if got := alistGet(t, r, key).Num; got != want {
+    if got := hashGet(t, r, key).Num; got != want {
       t.Errorf("%s: erwartet %v, bekommen %v", key, want, got)
     }
+  }
+  if e := hashGet(t, r, "elapsed").Num; e <= 0 {
+    t.Errorf("elapsed muss > 0 sein, got %v", e)
   }
 }
 
 func TestSigoStar_Lisp(t *testing.T) {
   withSigoState(t)
   srv := fakeSigo(t, nil)
-  evalEq(t, `(car (car (sigo* "hi" "m" "" "`+srv.URL+`")))`, "text")
+  evalEq(t, `(gethash "text" (sigo* "hi" "m" "" "`+srv.URL+`"))`, `"(+ 1 2)"`)
 }
 
 func TestSigoUsage_SumsAndResets(t *testing.T) {
   withSigoState(t)
   srv := fakeSigo(t, nil)
+  bad := fakeSigoWith(t, http.StatusInternalServerError, 0, nil)
   if _, err := fnSigoUsageReset(nil); err != nil {
     t.Fatal(err)
   }
@@ -206,22 +200,28 @@ func TestSigoUsage_SumsAndResets(t *testing.T) {
       t.Fatal(err)
     }
   }
-  u, _ := fnSigoUsage(nil)
-  if got := alistGet(t, u, "calls").Num; got != 2 {
-    t.Errorf("calls: erwartet 2, bekommen %v", got)
+  if _, err := fnSigo(sigoArgs(bad.URL)); err == nil {
+    t.Fatal("HTTP 500 muss Fehler liefern")
   }
-  if got := alistGet(t, u, "cached-tokens").Num; got != 10240 {
+  u, _ := fnSigoUsage(nil)
+  if got := hashGet(t, u, "calls").Num; got != 2 {
+    t.Errorf("calls: erwartet 2 (Fehlschlag zählt nicht), bekommen %v", got)
+  }
+  if got := hashGet(t, u, "cached-tokens").Num; got != 10240 {
     t.Errorf("cached-tokens: erwartet 10240, bekommen %v", got)
   }
-  if got := alistGet(t, u, "cost-usd").Num; got < 0.0062-1e-9 || got > 0.0062+1e-9 {
+  if got := hashGet(t, u, "cost-usd").Num; got < 0.0062-1e-9 || got > 0.0062+1e-9 {
     t.Errorf("cost-usd: erwartet 0.0062, bekommen %v", got)
+  }
+  if got := hashGet(t, u, "elapsed").Num; got <= 0 {
+    t.Errorf("elapsed: erwartet > 0, bekommen %v", got)
   }
   if _, err := fnSigoUsageReset(nil); err != nil {
     t.Fatal(err)
   }
   u, _ = fnSigoUsage(nil)
-  if got := alistGet(t, u, "calls").Num; got != 0 {
-    t.Errorf("calls nach Reset: erwartet 0, bekommen %v", got)
+  if hashGet(t, u, "calls").Num != 0 || hashGet(t, u, "elapsed").Num != 0 {
+    t.Errorf("nach Reset nicht 0: calls=%v elapsed=%v", hashGet(t, u, "calls"), hashGet(t, u, "elapsed"))
   }
 }
 
@@ -238,7 +238,7 @@ func TestSigoStar_ParallelCallsAreRaceFree(t *testing.T) {
   }
   wg.Wait()
   u, _ := fnSigoUsage(nil)
-  if got := alistGet(t, u, "calls").Num; got != 4 {
+  if got := hashGet(t, u, "calls").Num; got != 4 {
     t.Errorf("calls: erwartet 4, bekommen %v", got)
   }
 }

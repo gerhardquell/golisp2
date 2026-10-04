@@ -11,11 +11,11 @@ package lib
 import (
   "bytes"
   "context"
-  "encoding/json"
   "fmt"
   "io"
   "math"
   "net/http"
+  "net/url"
   "os"
   "strings"
   "sync"
@@ -99,6 +99,9 @@ func RegisterSigo(env *Env) {
   _ = env.Set("sigo-usage",         makeFn(fnSigoUsage))
   _ = env.Set("sigo-usage-reset",   makeFn(fnSigoUsageReset))
   _ = env.Set("sigo-request",       makeFn(fnSigoRequest))
+  _ = env.Set("sigo-budget",        makeFn(fnSigoBudget))
+  _ = env.Set("sigo-costs",         makeFn(fnSigoCosts))
+  _ = env.Set("sigo-model-info",    makeFn(fnSigoModelInfo))
 }
 
 func sigoGetHost() string {
@@ -215,26 +218,76 @@ func fnSigoUsageReset(args []*Cell) (*Cell, error) {
   return MakeNil(), nil
 }
 
-// fnSigoModels: (sigo-models) → Liste der verfügbaren Modelle
+// sigoGetJSON: GET gegen sigoREST, Antwort per JSONToCell.
+func sigoGetJSON(fname, path string) (*Cell, error) {
+  data, _, err := sigoDo(fname, "GET", sigoGetHost()+path, nil, sigoTimeout)
+  if err != nil { return nil, err }
+  c, err := JSONToCell(data)
+  if err != nil { return nil, fmt.Errorf("%s: Antwort kein JSON: %v", fname, err) }
+  return c, nil
+}
+
+// fnSigoModels: (sigo-models) → Liste der Modell-IDs aus /v1/models
 func fnSigoModels(args []*Cell) (*Cell, error) {
-  resp, err := http.Get(sigoGetHost() + "/v1/models")
-  if err != nil { return nil, fmt.Errorf("sigo-models: %v", err) }
-  defer resp.Body.Close()
-
-  body, _ := io.ReadAll(resp.Body)
-
-  var data struct {
-    Data []struct{ ID string `json:"id"` } `json:"data"`
+  resp, err := sigoGetJSON("sigo-models", "/v1/models")
+  if err != nil { return nil, err }
+  var ids []*Cell
+  for c := hashAt(resp, "data"); c != nil && c.Type == LIST; c = c.Cdr {
+    if id := hashAt(c.Car, "id"); id != nil && id.Type == STRING {
+      ids = append(ids, id)
+    }
   }
-  if err := json.Unmarshal(body, &data); err != nil {
-    return nil, fmt.Errorf("sigo-models parse: %v", err)
-  }
+  return SliceToCell(ids), nil
+}
 
-  result := MakeNil()
-  for i := len(data.Data) - 1; i >= 0; i-- {
-    result = Cons(MakeStr(data.Data[i].ID), result)
+// fnSigoBudget: (sigo-budget) → /api/budget als Hash-Tabelle
+func fnSigoBudget(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("sigo-budget: keine Argumente erwartet")
   }
-  return result, nil
+  return sigoGetJSON("sigo-budget", "/api/budget")
+}
+
+// fnSigoCosts: (sigo-costs [seit [bis]]) → /api/costs als Hash-Tabelle.
+// seit/bis: Unix-Sekunden wie (now), gesendet als RFC3339 (Ortszeit).
+func fnSigoCosts(args []*Cell) (*Cell, error) {
+  if len(args) > 2 {
+    return nil, fmt.Errorf("sigo-costs: 0 bis 2 Argumente erwartet ([seit [bis]])")
+  }
+  q := url.Values{}
+  for i, name := range []string{"since", "until"}[:len(args)] {
+    if args[i].Type != NUMBER {
+      return nil, fmt.Errorf("sigo-costs: Zeit muss Zahl sein (Unix-Sekunden), got %s", args[i])
+    }
+    q.Set(name, unixFloatToTime(args[i].Num).Format(time.RFC3339))
+  }
+  path := "/api/costs"
+  if len(q) > 0 {
+    path += "?" + q.Encode()
+  }
+  return sigoGetJSON("sigo-costs", path)
+}
+
+// fnSigoModelInfo: (sigo-model-info [modell]) → alle Modelle aus
+// /api/models oder das eine mit passender id bzw. shortcode.
+// Preise input_cost/output_cost in USD pro 1 Mio. Tokens; 0 = unbekannt.
+func fnSigoModelInfo(args []*Cell) (*Cell, error) {
+  if len(args) > 1 {
+    return nil, fmt.Errorf("sigo-model-info: 0 oder 1 Argument erwartet ([modell])")
+  }
+  if len(args) == 1 && args[0].Type != STRING {
+    return nil, fmt.Errorf("sigo-model-info: Modell muss String sein, got %s", args[0])
+  }
+  all, err := sigoGetJSON("sigo-model-info", "/api/models")
+  if err != nil || len(args) == 0 { return all, err }
+  for c := all; c != nil && c.Type == LIST; c = c.Cdr {
+    for _, k := range []string{"id", "shortcode"} {
+      if v := hashAt(c.Car, k); v != nil && v.Type == STRING && v.Val == args[0].Val {
+        return c.Car, nil
+      }
+    }
+  }
+  return nil, fmt.Errorf("sigo-model-info: Modell '%s' unbekannt", args[0].Val)
 }
 
 // fnSigoHost: (sigo-host "http://192.168.1.10:9080") → Host ändern

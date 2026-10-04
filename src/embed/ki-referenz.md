@@ -130,7 +130,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 sortiert (Basis von `tools/gen-reference.lisp`)
 
 ### Domänen (eigene Register-Xxx)
-- **sigoREST:** `sigo sigo* sigo-models sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `sigo*` → Assoc-Liste mit Tokens/Cache/Kosten; `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
+- **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
 - **Goroutinen:** `chan-make chan-send chan-recv lock-make`
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`

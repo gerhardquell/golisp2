@@ -1,23 +1,15 @@
-# Aufgaben 20260928
+# TODO 20261011 - Fragen
 
-## Ich möchte golisp2 /äquivalent zum CLisp) ergänzen:
-- [x] **type** → als `type-of` (CL hat keine Funktion `type`)
-- [x] **typep**
-    → erledigt 20260929, gemergt + gepusht (Merge 77227c4).
-      Spec `docs/superpowers/specs/2026-09-29-typep-design.md`,
-      Plan `docs/superpowers/plans/2026-09-29-typep.md`.
-      `%cell-type` (Go) + `src/embed/types.lisp`; Kombinatoren
-      `or/and/not/member/eql/satisfies`, Bereiche `(integer lo hi)`,
-      Structs via `*struct-types*`, Conditions über ihre Elternkette,
-      WARN bei Namenskollision.
+## 1. Testen eval
+Lass uns die eval-Funktion testen:
 
-## Nebenbei erledigt 20260929
-- [x] `ash` rundet beim Rechtsshift Richtung −∞ (`(ash -5 -1)` → -3)
-- [x] `(- x)` negiert (`(- 5)` → -5)
-- [x] `gcd` per Euklid über `mod` (`(gcd 12 18)` → 6)
-- [x] `(funcall 'f …)` löst Symbole global auf
-- [x] Lispbuch Kap. 11 (+Q&A) und Kap. 10 an golisp2-IST angeglichen,
-      Prosa zeitlos, `src/ch2/` ins Lispbuch-Repo aufgenommen
+```
+mul
+"(+ 4 22)"
+(eval mul)
+"(+ 4 22)"
+```
+Eigentlich sollte eval die Addition ausführen.
 
 ## Offen — Entscheidungen (Gerhard)
 - [ ] `swank--cell-type` (`src/lib/swank/env.go:116`) ist Beinahe-Zwilling

@@ -22,6 +22,8 @@ import (
   "net/http"
   "net/url"
   "os"
+  "runtime/debug"
+  "sync"
   "time"
 
   "github.com/gorilla/websocket"
@@ -34,8 +36,10 @@ var bootJS []byte
 type wsClient struct {
   id      int
   conn    *websocket.Conn
-  send    chan []byte        // Kapazitaet 64, einziger Schreibweg
-  callIDs map[int]struct{}   // offene ws-call-IDs dieses Clients
+  send    chan []byte      // Kapazitaet 64, einziger Schreibweg
+  callIDs map[int]struct{} // offene ws-call-IDs, geschützt durch ws.mu
+  sendMu  sync.Mutex       // Senden und Schließen sind gegenseitig ausgeschlossen
+  closed  bool             // geschützt durch sendMu
 }
 
 // wsCallResult transportiert Wert ODER Fehler an einen wartenden ws-call.
@@ -162,23 +166,38 @@ func (ws *WebServer) originOK(r *http.Request) bool {
 
 // writer ist die einzige schreibende Goroutine pro Client.
 func (c *wsClient) writer() {
+  defer c.conn.Close()
   for msg := range c.send {
     if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
       return
     }
   }
-  c.conn.Close()
 }
 
 // enqueue wirft eine Nachricht in den Writer-Channel. Voller Channel →
 // verwerfen und warnen, nie blockieren (Spec §5). Liefert false bei Drop.
 func (c *wsClient) enqueue(msg []byte) bool {
+  c.sendMu.Lock()
+  defer c.sendMu.Unlock()
+  if c.closed {
+    return false
+  }
   select {
   case c.send <- msg:
     return true
   default:
     fmt.Fprintf(os.Stderr, "warn: wsbridge: Client %d langsam, Nachricht verworfen\n", c.id)
     return false
+  }
+}
+
+// ########################################
+func (c *wsClient) closeSend() {
+  c.sendMu.Lock()
+  defer c.sendMu.Unlock()
+  if !c.closed {
+    c.closed = true
+    close(c.send)
   }
 }
 
@@ -189,6 +208,7 @@ func (ws *WebServer) removeClient(c *wsClient) {
   ws.mu.Lock()
   if _, ok := ws.clients[c.id]; !ok {
     ws.mu.Unlock()
+    c.closeSend()
     return
   }
   delete(ws.clients, c.id)
@@ -202,7 +222,7 @@ func (ws *WebServer) removeClient(c *wsClient) {
     ws.idleAt = time.Now()
   }
   ws.mu.Unlock()
-  close(c.send)
+  c.closeSend()
 }
 
 // deliverCallResult rueckt eine Browser-Antwort an den wartenden ws-call.
@@ -245,6 +265,12 @@ func (ws *WebServer) handleOp(client *wsClient, id *int, op string, rawArgs json
     }
     client.enqueue(data)
   }
+  defer func() {
+    if p := recover(); p != nil {
+      fmt.Fprintf(os.Stderr, "handleOp: Client %d, Operation %q: panic: %v\n%s", client.id, op, p, debug.Stack())
+      reply(wsOutMsg{Err: "wsbridge: interner Handler-Fehler"})
+    }
+  }()
 
   ws.mu.RLock()
   handler, ok := ws.handlers[op]
@@ -477,18 +503,30 @@ func fnWSCall(args []*Cell) (*Cell, error) {
   }
 
   ws.mu.Lock()
+  if ws.clients[clientID] != client {
+    ws.mu.Unlock()
+    return nil, fmt.Errorf("ws-call: Client %d hat die Verbindung getrennt", clientID)
+  }
   ws.nextCall++
   callID := ws.nextCall
   ch := make(chan wsCallResult, 1) // gepuffert: deliverCallResult blockiert nie
   ws.pending[callID] = ch
   client.callIDs[callID] = struct{}{}
   ws.mu.Unlock()
+  defer func() {
+    ws.mu.Lock()
+    delete(ws.pending, callID)
+    delete(client.callIDs, callID)
+    ws.mu.Unlock()
+  }()
 
   msg, err := json.Marshal(wsOutMsg{Call: callID, JS: args[2].Val})
   if err != nil {
     return nil, fmt.Errorf("ws-call: %v", err)
   }
-  client.enqueue(msg)
+  if !client.enqueue(msg) {
+    return nil, fmt.Errorf("ws-call: Client %d nicht erreichbar oder Sendepuffer voll", clientID)
+  }
 
   select {
   case res := <-ch:
@@ -497,12 +535,6 @@ func fnWSCall(args []*Cell) (*Cell, error) {
     }
     return res.val, nil
   case <-time.After(timeout):
-    ws.mu.Lock()
-    delete(ws.pending, callID)
-    if c := ws.clients[clientID]; c != nil {
-      delete(c.callIDs, callID)
-    }
-    ws.mu.Unlock()
     return nil, fmt.Errorf("ws-call: timeout nach %dms", int(timeout/time.Millisecond))
   }
 }

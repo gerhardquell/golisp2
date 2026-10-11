@@ -184,14 +184,15 @@
   t))
 
 (ws-export s "quit-app"
-	(lambda (c) (ws-emit s "golisp2web-quit" ())
+  (lambda (c)
+    (ws-emit s "golisp2web-quit" ())
     (http-stop s)
-    t) )
+    t))
 
 (parfunc ret
   (exec "python3" param: golisp2web-py
         param: "-t1"
-				param: (format nil "localhost:~a" (http-port s))
+        param: (format nil "localhost:~a" (http-port s))
         timeout: -1)
   (http-wait s))
 

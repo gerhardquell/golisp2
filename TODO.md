@@ -1,15 +1,9 @@
 # TODO 20261011 - Fragen
 
 ## 1. Testen eval
-Lass uns die eval-Funktion testen:
-
-```
-mul
-"(+ 4 22)"
-(eval mul)
-"(+ 4 22)"
-```
-Eigentlich sollte eval die Addition ausführen.
+- [x] Kein Fehler: `eval` braucht eine Form, keinen String (wie CL).
+      `(defvar mul '(+ 4 22)) (eval mul)` → 26;
+      aus Text: `(eval (read "(+ 4 22)"))` → 26.
 
 ## Offen — Entscheidungen (Gerhard)
 - [ ] `swank--cell-type` (`src/lib/swank/env.go:116`) ist Beinahe-Zwilling
@@ -26,7 +20,7 @@ Eigentlich sollte eval die Addition ausführen.
       (CL: `"1.5e+0"`).
 - [ ] Kommentar an `fnAppend` (`src/lib/primitives.go`) sagt „single-item",
       Tests sagen CL-`append` — Kommentar prüfen.
-- [ ] `examples/golisp2web_demo.lisp`: Tabs aus der Umformatierung (2 Spaces).
+- [x] `examples/golisp2web_demo.lisp`: Tabs aus der Umformatierung (2 Spaces).
 - [ ] typep-Folgen (Spec-Nicht-Ziele): `deftype`, `check-type`, `subtypep`,
       `typecase`/`etypecase`.
 - [ ] Aus 20260928 weiter offen: sigo Schritt 2 (Modell ohne Thinking,

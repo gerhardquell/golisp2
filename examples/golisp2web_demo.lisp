@@ -13,7 +13,7 @@
 ;;   1. Textinput + Button -> ws-export "greet"      (RPC mit Argument)
 ;;   2. Tabelle             -> ws-export "table-data" (RPC, strukturierte
 ;;                              Antwort, Client rendert als <table>)
-;;   3. Neuer Tab            -> ws-export "open-tab" -> ws-emit
+;;   3. Neuer Tab            -> ws-export "open-tab" -> ws-emit-to
 ;;                              golisp2web-new-tab (siehe golisp2web/lib/
 ;;                              quitBridge.py) -- oeffnet einen zweiten Tab
 ;;                              auf demselben Server
@@ -98,6 +98,9 @@
   <section>
     <h2>3. Neuer Tab</h2>
     <button id='newTabBtn'>Neuen Tab oeffnen</button>
+    <button id='customersBtn'>Kundendaten oeffnen</button>
+    <button id='articlesBtn'>Artikel oeffnen</button>
+    <p id='pageInfo'></p>
   </section>
 
   <section>
@@ -106,6 +109,14 @@
   </section>
 
   <script>
+    var page = window.location.pathname;
+    if (page === '/kunden') {
+      document.querySelector('h1').textContent = 'Kundendaten';
+      document.getElementById('pageInfo').textContent = 'Kundenansicht auf /kunden';
+    } else if (page === '/artikel') {
+      document.querySelector('h1').textContent = 'Artikel';
+      document.getElementById('pageInfo').textContent = 'Artikelansicht auf /artikel';
+    }
     window.golisp.ready.then(function () {
 
       document.getElementById('greetBtn').onclick = function () {
@@ -116,7 +127,7 @@
       };
 
       document.getElementById('tableBtn').onclick = function () {
-        golisp.call('table-data').then(function (rows) {
+        golisp.call('table-data', page).then(function (rows) {
           var tbl = document.getElementById('dataTable');
           tbl.innerHTML = '';
           rows.forEach(function (row) {
@@ -135,6 +146,13 @@
         golisp.call('open-tab');
       };
 
+      document.getElementById('customersBtn').onclick = function () {
+        golisp.call('open-tab', '/kunden', 'Kundendaten');
+      };
+      document.getElementById('articlesBtn').onclick = function () {
+        golisp.call('open-tab', '/artikel', 'Artikel');
+      };
+
       document.getElementById('quitBtn').onclick = function () {
         golisp.call('quit-app');
       };
@@ -149,14 +167,20 @@
 
 (ws-export s "greet" (lambda (c name) (string-append "Hallo, " name "!")))
 
-(ws-export s "table-data" (lambda (c)
-  (list (list "Sprache" "Erschienen")
-        (list "Lisp" "1958")
-        (list "Go" "2009")
-        (list "golisp2" "2026"))))
+(ws-export s "table-data" (lambda (c &optional (page "/"))
+  (cond
+    ((equal? page "/kunden")
+     (list (list "Kunde" "Ort") (list "Quell" "Berlin") (list "Muster" "Hamburg")))
+    ((equal? page "/artikel")
+     (list (list "Artikel" "Preis") (list "Tastatur" "49 EUR") (list "Maus" "25 EUR")))
+    (t (list (list "Sprache" "Erschienen")
+             (list "Lisp" "1958") (list "Go" "2009") (list "golisp2" "2026"))))))
 
-(ws-export s "open-tab" (lambda (c)
-  (ws-emit s "golisp2web-new-tab" (format nil "127.0.0.1:~a" (http-port s)))
+(ws-export s "open-tab" (lambda (c &optional (path "/") (title nil))
+  (let ((tab (make-hash-table)))
+    (puthash "target" tab (format nil "127.0.0.1:~a~a" (http-port s) path))
+    (when title (puthash "title" tab title))
+    (ws-emit-to s c "golisp2web-new-tab" tab))
   t))
 
 (ws-export s "quit-app"

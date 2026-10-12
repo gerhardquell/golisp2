@@ -16,26 +16,6 @@ als eingebaute Lisp-Primitiven beherrscht.
 
 ## Orientierung
 
-```
-src/
-  main.go              CLI: stdin / -i / -e / -t / --swank / Datei
-  cmd/golisp2-client/  CLI-Client mit REPL
-  embed/               //go:embed Assets (stdlib.lisp, swank.lisp, ...)
-  lib/
-    types*.go          Cell-Datenstruktur, Small-Int-Cache, Helfer
-    reader.go          Parser: String → Cell-Baum
-    env.go             Environment: verkettete Scopes, RWMutex
-    eval_core.go       Eval-Trampolin, apply, evalArgs
-    eval_*.go          Spezialformen, Lambda, Control, Quasiquote, load, exec
-    primitives.go      Eingebaute Funktionen + BaseEnv()
-    format*.go         FORMAT-Engine (CL-HyperSpec 22.3)
-    <domäne>.go        goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
-    stdlib.go          //go:embed stdlib.lisp
-    readline.go        REPL (go-prompt, Highlighting, History)
-    swank/             SWANK-Server für Emacs/SLIME
-build/               Build-Artefakte (golisp2, golisp2-client)
-```
-
 
 Vollständige Datei-für-Datei-Beschreibung: `docs/struktur.md`.
 Im Zweifel: `rg` statt raten.
@@ -188,20 +168,13 @@ in `(begin ...)`. Einzelausdruck bleibt unverpackt (kein Overhead).
 ```bash
 ./build.sh                                 # alle Binaries → ./build/
 go build ./...                             # Ground Truth für "kompiliert es?"
-go test ./...                              # Unit-Tests
 go test ./... -count=1                     # bei überraschenden Ergebnissen (Cache!)
 
 ./build/golisp2 -t                         # Lisp-Testsuite
 ./build/golisp2 -i                         # REPL (braucht TTY)
-./build/golisp2 -e "(+ 1 2)"               # Expression
-echo "(+ 1 2)" | ./build/golisp2           # stdin (Default)
-./build/golisp2 skript.lisp                # Datei
-
-./build/golisp2 --swank 127.0.0.1:4321     # SWANK-Server
-./build/golisp2-client --repl              # Client-REPL
 ```
 
-Exit-Codes: `0` = Erfolg, `1` = Fehler. Fehler → stderr, Ergebnisse → stdout.
+Weitere Flags, stdin, SWANK, Client, Exit-Codes: `docs/cli.md`.
 
 ---
 

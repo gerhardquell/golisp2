@@ -195,6 +195,8 @@ Primärwert (CL). Die letzte Form von `or` bleibt Tail; `and` unverändert.
 **Fix:** Bruchteile werden gelesen; Nicht-Zahl oder negativ → Fehler
 `parfunc: :timeout erwartet Zahl >= 0 (Sekunden)`.
 **Beachten [KNOWN]:** Das Argument wird nicht ausgewertet — nur Zahl-Literal.
+**Beachten:** `:timeout 0` heißt bei `parfunc` „kein Timeout“, bei
+`chan-recv` und `chan-select` dagegen „sofort zurück, nicht warten“.
 
 ### F5. Channels ohne Timeout, try, close, select  [FIXED 0.3.0 / 0.5.0]
 **Symptom:** `chan-recv` blockierte ewig (auch auf geschlossenem Channel).

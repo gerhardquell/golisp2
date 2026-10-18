@@ -281,7 +281,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |
 | `(gets)` am Eingabeende | Fehler `gets: EOF`, nicht `nil` | `read-line` → `nil`/EOF-Wert |
 | `(sleep ms)` vs. `:timeout sek` | `sleep` in **Millisekunden**, `:timeout` in **Sekunden** — `(sleep 0.05)` wirkt nicht | `sleep` in Sekunden |
-| `(parfunc r :timeout N …)` | `N` nur Zahl-Literal (nicht ausgewertet), Zahl ≥ 0, Bruchteile ok | – |
+| `(parfunc r :timeout N …)` | `N` nur Zahl-Literal (nicht ausgewertet), Zahl ≥ 0, Bruchteile ok; `:timeout 0` = **kein** Timeout (bei `chan-recv`/`chan-select` dagegen: sofort zurück) | – |
 
 ---
 

@@ -18,6 +18,11 @@
 //                                          sonst (values nil nil nil)
 //   (chan-close ch)                      → Channel schließen (t)
 //   (chan-closed? ch)                    → t wenn geschlossen und leer
+//                                          Grenze: zwischen Setzen des Flags und
+//                                          close() kann ein Sender, der den Check
+//                                          schon passiert hat, noch senden (nur bei
+//                                          gleichzeitigem Senden und Schließen) –
+//                                          ein t kann dann zu früh kommen
 //   (lock-make)                          → neuen Mutex erstellen
 //   (lock mu expr)                       → atomar ausführen
 //**********************************************************************

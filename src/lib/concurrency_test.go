@@ -273,9 +273,13 @@ func TestChanNoChannelArg(t *testing.T) {
 }
 
 func TestChanCloseWakesReceiver(t *testing.T) {
+  start := time.Now()
   evalEq(t, `(define ch (chan-make))
-    (spawn (lambda () (chan-close ch)))
-    (multiple-value-list (chan-recv ch :timeout 1))`, "(() ())")
+    (spawn (lambda () (sleep 50) (chan-close ch)))
+    (multiple-value-list (chan-recv ch :timeout 5))`, "(() ())")
+  if d := time.Since(start); d > time.Second {
+    t.Errorf("Empfänger nicht durch chan-close geweckt, Dauer = %v", d)
+  }
 }
 
 // blockedSenders zählt Goroutinen, die gerade in chanPut stecken
@@ -395,7 +399,14 @@ func TestChanSelectSkipsClosedWhileWaiting(t *testing.T) {
 func TestChanSelectBlocksUntilSend(t *testing.T) {
   evalEq(t, `(define a (chan-make)) (define b (chan-make))
     (spawn (lambda () (sleep 50) (chan-send a 8)))
-    (multiple-value-list (chan-select (list a b)))`, "(8 t 0)")
+    (multiple-value-list (chan-select (list a b) :timeout 5))`, "(8 t 0)")
+}
+
+func TestChanSelectMiddleClosedIndex(t *testing.T) {
+  evalEq(t, `(define a (chan-make)) (define b (chan-make)) (define c (chan-make))
+    (chan-close b)
+    (spawn (lambda () (sleep 50) (chan-send c 9)))
+    (multiple-value-list (chan-select (list a b c) :timeout 5))`, "(9 t 2)")
 }
 
 func TestChanSelectErrors(t *testing.T) {

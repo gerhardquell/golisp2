@@ -124,7 +124,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
       } else if def != nil {
         val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
-        _ = localEnv.Set(name, val)
+        _ = localEnv.Set(name, Primary(val))
         bindSupplied(localEnv, supplied, false)
       } else {
         _ = localEnv.Set(name, MakeNil())
@@ -144,7 +144,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
         if def != nil {
           val, err := evalWithCtx(def, closureEnv, ectx.child())
           if err != nil { return err }
-          _ = localEnv.Set(name, val)
+          _ = localEnv.Set(name, Primary(val))
         } else {
           _ = localEnv.Set(name, MakeNil())
         }
@@ -219,7 +219,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       } else if def != nil {
         val, err := evalWithCtx(def, closureEnv, ectx.child())
         if err != nil { return err }
-        _ = localEnv.Set(name, val)
+        _ = localEnv.Set(name, Primary(val))
         bindSupplied(localEnv, supplied, false)
       } else {
         _ = localEnv.Set(name, MakeNil())
@@ -246,7 +246,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         if def != nil {
           val, err := evalWithCtx(def, closureEnv, ectx.child())
           if err != nil { return err }
-          _ = localEnv.Set(name, val)
+          _ = localEnv.Set(name, Primary(val))
         } else {
           _ = localEnv.Set(name, MakeNil())
         }

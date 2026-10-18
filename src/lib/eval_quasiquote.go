@@ -33,7 +33,10 @@ func evalQQ(expr *Cell, env *Env, depth int, ectx evalCtx) (*Cell, error) {
       if err != nil { return nil, err }
       return Cons(MakeAtom("quasiquote"), Cons(inner, MakeNil())), nil
     case "unquote":
-      if depth == 1 { return evalWithCtx(expr.Cdr.Car, env, ectx.child()) }
+      if depth == 1 {
+        v, err := evalWithCtx(expr.Cdr.Car, env, ectx.child())
+        return Primary(v), err
+      }
       inner, err := evalQQ(expr.Cdr.Car, env, depth-1, ectx)
       if err != nil { return nil, err }
       return Cons(MakeAtom("unquote"), Cons(inner, MakeNil())), nil
@@ -61,7 +64,7 @@ func evalQQList(lst *Cell, env *Env, depth int, ectx evalCtx) (*Cell, error) {
       if err != nil { return nil, err }
       rest, err := evalQQList(lst.Cdr, env, depth, ectx)
       if err != nil { return nil, err }
-      return appendList(spliced, rest), nil
+      return appendList(Primary(spliced), rest), nil
     }
   }
 

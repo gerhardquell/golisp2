@@ -274,7 +274,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
             val, err := evalWithCtx(test, env, ectx.child())
             if err != nil { return nil, err }
             hit = IsTruthy(val)
-            testVal = val
+            testVal = Primary(val)
           }
           if hit {
             body := clause.Cdr
@@ -307,12 +307,13 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     // ── Funktionsanwendung ──
     fn, err := evalWithCtx(expr.Car, env, ectx.child())
     if err != nil { return nil, err }
+    fn = Primary(fn)
 
     // Makro → expandieren, Loop weiter (TCO)
     if fn.Type == MACRO {
       expanded, err := applyLambda(fn, CellToSlice(expr.Cdr), ectx)
       if err != nil { return nil, err }
-      expr = expanded
+      expr = Primary(expanded)
       continue
     }
 

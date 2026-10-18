@@ -77,7 +77,7 @@ func evalMultipleValueCall(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     }
     vals = append(vals, ValuesToSlice(v)...)
   }
-  return applyWithCtx(fn, vals, ectx)
+  return applyWithCtx(Primary(fn), vals, ectx)
 }
 
 // multiple-value-prog1: (multiple-value-prog1 form rest...) → liefert
@@ -111,6 +111,7 @@ func evalNthValue(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil {
     return nil, err
   }
+  n = Primary(n)
   if n.Type != NUMBER || n.Num < 0 {
     return nil, fmt.Errorf("nth-value: Index muss nicht-negative Zahl sein, got %s", n)
   }

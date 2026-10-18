@@ -21,6 +21,7 @@ import (
 func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   filenameCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
+  filenameCell = Primary(filenameCell)
   if filenameCell == nil || filenameCell.Type != STRING {
     return nil, fmt.Errorf("load: Dateiname muss String sein")
   }

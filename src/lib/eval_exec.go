@@ -36,6 +36,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("exec: %v", err)
   }
+  programCell = Primary(programCell)
   if programCell == nil || programCell.Type != STRING {
     return nil, fmt.Errorf("exec: Programmname muss ein String sein")
   }
@@ -70,6 +71,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }
+      val = Primary(val)
       if val == nil || val.Type != STRING {
         return nil, fmt.Errorf("exec: param muss String sein")
       }
@@ -79,6 +81,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }
+      val = Primary(val)
       if val == nil || val.Type != STRING {
         return nil, fmt.Errorf("exec: env muss String der Form KEY=WERT sein")
       }
@@ -91,6 +94,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }
+      val = Primary(val)
       if val != nil && val.Type != STRING {
         return nil, fmt.Errorf("exec: stdin muss String sein")
       }
@@ -102,6 +106,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       if err != nil {
         return nil, fmt.Errorf("exec: %v", err)
       }
+      val = Primary(val)
       if val == nil || val.Type != NUMBER {
         return nil, fmt.Errorf("exec: timeout muss NUMBER sein")
       }

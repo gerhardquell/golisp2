@@ -45,6 +45,7 @@ func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   name := args.Car.Val
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
+  val = Primary(val)
   if err := checkRootRedefine(env, name, val, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
   if err := env.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile(), form.SrcLine)
@@ -127,6 +128,7 @@ func evalBound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   sym, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
+  sym = Primary(sym)
   if sym == nil || (sym.Type != ATOM && sym.Type != STRING) {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
   }
@@ -146,6 +148,7 @@ func evalMakunbound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil {
     return nil, err
   }
+  sym = Primary(sym)
   if sym.Type != ATOM {
     return nil, fmt.Errorf("makunbound: Argument muss ein Symbol sein")
   }
@@ -174,6 +177,7 @@ func evalMacroexpand(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   form, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
+  form = Primary(form)
 
   // Wenn es keine Liste ist, geben wir sie unverändert zurück
   if form == nil || form.Type != LIST || form.Car == nil {
@@ -206,7 +210,7 @@ func evalMacroexpandAll(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   form, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
-  return macroexpandAll(form, env, ectx)
+  return macroexpandAll(Primary(form), env, ectx)
 }
 
 func macroexpandAll(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
@@ -245,7 +249,8 @@ func macroexpandOnce(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     return form, nil // Spezialform oder ungebunden
   }
   if fn.Type == MACRO {
-    return applyLambda(fn, CellToSlice(form.Cdr), ectx)
+    exp, err := applyLambda(fn, CellToSlice(form.Cdr), ectx)
+    return Primary(exp), err
   }
   return form, nil
 }
@@ -326,6 +331,7 @@ func evalSetQStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     }
     val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
     if err != nil { return nil, err }
+    val = Primary(val)
     // Update existierende Variable oder neu definieren
     if _, getErr := env.Get(name); getErr == nil {
       if err := env.Update(name, val); err != nil { return nil, err }  // Existiert → updaten
@@ -519,6 +525,7 @@ func evalCase(args *Cell, env *Env, ectx evalCtx) (*Cell, *Env, error) {
   }
   key, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, nil, err }
+  key = Primary(key)
 
   for clauses := args.Cdr; clauses != nil && clauses.Type == LIST; clauses = clauses.Cdr {
     clause := clauses.Car

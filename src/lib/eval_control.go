@@ -85,7 +85,7 @@ func evalDo(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     name := spec.Car.Val
     init, err := evalWithCtx(spec.Cdr.Car, env, ectx.child())  // init im äußeren env auswerten
     if err != nil { return nil, err }
-    _ = localEnv.Set(name, init)
+    _ = localEnv.Set(name, Primary(init))
   }
   // Abbruchbedingung: (test result...)
   termClause := args.Cdr.Car
@@ -122,7 +122,7 @@ func evalDo(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
         if err != nil { return nil, err }
       }
       names = append(names, name)
-      vals  = append(vals, newVal)
+      vals  = append(vals, Primary(newVal))
     }
     for i, name := range names {
       _ = localEnv.Set(name, vals[i])
@@ -201,7 +201,7 @@ func evalEval(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   // So bleiben Definitionen aus (eval (read ...)) global sichtbar, was
   // fuer REPL (swank:listener-eval) und das selbsterweiternde Muster
   // essenziell ist.
-  return evalWithCtx(expr, env.Root(), evalCtx{depth: 0, ctx: ectx.ctx})
+  return evalWithCtx(Primary(expr), env.Root(), evalCtx{depth: 0, ctx: ectx.ctx})
 }
 
 // blockReturn: Sentinel-Fehler für (return-from name value)
@@ -365,7 +365,7 @@ func evalCatch(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   result, err := evalWithCtx(wrapBegin(args.Cdr), env, ectx.child())
   if err != nil {
-    if tv, ok := err.(*throwValue); ok && sameTag(tv.tag, tag) {
+    if tv, ok := err.(*throwValue); ok && sameTag(tv.tag, Primary(tag)) {
       return tv.value, nil
     }
     return nil, err
@@ -387,7 +387,7 @@ func evalThrow(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  return nil, &throwValue{tag: tag, value: val}
+  return nil, &throwValue{tag: Primary(tag), value: val}
 }
 
 // throwValue: Sentinel-Fehler für (throw tag wert)
@@ -475,7 +475,7 @@ func evalTrap(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if herr != nil {
     return nil, herr
   }
-  return applyWithCtx(handler, []*Cell{lispErr.Msg}, ectx)
+  return applyWithCtx(Primary(handler), []*Cell{lispErr.Msg}, ectx)
 }
 
 // parfunc: (parfunc ergebnis [:timeout N] expr1 expr2 ...)
@@ -527,7 +527,7 @@ func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     go func(idx int, e *Cell) {
       val, err := evalWithCtx(e, env, evalCtx{depth: 0, ctx: workerCtx})
       if err != nil { val = MakeNil() }
-      ch <- parfuncResult{idx, val}
+      ch <- parfuncResult{idx, Primary(val)}
     }(i, expr)
   }
 
@@ -579,7 +579,7 @@ func evalLock(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   muCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
 
-  gm, err := getMutex(muCell)
+  gm, err := getMutex(Primary(muCell))
   if err != nil { return nil, err }
 
   gm.mu.Lock()

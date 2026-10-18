@@ -30,7 +30,7 @@ func TestSpawnRunsFn(t *testing.T) {
   if err != nil {
     t.Fatalf("LoadString: %v", err)
   }
-  if res.Num != 42 {
+  if Primary(res).Num != 42 {
     t.Fatalf("got %s, want 42", res)
   }
 }
@@ -64,7 +64,7 @@ func TestSpawnErrorDoesNotKill(t *testing.T) {
   if err != nil {
     t.Fatalf("LoadString: %v", err)
   }
-  if res.Num != 7 {
+  if Primary(res).Num != 7 {
     t.Fatalf("got %s, want 7", res)
   }
 }

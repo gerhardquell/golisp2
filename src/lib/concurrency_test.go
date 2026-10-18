@@ -159,3 +159,118 @@ func TestParfuncResultIsList(t *testing.T) {
   }
   _ = strings.Contains // keep import wenn später gebraucht
 }
+
+// --- Channels: try, Timeout, close (0.3.0) ---
+
+func TestChanRecvValues(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 1)) (chan-send ch 5)
+    (multiple-value-list (chan-recv ch))`, "(5 t)")
+  evalEq(t, `(define ch (chan-make 1)) (chan-send ch 5) (chan-recv ch)`, "5")
+}
+
+func TestChanRecvClosedEmptyReturnsAtOnce(t *testing.T) {
+  start := time.Now()
+  evalEq(t, `(define ch (chan-make 1)) (chan-close ch)
+    (multiple-value-list (chan-recv ch))`, "(() ())")
+  if d := time.Since(start); d > 500*time.Millisecond {
+    t.Errorf("chan-recv auf geschlossenem Channel dauerte %v", d)
+  }
+}
+
+func TestChanCloseDrainsBuffer(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 2)) (chan-send ch 1) (chan-send ch 2)
+    (chan-close ch)
+    (list (multiple-value-list (chan-recv ch))
+          (multiple-value-list (chan-recv ch))
+          (multiple-value-list (chan-recv ch)))`, "((1 t) (2 t) (() ()))")
+}
+
+func TestChanRecvTimeout(t *testing.T) {
+  start := time.Now()
+  evalEq(t, `(define ch (chan-make 1))
+    (multiple-value-list (chan-recv ch :timeout 0.05))`, "(() ())")
+  d := time.Since(start)
+  if d < 40*time.Millisecond || d > time.Second {
+    t.Errorf("Timeout nach %v, erwartet 40 ms .. 1 s", d)
+  }
+}
+
+func TestChanRecvTimeoutGetsValue(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 1)) (chan-send ch 9)
+    (multiple-value-list (chan-recv ch :timeout 0.05))`, "(9 t)")
+}
+
+func TestChanRecvTimeoutZero(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 1))
+    (multiple-value-list (chan-recv ch :timeout 0))`, "(() ())")
+}
+
+func TestChanRecvSyntax(t *testing.T) {
+  for _, src := range []string{
+    `(chan-recv)`,
+    `(define ch (chan-make 1)) (chan-recv ch :timeout)`,
+    `(define ch (chan-make 1)) (chan-recv ch :wait 1)`,
+    `(define ch (chan-make 1)) (chan-recv ch :timeout "x")`,
+    `(define ch (chan-make 1)) (chan-recv ch :timeout -1)`,
+    `(define ch (chan-make 1)) (chan-recv ch :timeout 1 2)`,
+  } {
+    _, err := evalStr(src)
+    if err == nil || !strings.Contains(err.Error(), "chan-recv: Syntax: (chan-recv ch [:timeout sek])") {
+      t.Errorf("eval(%q) Fehler = %v", src, err)
+    }
+  }
+}
+
+func TestChanTryRecv(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 1))
+    (multiple-value-list (chan-try-recv ch))`, "(() ())")
+  evalEq(t, `(define ch (chan-make 1)) (chan-send ch 3)
+    (multiple-value-list (chan-try-recv ch))`, "(3 t)")
+}
+
+func TestChanTrySend(t *testing.T) {
+  evalEq(t, `(define ch (chan-make 1))
+    (list (chan-try-send ch 1) (chan-try-send ch 2) (chan-recv ch))`, "(t () 1)")
+}
+
+func TestChanTrySendNoReceiver(t *testing.T) {
+  evalEq(t, `(chan-try-send (chan-make) 1)`, "()")
+}
+
+func TestChanSendClosedError(t *testing.T) {
+  _, err := evalStr(`(define ch (chan-make 1)) (chan-close ch) (chan-send ch 1)`)
+  if err == nil || !strings.Contains(err.Error(), "chan-send: Channel geschlossen") {
+    t.Errorf("Fehler = %v", err)
+  }
+  _, err = evalStr(`(define ch (chan-make 1)) (chan-close ch) (chan-try-send ch 1)`)
+  if err == nil || !strings.Contains(err.Error(), "chan-try-send: Channel geschlossen") {
+    t.Errorf("Fehler = %v", err)
+  }
+}
+
+func TestChanClose(t *testing.T) {
+  evalEq(t, `(chan-close (chan-make))`, "t")
+  _, err := evalStr(`(define ch (chan-make)) (chan-close ch) (chan-close ch)`)
+  if err == nil || !strings.Contains(err.Error(), "chan-close: Channel bereits geschlossen") {
+    t.Errorf("Fehler = %v", err)
+  }
+}
+
+func TestChanClosedP(t *testing.T) {
+  evalEq(t, `(chan-closed? (chan-make 1))`, "()")
+  evalEq(t, `(define ch (chan-make 1)) (chan-send ch 1) (chan-close ch)
+    (list (chan-closed? ch) (chan-recv ch) (chan-closed? ch))`, "(() 1 t)")
+}
+
+func TestChanNoChannelArg(t *testing.T) {
+  for _, f := range []string{"chan-try-recv", "chan-close", "chan-closed?"} {
+    evalErr(t, "("+f+" 1)")
+  }
+  evalErr(t, `(chan-try-send 1 2)`)
+}
+
+func TestChanCloseWakesReceiver(t *testing.T) {
+  evalEq(t, `(define ch (chan-make))
+    (spawn (lambda () (chan-close ch)))
+    (multiple-value-list (chan-recv ch :timeout 1))`, "(() ())")
+}

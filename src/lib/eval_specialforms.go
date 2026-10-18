@@ -357,12 +357,14 @@ func evalAnd(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   return result, nil
 }
 
-// or: (or a b c ...) → gibt ersten wahren Wert zurück, sonst nil
+// or: (or a b c ...) → gibt ersten wahren Wert zurück, sonst nil.
+// Vordere Formen liefern nur den Primärwert, die letzte reicht MV durch (CL).
 func evalOr(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   for args != nil && args.Type == LIST {
     val, err := evalWithCtx(args.Car, env, ectx.child())
     if err != nil { return nil, err }
-    if IsTruthy(val) { return val, nil }  // Kurzschluss!
+    if args.Cdr == nil || args.Cdr.Type != LIST { return val, nil }
+    if IsTruthy(val) { return Primary(val), nil }  // Kurzschluss!
     args = args.Cdr
   }
   return MakeNil(), nil

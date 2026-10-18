@@ -19,7 +19,7 @@ import (
 )
 
 // prog1: (prog1 first rest...) → wertet first aus, dann rest (Nebenwirkung),
-// liefert den Wert von first.
+// liefert den Primärwert von first (CL).
 func evalProg1(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST {
     return nil, fmt.Errorf("prog1: Syntax: (prog1 first rest...)")
@@ -28,6 +28,7 @@ func evalProg1(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil {
     return nil, err
   }
+  result = Primary(result)
   for rest := args.Cdr; rest != nil && rest.Type == LIST; rest = rest.Cdr {
     if _, err := evalWithCtx(rest.Car, env, ectx.child()); err != nil {
       return nil, err
@@ -490,12 +491,16 @@ func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   resultName := args.Car.Val
   rest       := args.Cdr
 
-  // optionalen :timeout N Parameter lesen
+  // optionalen :timeout N Parameter lesen (0 = kein Timeout)
   timeout := time.Duration(0)
   if rest != nil && rest.Type == LIST &&
      rest.Car != nil && rest.Car.Val == ":timeout" &&
      rest.Cdr != nil && rest.Cdr.Type == LIST {
-    timeout = time.Duration(rest.Cdr.Car.Num) * time.Second
+    d, ok := timeoutArg(rest.Cdr.Car)
+    if !ok {
+      return nil, fmt.Errorf("parfunc: :timeout erwartet Zahl >= 0 (Sekunden)")
+    }
+    timeout = d
     rest = rest.Cdr.Cdr
   }
 

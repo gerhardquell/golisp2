@@ -282,11 +282,10 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
               if _, err := evalWithCtx(body.Car, env, ectx.child()); err != nil { return nil, err }
               body = body.Cdr
             }
-            // Klausel ohne Body (z. B. (cond (t))) → Wert des Tests (CL)
+            // Klausel ohne Body (z. B. (cond (t))) → Primärwert des Tests (CL),
+            // direkt zurück: der Wert ist schon ausgewertet
             if body == nil || body.Type != LIST {
-              expr = testVal
-              matched = true
-              break
+              return testVal, nil
             }
             expr = body.Car
             matched = true

@@ -152,3 +152,29 @@ func TestEvalMVBindungen(t *testing.T) {
   evalEq(t, `(apply (lambda (&key (k (values 1 2))) (multiple-value-list k)) '())`, "(1)")
   evalEq(t, `(parfunc mv-r (values 1 2)) (multiple-value-list (car mv-r))`, "(1)")
 }
+
+// Task 4b (0.5.1): Klausel ohne Körper, prog1/prog2 und vordere or-Formen
+// liefern nur den Primärwert; die letzte or-Form und and reichen MV durch.
+func TestEvalMVCondOhneKoerperPrimaer(t *testing.T) {
+  evalEq(t, `(multiple-value-list (cond ((values 1 2))))`, "(1)")
+}
+
+func TestEvalMVProg1(t *testing.T) {
+  evalEq(t, `(multiple-value-list (prog1 (values 1 2) 3))`, "(1)")
+}
+
+func TestEvalMVProg2(t *testing.T) {
+  evalEq(t, `(multiple-value-list (prog2 0 (values 1 2) 3))`, "(1)")
+}
+
+func TestEvalMVOrVordereForm(t *testing.T) {
+  evalEq(t, `(multiple-value-list (or (values 1 2) 3))`, "(1)")
+}
+
+func TestEvalMVOrLetzteForm(t *testing.T) {
+  evalEq(t, `(multiple-value-list (or nil (values 1 2)))`, "(1 2)")
+}
+
+func TestEvalMVAndCharakterisierung(t *testing.T) {
+  evalEq(t, `(multiple-value-list (and 1 (values 1 2)))`, "(1 2)")
+}

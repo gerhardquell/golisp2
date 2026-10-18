@@ -15,7 +15,9 @@ package lib
 
 import (
   "math"
+  "runtime"
   "strings"
+  "sync"
   "testing"
   "time"
 )
@@ -274,6 +276,56 @@ func TestChanCloseWakesReceiver(t *testing.T) {
   evalEq(t, `(define ch (chan-make))
     (spawn (lambda () (chan-close ch)))
     (multiple-value-list (chan-recv ch :timeout 1))`, "(() ())")
+}
+
+// blockedSenders zählt Goroutinen, die gerade in chanPut stecken
+func blockedSenders() int {
+  buf := make([]byte, 1<<20)
+  n := runtime.Stack(buf, true)
+  return strings.Count(string(buf[:n]), "lib.chanPut(")
+}
+
+func TestChanCloseWakesBlockedSender(t *testing.T) {
+  env := spawnEnv(t)
+  before := blockedSenders()
+  if _, err := LoadString(`(define ch (chan-make))
+    (define r (spawn (lambda () (chan-send ch 1))))`, env); err != nil {
+    t.Fatalf("LoadString: %v", err)
+  }
+  deadline := time.Now().Add(2 * time.Second)
+  for blockedSenders() <= before {
+    if time.Now().After(deadline) { t.Fatalf("Sender blockiert nie") }
+    time.Sleep(5 * time.Millisecond)
+  }
+  res, err := LoadString(`(chan-close ch) (chan-recv r :timeout 5)`, env)
+  if err != nil {
+    t.Fatalf("LoadString: %v", err)
+  }
+  if got, want := Primary(res).String(), `(:error "chan-send: Channel geschlossen")`; got != want {
+    t.Fatalf("got %s, want %s", got, want)
+  }
+}
+
+func TestChanSendCloseParallel(t *testing.T) {
+  for i := 0; i < 50; i++ {
+    ch := makeChannelCell(1)
+    var wg sync.WaitGroup
+    for j := 0; j < 4; j++ {
+      wg.Add(2)
+      go func() { defer wg.Done(); _, _ = fnChanSend([]*Cell{ch, MakeNum(1)}) }()
+      go func() { defer wg.Done(); _, _ = fnChanTrySend([]*Cell{ch, MakeNum(2)}) }()
+    }
+    wg.Add(2)
+    go func() { defer wg.Done(); _, _ = fnChanTryRecv([]*Cell{ch}) }()
+    go func() { defer wg.Done(); _, _ = fnChanClose([]*Cell{ch}) }()
+    done := make(chan struct{})
+    go func() { wg.Wait(); close(done) }()
+    select {
+    case <-done:
+    case <-time.After(5 * time.Second):
+      t.Fatalf("Durchlauf %d: Sender hängt nach chan-close", i)
+    }
+  }
 }
 
 // --- chan-select ---

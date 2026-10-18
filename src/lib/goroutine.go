@@ -34,9 +34,13 @@ import (
   "time"
 )
 
-// goChannel: Go-Channel verpackt in Cell
+// goChannel: Go-Channel verpackt in Cell. Sender halten mu.RLock, close(ch)
+// läuft unter mu.Lock – so laufen Senden und Schließen nie gleichzeitig;
+// done weckt blockierte Sender beim Schließen.
 type goChannel struct {
   ch     chan *Cell
+  done   chan struct{}
+  mu     sync.RWMutex
   closed atomic.Bool
 }
 
@@ -47,7 +51,7 @@ type goMutex struct {
 
 // makeChannelCell erstellt eine Cell die einen Channel hält
 func makeChannelCell(size int) *Cell {
-  gc := &goChannel{ch: make(chan *Cell, size)}
+  gc := &goChannel{ch: make(chan *Cell, size), done: make(chan struct{})}
   return &Cell{
     Type: FUNC,
     Val:  "channel",
@@ -131,13 +135,18 @@ func recvValues(v *Cell, ok bool) *Cell {
   return MakeValues([]*Cell{v, MakeAtom("t")})
 }
 
-// chanPut: Senden mit Schutz gegen close-Wettlauf (Go panict bei send auf closed)
-func chanPut(gc *goChannel, v *Cell, block bool, name string) (sent bool, err error) {
-  if gc.closed.Load() { return false, fmt.Errorf("%s: Channel geschlossen", name) }
-  defer func() {
-    if r := recover(); r != nil { sent, err = false, fmt.Errorf("%s: Channel geschlossen", name) }
-  }()
-  if block { gc.ch <- v; return true, nil }
+// chanPut: Senden unter mu.RLock; geschlossener Channel → Fehler statt panic
+func chanPut(gc *goChannel, v *Cell, block bool, name string) (bool, error) {
+  gc.mu.RLock()
+  defer gc.mu.RUnlock()
+  closedErr := fmt.Errorf("%s: Channel geschlossen", name)
+  if gc.closed.Load() { return false, closedErr }
+  if block {
+    select {
+    case gc.ch <- v: return true, nil
+    case <-gc.done:  return false, closedErr
+    }
+  }
   select {
   case gc.ch <- v: return true, nil
   default:         return false, nil
@@ -258,7 +267,10 @@ func fnChanClose(args []*Cell) (*Cell, error) {
   if !gc.closed.CompareAndSwap(false, true) {
     return nil, fmt.Errorf("chan-close: Channel bereits geschlossen")
   }
+  close(gc.done)
+  gc.mu.Lock()
   close(gc.ch)
+  gc.mu.Unlock()
   return MakeAtom("t"), nil
 }
 

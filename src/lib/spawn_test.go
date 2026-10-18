@@ -9,6 +9,8 @@
 package lib
 
 import (
+  "runtime"
+  "strings"
   "testing"
   "time"
 )
@@ -110,4 +112,32 @@ func TestSpawnResultOnlyOnce(t *testing.T) {
   evalEq(t, `(define ch (spawn (lambda () 1)))
     (chan-recv ch)
     (multiple-value-list (chan-try-recv ch))`, "(() ())")
+}
+
+func TestSpawnResultChanClosedNoCrash(t *testing.T) {
+  evalEq(t, `(define r (spawn (lambda () (sleep 50) 1)))
+    (chan-close r)
+    (sleep 150)
+    'ok`, "ok")
+}
+
+// spawnGoroutines zählt laufende spawn-Goroutinen über ihre Stacks
+func spawnGoroutines() int {
+  buf := make([]byte, 1<<20)
+  n := runtime.Stack(buf, true)
+  return strings.Count(string(buf[:n]), "lib.fnSpawn.func1(")
+}
+
+func TestSpawnResultBufferFullNoHang(t *testing.T) {
+  before := spawnGoroutines()
+  evalEq(t, `(define r (spawn (lambda () (sleep 50) 1)))
+    (chan-send r 'mine)
+    'ok`, "ok")
+  deadline := time.Now().Add(2 * time.Second)
+  for spawnGoroutines() > before {
+    if time.Now().After(deadline) {
+      t.Fatalf("spawn-Goroutine hängt (vorher %d, jetzt %d)", before, spawnGoroutines())
+    }
+    time.Sleep(10 * time.Millisecond)
+  }
 }

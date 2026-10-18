@@ -17,7 +17,7 @@ import (
 )
 
 // Version von golisp2 – von Hand gepflegt (SemVer)
-const Version = "0.5.1"
+const Version = "0.5.2"
 
 // VersionText liefert "<name> <Version> (<commit>, <datum>[, dirty])";
 // ohne VCS-Infos (z. B. go test) nur "<name> <Version>".

@@ -381,7 +381,7 @@ func fnMapcar(args []*Cell) (*Cell, error) {
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, res)
+		results = append(results, Primary(res))
 	}
 	return SliceToCell(results), nil
 }

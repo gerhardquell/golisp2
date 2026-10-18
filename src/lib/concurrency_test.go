@@ -14,6 +14,7 @@
 package lib
 
 import (
+  "math"
   "strings"
   "testing"
   "time"
@@ -361,5 +362,27 @@ func TestChanSelectErrors(t *testing.T) {
     if err == nil || !strings.Contains(err.Error(), c.want) {
       t.Errorf("eval(%q) Fehler = %v, want %q", c.src, err, c.want)
     }
+  }
+}
+
+// --- timeoutArg ---
+
+func TestTimeoutGrossLaeuftNichtUeber(t *testing.T) {
+  evalEq(t, `(define ch (chan-make))
+    (spawn (lambda () (sleep 50) (chan-send ch 4)))
+    (multiple-value-list (chan-recv ch :timeout 1e12))`, "(4 t)")
+  evalEq(t, `(define a (chan-make)) (define b (chan-make))
+    (spawn (lambda () (sleep 50) (chan-send b 6)))
+    (multiple-value-list (chan-select (list a b) :timeout 1e12))`, "(6 t 1)")
+}
+
+func TestTimeoutArgNaNInf(t *testing.T) {
+  for _, f := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+    if _, ok := timeoutArg(MakeNum(f)); ok {
+      t.Errorf("timeoutArg(%v) ok, want Fehler", f)
+    }
+  }
+  if d, ok := timeoutArg(MakeNum(1e300)); !ok || d != math.MaxInt64 {
+    t.Errorf("timeoutArg(1e300) = %v, %v, want MaxInt64", d, ok)
   }
 }

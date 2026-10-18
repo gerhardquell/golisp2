@@ -136,6 +136,7 @@ func makeLispGenFunc(ga *GA, fn *Cell) GenFunc {
       return 0
     }
     result, err := apply(fn, []*Cell{genomeCell})
+    result = Primary(result)
     if err != nil || result == nil || result.Type != NUMBER {
       return 0
     }

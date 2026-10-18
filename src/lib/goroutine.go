@@ -26,6 +26,7 @@ package lib
 
 import (
   "fmt"
+  "math"
   "os"
   "reflect"
   "sync"
@@ -113,10 +114,15 @@ func fnChanMake(args []*Cell) (*Cell, error) {
   return makeChannelCell(size), nil
 }
 
-// timeoutArg liest die Zahl hinter :timeout (Sekunden, >= 0)
+// timeoutArg liest die Zahl hinter :timeout (Sekunden, >= 0, endlich);
+// sehr große Werte werden auf die längste Duration gedeckelt
 func timeoutArg(c *Cell) (time.Duration, bool) {
-  if c == nil || c.Type != NUMBER || c.Num < 0 { return 0, false }
-  return time.Duration(c.Num * float64(time.Second)), true
+  if c == nil || c.Type != NUMBER || c.Num < 0 || math.IsNaN(c.Num) || math.IsInf(c.Num, 0) {
+    return 0, false
+  }
+  ns := c.Num * float64(time.Second)
+  if ns >= math.MaxInt64 { return math.MaxInt64, true }
+  return time.Duration(ns), true
 }
 
 // recvValues: (values x t) bei Erfolg, (values nil nil) sonst
@@ -276,7 +282,9 @@ func fnLockMake(args []*Cell) (*Cell, error) {
 // und kehrt sofort mit einem Ergebnis-Channel (Puffer 1) zurück (Gegenstück
 // zu parfunc, das wartet). Der Channel erhält genau eine Nachricht:
 // (:ok wert) mit dem Primärwert, (:error text) bei Fehler oder panic.
-// Fehler und panics gehen zusätzlich auf stderr.
+// Fehler und panics gehen zusätzlich auf stderr. Ist der Channel beim
+// Senden geschlossen oder vom Benutzer gefüllt, wird das Ergebnis verworfen
+// (Meldung auf stderr) – die Goroutine endet trotzdem.
 func fnSpawn(args []*Cell) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("spawn: genau 1 Argument nötig (Funktion)")
@@ -294,7 +302,9 @@ func fnSpawn(args []*Cell) (*Cell, error) {
         fmt.Fprintf(os.Stderr, "spawn: panic: %v\n", r)
         msg = List(MakeAtom(":error"), MakeStr(fmt.Sprintf("panic: %v", r)))
       }
-      gc.ch <- msg
+      if sent, _ := chanPut(gc, msg, false, "spawn"); !sent {
+        fmt.Fprintln(os.Stderr, "spawn: Ergebnis verworfen (Channel geschlossen oder voll)")
+      }
     }()
     v, err := apply(fn, nil)
     if err != nil {

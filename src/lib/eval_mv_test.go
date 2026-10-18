@@ -178,3 +178,27 @@ func TestEvalMVOrLetzteForm(t *testing.T) {
 func TestEvalMVAndCharakterisierung(t *testing.T) {
   evalEq(t, `(multiple-value-list (and 1 (values 1 2)))`, "(1 2)")
 }
+
+// --- Go-Aufrufer von apply legen nur Primärwerte ab ---
+
+func TestMapcarPrimary(t *testing.T) {
+  evalEq(t, `(equal? (mapcar (lambda (x) (values x 0)) (list 1 2)) (list 1 2))`, "t")
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send a 1) (chan-send b 2)
+    (equal? (mapcar (lambda (c) (chan-recv c)) (list a b)) (list 1 2))`, "t")
+  evalEq(t, `(define h (make-hash-table)) (puthash 1 h "a")
+    (equal? (mapcar (lambda (k) (gethash k h)) (list 1)) (list "a"))`, "t")
+}
+
+func TestSortKeyPrimary(t *testing.T) {
+  evalEq(t, `(sort (list 3 1 2) (function <) :key (lambda (x) (values x 0)))`, "(1 2 3)")
+}
+
+func TestFormatFunPrimary(t *testing.T) {
+  evalEq(t, `(defun mv-fmt (x) (values "s" x)) (format nil "~/mv-fmt/" 5)`, `"s"`)
+}
+
+func TestGaFitnessPrimary(t *testing.T) {
+  evalEq(t, `(define ga (ga-create 'bit1 5 4 (lambda (g) (values 7 0))))
+    (ga-init ga) (ga-calc ga) (ga-result ga)`, "(7 7 7 7)")
+}

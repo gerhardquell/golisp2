@@ -61,7 +61,8 @@ func fnSort(args []*Cell) (*Cell, error) {
     if key == nil {
       return c, nil
     }
-    return apply(key, []*Cell{c})
+    k, err := apply(key, []*Cell{c})
+    return Primary(k), err
   }
 
   var callErr error

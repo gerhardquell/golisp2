@@ -59,7 +59,7 @@ func emitUserFunc(st *fmtState, ctrl []rune, pos int, params []pval, colon, at b
     st.err = fmt.Errorf("format: ~/%s/: %v", name, err)
     return pos
   }
-  st.out.WriteString(aesthetic(result))
+  st.out.WriteString(aesthetic(Primary(result)))
   return pos
 }
 

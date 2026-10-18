@@ -131,13 +131,17 @@ sortiert (Basis von `tools/gen-reference.lisp`)
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
-- **Goroutinen:** `chan-make chan-send chan-recv lock-make`
+- **Goroutinen:** `chan-make chan-send chan-recv chan-try-recv chan-try-send chan-close chan-closed? chan-select spawn lock-make`
+  - `(chan-recv ch [:timeout sek])` → `(values x t)`; geschlossen+leer oder Timeout → `(values nil nil)` (`sek` = Sekunden, Bruchteile ok). `(chan-try-recv ch)` wie `chan-recv`, nie blockierend
+  - `(chan-send ch x)` blockiert; auf geschlossenem Channel Fehler. `(chan-try-send ch x)` → `t` / `nil` (Puffer voll); `(chan-close ch)` → `t`, zweites Mal Fehler; `(chan-closed? ch)` → `t` nur wenn geschlossen **und** leer
+  - `(chan-select chans [:timeout sek])` → `(values x t i)` (`i` = Index in `chans`, ab 0); Timeout oder alle geschlossen+leer → `(values nil nil nil)`
+  - `(spawn fn)` → sofort Ergebnis-Channel mit genau einer Nachricht `(:ok wert)` bzw. `(:error "text")`; Fehler gehen zusätzlich auf stderr. Gegenstück zu `parfunc` (wartet)
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → nur Exit-Code; `(shell-output "cmd")` → stdout als String (wie `$(…)`), Exit ≠ 0 → Fehler; `shell-assoc` ist nur `assoc`, kein Shell-Aufruf
 - **Zeit:** `now format-time get-universal-time sleep` — `(now)` → Unix-Sekunden als Float; `(format-time "%F %T" [zeit] [:utc])` strftime-artig (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, Namen englisch); `get-universal-time` zählt ab 1900
 - **Strings:** `string-length string-append substring string-upcase string-downcase string->number number->string string->list list->string string-replace string-trim string-contains string-find string-split string-join` — `(string-split s [sep])`: mit sep wörtlich (leere Felder bleiben), ohne an Whitespace; `(string-join liste sep)` sep Pflicht; Argumentreihenfolge: `string-contains`/`string-split` Heuhaufen zuerst, `string-find` Nadel zuerst
-- **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash`
+- **Hashtable:** `make-hash-table gethash puthash remhash clrhash hash-table-count hash-table-p maphash` — `puthash` ist intern: `(puthash key table value)`, Tabelle an 2. Stelle (anders als Emacs Lisp); empfohlen `(setf (gethash k h) v)`
 - **JSON:** `json-parse json-encode` — Objekt ↔ Hash-Tabelle (`:test 'equal`, String-Keys), Array ↔ Liste, `true` ↔ `t`, `null` ↔ `:null`, `false` → `()`, `()` → `[]`, `:false` → `false`. Alists sind **keine** Objekte (Fehler beim Kodieren). Gilt auch für `ws-call`/`ws-export`/`ws-emit`
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
   - Rundung: half-to-even (Go-`strconv`), nicht half-up wie C — `%.2f` von `2.25` → `"2.2"`
@@ -270,6 +274,14 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
 | Structs sind Listen | `(typep p 'cons)` → `t` | eigener Typ, nicht `cons` |
 | Ganzzahlige Floats sind integer | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 ist ein Float) |
+| `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
+| `stringp` `consp` `string=` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` (auch für `string=`) | vorhanden |
+| `(member x l)` | kein `:test`; vergleicht Strings strukturell | `eql` (Strings nur mit `:test 'equal`) |
+| `(last l)` | liefert das **Element**, nicht die Zelle | letzte Cons-Zelle |
+| `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |
+| `(gets)` am Eingabeende | Fehler `gets: EOF`, nicht `nil` | `read-line` → `nil`/EOF-Wert |
+| `(sleep ms)` vs. `:timeout sek` | `sleep` in **Millisekunden**, `:timeout` in **Sekunden** — `(sleep 0.05)` wirkt nicht | `sleep` in Sekunden |
+| `(parfunc r :timeout N …)` | `N` nur Zahl-Literal (nicht ausgewertet), Zahl ≥ 0, Bruchteile ok | – |
 
 ---
 

@@ -167,5 +167,64 @@ Diese 8 sind in CLAUDE.md dokumentiert und gültig — hier nur Index:
 
 ---
 
+## F. Runde golisp2dfs: Mehrfachwerte, Channels, Gotchas (20261018, 0.5.1)
+
+Fund-Quelle: golisp2dfs (DataFlowSystem, `exp/dfs`). Plan:
+`docs/superpowers/plans/2026-10-18-channels-mv.md`.
+
+### F1. Mehrfachwerte in Spezialformen (`lock`, `case`, 21 Formen)  [FIXED 0.2.1]
+**Symptom:** Spezialformen, die das Ergebnis eines Teilausdrucks inspizieren,
+sahen die Mehrfachwert-Zelle statt des Primärwerts: `lock` meldete „kein
+Mutex“ (Mutex aus `gethash` o. ä.), `case` nahm still den falschen Zweig.
+**Fix:** 21 Spezialformen packen Mehrfachwerte über `Primary()` aus
+(u. a. `lock`, `case`, `catch`/`throw`, `do`, `define`, `,@`, `exec`, `load`).
+Eine Quelle: `Primary()` in `types.go`.
+
+### F2. `cond`-Klausel ohne Körper wertete den Test doppelt aus  [FIXED 0.5.1]
+**Symptom:** `(cond ('foo))` → Fehler „unbekanntes Symbol 'foo'“;
+`(cond ((list 1 2)))` rief `(1 2)` als Funktion auf.
+**Fix:** Klausel ohne Körper liefert den **Primärwert** des Tests (CL).
+
+### F3. `prog1`/`prog2`/`or` reichten Mehrfachwerte durch  [FIXED 0.5.1]
+**Symptom:** `(multiple-value-list (prog1 (values 1 2) 3))` → `(1 2)`.
+**Fix:** `prog1`, `prog2` und vordere Formen von `or` liefern nur den
+Primärwert (CL). Die letzte Form von `or` bleibt Tail; `and` unverändert.
+
+### F4. `parfunc :timeout` ignorierte Bruchteile  [FIXED 0.5.1]
+**Symptom:** `:timeout 0.2` wirkte nicht (kein Timeout), ohne Fehlermeldung.
+**Fix:** Bruchteile werden gelesen; Nicht-Zahl oder negativ → Fehler
+`parfunc: :timeout erwartet Zahl >= 0 (Sekunden)`.
+**Beachten [KNOWN]:** Das Argument wird nicht ausgewertet — nur Zahl-Literal.
+
+### F5. Channels ohne Timeout, try, close, select  [FIXED 0.3.0 / 0.5.0]
+**Symptom:** `chan-recv` blockierte ewig (auch auf geschlossenem Channel).
+**Fix:** `(chan-recv ch [:timeout sek])` → `(values x t)` / `(values nil nil)`;
+neu `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`
+(geschlossen **und** leer); `chan-send` auf geschlossenem Channel → Fehler;
+`(chan-select chans [:timeout sek])` → `(values x t i)` / `(values nil nil nil)`.
+
+### F6. `spawn`-Fehler nur auf stderr  [FIXED 0.4.0]
+**Symptom:** `(spawn fn)` lieferte `nil`; Ergebnis und Fehler gingen verloren.
+**Fix:** `spawn` liefert einen Ergebnis-Channel mit genau einer Nachricht
+`(:ok wert)` bzw. `(:error "text")`. Die stderr-Meldung bleibt.
+
+### F7. `puthash`-Argumentreihenfolge  [KNOWN]
+`(puthash key table value)` — Tabelle an 2. Stelle, anders als Emacs Lisp
+`(puthash key value table)`. Empfohlen: `(setf (gethash k h) v)`.
+
+### F8. `sleep` in Millisekunden, `:timeout` in Sekunden  [KNOWN]
+`(sleep ms)` erwartet Millisekunden; `:timeout` (`chan-recv`, `chan-select`,
+`parfunc`) Sekunden. `(sleep 0.05)` wirkt praktisch nicht.
+
+### F9. Fehlende CL-Namen, `last`, `member :test`  [LIMITATION]
+- `stringp`, `consp`, `string=`, `equal` fehlen → `string?`,
+  `(typep x 'cons)`, `equal?`.
+- `(member x l)` kennt kein `:test` und vergleicht Strings strukturell.
+- `(last l)` liefert das Element, nicht die letzte Zelle.
+- `(slurp)` liest stdin (Datei → `file-read`); `(gets)` am Eingabeende
+  → Fehler `gets: EOF`, nicht `nil`.
+
+---
+
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).
 Quelle der Wahrheit für die 8 Kern-Fallstricke bleibt CLAUDE.md.

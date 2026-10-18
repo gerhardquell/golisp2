@@ -54,12 +54,13 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **字符串**：`string-split`、`string-join`、`string-find`、`string-contains`，`format` 采用 CL FORMAT 引擎
 - **时间**：`(now)` 返回浮点型 Unix 秒数，`(format-time "%F %T" [时间] [:utc])` 按 strftime 风格格式化
 - **文件与目录**：`file-read`、`file-write` 等，以及 `directory-files`（已排序，目录以 `/` 结尾）
-- **哈希表**：`make-hash-table`、`gethash`、`puthash`、`maphash` 等（参数顺序同 CL：`(puthash KEY TABLE VALUE)`）
+- **哈希表**：`make-hash-table`、`gethash`、`puthash`、`maphash` 等（参数顺序：`(puthash KEY TABLE VALUE)`，表在第 2 位，与 Emacs Lisp 不同；推荐 `(setf (gethash k h) v)`）
 - **数学**：`truncate`、`ceiling`、`round`、`gcd`、`ash`、`parse-int`、`parse-float`；通过 Maxima 子进程提供 CAS（`maxima-open`、`maxima-eval`、`maxima-close`）
 
 ### 并发编程（Go 原生支持）
 - **`parfunc`**：在并行 Goroutine 中求值表达式
-- **通道机制**：`chan-make`、`chan-send`、`chan-recv`
+- **`spawn`**：启动 Goroutine，立即返回结果通道，其中恰有一条消息 `(:ok 值)` 或 `(:error "文本")`
+- **通道机制**：`chan-make`、`chan-send`、`chan-recv`（可带 `:timeout`，单位秒 → `(values x t)` / `(values nil nil)`）、`chan-try-recv`、`chan-try-send`、`chan-close`、`chan-closed?`、`chan-select`（多个通道中最先就绪者 → `(values x t i)`）
 - **锁机制**：`lock-make`、`lock` 用于临界区保护
 
 ### AI 集成（sigoREST）
@@ -155,6 +156,7 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 | **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行一个或多个表达式；单个形式打印结果，多个形式抑制最终结果 |
 | **脚本模式** | `./build/golisp2 script.lisp [参数…]` | 运行 Lisp 脚本文件（也可通过 shebang）；`defmain` 见下 |
 | **测试模式** | `./build/golisp2 -t` | 运行内置测试套件 |
+| **版本** | `./build/golisp2 --version` | 输出 `golisp2 <版本> (<commit>, <日期>[, dirty])`（`golisp2-client --version` 同样） |
 
 **退出码：** `0` = 成功，`1` = 错误；使用 `defmain` 的脚本则为其返回值（0–255）
 
@@ -240,7 +242,7 @@ golisp2> :quit
 ```
 
 ```lisp
-GoLisp 0.2  –  Ctrl+D 或 (exit) 退出
+golisp2 <版本> (<commit>, <日期>)  –  Ctrl+D 或 (exit) 退出
 多行输入：未闭合括号 → 继续输入..
 
 > (defun greet (name)
@@ -358,9 +360,9 @@ results  ; => (42 123 7)
 ; 通道通信
 (define ch (chan-make))
 
-; 在实际实现中，使用 go 启动 goroutine
-; (chan-send ch 42)
-; (chan-recv ch)  ; => 42
+(define r (spawn (lambda () (+ 1 2))))
+(chan-select (list ch r) :timeout 1)  ; => (values (:ok 3) t 1)
+(chan-recv ch :timeout 0.1)   ; => 0.1 秒后 (values nil nil)
 ```
 
 ### AI 集成
@@ -575,7 +577,7 @@ my-project/
 | **类型** | `type-of`、`typep` |
 | **输入输出** | `print`、`println`、`read`、`load`（带搜索路径）、`exec`、`shell-output` |
 | **文件操作** | `file-write`、`file-append`、`file-read`、`file-exists?`、`file-delete`、`directory-files` |
-| **并发** | `parfunc`、`spawn`、`chan-make`、`chan-send`、`chan-recv`、`lock-make` |
+| **并发** | `parfunc`、`spawn`、`chan-make`、`chan-send`、`chan-recv`、`chan-try-recv`、`chan-try-send`、`chan-close`、`chan-closed?`、`chan-select`、`lock-make` |
 | **AI** | `sigo`、`sigo*`、`sigo-request`、`sigo-models`、`sigo-host`、`sigo-usage`、`sigo-usage-reset`、`sigo-system-prompt`、`sigo-reference`、`sigo-costs`、`sigo-budget`、`sigo-model-info` |
 | **遗传算法** | `ga-create`、`ga-init`、`ga-cross`、`ga-calc`、`ga-select`、`ga-result`、`ga-mut`、`ga-print`、`ga?` |
 | **PostgreSQL** | `pg-connect`、`pg-query`、`pg-exec`、`pg-close` |

@@ -1853,9 +1853,9 @@ Sendet einen Wert in einen Channel.
 
 ### chan-recv
 
-**Syntax:** `(chan-recv ch)`
+**Syntax:** `(chan-recv ch [:timeout sek])`
 
-Empfängt einen Wert aus einem Channel (blockierend, wenn leer).
+Empfängt einen Wert aus einem Channel (blockierend, wenn leer und offen). Rückgabe `(values x t)`; auf geschlossenem, leerem Channel sofort `(values nil nil)`. Mit `:timeout sek` (Sekunden) endet das Warten nach `sek` mit `(values nil nil)`.
 
 ```lisp
 (chan-recv ch)

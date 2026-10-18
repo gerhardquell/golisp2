@@ -280,10 +280,19 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ### Goroutinen und Concurrency
 ```lisp
 (define c (chan-make 10))         ; Channel erstellen
-(chan-send c "msg")               ; Senden
-(chan-recv c)                     ; Empfangen
+(chan-send c "msg")               ; Senden (blockiert; geschlossen -> Fehler)
+(chan-recv c)                     ; Empfangen -> (values x t); geschlossen+leer -> (values nil nil)
+(chan-recv c :timeout 0.5)        ; wie oben, nach 0.5 s -> (values nil nil)
+(chan-try-recv c)                 ; nie blockierend -> (values x t) / (values nil nil)
+(chan-try-send c "msg")           ; t gesendet / nil (Puffer voll)
+(chan-close c)                    ; schliessen -> t; zweites Mal Fehler
+(chan-closed? c)                  ; t nur wenn geschlossen UND leer
+(chan-select (list c1 c2) :timeout 1)  ; -> (values x t i) / (values nil nil nil)
+(define r (spawn (lambda () (+ 1 2))))  ; sofort Ergebnis-Channel
+(chan-recv r)                     ; -> (:ok 3) bzw. (:error "text")
 (define l (lock-make))            ; Mutex
 ```
+`:timeout` ist in **Sekunden** (Bruchteile ok), `(sleep ms)` in Millisekunden.
 
 ### Shared Memory
 ```lisp
@@ -337,6 +346,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ### CLI & Environment
 ```lisp
 (argv)                ; → ("/pfad/golisp2" "skript.lisp" "arg1" ...)
+; Kommandozeile: golisp2 --version  →  golisp2 <version> (<commit>, <datum>[, dirty])
 (getenv "HOME")       ; → String oder () wenn nicht gesetzt
 (environ)             ; → Alist aller Variablen
 ```

@@ -54,13 +54,13 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Strings**: `string-split`, `string-join`, `string-find`, `string-contains`, `format` with the CL FORMAT engine
 - **Time**: `(now)` returns Unix seconds as a float, `(format-time "%F %T" [time] [:utc])` formats strftime-style
 - **Files and directories**: `file-read`, `file-write`, …, `directory-files` (sorted, directories end in `/`)
-- **Hash tables**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (CL argument order: `(puthash KEY TABLE VALUE)`)
+- **Hash tables**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (argument order: `(puthash KEY TABLE VALUE)` – table in 2nd position, unlike Emacs Lisp; prefer `(setf (gethash k h) v)`)
 - **Math**: `truncate`, `ceiling`, `round`, `gcd`, `ash`, `parse-int`, `parse-float`; CAS via Maxima subprocess (`maxima-open`, `maxima-eval`, `maxima-close`)
 
 ### Concurrency (Go-powered)
 - **`parfunc`**: Evaluate expressions in parallel goroutines
-- **`spawn`**: Fire-and-forget goroutine
-- **Channels**: `chan-make`, `chan-send`, `chan-recv`
+- **`spawn`**: Start a goroutine; returns a result channel at once carrying `(:ok value)` or `(:error "text")`
+- **Channels**: `chan-make`, `chan-send`, `chan-recv` (with `:timeout` in seconds → `(values x t)` / `(values nil nil)`), `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select` (first of several channels → `(values x t i)`)
 - **Locks**: `lock-make`, `lock` for critical sections
 
 ### AI Integration (sigoREST)
@@ -156,6 +156,7 @@ GoLisp works like a standard Unix tool with multiple modes:
 | **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
 | **Script** | `./build/golisp2 script.lisp [args…]` | Run a Lisp file (also via shebang); with `defmain` see below |
 | **Tests** | `./build/golisp2 -t` | Run built-in test suite |
+| **Version** | `./build/golisp2 --version` | Print `golisp2 <version> (<commit>, <date>[, dirty])` (`golisp2-client --version` too) |
 
 **Exit codes:** `0` = success, `1` = error; for scripts with `defmain`, its return value (0–255)
 
@@ -246,7 +247,7 @@ golisp2> :quit
 ```
 
 ```lisp
-GoLisp 0.2  –  Ctrl+D oder (exit) zum Beenden
+golisp2 <version> (<commit>, <date>)  –  Ctrl+D oder (exit) zum Beenden
 Multiline: offene Klammern → Fortsetzung mit ..
 
 > (defun greet (name)
@@ -366,9 +367,9 @@ results  ; => (42 123 13)
 ; Channels
 (define ch (chan-make))
 
-; In a real implementation, spawn goroutines with go
-; (chan-send ch 42)
-; (chan-recv ch)  ; => 42
+(define r (spawn (lambda () (+ 1 2))))
+(chan-select (list ch r) :timeout 1)  ; => (values (:ok 3) t 1)
+(chan-recv ch :timeout 0.1)   ; => (values nil nil) after 0.1 s
 ```
 
 ### AI Integration
@@ -583,7 +584,7 @@ my-project/
 | **Types** | `type-of`, `typep` |
 | **I/O** | `print`, `println`, `read`, `load` (with search path), `exec`, `shell-output` |
 | **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete`, `directory-files` |
-| **Concurrency** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `lock-make` |
+| **Concurrency** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select`, `lock-make` |
 | **AI** | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-usage`, `sigo-usage-reset`, `sigo-system-prompt`, `sigo-reference`, `sigo-costs`, `sigo-budget`, `sigo-model-info` |
 | **Genetic Algorithms** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |

@@ -14,6 +14,8 @@
 //   (chan-try-send ch wert)              → t gesendet / nil (voll, kein Empfänger)
 //   (chan-recv ch [:timeout sek])        → (values x t) / (values nil nil)
 //   (chan-try-recv ch)                   → (values x t) / sofort (values nil nil)
+//   (chan-select chans [:timeout sek])   → (values x t i) vom ersten liefernden Channel,
+//                                          sonst (values nil nil nil)
 //   (chan-close ch)                      → Channel schließen (t)
 //   (chan-closed? ch)                    → t wenn geschlossen und leer
 //   (lock-make)                          → neuen Mutex erstellen
@@ -25,6 +27,7 @@ package lib
 import (
   "fmt"
   "os"
+  "reflect"
   "sync"
   "sync/atomic"
   "time"
@@ -94,6 +97,7 @@ func RegisterGoroutines(env *Env) {
   _ = env.Set("chan-recv", makeFn(fnChanRecv))
   _ = env.Set("chan-try-recv", makeFn(fnChanTryRecv))
   _ = env.Set("chan-try-send", makeFn(fnChanTrySend))
+  _ = env.Set("chan-select", makeFn(fnChanSelect))
   _ = env.Set("chan-close", makeFn(fnChanClose))
   _ = env.Set("chan-closed?", makeFn(fnChanClosedP))
   _ = env.Set("lock-make", makeFn(fnLockMake))
@@ -188,6 +192,56 @@ func fnChanTryRecv(args []*Cell) (*Cell, error) {
   default:
     return recvValues(nil, false), nil
   }
+}
+
+// chan-select: (chan-select chans [:timeout sek]) → (values x t i) / (values nil nil nil)
+// Geschlossene und leere Channels scheiden aus; sind alle weg, endet das Warten.
+func fnChanSelect(args []*Cell) (*Cell, error) {
+  syntax := fmt.Errorf("chan-select: Syntax: (chan-select chans [:timeout sek])")
+  if len(args) != 1 && len(args) != 3 { return nil, syntax }
+  var d time.Duration
+  hasTimeout := len(args) == 3
+  if hasTimeout {
+    if args[1] == nil || args[1].Val != ":timeout" { return nil, syntax }
+    var ok bool
+    if d, ok = timeoutArg(args[2]); !ok { return nil, syntax }
+  }
+  if args[0] != nil && args[0].Type != LIST && args[0].Type != NIL { return nil, syntax }
+  chans := CellToSlice(args[0])
+  if len(chans) == 0 { return nil, fmt.Errorf("chan-select: leere Channel-Liste") }
+  cases := make([]reflect.SelectCase, len(chans), len(chans)+1)
+  index := make([]int, len(chans))
+  for i, c := range chans {
+    gc, err := getChannel(c)
+    if err != nil { return nil, fmt.Errorf("chan-select: kein Channel an Stelle %d", i) }
+    cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(gc.ch)}
+    index[i] = i
+  }
+  timeoutCase := -1
+  if hasTimeout {
+    timeoutCase = len(cases)
+    if d == 0 {
+      cases = append(cases, reflect.SelectCase{Dir: reflect.SelectDefault})
+    } else {
+      timer := time.NewTimer(d)
+      defer timer.Stop()
+      cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(timer.C)})
+    }
+  }
+  none := MakeValues([]*Cell{MakeNil(), MakeNil(), MakeNil()})
+  for len(index) > 0 {
+    chosen, v, ok := reflect.Select(cases)
+    if chosen == timeoutCase { return none, nil }
+    if !ok {
+      cases = append(cases[:chosen], cases[chosen+1:]...)
+      index = append(index[:chosen], index[chosen+1:]...)
+      if hasTimeout { timeoutCase-- }
+      continue
+    }
+    x, _ := v.Interface().(*Cell)
+    return MakeValues([]*Cell{x, MakeAtom("t"), MakeNum(float64(index[chosen]))}), nil
+  }
+  return none, nil
 }
 
 // chan-close: (chan-close ch) → t; zweites Mal Fehler

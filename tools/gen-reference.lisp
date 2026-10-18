@@ -109,6 +109,7 @@
     (ceiling . "auf die naechste ganze Zahl aufrunden; 2 Werte (CL): Quotient, Rest")
     (chan-make . "Channel erzeugen (optional Puffergroesse n)")
     (chan-recv . "Wert aus Channel empfangen (blockierend)")
+    (chan-select . "erster liefernder Channel einer Liste: (values x t i); (values nil nil nil) bei Timeout oder wenn alle geschlossen; optional :timeout sek")
     (chan-send . "Wert in Channel senden")
     (clrhash . "Hash-Table leeren")
     (coerce . "Typumwandlung, unterstuetzt 'list und 'string")

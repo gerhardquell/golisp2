@@ -274,3 +274,92 @@ func TestChanCloseWakesReceiver(t *testing.T) {
     (spawn (lambda () (chan-close ch)))
     (multiple-value-list (chan-recv ch :timeout 1))`, "(() ())")
 }
+
+// --- chan-select ---
+
+func TestChanSelectOneReady(t *testing.T) {
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send b 7)
+    (multiple-value-list (chan-select (list a b)))`, "(7 t 1)")
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send a "x")
+    (multiple-value-list (chan-select (list a b) :timeout 1))`, `("x" t 0)`)
+}
+
+func TestChanSelectBind(t *testing.T) {
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send b 5)
+    (multiple-value-bind (x ok i) (chan-select (list a b))
+      (list x ok i))`, "(5 t 1)")
+}
+
+func TestChanSelectBothReadyRandom(t *testing.T) {
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send a 1) (chan-send b 2)
+    (multiple-value-bind (x ok i) (chan-select (list a b))
+      (list ok (if (= i 0) (= x 1) (= x 2))))`, "(t t)")
+}
+
+func TestChanSelectTimeout(t *testing.T) {
+  start := time.Now()
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (multiple-value-list (chan-select (list a b) :timeout 0.05))`, "(() () ())")
+  if d := time.Since(start); d < 40*time.Millisecond || d > 2*time.Second {
+    t.Errorf("Timeout-Dauer = %v", d)
+  }
+}
+
+func TestChanSelectTimeoutZero(t *testing.T) {
+  start := time.Now()
+  evalEq(t, `(define a (chan-make 1))
+    (multiple-value-list (chan-select (list a) :timeout 0))`, "(() () ())")
+  if d := time.Since(start); d > time.Second {
+    t.Errorf("sofort erwartet, Dauer = %v", d)
+  }
+  evalEq(t, `(define a (chan-make 1)) (chan-send a 9)
+    (multiple-value-list (chan-select (list a) :timeout 0))`, "(9 t 0)")
+}
+
+func TestChanSelectAllClosedEmpty(t *testing.T) {
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-close a) (chan-close b)
+    (multiple-value-list (chan-select (list a b)))`, "(() () ())")
+}
+
+func TestChanSelectClosedWithBufferDelivers(t *testing.T) {
+  evalEq(t, `(define a (chan-make 1)) (define b (chan-make 1))
+    (chan-send a 4) (chan-close a) (chan-close b)
+    (list (multiple-value-list (chan-select (list a b)))
+          (multiple-value-list (chan-select (list a b))))`, "((4 t 0) (() () ()))")
+}
+
+func TestChanSelectSkipsClosedWhileWaiting(t *testing.T) {
+  evalEq(t, `(define a (chan-make)) (define b (chan-make 1))
+    (spawn (lambda () (sleep 50) (chan-close a) (sleep 50) (chan-send b 3)))
+    (multiple-value-list (chan-select (list a b) :timeout 5))`, "(3 t 1)")
+}
+
+func TestChanSelectBlocksUntilSend(t *testing.T) {
+  evalEq(t, `(define a (chan-make)) (define b (chan-make))
+    (spawn (lambda () (sleep 50) (chan-send a 8)))
+    (multiple-value-list (chan-select (list a b)))`, "(8 t 0)")
+}
+
+func TestChanSelectErrors(t *testing.T) {
+  cases := []struct{ src, want string }{
+    {`(chan-select)`, "chan-select: Syntax: (chan-select chans [:timeout sek])"},
+    {`(chan-select (list (chan-make)) :timeout)`, "chan-select: Syntax: (chan-select chans [:timeout sek])"},
+    {`(chan-select (list (chan-make)) :foo 1)`, "chan-select: Syntax: (chan-select chans [:timeout sek])"},
+    {`(chan-select (list (chan-make)) :timeout -1)`, "chan-select: Syntax: (chan-select chans [:timeout sek])"},
+    {`(chan-select 5)`, "chan-select: Syntax: (chan-select chans [:timeout sek])"},
+    {`(chan-select (list))`, "chan-select: leere Channel-Liste"},
+    {`(chan-select (list (chan-make) 5))`, "chan-select: kein Channel an Stelle 1"},
+    {`(chan-select (list 5 (chan-make)))`, "chan-select: kein Channel an Stelle 0"},
+  }
+  for _, c := range cases {
+    _, err := evalStr(c.src)
+    if err == nil || !strings.Contains(err.Error(), c.want) {
+      t.Errorf("eval(%q) Fehler = %v, want %q", c.src, err, c.want)
+    }
+  }
+}

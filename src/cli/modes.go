@@ -181,7 +181,7 @@ func runREPL(env *lib.Env) int {
     return 1
   }
 
-  fmt.Println("GoLisp 0.2  –  Ctrl+D oder (exit) zum Beenden")
+  fmt.Println(lib.VersionText("golisp2") + "  –  Ctrl+D oder (exit) zum Beenden")
   fmt.Println("Multiline: offene Klammern → Fortsetzung mit ..")
   rl := lib.NewReadline("golisp2> ", env.Symbols)
   defer rl.Close()

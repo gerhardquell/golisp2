@@ -161,3 +161,17 @@ func TestRunHelpExits0(t *testing.T) {
     t.Fatalf("code = %d, want 0, stderr = %q", code, errOut.String())
   }
 }
+
+func TestRunVersionFlag(t *testing.T) {
+  for _, flagName := range []string{"-version", "--version"} {
+    var out, errOut bytes.Buffer
+    code := run([]string{flagName}, &out, &errOut)
+    if code != 0 {
+      t.Fatalf("%s: exit code = %d, want 0", flagName, code)
+    }
+    want := lib.VersionText("golisp2") + "\n"
+    if out.String() != want {
+      t.Fatalf("%s: stdout = %q, want %q", flagName, out.String(), want)
+    }
+  }
+}

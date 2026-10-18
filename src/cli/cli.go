@@ -45,11 +45,17 @@ func run(args []string, out, errOut io.Writer, ext ...Extension) int {
   exprFlag := fs.String("e", "", "Expression direkt ausführen")
   testFlag := fs.Bool("t", false, "Tests ausführen")
   swankFlag := fs.String("swank", "", "SWANK-Server starten (Format: host:port, z.B. 127.0.0.1:4005)")
+  versionFlag := fs.Bool("version", false, "Version ausgeben")
   if err := fs.Parse(args); err != nil {
     if errors.Is(err, flag.ErrHelp) {
       return 0
     }
     return 2
+  }
+
+  if *versionFlag {
+    fmt.Fprintln(out, lib.VersionText("golisp2"))
+    return 0
   }
 
   env := lib.BaseEnv()

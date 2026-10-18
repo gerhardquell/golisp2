@@ -12,6 +12,7 @@ Fehler nach stderr, Exit-Code sagt die Wahrheit.
 | `-e EXPR` | Expression(en) direkt ausführen | `./build/golisp2 -e "(* 6 7)"` |
 | `-t` | Lisp-Testsuite ausführen (Exit-Code = Anzahl FAILs) | `./build/golisp2 -t` |
 | `--swank HOST:PORT` | SWANK-Server starten (Emacs/SLIME) | `./build/golisp2 --swank 127.0.0.1:4242` |
+| `--version` | Version ausgeben (`golisp2 0.2.0 (<commit>, <datum>[, dirty])`) und beenden; `golisp2-client` kennt dasselbe Flag | `./build/golisp2 --version` |
 | `DATEI` | Lisp-Datei laden und ausführen | `./build/golisp2 script.lisp` |
 
 **Shebang:** Eine Zeile `#!…` (typisch `#!/usr/local/bin/golisp2`) gilt

@@ -323,15 +323,21 @@ func main() {
 	}
 
 	var (
-		host     = flag.String("host", hostDefault, "Server-Host (env: GOLISP_HOST)")
-		port     = flag.String("port", portDefault, "Server-Port (env: GOLISP_PORT)")
-		evalFlag = flag.String("eval", "", "Expression auswerten")
-		replFlag = flag.Bool("repl", false, "Interaktiver REPL-Modus")
-		compFlag = flag.String("complete", "", "Autocomplete für Prefix")
-		loadFlag = flag.String("load", "", "Datei laden")
-		pingFlag = flag.Bool("ping", false, "Server-Ping")
+		host        = flag.String("host", hostDefault, "Server-Host (env: GOLISP_HOST)")
+		port        = flag.String("port", portDefault, "Server-Port (env: GOLISP_PORT)")
+		evalFlag    = flag.String("eval", "", "Expression auswerten")
+		replFlag    = flag.Bool("repl", false, "Interaktiver REPL-Modus")
+		compFlag    = flag.String("complete", "", "Autocomplete für Prefix")
+		loadFlag    = flag.String("load", "", "Datei laden")
+		pingFlag    = flag.Bool("ping", false, "Server-Ping")
+		versionFlag = flag.Bool("version", false, "Version ausgeben")
 	)
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(lib.VersionText("golisp2-client"))
+		return
+	}
 
 	client := NewClient(*host, *port)
 	if err := client.Connect(); err != nil {

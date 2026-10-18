@@ -28,7 +28,7 @@ func RunServer(addr string) error {
   if err != nil {
     return fmt.Errorf("RunServer: %w", err)
   }
-  fmt.Fprintf(os.Stderr, "SWANK server on %s\n", listener.Addr())
+  fmt.Fprintf(os.Stderr, "%s – SWANK server on %s\n", lib.VersionText("golisp2"), listener.Addr())
 
   for {
     conn, err := listener.Accept()
@@ -50,7 +50,7 @@ func RunServerEnv(addr string, env *lib.Env, exec func(func())) error {
     return fmt.Errorf("RunServerEnv: %w", err)
   }
   defer listener.Close()
-  fmt.Fprintf(os.Stderr, "SWANK server on %s\n", listener.Addr())
+  fmt.Fprintf(os.Stderr, "%s – SWANK server on %s\n", lib.VersionText("golisp2"), listener.Addr())
   return ServeEnv(listener, env, exec)
 }
 

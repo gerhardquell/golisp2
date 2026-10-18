@@ -43,3 +43,8 @@ func TestVersionTextMitVCS(t *testing.T) {
     t.Fatalf("dirty: %q", got)
   }
 }
+
+func TestLispImplementationVersion(t *testing.T) {
+  evalEq(t, `(lisp-implementation-version)`, `"`+Version+`"`)
+  evalErr(t, `(lisp-implementation-version 1)`)
+}

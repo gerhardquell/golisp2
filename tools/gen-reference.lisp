@@ -204,6 +204,7 @@
     (last . "letztes Element einer Liste")
     (length . "Elementzahl einer Liste bzw. Zeichenzahl eines Strings")
     (lisp-error-msg . ":msg-Slot einer Condition liefern")
+    (lisp-implementation-version . "Version von golisp2 als String (CL)")
     (list . "Liste aus den Argumenten erzeugen")
     (loop . "Iteration (CL-Praxis-Kern): for/repeat/when/collect/sum/... (loop.lisp)")
     (list->string . "Stringliste zu einem String verketten")

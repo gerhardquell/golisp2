@@ -241,7 +241,7 @@
                           :style :spawn
                           :encoding (list :coding-systems (list "utf-8-unix"))
                           :implementation (list :type "GoLisp"
-                                                :version "0.2"
+                                                :version (lisp-implementation-version)
                                                 :program "golisp")
                           :machine (list :instance "unknown")
                           :package (list :name "USER" :prompt "USER")

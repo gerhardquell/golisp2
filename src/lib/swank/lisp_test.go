@@ -438,3 +438,28 @@ func TestSwankFindDefinitionsReplSnippet(t *testing.T) {
     t.Fatalf("expected buffer snippet for REPL fn, got: %s", s)
   }
 }
+
+func TestSwankConnectionInfoVersion(t *testing.T) {
+  env := lib.BaseEnv()
+  lib.LoadStdlib(env)
+  RegisterSwankEnv(env, func(c *lib.Cell) error { return nil })
+  if err := LoadSwankLisp(env); err != nil {
+    t.Fatalf("LoadSwankLisp: %v", err)
+  }
+  cell, err := lib.Read("(:emacs-rex (swank:connection-info) nil t 1)")
+  if err != nil {
+    t.Fatalf("read: %v", err)
+  }
+  result, err := HandleMessage(env, cell)
+  if err != nil {
+    t.Fatalf("HandleMessage: %v", err)
+  }
+  s := result.String()
+  impl := `:implementation (:type "GoLisp" :version "` + lib.Version + `"`
+  if !strings.Contains(s, impl) {
+    t.Fatalf("Implementierungsversion fehlt (%s): %s", impl, s)
+  }
+  if !strings.Contains(s, `:features () :version "0.2"`) {
+    t.Fatalf("Protokollversion 0.2 fehlt: %s", s)
+  }
+}

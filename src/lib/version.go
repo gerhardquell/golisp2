@@ -12,12 +12,21 @@
 package lib
 
 import (
+  "fmt"
   "runtime/debug"
   "strings"
 )
 
 // Version von golisp2 – von Hand gepflegt (SemVer)
-const Version = "0.5.2"
+const Version = "0.6.0"
+
+// lisp-implementation-version: (lisp-implementation-version) → Version als String (CL)
+func fnLispImplementationVersion(args []*Cell) (*Cell, error) {
+  if len(args) != 0 {
+    return nil, fmt.Errorf("lisp-implementation-version: keine Argumente erwartet")
+  }
+  return MakeStr(Version), nil
+}
 
 // VersionText liefert "<name> <Version> (<commit>, <datum>[, dirty])";
 // ohne VCS-Infos (z. B. go test) nur "<name> <Version>".

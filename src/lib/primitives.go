@@ -79,6 +79,7 @@ func BaseEnv() *Env {
 	_ = env.Set("memstats", makeFn(fnMemstats))
 
 	// Introspektion
+	_ = env.Set("lisp-implementation-version", makeFn(fnLispImplementationVersion))
 	_ = env.Set("env-symbols", makeFn(func(args []*Cell) (*Cell, error) {
 		names := env.Symbols()
 		sort.Strings(names)

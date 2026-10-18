@@ -102,7 +102,7 @@ golisp2> :quit
 
 | Op | Verhalten |
 |----|-----------|
-| `swank:connection-info` | `(:type "GoLisp" :version "0.2" :style :spawn)` |
+| `swank:connection-info` | `(:style :spawn :implementation (:type "GoLisp" :version "<golisp2-Version>") … :version "0.2")` — innen die Implementierungsversion aus `(lisp-implementation-version)`, außen die feste SWANK-Protokollversion |
 | `swank:swank-require` | Stub `(:ok ())` — keine Contribs |
 | `swank:init-presentations` | Stub `(:ok ())` |
 | `swank-repl:create-repl` | `(:ok ("USER" "USER"))` + `:new-package` |

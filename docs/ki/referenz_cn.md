@@ -117,7 +117,7 @@
 
 ### 领域（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo-models sigo-host`
-- **Goroutine：** `chan-make chan-send chan-recv lock-make`
+- **Goroutine：** `chan-make chan-send chan-recv chan-try-recv chan-try-send chan-close chan-closed? chan-select spawn lock-make`
 - **共享内存：** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **文件 I/O：** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell：** `system file-stat shell-assoc`

@@ -117,7 +117,7 @@ Tail calls (`if`, `begin`, `let`, `lambda`, `case`, `cond`, `prog1/2`, `catch`,
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo-models sigo-host`
-- **Goroutines:** `chan-make chan-send chan-recv lock-make`
+- **Goroutines:** `chan-make chan-send chan-recv chan-try-recv chan-try-send chan-close chan-closed? chan-select spawn lock-make`
 - **Shared memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system file-stat shell-assoc`

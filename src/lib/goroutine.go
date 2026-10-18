@@ -7,7 +7,8 @@
 //**********************************************************************
 // Go-Nebenläufigkeit als Lisp-Primitiven:
 //   (parfunc ergebnis expr1 expr2 ...)  → parallel auswerten
-//   (spawn fn)                           → fn in neuer Goroutine, sofort zurück
+//   (spawn fn)                           → fn in neuer Goroutine, sofort Ergebnis-Channel
+//                                          mit genau einer Nachricht (:ok wert) / (:error text)
 //   (chan-make)                          → neuen Channel erstellen
 //   (chan-send ch wert)                  → Wert senden (blockiert)
 //   (chan-try-send ch wert)              → t gesendet / nil (voll, kein Empfänger)
@@ -218,8 +219,10 @@ func fnLockMake(args []*Cell) (*Cell, error) {
 }
 
 // spawn: (spawn fn) → startet fn ohne Argumente in einer neuen Goroutine
-// und kehrt sofort mit nil zurück (Fire-and-forget, Gegenstück zu
-// parfunc, das wartet). Fehler und panics von fn landen auf stderr.
+// und kehrt sofort mit einem Ergebnis-Channel (Puffer 1) zurück (Gegenstück
+// zu parfunc, das wartet). Der Channel erhält genau eine Nachricht:
+// (:ok wert) mit dem Primärwert, (:error text) bei Fehler oder panic.
+// Fehler und panics gehen zusätzlich auf stderr.
 func fnSpawn(args []*Cell) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("spawn: genau 1 Argument nötig (Funktion)")
@@ -228,15 +231,24 @@ func fnSpawn(args []*Cell) (*Cell, error) {
   if fn == nil || (fn.Type != FUNC && fn.Type != LAMBDA) {
     return nil, fmt.Errorf("spawn: '%s' ist keine Funktion", fn)
   }
+  result := makeChannelCell(1)
+  gc, _ := getChannel(result)
   go func() {
+    msg := List(MakeAtom(":error"), MakeStr("spawn: keine Nachricht"))
     defer func() {
       if r := recover(); r != nil {
         fmt.Fprintf(os.Stderr, "spawn: panic: %v\n", r)
+        msg = List(MakeAtom(":error"), MakeStr(fmt.Sprintf("panic: %v", r)))
       }
+      gc.ch <- msg
     }()
-    if _, err := apply(fn, nil); err != nil {
+    v, err := apply(fn, nil)
+    if err != nil {
       fmt.Fprintf(os.Stderr, "spawn: %v\n", err)
+      msg = List(MakeAtom(":error"), MakeStr(err.Error()))
+      return
     }
+    msg = List(MakeAtom(":ok"), Primary(v))
   }()
-  return MakeNil(), nil
+  return result, nil
 }

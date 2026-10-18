@@ -288,7 +288,7 @@
     (sleep . "Millisekunden pausieren")
     (slurp . "stdin komplett als String lesen")
     (sort . "Liste nach Vergleich sortieren (neue Liste)")
-    (spawn . "fn ohne Argumente in neuer Goroutine starten, sofort nil (fire-and-forget)")
+    (spawn . "fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text)")
     (sprintf . "C-Format in String umwandeln")
     (sqrt . "Quadratwurzel")
     (square . "x quadrieren")

@@ -43,8 +43,8 @@ func TestSpawnReturnsImmediately(t *testing.T) {
   if err != nil {
     t.Fatalf("LoadString: %v", err)
   }
-  if res.Type != NIL {
-    t.Fatalf("spawn-Rückgabe = %s, want ()", res)
+  if _, err := getChannel(Primary(res)); err != nil {
+    t.Fatalf("spawn-Rückgabe = %s, want Channel", res)
   }
   if d := time.Since(start); d > time.Second {
     t.Fatalf("spawn blockierte %v", d)
@@ -76,4 +76,38 @@ func TestSpawnArgErrors(t *testing.T) {
       t.Errorf("%s: kein Fehler, want Fehler", src)
     }
   }
+}
+
+func TestSpawnResultOk(t *testing.T) {
+  evalEq(t, `(chan-recv (spawn (lambda () 42)))`, "(:ok 42)")
+}
+
+func TestSpawnResultOkIsPrimary(t *testing.T) {
+  evalEq(t, `(chan-recv (spawn (lambda () (values 1 2))))`, "(:ok 1)")
+}
+
+func TestSpawnResultError(t *testing.T) {
+  evalEq(t, `(chan-recv (spawn (lambda () (error "kaputt"))))`, `(:error "kaputt")`)
+}
+
+func TestSpawnResultGoError(t *testing.T) {
+  evalEq(t, `(chan-recv (spawn (lambda () (car 1))))`, `(:error "car: Liste erwartet")`)
+}
+
+func TestSpawnResultPanic(t *testing.T) {
+  env := spawnEnv(t)
+  _ = env.Set("boom", makeFn(func(_ []*Cell) (*Cell, error) { panic("bumm") }))
+  res, err := LoadString(`(chan-recv (spawn boom))`, env)
+  if err != nil {
+    t.Fatalf("LoadString: %v", err)
+  }
+  if got, want := Primary(res).String(), `(:error "panic: bumm")`; got != want {
+    t.Fatalf("got %s, want %s", got, want)
+  }
+}
+
+func TestSpawnResultOnlyOnce(t *testing.T) {
+  evalEq(t, `(define ch (spawn (lambda () 1)))
+    (chan-recv ch)
+    (multiple-value-list (chan-try-recv ch))`, "(() ())")
 }

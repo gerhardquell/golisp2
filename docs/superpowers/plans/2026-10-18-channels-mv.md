@@ -6,7 +6,7 @@
 
 **Anlass:** Bau von golisp2dfs (`/u/ki-projekte/DataFlowSystem/exp/dfs`), Retro `RETROSPECTIVE.md.d/20261018-1705-golisp2dfs-qad.md` dort. Entscheidungen Gerhard 20261018: Rückgabe über Mehrfachwerte; spawn mit Ergebnis-Channel; CL-Namen und `puthash` nur dokumentieren; `select` als Primitiv `chan-select` (nur Empfangen); Versionsstart 0.2.0 (passend zum REPL-Kopf „GoLisp 0.2“), jeder Task zählt hoch.
 
-**Versionen je Task (im selben Commit hochzählen):** Task 0 → 0.2.0 · Task 1 (Fix) → 0.2.1 · Task 2 (Channels) → 0.3.0 · Task 3 (spawn) → 0.4.0 · Task 4 (chan-select) → 0.5.0 · Task 5 (Doku) unverändert.
+**Versionen je Task (im selben Commit hochzählen):** Task 0 → 0.2.0 · Task 1 (Fix) → 0.2.1 · Task 2 (Channels) → 0.3.0 · Task 3 (spawn) → 0.4.0 · Task 4 (chan-select) → 0.5.0 · Task 4b (Fix cond/prog1/or) → 0.5.1 · Task 5 (Doku) unverändert.
 
 **Tech Stack:** Go (Modul `golisp2`), Paket `src/lib`, `go test`, eingebettete Stdlib/Doku.
 
@@ -219,13 +219,39 @@ Fehler wörtlich: `chan-select: Syntax: (chan-select chans [:timeout sek])`, `ch
 
 ---
 
+## Task 4b: cond ohne Körper, prog1/prog2/or nach CL (0.5.1)
+
+**Befund aus Task 1** (Entscheidung Gerhard 20261018: mit erledigen):
+
+| Form | heute | soll (CL) |
+|---|---|---|
+| `(cond ('foo))` | Fehler „unbekanntes Symbol 'foo'“ – Testwert wird ein zweites Mal ausgewertet (`expr = testVal; continue`) | `foo` |
+| `(cond ((list 1 2)))` | ruft `(1 2)` als Funktion auf | `(1 2)` |
+| `(multiple-value-list (cond ((values 1 2))))` | – | `(1)` – Klausel ohne Körper liefert den **Primärwert** des Tests |
+| `(multiple-value-list (prog1 (values 1 2) 3))` | `(1 2)` | `(1)` |
+| `(multiple-value-list (prog2 0 (values 1 2) 3))` | `(1 2)` | `(1)` |
+| `(multiple-value-list (or (values 1 2) 3))` | `(1 2)` | `(1)` – vordere Formen nur Primärwert |
+| `(multiple-value-list (or nil (values 1 2)))` | `(1 2)` | `(1 2)` – letzte Form bleibt Tail, MV wird durchgereicht |
+| `(multiple-value-list (and 1 (values 1 2)))` | `(1 2)` | `(1 2)` – unverändert (Charakterisierungstest) |
+| `(parfunc r :timeout 0.2 (progn (sleep 1000) 1))` | Timeout still ignoriert (`time.Duration(0.2)*time.Second` = 0 → kein Timeout), Ergebnis `(1)` nach 1 s | `(())` nach ≈ 0,2 s – Zahl über `timeoutArg` (Task 2) lesen, keine zweite Lese-Logik |
+
+- [ ] Failing Tests (eine Testfunktion je Form) in `src/lib/eval_mv_test.go` bzw. für `cond` in `eval_control_test.go`/passender Datei; `and`-Zeile als Charakterisierungstest.
+- [ ] Fix `cond`: Klausel ohne Körper gibt `Primary(testVal)` direkt zurück, **kein** erneutes Auswerten. TCO der übrigen `cond`-Zweige unverändert lassen.
+- [ ] Fix `prog1`/`prog2`/`or` über `Primary()`; letzte `or`-Form bleibt Tail.
+- [ ] Fix `parfunc :timeout`: `timeoutArg` aus `goroutine.go` nutzen (Bruchteile, Typprüfung); bestehende `parfunc`-Tests bleiben grün.
+- [ ] `Version` → `0.5.1`.
+- [ ] Grün + Commit `fix(eval): cond ohne Körper wertet nicht doppelt aus; prog1/prog2/or liefern Primärwert (0.5.1)`.
+
+---
+
 ## Task 5: Doku
 
 - [ ] `src/embed/ki-referenz.md` (**Cache-Regel:** Dateianfang nicht ändern, nur die betroffenen Abschnitte):
   - Abschnitt 3, Zeile **Goroutinen**: alle Channel-Formen mit Signatur und Rückgabe (Tabellen aus Task 2 und 4), `spawn` mit Ergebnis-Channel.
   - Zeile **Hashtable**: `puthash` als intern markieren: `(puthash key table value)` – Tabelle an 2. Stelle (anders als Emacs Lisp); empfohlen `(setf (gethash k h) v)`.
   - Abschnitt 9 **Gotchas**, neue Zeilen: `puthash`-Reihenfolge; `stringp`/`consp`/`string=`/`equal` fehlen → `string?`, `(typep x 'cons)`, `equal?`; `member` ohne `:test` (vergleicht Strings strukturell); `(last l)` liefert das Element, nicht die Zelle; `slurp` liest stdin, Datei → `file-read`; `(gets)` am Eingabeende → Fehler `gets: EOF`, nicht `nil`.
-- [ ] `docs/golisp2-fehler.md`: Einträge im Stil der Datei – [FIXED] MV in `lock`/`case` (+ Audit-Funde); [KNOWN] `puthash`-Reihenfolge; [LIMITATION] fehlende CL-Namen, `last`; [FIXED] Channels ohne Timeout/close; [FIXED] spawn-Fehler nur auf stderr.
+- [ ] `README.md`, `README_en.md`, `README_CN.md`: festen REPL-Kopf `GoLisp 0.2  –  Ctrl+D …` an die neue Ausgabe anpassen (`golisp2 <version> (…)  –  Ctrl+D …`), `--version` erwähnen.
+- [ ] `docs/golisp2-fehler.md`: Einträge im Stil der Datei – [FIXED] MV in `lock`/`case` (+ 21 Audit-Funde aus Task 1); [FIXED] `cond` ohne Körper wertete doppelt aus; [FIXED] `prog1`/`prog2`/`or` reichten MV durch; [KNOWN] `puthash`-Reihenfolge; [LIMITATION] fehlende CL-Namen, `last`; [FIXED] Channels ohne Timeout/close; [FIXED] spawn-Fehler nur auf stderr.
 - [ ] `docs/golisp2-cheatsheet.md`: Abschnitt Nebenläufigkeit um die neuen Formen ergänzen.
 - [ ] `docs/referenz-generiert.md` mit `tools/gen-reference.lisp` neu erzeugen (Aufruf steht im Kopf des Skripts).
 - [ ] `TODO.md` Punkt 1 (`--version`) **nicht** anfassen – Gerhard hat dort offene Änderungen; der Hauptagent hakt ihn nach dem Merge ab.

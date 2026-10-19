@@ -1,11 +1,12 @@
-# TODO 20261011 - Fragen
+# TODO golisp2 – Aufgaben und Fragen
 
-## 1. Testen eval
-- [x] Kein Fehler: `eval` braucht eine Form, keinen String (wie CL).
-      `(defvar mul '(+ 4 22)) (eval mul)` → 26;
-      aus Text: `(eval (read "(+ 4 22)"))` → 26.
+Zusammengeführt am 19.10.2026 aus `TODO.md` (Stand 18.10.) und den drei Dateien in `TODO.md.d/`
+(`TODO-20260928.md`, `TODO-20261003-luecken.md`, `TODO-20261011.md`). Die alten Dateien bleiben
+als Verlauf dort. Ihre offenen Punkte sind mit `- [>]` als „übertragen“ markiert.
+Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpreter ausprobiert.
 
-## Offen — Entscheidungen (Gerhard)
+## 1. Entscheidungen (Gerhard)
+
 - [ ] `swank--cell-type` (`src/lib/swank/env.go:116`) ist Beinahe-Zwilling
       von `cellTypeName` (`src/lib/celltype.go`). Zusammenlegen ändert die
       Labels von SLIME `describe-symbol` (`"atom"` → `symbol` …).
@@ -14,17 +15,60 @@
       in ch2 älter (ohne sort/sqrt-Fixes), Kap. 1 in ch2 neuer. Richtung?
 - [ ] Lispbuch-`CLAUDE.md`: Sprachabschnitt veraltet („keine Hash-Maps",
       „KEIN CL-Condition-System").
+- [ ] Printer: Große Floats erscheinen in Exponentialschreibweise
+      (geprüft 19.10.: `(now)` → `1.7924418639679012e+09`). Regel festlegen.
+      Umgehung heute: `(format nil "~,3f" x)`.
+- [ ] `golisp2 -e` druckt den Wert zusätzlich zur Ausgabe (geprüft 19.10.:
+      `(println 1)` → zwei Zeilen `1`). Daher kam die „doppelte“ `(environ)`-Ausgabe
+      (20261003 §5). Gewollt (REPL-Stil)?
 
-## Offen — Fehler / Kleinkram
+## 2. Fehler und Kleinkram
+
 - [ ] `format ~e` / `~g` runden falsch: `(format nil "~e" 1.5)` → `"2e+00"`
-      (CL: `"1.5e+0"`).
-- [ ] Kommentar an `fnAppend` (`src/lib/primitives.go`) sagt „single-item",
-      Tests sagen CL-`append` — Kommentar prüfen.
-- [x] `examples/golisp2web_demo.lisp`: Tabs aus der Umformatierung (2 Spaces).
-- [ ] typep-Folgen (Spec-Nicht-Ziele): `deftype`, `check-type`, `subtypep`,
-      `typecase`/`etypecase`.
-- [ ] Aus 20260928 weiter offen: sigo Schritt 2 (Modell ohne Thinking,
-      `zai-glm53-f`), Schritt 3 (`max_tokens`/`temperature`), Cache-Feldnamen
-      Moonshot/Gemini/DeepSeek.
+      (CL: `"1.5e+0"`; geprüft 19.10.: unverändert).
+- [ ] `(get-working-directory)` liefert `()`, wenn es nie gesetzt wurde
+      (geprüft 19.10.). Sollte es das echte Arbeitsverzeichnis liefern?
+- [ ] Kommentar an `fnAppend` (`src/lib/primitives.go:261`) sagt „single-item",
+      Tests sagen CL-`append` — Kommentar prüfen (19.10.: Kommentar unverändert).
 - [ ] webserv deferred-minor (20260809): `fnBrowserOpen` verschluckt Fehler,
       `/`-Kollision → Go-Panic, `webserv-smoke` nicht in `-t`.
+
+## 3. Fehlende Funktionen
+
+- [ ] Reguläre Ausdrücke für Lisp-Code (geprüft 19.10.: kein Symbol mit `regex`).
+- [ ] Vektoren/Arrays mit O(1)-Zugriff, `make-array`/`aref` (geprüft 19.10.: fehlen).
+- [ ] Arbeiterpool: Bietet die Stdlib einen, oder `(pool-map n fn liste)` bauen?
+      Vorlage: der Eigenbau in `/u/ki-projekte/ai-vergleiche/src/steuerung.lisp`.
+- [ ] typep-Folgen (Spec-Nicht-Ziele): `deftype`, `check-type`, `subtypep`,
+      `typecase`/`etypecase` (geprüft 19.10.: `typecase` unbekannt).
+
+## 4. sigo / sigoREST
+
+- [ ] Schritt 2: Default-Modell von `(sigo …)` auf ein Modell ohne Thinking
+      (Kandidat `zai-glm53-f`); Thinking-Modelle nur gezielt, dann `max_tokens` großzügig.
+- [ ] Schritt 3: Für Code niedrige `temperature` und bewusstes `max_tokens` als Standard
+      (pro Aufruf geht es schon über `sigo-request`).
+- [ ] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).
+      Greift `cached_tokens` mit dem Vorspann? Thinking-Anteil? Antworten golisp2-korrekt?
+- [ ] Cache-Feldnamen Moonshot/Gemini/DeepSeek.
+- [ ] Streaming für `sigo*`. Achtung: sigoREST bucht bei Streaming die Kosten falsch
+      (`/u/go-projekte/sigoREST/TODO-20261003-kosten.md`).
+- [ ] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (Werkzeug: `(sigo-costs t0)`).
+- [ ] Später, bei Bedarf: Zusammenfassung langer Sessions im Client statt des
+      20-Nachrichten-Fensters; Retrieval über `/v1/embeddings` statt Komplett-Referenz;
+      sigoREST (anderes Repo): Thinking pro Request abschalten.
+
+## 5. Beim Zusammenführen als erledigt erkannt (19.10.2026)
+
+| Punkt | Beleg |
+|---|---|
+| 20260928 Schritt 1: Referenz als Vorspann, stabiler Anfang, als `system_prompt` | `(sigo-reference)` ist per `go:embed` der Default-Vorspann; Cache-Regel steht im Kopf der Referenz |
+| 20260928 Gerhards Gedanken 1–3: Prompt leeren, lesen/schreiben, Kosten und Cache | `(sigo-system-prompt "")`, `(sigo-system-prompt "text")`, `sigo*` mit `cached-tokens`/`cost-usd`, `sigo-costs`, `sigo-usage` |
+| 20261003 §0: Doku „keine Hash-Maps“, „sigo nur Text“ | in golisp2-`CLAUDE.md` und der Zutat nicht mehr enthalten; KI-Referenz §3 beschreibt Hash-Tabellen und `sigo*` |
+| 20261003 §1: `parse-time` | entschieden 20261003: nicht gebaut (YAGNI) |
+| 20261003 §2: `shell-assoc` irreführend | dokumentiert: „nur `assoc`, kein Shell-Aufruf“ (KI-Referenz §3) |
+| 20261003 §4: `string-find` Nadel zuerst | dokumentiert (KI-Referenz §3, Strings) |
+| 20261003 §5: `slurp` | dokumentiert: liest stdin (KI-Referenz §9) |
+| 20261003 §5: `coerce 1 'string` | war schon erledigt; heute klarer Fehler statt `""` |
+| 20261011: Tabs in `examples/golisp2web_demo.lisp` | erledigt (TODO.md vom 18.10.) |
+| 20261011 §1: `golisp2 --version` | erledigt 20261018 (`src/lib/version.go`) |

@@ -1,5 +1,7 @@
 # TODO 20261003 - Lücken in golisp2, gefunden im Projekt ai-vergleiche
 
+> **Übertragen am 19.10.2026:** Offene Punkte (`- [>]`) werden in `../TODO.md` weitergeführt. Diese Datei ist nur noch Verlauf.
+
 Anlass: Für den sigoREST-Modellvergleich (`/u/ki-projekte/ai-vergleiche`, `src/steuerung.lisp`, ca. 350 Zeilen)
 habe ich golisp2 einen Tag lang als Steuerung benutzt. Dabei fehlte einiges oder war umständlich.
 Geprüft im Interpreter (`./build/golisp2 -e …`, `(env-symbols)` liefert 310 Symbole), Stand 03.10.2026.
@@ -8,11 +10,11 @@ Legende: **belegt** = im Interpreter ausprobiert, **offen** = nicht geprüft ode
 
 ## 0. Die Doku ist an zwei Stellen veraltet
 
-- [ ] `CLAUDE.md` / `sprachen/golisp2.md` (Projektvorgaben) behaupten „Keine Vektoren, keine Hash-Maps“.
+- [>] `CLAUDE.md` / `sprachen/golisp2.md` (Projektvorgaben) behaupten „Keine Vektoren, keine Hash-Maps“.
   **Belegt:** Hash-Tabellen gibt es (`make-hash-table`, `puthash`, `gethash`, `remhash`, `clrhash`, `maphash`,
   `hash-table-count`, `hash-table-p`). Argumentreihenfolge wie CL: `(puthash KEY TABLE VALUE)`, `(gethash KEY TABLE)`.
   Falsche Reihenfolge gibt nur „Hashtabelle erwartet, got …“. Das steht schon in `TODO.md` als „Lispbuch-CLAUDE.md veraltet“.
-- [ ] Dieselbe Doku sagt, `(sigo …)` liefere nur Text. **Belegt:** `(sigo* …)` liefert Text, Modell, finish-reason,
+- [>] Dieselbe Doku sagt, `(sigo …)` liefere nur Text. **Belegt:** `(sigo* …)` liefert Text, Modell, finish-reason,
   Prompt-/Completion-/Cached-/Reasoning-Tokens und `cost-usd`, dazu `(sigo-usage)`. Ich habe deshalb im Projekt
   zu Unrecht einen Go-Runner gebaut, weil ich `sigo*` nicht kannte. Grenzen von `sigo*` siehe 6.
 
@@ -24,7 +26,7 @@ Legende: **belegt** = im Interpreter ausprobiert, **offen** = nicht geprüft ode
 
 - [x] `(now)` → Sekunden mit Nachkommastellen (Float), oder `(now-ms)`.
 - [x] `(format-time fmt [zeit])` im Stil von `strftime`, z. B. `"%F %T"`.
-- [ ] `(parse-time text fmt)`, falls einfach machbar.
+- [>] `(parse-time text fmt)`, falls einfach machbar.
 - **Geklärt 20261003:** `get-universal-time` ist exakt CL-Universal-Time (Epoche 1900, Abstand zu Unix 2208988800 s). `(now)` liefert Unix-Sekunden als Float, `(format-time fmt [zeit] [:utc])` strftime-artig. `parse-time` nicht gebaut (YAGNI).
 - Alt: `(get-universal-time)` lieferte 4000022742. Das ist **nicht** die Unix-Zeit (ca. 1,79 Mrd. am 03.10.2026),
   sondern vermutlich CL-Universal-Time (Sekunden seit 1900) plus etwas? 1900→2026 wären ca. 3,98 Mrd.,
@@ -56,10 +58,10 @@ und `/api/costs` alle JSON. Ich habe die Teile in Python/Go ausgelagert. In Lisp
 - Erledigt 20261003: `(string-split s [sep])`, `(string-join liste sep)`, `(directory-files dir [muster])` (Namen, sortiert, Verzeichnisse mit `/`). Kein `glob` über ganze Pfade.
 - [x] **Verzeichnis auflisten / glob**: fehlt (**belegt**: kein Symbol dafür). `mkdir -p` lief über `system`.
 - [x] **`string-split`, `string-join`** fehlen (**belegt**, kein Symbol). Ich habe `zeilen` selbst geschrieben.
-- [ ] **Regulärausdrücke**: `(regexp …)` ist **kein** Symbol (**belegt**). Im Go-Quelltext kommt der String `"regexp"` vor.
+- [>] **Regulärausdrücke**: `(regexp …)` ist **kein** Symbol (**belegt**). Im Go-Quelltext kommt der String `"regexp"` vor.
   Unklar, wofür (vielleicht nur ein Import). Es gibt offenbar keine Regex-Funktion für Lisp-Code.
-- [ ] **Vektoren/Arrays** mit O(1)-Zugriff (`make-array`, `aref`): nicht vorhanden (**belegt**, kein Symbol).
-- [ ] `string-find` hat die Reihenfolge `(string-find NADEL HEUHAUFEN)` und liefert den Index oder `nil`.
+- [>] **Vektoren/Arrays** mit O(1)-Zugriff (`make-array`, `aref`): nicht vorhanden (**belegt**, kein Symbol).
+- [>] `string-find` hat die Reihenfolge `(string-find NADEL HEUHAUFEN)` und liefert den Index oder `nil`.
   **Belegt:** `(string-find "b" "abc")` → 1, `(string-find "abc" "b")` → `()`. Das ist umgekehrt zu `string-contains "abc" "b"` → `t`
   (Heuhaufen zuerst). Zwei ähnliche Funktionen mit entgegengesetzter Argumentreihenfolge. Ich bin darüber gestolpert.
   **Offen:** Absicht? Dokumentieren oder angleichen?
@@ -68,16 +70,16 @@ und `/api/costs` alle JSON. Ich habe die Teile in Python/Go ausgelagert. In Lisp
 
 - [x] `(coerce 1 'string)` liefert `""` statt `"1"` und keinen Fehler (**belegt**). `(coerce "12" 'number)` liefert einen
   klaren Fehler („nur 'list/'string“). Der stille leere String ist gefährlich. Fehler oder `"1"`.
-- [ ] `(get-working-directory)` liefert `()` (**belegt**), wenn es nie gesetzt wurde. **Offen:** Sollte es nicht das echte
+- [>] `(get-working-directory)` liefert `()` (**belegt**), wenn es nie gesetzt wurde. **Offen:** Sollte es nicht das echte
   Arbeitsverzeichnis liefern? Ich habe es nicht in einem Skript geprüft, nur mit `-e`.
-- [ ] `slurp` erwartet laut Fehlermeldung „keine Argumente“ (**belegt**). Nach dem Namen hätte ich „Datei lesen“ erwartet
+- [>] `slurp` erwartet laut Fehlermeldung „keine Argumente“ (**belegt**). Nach dem Namen hätte ich „Datei lesen“ erwartet
   (das ist `file-read`). **Offen:** `slurp` liest vermutlich stdin. Doku prüfen.
-- [ ] `(environ)` lieferte in meinem Test die Umgebung **doppelt** ineinander geschachtelt (**belegt** an der Ausgabe, die
+- [>] `(environ)` lieferte in meinem Test die Umgebung **doppelt** ineinander geschachtelt (**belegt** an der Ausgabe, die
   erste Liste wiederholt sich innerhalb der zweiten). Das kann an meinem Aufruf `-e "(println (environ))"` liegen (die
   Ausgabe erscheint sowohl als `println` als auch als Ergebnis der Zeile). **Offen:** Dasselbe gilt für alle `-e`-Tests in
   dieser Session: Jede Ausgabe kam doppelt. Prüfen, ob `-e` den Wert zusätzlich druckt (vermutlich gewollt, REPL-Stil).
 
-- [ ] Printer gibt große Floats in Exponentialschreibweise aus: `(now)` → `1.7910463319138556e+09`, `1791046331.5` → `1.7910463315e+09` (**belegt** 20261003). Umgehung: `(format nil "~,3f" x)` oder `(format-time "%s.%3N")`. CL druckt `1.7910463e9` (single) bzw. Dezimal — Regel festlegen.
+- [>] Printer gibt große Floats in Exponentialschreibweise aus: `(now)` → `1.7910463319138556e+09`, `1791046331.5` → `1.7910463315e+09` (**belegt** 20261003). Umgehung: `(format nil "~,3f" x)` oder `(format-time "%s.%3N")`. CL druckt `1.7910463e9` (single) bzw. Dezimal — Regel festlegen.
 
 ## 6. KI-Anbindung `sigo*` reicht nicht für Messungen
 
@@ -89,15 +91,15 @@ Warum das zählt: Im Vergleich brachen Aufrufe bei genau 300 s ab (`WriteTimeout
 mit Reasoning-Modellen laufen leicht in solche Grenzen. Für solche Messungen bräuchte golisp2:
 - Erledigt 20261004 (Branch sigo-request, gemergt): `(sigo-request h [host])` mit Feld `timeout` pro Call, `elapsed` im Ergebnis, `sigo*`/`sigo-usage` als Hash-Tabelle, dazu `sigo-costs`, `sigo-budget`, `sigo-model-info`. `stream` ist in `sigo-request` gesperrt.
 - [x] Timeout als Parameter pro Aufruf.
-- [ ] Streaming-Unterstützung. **Achtung:** sigoREST bucht bei Streaming die Kosten falsch
+- [>] Streaming-Unterstützung. **Achtung:** sigoREST bucht bei Streaming die Kosten falsch
   (siehe `/u/go-projekte/sigoREST/TODO-20261003-kosten.md`). `cost-usd` aus `sigo*` wäre dort ebenfalls zu prüfen.
-- [ ] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (die Doku nennt es „obere Schranke“). Werkzeug da: `(sigo-costs t0)` als Messfenster, Abgleich selbst offen.
+- [>] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (die Doku nennt es „obere Schranke“). Werkzeug da: `(sigo-costs t0)` als Messfenster, Abgleich selbst offen.
 
 ## 7. Nebenläufigkeit
 
 - **Belegt:** `parfunc`, `spawn`, `lock-make`, `chan-make` existieren. Im Projekt lief ein Pool mit N Arbeitern über M Zellen
   (`*parallel*` = 3 bis 4). Ich habe ihn in `steuerung.lisp` selbst gebaut.
-- [ ] Prüfen, ob die Stdlib einen Arbeiterpool bietet oder ob `(pool-map n fn liste)` sinnvoll wäre.
+- [>] Prüfen, ob die Stdlib einen Arbeiterpool bietet oder ob `(pool-map n fn liste)` sinnvoll wäre.
   **Offen:** Ob mein Eigenbau Lücken hat, habe ich nicht untersucht. Er lief stabil in 45 + 9 + 9 Zellen.
 
 ## 8. Was gut funktionierte (zur Einordnung)

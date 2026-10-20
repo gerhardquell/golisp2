@@ -32,7 +32,6 @@ func TestCformatToCL(t *testing.T) {
     {"%08.2f", "~8,2,,,'0F"},
     {"%e", "~,6,2E"},
     {"%015e", "~15,6,2,,,'0E"},
-    {"%g", "~G"},
     {"%c", "~C"},
     {"%%", "%"},
     {"100%%", "100%"},
@@ -48,7 +47,7 @@ func TestCformatToCL(t *testing.T) {
 }
 
 func TestCformatToCLErrors(t *testing.T) {
-  for _, bad := range []string{"%", "%q", "%.3s", "%-8.2f", "%5c"} {
+  for _, bad := range []string{"%", "%q", "%.3s", "%-8.2f", "%5c", "%g"} {
     if _, err := cformatToCL(bad); err == nil {
       t.Errorf("cformatToCL(%q): Fehler erwartet, keiner gekommen", bad)
     }

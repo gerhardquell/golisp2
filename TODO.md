@@ -27,7 +27,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 - [x] `format ~e` / `~g` runden falsch: `(format nil "~e" 1.5)` → `"2e+00"`
       (CL: `"1.5e+0"`). Erledigt 20.10.: ohne `d`/`e` so viele Stellen wie nötig;
       `printf "%e"` behält C-Form `e+00`, `%0We` füllt jetzt mit `0`.
-      Offen: `~g` ist weiter nur `~e` (CL wählt zwischen `~f` und `~e`).
+      `~g` seit 20.10. nach CLHS 22.3.3.3 (`~f` + 4 Leerzeichen oder `~e`);
+      `printf "%g"` ist jetzt ein Fehler (kein FORMAT-Gegenstück).
 - [x] `(get-working-directory)` liefert `()`, wenn es nie gesetzt wurde
       (geprüft 19.10.). Erledigt 20.10.: liefert dann das Prozess-Verzeichnis.
 - [x] Kommentar an `fnAppend` (`src/lib/primitives.go:261`) sagt „single-item",

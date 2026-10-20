@@ -13,6 +13,7 @@ package lib
 
 import (
   "fmt"
+  "math"
   "strconv"
   "strings"
   "unicode/utf8"
@@ -520,9 +521,48 @@ func formatExp(f float64, d, e int, at bool) string {
   return sign + mant + "e" + esign + es
 }
 
+// emitG: ~w,d,e,k,overflowchar,padcharG nach CLHS 22.3.3.3 — ~F mit ee
+// Leerzeichen dahinter, wenn die Zahl in d Stellen passt, sonst ~E.
 func emitG(st *fmtState, params []pval, at bool) {
-  // ~G: General — vereinfacht als ~E-Darstellung gewählt.
-  emitE(st, params, at)
+  w := resolveInt(st, paramGet(params, 0), -1)
+  dParam := resolveInt(st, paramGet(params, 1), -1)
+  e := resolveInt(st, paramGet(params, 2), -1)
+  padchar := resolveRune(st, paramGet(params, 5), ' ')
+  f := toFloat(st.consume())
+
+  // n: Stellen vor dem Komma (10^(n-1) <= |f| < 10^n), q: signifikante Ziffern
+  digits, exp, _ := strings.Cut(strconv.FormatFloat(math.Abs(f), 'e', -1, 64), "e")
+  q := len(strings.Replace(digits, ".", "", 1))
+  n, _ := strconv.Atoi(exp)
+  n++
+  if f == 0 {
+    n = 0
+  }
+  d := dParam
+  if d < 0 {
+    d = max(q, min(n, 7))
+  }
+  ee := 4
+  if e >= 0 {
+    ee = e + 2
+  }
+
+  var s string
+  width := w
+  if dd := d - n; dd >= 0 && dd <= d {
+    s = formatFixed(f, dd, at)
+    width = w - ee
+  } else {
+    if e < 0 {
+      e = 1
+    }
+    s = formatExp(f, dParam, e, at) // ohne d: so viele Stellen wie nötig, wie ~E
+    ee = 0
+  }
+  if width > utf8.RuneCountInString(s) {
+    s = strings.Repeat(string(padchar), width-utf8.RuneCountInString(s)) + s
+  }
+  st.out.WriteString(s + strings.Repeat(" ", ee))
 }
 
 func emitDollar(st *fmtState, params []pval, at bool) {

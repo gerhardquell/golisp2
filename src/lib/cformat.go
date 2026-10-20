@@ -17,7 +17,7 @@
 // Unicode: alles rune-basiert (utf8.RuneCountInString), %c = 1 Rune.
 //
 // Unterstütztes Kern-Set:
-//   %d %i %s %f %e %g %x %X %o %c %%
+//   %d %i %s %f %e %x %X %o %c %%
 //   Flags: - (linksbündig), 0 (Null-Padding), + (Vorzeichen)
 //   width, .precision
 //
@@ -26,6 +26,7 @@
 //   - %x/%X: Ausgabe immer lowercase (Engine nutzt strconv.FormatInt)
 //   - %.Ns (String-Truncation): Fehler — CL-format kann das nicht ausdrücken
 //   - linksbündige Floats (%-8.2f): Fehler — ~F kennt kein linksbündig
+//   - %g: Fehler — C-%g hat kein FORMAT-Gegenstück
 //   - Hex/Exponential-Details folgen der Engine, nicht glibc
 //**********************************************************************
 
@@ -121,8 +122,11 @@ func cformatToCL(cfmt string) (string, error) {
         return "", fmt.Errorf("cformat: %%.%ds (String-Truncation) nicht unterstützt", prec)
       }
       out.WriteString(clStr(width, left))
-    case 'f', 'e', 'g':
-      s, err := clFloat(width, prec, zero, left, plus, rune(verb-32)) // → F/E/G
+    case 'g':
+      // C-%g (Precision 6, Nullen kürzen) hat kein FORMAT-Gegenstück; ~G ist CL-Semantik
+      return "", fmt.Errorf("cformat: %%g nicht unterstützt — %%f oder %%e verwenden")
+    case 'f', 'e':
+      s, err := clFloat(width, prec, zero, left, plus, rune(verb-32)) // → F/E
       if err != nil { return "", err }
       out.WriteString(s)
     case 'c':
@@ -168,7 +172,7 @@ func clFloat(width, prec int, zero, left, plus bool, verb rune) (string, error) 
     return "", fmt.Errorf("cformat: linksbündige Floats (%%-%c) nicht unterstützt", verb)
   }
   p := prec
-  if p < 0 && verb != 'G' { p = 6 }
+  if p < 0 { p = 6 }
   var b strings.Builder
   b.WriteRune('~')
   if width > 0 { b.WriteString(strconv.Itoa(width)) }

@@ -329,3 +329,62 @@ func TestDeftypeKollision(t *testing.T) {
     t.Errorf("Warnung fehlt, stderr = %q", out)
   }
 }
+
+func TestSubtypep(t *testing.T) {
+  st := func(a, b, want string) {
+    t.Helper()
+    evalStdlibEq(t, `(multiple-value-list (subtypep '`+a+` '`+b+`))`, want)
+  }
+  // eingebaute Hierarchie
+  st("integer", "number", "(t t)")
+  st("number", "integer", "(() t)")
+  st("null", "list", "(t t)")
+  st("string", "sequence", "(t t)")
+  st("string", "cons", "(() t)")
+  st("integer", "t", "(t t)")
+  st("t", "integer", "(() t)")
+  st("integer", "integer", "(t t)")
+  st("()", "string", "(t t)") // nil ist der leere Typ
+  // atom = (not cons)
+  st("integer", "atom", "(t t)")
+  st("null", "atom", "(t t)")
+  st("list", "atom", "(() t)")
+  st("atom", "number", "(() t)")
+  // Kombinatoren
+  st("(or integer float)", "number", "(t t)")
+  st("(or integer string)", "number", "(() t)")
+  st("integer", "(or string number)", "(t t)")
+  st("integer", "(and number atom)", "(t t)")
+  st("(and integer string)", "integer", "(t t)")
+  st("(member 1 2 3)", "integer", "(t t)")
+  st("(member 1 \"a\")", "integer", "(() t)")
+  st("(eql 5)", "(integer 0 9)", "(t t)")
+  // Bereiche
+  st("(integer 0 9)", "integer", "(t t)")
+  st("(integer 0 9)", "number", "(t t)")
+  st("(integer 0 9)", "(integer 0 *)", "(t t)")
+  st("(integer 2 5)", "(integer (1) (6))", "(t t)")
+  st("integer", "(integer * *)", "(t t)")
+  st("string", "(integer 0 9)", "(() t)")
+  // unentscheidbar → (() ())
+  st("integer", "(integer 0 9)", "(() ())")
+  st("(satisfies evenp)", "integer", "(() ())")
+  st("integer", "(not string)", "(() ())")
+}
+
+func TestSubtypepNutzertypen(t *testing.T) {
+  st := func(pre, a, b, want string) {
+    t.Helper()
+    evalStdlibEq(t, pre+` (multiple-value-list (subtypep '`+a+` '`+b+`))`, want)
+  }
+  st(`(defstruct punkt x)`, "punkt", "structure-object", "(t t)")
+  st(`(defstruct punkt x)`, "punkt", "cons", "(t t)")
+  st(`(defstruct punkt x)`, "punkt", "number", "(() t)")
+  st(`(defstruct punkt x)`, "punkt", "atom", "(() t)")
+  st(`(define-condition mein-f (error) ())`, "mein-f", "error", "(t t)")
+  st(`(define-condition mein-f (error) ())`, "error", "mein-f", "(() t)")
+  st(`(define-condition mein-f (error) ())`, "mein-f", "string", "(() t)")
+  st(`(deftype ziffer () '(integer 0 9))`, "ziffer", "integer", "(t t)")
+  st(`(deftype ziffer () '(integer 0 9))`, "(eql 3)", "ziffer", "(t t)")
+  evalStdlibErr(t, `(subtypep 'gibts-nicht 'integer)`)
+}

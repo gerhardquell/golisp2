@@ -289,3 +289,130 @@
      (%deftype-check ',name)
      (set! *deftypes* (alist-set ',name (lambda ,lambda-list ,@body) *deftypes*))
      ',name))
+
+;; === subtypep ========================================================
+
+;; Intern liefert jede Prüfung (sub? sicher?) als Liste; subtypep gibt sie
+;; als zwei Werte zurück. (() ()) = nicht entscheidbar (erlaubt laut CL).
+
+(defun %st-ja/nein (b) (if b '(t t) '(() t)))
+
+;; alle Teilergebnisse ja → ja; eines sicher nein → nein; sonst unklar
+(defun %st-all (results)
+  (cond ((every car results)                                   '(t t))
+        ((any (lambda (r) (and (not (car r)) (cadr r))) results) '(() t))
+        (t                                                     '(() ()))))
+
+(defun %st-some (results)
+  (if (any car results) '(t t) '(() ())))
+
+(defun %st-deftype? (s)
+  (if (pair? s)
+      (and (symbol? (car s)) (assoc (car s) *deftypes*))
+      (and (symbol? s) (assoc s *deftypes*))))
+
+(defun %st-expand (s)
+  (if (pair? s) (%deftype-expand (car s) (cdr s)) (%deftype-expand s '())))
+
+(defun %st-name-kind (name)
+  (cond ((%builtin-type? name)            'builtin)
+        ((assoc name *struct-types*)      'struct)
+        ((assoc name *condition-types*)   'condition)
+        (t (error (format nil "subtypep: unbekannter Typ '~a'" name)))))
+
+;; eingebauter Typ ohne gemeinsame Elemente mit cons → Untertyp von atom
+(defun %st-cons-free? (name)
+  (and (not (%builtin-subtype? 'cons name)) (not (%builtin-subtype? name 'cons))))
+
+;; Structs sind Listen (structure-object → cons), Conditions auch (cons).
+(defun %st-names (a b)
+  (let ((ka (%st-name-kind a))
+        (kb (%st-name-kind b)))
+    (cond ((eq b 'atom)          (%st-ja/nein (and (eq ka 'builtin) (%st-cons-free? a))))
+          ((eq a 'atom)          (%st-ja/nein (eq b t)))
+          ((eq ka 'builtin)      (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? a b))))
+          ((eq ka 'struct)       (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? 'structure-object b))))
+          ((eq kb 'condition)    (%st-ja/nein (%cond-subtype? a b)))
+          (t                     (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? 'cons b)))))))
+
+(defun %st-range? (s)
+  (and (pair? s) (member (car s) '(integer float real rational))))
+
+;; Grenze → * oder (wert exklusiv?). Bei Ganzzahlen wird (n) zu n±1 inklusiv.
+(defun %st-bound (b lower int?)
+  (cond ((eq b '*)   '*)
+        ((number? b) (list b ()))
+        (int?        (list (if lower (+ (car b) 1) (- (car b) 1)) ()))
+        (t           (list (car b) t))))
+
+(defun %st-range-bounds (s int?)
+  (let ((args (cdr s)))
+    (if (or (not (%proper-list? args)) (> (length args) 2) (not (every %valid-bound? args)))
+        (%bad-spec s)
+        (list (%st-bound (if (null args) '* (car args)) t int?)
+              (%st-bound (if (null (cdr args)) '* (cadr args)) () int?)))))
+
+(defun %st-bound-in? (b1 b2 lower)
+  (cond ((eq b2 '*) t)
+        ((eq b1 '*) ())
+        (t (let ((v1 (car b1)) (v2 (car b2)))
+             (or (if lower (> v1 v2) (< v1 v2))
+                 (and (= v1 v2) (or (not (cadr b2)) (cadr b1))))))))
+
+;; r1 ⊆ r2 als Zahlbereich (Typköpfe prüft der Aufrufer)
+(defun %st-range-in? (r1 r2 int?)
+  (let ((b1 (%st-range-bounds r1 int?))
+        (b2 (%st-range-bounds r2 int?)))
+    (and (%st-bound-in? (car b1) (car b2) t)
+         (%st-bound-in? (cadr b1) (cadr b2) ()))))
+
+(defun %st-unknown-compound (s)
+  (if (member (car s) '(not satisfies member eql)) '(() ()) (%bad-spec s)))
+
+;; a zusammengesetzt
+(defun %st-left (a b)
+  (let ((head (car a))
+        (args (cdr a)))
+    (cond ((eq head 'or)  (%st-all (mapcar (lambda (x) (%subtypep x b)) args)))
+          ((eq head 'and) (%st-some (mapcar (lambda (x) (%subtypep x b)) args)))
+          ((member head '(member eql))
+           (%st-ja/nein (every (lambda (v) (typep v b)) args)))
+          ((%st-range? a)
+           (cond ((%st-range? b)
+                  (if (and (car (%subtypep head (car b)))
+                           (%st-range-in? a b (eq head 'integer)))
+                      '(t t)
+                      '(() ())))
+                 ((pair? b) (%st-right a b))
+                 ;; leerer Bereich wäre Untertyp von allem → nein nur als unklar
+                 (t (let ((r (%subtypep head b))) (if (car r) r '(() ()))))))
+          (t (%st-unknown-compound a)))))
+
+;; b zusammengesetzt, a Symbol oder Zahlbereich
+(defun %st-right (a b)
+  (let ((head (car b))
+        (args (cdr b)))
+    (cond ((eq head 'or)  (%st-some (mapcar (lambda (x) (%subtypep a x)) args)))
+          ((eq head 'and) (%st-all (mapcar (lambda (x) (%subtypep a x)) args)))
+          ((%st-range? b)
+           (let ((base (%subtypep a head)))
+             (cond ((not (car base))                  base)
+                   ((%st-range-in? (list a) b ())     '(t t))
+                   (t                                 '(() ())))))
+          (t (%st-unknown-compound b)))))
+
+(defun %subtypep (a b)
+  (cond ((equal? a b)       '(t t))
+        ((eq b t)           '(t t))
+        ((null a)           '(t t))
+        ((%st-deftype? a)   (%subtypep (%st-expand a) b))
+        ((%st-deftype? b)   (%subtypep a (%st-expand b)))
+        ((null b)           (if (symbol? a) '(() t) '(() ())))
+        ((pair? a)          (%st-left a b))
+        ((pair? b)          (%st-right a b))
+        (t                  (%st-names a b))))
+
+;; (subtypep typ1 typ2) → zwei Werte: Untertyp? und sicher?
+(defun subtypep (a b)
+  (let ((r (%subtypep a b)))
+    (values (car r) (cadr r))))

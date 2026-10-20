@@ -229,6 +229,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (typecase x (integer …) (otherwise …)) ; Verzweigung nach Typ; etypecase: ohne Treffer Fehler
 (check-type x (integer 0 *))      ; Typ zusichern → () oder Fehler
 (deftype ziffer () '(integer 0 9)) ; eigener Typname für typep/typecase/check-type
+(subtypep 'integer 'number)       ; → t t (Untertyp? sicher?); unentscheidbar → () ()
 ```
 
 ### Symbol-Konstruktion

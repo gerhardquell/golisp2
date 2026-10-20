@@ -379,6 +379,8 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
   (otherwise 'sonst))              ; t geht auch; ohne Treffer → ()
 (etypecase x (integer 'ganz))      ; ohne Treffer → Fehler
 (check-type x (integer 0 *))       ; → () oder Fehler "check-type: x ist -1, nicht vom Typ …"
+(subtypep 'integer 'number)        ; → t, t   (zwei Werte: Untertyp? sicher?)
+(subtypep 'integer '(integer 0 9)) ; → (), () (nicht entscheidbar)
 (deftype ziffer () '(integer 0 9)) ; eigener Typname
 (deftype bis (&optional (n '*))    ; mit Parametern: (typep x '(bis 5))
   (list 'integer 0 n))
@@ -407,7 +409,10 @@ Condition.
 
 **Nicht vorhanden / keine Typen:**
 - Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
-- Noch nicht vorhanden: `subtypep`, `ctypecase`.
+- `subtypep` entscheidet eingebaute Typen, `atom`, Structs, Conditions,
+  `deftype`, `or`/`and`/`member`/`eql` und Zahlbereiche; `not`, `satisfies`
+  und Bereichsfälle, die nicht sicher passen, liefern `() ()`.
+- Noch nicht vorhanden: `ctypecase`.
 
 ---
 

@@ -104,6 +104,7 @@
     ("etypecase" . "(etypecase key (type form...)...)")
     ("check-type" . "(check-type place type-spec &optional description)")
     ("deftype" . "(deftype name lambda-list &body body)")
+    ("subtypep" . "(subtypep type1 type2) => subtype-p, valid-p")
     ("sleep" . "(sleep ms)")
     ("now" . "(now)")
     ("format-time" . "(format-time fmt &optional time :utc)")

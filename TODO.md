@@ -73,7 +73,11 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 - [ ] Cache-Feldnamen Moonshot/Gemini/DeepSeek.
 - [ ] Streaming für `sigo*`. Achtung: sigoREST bucht bei Streaming die Kosten falsch
       (`/u/go-projekte/sigoREST/TODO-20261003-kosten.md`).
-- [ ] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (Werkzeug: `(sigo-costs t0)`).
+- [x] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (Werkzeug: `(sigo-costs t0)`).
+      Erledigt 20.10.: exakt gleich (4 Calls, 0,009657 USD). Aber beide ohne Cache-Rabatt —
+      obere Schranke (`docs/sigo.md`).
+- [ ] sigoREST (anderes Repo): `cached_input_cost` für die `zai`-Modelle eintragen
+      (heute 0 → gecachte Tokens zum vollen Preis). Echten Cache-Preis bei Z.ai nachsehen.
 - [ ] Später, bei Bedarf: Zusammenfassung langer Sessions im Client statt des
       20-Nachrichten-Fensters; Retrieval über `/v1/embeddings` statt Komplett-Referenz;
       sigoREST (anderes Repo): Thinking pro Request abschalten.

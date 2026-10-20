@@ -257,3 +257,18 @@ parallel; jede Antwort wurde geladen und gegen einen Testfall ausgeführt
   `mapcar`/`apply`/`reduce` (TODO.md).
 - **Fences:** `zai-glm53-f` hält sich schlechter an „kein Markdown" — vor
   `(eval (read …))` Fences entfernen, z. B. `(regex-replace "(?m)^```.*$" text "")`.
+
+### Kostenabgleich `cost-usd` ↔ `/api/costs` (20261020)
+
+Kontrolliert gemessen: Zeitpunkt merken, 4 Calls (3× `zai-glm53-f`,
+1× `zai-glm53`), dann `(sigo-costs t0)`. Ergebnis: **exakt gleich** —
+4 Requests, 0,009657 USD, auch je Modell. golisp2 reicht `usage.cost_usd`
+unverändert durch; sigoREST verbucht denselben Wert.
+
+**Beides ist eine obere Schranke:** sigoREST hat für die `zai`-Modelle keinen
+Cache-Preis (`cached_input_cost` = 0 heißt „kein bekannter Rabatt") und
+rechnet gecachte Prompt-Tokens zum vollen Eingabepreis. Ein Call mit 7 488 von
+7 529 Tokens im Cache kostet laut Abrechnung so viel wie einer ohne Cache.
+Die echte Provider-Rechnung liegt bei ~99 % Cache-Treffern vermutlich deutlich
+darunter. Korrigieren lässt sich das nur in sigoREST (Spalte
+`cached_input_cost` der Modell-CSV) mit dem echten Cache-Preis des Providers.

@@ -188,6 +188,7 @@ func clFloat(width, prec int, zero, left, plus bool, verb rune) (string, error) 
     // padchar: ~F Index 4 (w,d,k,overflow,padchar), ~E dank ",2" Index 5 (w,d,e,k,overflow,padchar)
     b.WriteString(",,,'0")
   }
+  if verb == 'F' && p == 0 { b.WriteRune(':') } // C: "%.0f" ohne Punkt, CL-~,0F hätte "2."
   if plus { b.WriteRune('@') }
   b.WriteRune(verb)
   return b.String(), nil

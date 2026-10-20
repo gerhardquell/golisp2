@@ -238,6 +238,9 @@ Mit Parametern und den Modifiern `:` und `@`.
 **Besonderheiten:**
 - `~/name/` ruft eine benannte Funktion via `globalFormatEnv`
 - `~:;` markiert die Default-Klausel
+- `~,0:F` (golisp-Erweiterung): wie `~,0F`, aber ohne Punkt am Ende —
+  `(format nil "~,0:f" 1.5)` → `"2"` statt `"2."`. Dafür übersetzt
+  `printf "%.0f"`, damit es C-treu bleibt.
 
 ---
 

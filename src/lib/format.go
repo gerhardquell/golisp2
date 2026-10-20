@@ -170,7 +170,7 @@ func formatRun(st *fmtState, ctrl []rune, pos int) (int, bool) {
     case 'C', 'c':
       emitC(st, params, colon, at)
     case 'F', 'f':
-      emitF(st, params, at)
+      emitF(st, params, colon, at)
     case 'E', 'e':
       emitE(st, params, at)
     case 'G', 'g':

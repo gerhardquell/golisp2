@@ -420,7 +420,8 @@ func charName(r rune) (string, bool) {
 
 // ---- Float ~F ~E ~G ~$ ----
 
-func emitF(st *fmtState, params []pval, at bool) {
+// colon (golisp-Erweiterung, für printf "%.0f"): bei d=0 kein Punkt am Ende.
+func emitF(st *fmtState, params []pval, colon, at bool) {
   w := resolveInt(st, paramGet(params, 0), 0)
   // d: fehlt → volle Precision (-1); 0 explizit → kein Nachkomma
   d := -1
@@ -433,6 +434,9 @@ func emitF(st *fmtState, params []pval, at bool) {
   c := st.consume()
   f := toFloat(c) * pow10(k)
   s := formatFixed(f, d, at)
+  if colon && d == 0 {
+    s = strings.TrimSuffix(s, ".")
+  }
   if w > utf8.RuneCountInString(s) {
     s = strings.Repeat(string(padchar), w-utf8.RuneCountInString(s)) + s
   }
@@ -465,11 +469,20 @@ func formatFixed(f float64, d int, at bool) string {
   } else if at {
     sign = "+"
   }
+  // CL: ~F schreibt immer einen Dezimalpunkt ("2.", "1.0")
   if d < 0 {
     // volle Precision (minimal darstellbar)
-    return sign + strconv.FormatFloat(f, 'g', -1, 64)
+    g := strconv.FormatFloat(f, 'g', -1, 64)
+    if !strings.ContainsAny(g, ".e") {
+      g += ".0"
+    }
+    return sign + g
   }
-  return sign + strconv.FormatFloat(f, 'f', d, 64)
+  s := strconv.FormatFloat(f, 'f', d, 64)
+  if d == 0 {
+    s += "."
+  }
+  return sign + s
 }
 
 func emitE(st *fmtState, params []pval, at bool) {

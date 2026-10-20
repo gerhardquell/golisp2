@@ -38,6 +38,12 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~:p" 2)`, `"ies"`},
     {`(format nil "~$" 3.14159)`, `"3.14"`},
     {`(format nil "~f" 3.14)`, `"3.14"`},
+    {`(format nil "~,0f" 1.5)`, `"2."`},         // CL: ~F hat immer einen Punkt
+    {`(format nil "~,0f" 0.4)`, `"0."`},
+    {`(format nil "~5,0f" 1.5)`, `"   2."`},
+    {`(format nil "~,0@f" 1.5)`, `"+2."`},
+    {`(format nil "~f" 1.0)`, `"1.0"`},
+    {`(format nil "~,0:f" 1.5)`, `"2"`},          // golisp-Erweiterung für printf %.0f
     {`(format nil "~e" 1.5)`, `"1.5e+0"`},       // ohne d: nicht runden
     {`(format nil "~e" 1.0)`, `"1.0e+0"`},
     {`(format nil "~e" -0.00125)`, `"-1.25e-3"`},

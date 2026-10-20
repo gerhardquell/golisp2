@@ -18,9 +18,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 - [ ] Printer: Große Floats erscheinen in Exponentialschreibweise
       (geprüft 19.10.: `(now)` → `1.7924418639679012e+09`). Regel festlegen.
       Umgehung heute: `(format nil "~,3f" x)`.
-- [ ] `golisp2 -e` druckt den Wert zusätzlich zur Ausgabe (geprüft 19.10.:
-      `(println 1)` → zwei Zeilen `1`). Daher kam die „doppelte“ `(environ)`-Ausgabe
-      (20261003 §5). Gewollt (REPL-Stil)?
+- [x] `golisp2 -e` druckt den Wert zusätzlich zur Ausgabe (geprüft 19.10.:
+      `(println 1)` → zwei Zeilen `1`). Erledigt 20.10.: Wert nur, wenn die Form
+      nichts selbst nach stdout geschrieben hat (`docs/cli.md`).
 
 ## 2. Fehler und Kleinkram
 

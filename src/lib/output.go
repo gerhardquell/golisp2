@@ -16,6 +16,7 @@ package lib
 import (
   "os"
   "sync"
+  "sync/atomic"
 )
 
 // OutputWriter schreibt eine Zeichenkette. Der Rückgabewert folgt dem
@@ -38,8 +39,18 @@ func defaultErrorWriter(s string) error {
   return err
 }
 
+// outputWrites zählt nichtleere WriteOutput-Aufrufe (nur stdout), damit
+// golisp2 -e erkennt, ob eine Form selbst etwas ausgegeben hat.
+var outputWrites atomic.Uint64
+
+// OutputWrites liefert den Zählerstand; nur Differenzen sind aussagekräftig.
+func OutputWrites() uint64 { return outputWrites.Load() }
+
 // WriteOutput schreibt s über den aktuell gesetzten OutputWriter.
 func WriteOutput(s string) error {
+  if s != "" {
+    outputWrites.Add(1)
+  }
   outputMu.Lock()
   w := outputWriter
   outputMu.Unlock()

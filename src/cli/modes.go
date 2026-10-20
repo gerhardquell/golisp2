@@ -23,7 +23,8 @@ import (
 )
 
 // runExpression parses and executes expressions from -e. A single form's
-// result is printed; for multiple forms only side effects are emitted so
+// result is printed unless the form wrote to stdout itself; for multiple
+// forms only side effects are emitted so
 // scripts like (exec ...) (println out) (println cd) produce clean output.
 // Returns exit code 0 on success, 1 on error.
 func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) int {
@@ -45,6 +46,7 @@ func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) i
   }
 
   var result *lib.Cell
+  writesBefore := lib.OutputWrites()
   cur := cells
   for cur != nil && cur.Type == lib.LIST {
     form := cur.Car
@@ -64,7 +66,9 @@ func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) i
     }
     cur = cur.Cdr
   }
-  if formCount == 1 {
+  // Wert nur zeigen, wenn die Form nichts selbst ausgegeben hat — sonst
+  // erschiene z. B. (println 1) doppelt.
+  if formCount == 1 && lib.OutputWrites() == writesBefore {
     fmt.Fprintln(out, result)
   }
   return 0

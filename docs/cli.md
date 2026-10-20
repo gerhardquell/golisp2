@@ -51,9 +51,11 @@ Shebang — beides ist für golisp2 dasselbe).
   es beim Laden still ignoriert (`apply` startet einen frischen Kontext).
 - Ohne `defmain` bleibt alles wie bisher (Wert der letzten Form wird ausgegeben).
 
-**Hinweis zu `-e`:** Eine einzelne Form gibt ihr Ergebnis aus. Bei mehreren
-Formen wird das letzte Ergebnis unterdrückt, damit rein seiteneffektbehaftete
-Skripte saubere Ausgabe erzeugen.
+**Hinweis zu `-e`:** Eine einzelne Form gibt ihr Ergebnis aus — außer sie hat
+selbst etwas nach stdout geschrieben (`-e '(println 1)'` → einmal `1`, nicht
+zweimal; `-e '(begin (println "x") 42)'` → nur `x`). stderr zählt nicht. Bei
+mehreren Formen wird das letzte Ergebnis immer unterdrückt, damit rein
+seiteneffektbehaftete Skripte saubere Ausgabe erzeugen.
 
 ## Exit-Codes
 

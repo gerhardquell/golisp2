@@ -52,8 +52,34 @@ func TestRunExpressionSingleSideEffectFormPrintsReturnValue(t *testing.T) {
   if errOut.Len() != 0 {
     t.Fatalf("unexpected stderr: %q", errOut.String())
   }
-  if got := out.String(); got != "\"a\"\n\"a\"\n" {
-    t.Fatalf("stdout = %q, want %q", got, "\"a\"\n\"a\"\n")
+  // Die Form hat selbst ausgegeben → Wert nicht noch einmal drucken
+  if got := out.String(); got != "\"a\"\n" {
+    t.Fatalf("stdout = %q, want %q", got, "\"a\"\n")
+  }
+}
+
+func TestRunExpressionOutputSuppressesValue(t *testing.T) {
+  var out bytes.Buffer
+  var errOut bytes.Buffer
+  env := lib.BaseEnv()
+  lib.SetOutputWriter(func(s string) error { _, err := out.WriteString(s); return err })
+  defer lib.ResetOutputWriter()
+
+  if code := runExpression(`(begin (println "x") 42)`, env, &out, &errOut); code != 0 {
+    t.Fatalf("exit code = %d, stderr %q", code, errOut.String())
+  }
+  if got := out.String(); got != "\"x\"\n" {
+    t.Fatalf("stdout = %q, want nur die Ausgabe", got)
+  }
+  // stderr-Ausgabe zählt nicht als Ausgabe: Wert erscheint
+  out.Reset()
+  lib.SetErrorWriter(func(s string) error { return nil })
+  defer lib.ResetErrorWriter()
+  if code := runExpression(`(begin (err-write "w") 7)`, env, &out, &errOut); code != 0 {
+    t.Fatalf("exit code = %d, stderr %q", code, errOut.String())
+  }
+  if got := out.String(); got != "7\n" {
+    t.Fatalf("stdout = %q, want %q", got, "7\n")
   }
 }
 

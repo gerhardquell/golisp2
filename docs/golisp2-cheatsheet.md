@@ -377,6 +377,15 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (string-contains "abc" "b")       ; → t
 ```
 
+### Reguläre Ausdrücke (Go-RE2, Muster zuerst)
+```lisp
+(regex-match "^[0-9]+$" "123")    ; → t
+(regex-find "[a-z]+" "12abc34")   ; → "abc"; 2. Wert: Gruppen-Liste (() = Gruppe nicht beteiligt)
+(regex-find-all "[0-9]+" "a1b22") ; → ("1" "22")
+(regex-replace "(\\w+)@(\\w+)" "gq@sk" "$2/$1") ; → "sk/gq"
+(regex-split ",\\s*" "a, b,c")     ; → ("a" "b" "c")
+```
+
 ### Hashtable (CL-kompatibel)
 ```lisp
 (define h (make-hash-table))

@@ -112,6 +112,9 @@ func BaseEnv() *Env {
 	// String-Funktionen
 	RegisterStringFuncs(env)
 
+	// Reguläre Ausdrücke (Go regexp)
+	RegisterRegex(env)
+
 	// Hashtables (CL)
 	RegisterHashtables(env)
 

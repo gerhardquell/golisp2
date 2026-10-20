@@ -40,7 +40,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 3. Fehlende Funktionen
 
-- [ ] Reguläre Ausdrücke für Lisp-Code (geprüft 19.10.: kein Symbol mit `regex`).
+- [x] Reguläre Ausdrücke für Lisp-Code — erledigt 20.10.: `regex-match`, `regex-find`,
+      `regex-find-all`, `regex-replace`, `regex-split` (`src/lib/regex.go`, Muster zuerst).
 - [ ] Vektoren/Arrays mit O(1)-Zugriff, `make-array`/`aref` (geprüft 19.10.: fehlen).
 - [ ] Arbeiterpool: Bietet die Stdlib einen, oder `(pool-map n fn liste)` bauen?
       Vorlage: der Eigenbau in `/u/ki-projekte/ai-vergleiche/src/steuerung.lisp`.

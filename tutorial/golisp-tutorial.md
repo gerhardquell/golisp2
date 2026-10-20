@@ -10,7 +10,7 @@
 
 Dieses Dokument beschreibt die öffentlichen Funktionen, Spezialformen und Makros von GoLisp mit kurzen, lauffähigen Beispielen. Dateioperationen nutzen immer das Projekt-temp-Verzeichnis `./tmp`. Funktionen, die externe Dienste benötigen (sigo, PostgreSQL), enthalten beschreibende Beispiele.
 
-Stand: 20260827 — inklusive Hash-Tables, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Shared Memory, Trace.
+Stand: 20261020 — inklusive Hash-Tables, Vektoren, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Typen (typep, typecase, deftype, subtypep), Regex, Arbeiterpool, Shared Memory, Trace.
 
 ## Spezialformen
 
@@ -761,6 +761,98 @@ Gibt t zurück, wenn x nil ist.
 (null '(1))
 ```
 
+### type-of
+
+**Syntax:** `(type-of x)`
+
+Typ eines Werts als Symbol: `integer`, `float`, `string`, `symbol`, `keyword`, `boolean`, `null`, `cons`, `function`, `compiled-function`, `macro`, `hash-table`, `vector` oder der Name eines Structs bzw. einer Condition. `3.0` ist `integer` (der Kern kennt nur `float64`).
+
+```lisp
+(type-of 3)          ; => integer
+(type-of 3.5)        ; => float
+(type-of (vector 1)) ; => vector
+```
+
+### typep
+
+**Syntax:** `(typep x typangabe)`
+
+Prüft x gegen eine Typangabe: Typname (mit Obertypen, z. B. `integer` → `rational` → `real` → `number`), `(or …)`, `(and …)`, `(not …)`, `(member …)`, `(eql x)`, `(satisfies f)`, Zahlbereiche `(integer lo hi)` (`(n)` = exklusiv, `*` = offen) und eigene Typen aus `deftype`.
+
+```lisp
+(typep 3 'number)              ; => t
+(typep "a" '(or string symbol)) ; => t
+(typep 10 '(integer 0 (10)))   ; => ()
+```
+
+### typecase
+
+**Syntax:** `(typecase ausdruck (typ form ...) ... [(otherwise form ...)])`
+
+Verzweigt nach dem Typ des Ausdrucks, der nur einmal ausgewertet wird. Jede Klausel nimmt eine `typep`-Angabe; `t` oder `otherwise` ist der Sonst-Zweig. Ohne Treffer → `()`.
+
+```lisp
+(defun art (x)
+  (typecase x
+    (integer 'ganz)
+    ((or string symbol) 'text)
+    (otherwise 'sonst)))
+(art 3)    ; => ganz
+(art "a")  ; => text
+(art 1.5)  ; => sonst
+```
+
+### etypecase
+
+**Syntax:** `(etypecase ausdruck (typ form ...) ...)`
+
+Wie `typecase`, aber ohne Treffer ein Fehler, der alle erlaubten Typen nennt. Abweichung von CL: einfacher `error`, kein `type-error`.
+
+```lisp
+(etypecase 1.5 (string 'a) (integer 'b))
+; Fehler: etypecase: 1.5 passt zu keinem Typ (string integer)
+```
+
+### check-type
+
+**Syntax:** `(check-type ort typangabe [beschreibung])`
+
+Sichert einen Typ zu: `()` wenn er passt, sonst ein Fehler mit Ort, Wert und Typ bzw. Beschreibung. Abweichung von CL: einfacher `error`, kein `store-value`-Restart.
+
+```lisp
+(defun wurzel (x)
+  (check-type x (real 0 *) "eine nichtnegative Zahl")
+  (sqrt x))
+(wurzel 9)   ; => 3
+(wurzel -1)  ; Fehler: check-type: x ist -1, nicht eine nichtnegative Zahl
+```
+
+### deftype
+
+**Syntax:** `(deftype name (parameter ...) rumpf ...)`
+
+Definiert einen eigenen Typnamen; der Rumpf liefert die Typangabe. Gilt überall, wo `typep` gilt (`typecase`, `check-type`, `subtypep`). Abweichung von CL: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))` schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler.
+
+```lisp
+(deftype ziffer () '(integer 0 9))
+(typep 7 'ziffer)                ; => t
+(deftype bis (&optional (n '*)) (list 'integer 0 n))
+(typep 6 '(bis 5))               ; => ()
+```
+
+### subtypep
+
+**Syntax:** `(subtypep typ1 typ2)`
+
+Ist typ1 ein Untertyp von typ2? Zwei Werte wie in CL: Antwort und „sicher?". Bei `not`, `satisfies` und Bereichen, die nicht sicher passen, kommt `() ()` (nicht entscheidbar).
+
+```lisp
+(subtypep 'integer 'number)                 ; => t, t
+(subtypep 'number 'integer)                 ; => (), t
+(subtypep 'integer '(integer 0 9))          ; => (), ()
+(multiple-value-list (subtypep 'null 'list)) ; => (t t)
+```
+
 ## Listen
 
 ### car
@@ -1100,11 +1192,13 @@ Parst einen String als Zahl.
 
 **Syntax:** `(number->string zahl)`
 
-Wandelt eine Zahl in einen String um.
+Wandelt eine Zahl in einen String um — dieselbe Form wie der Printer: ganzzahlige Werte ohne Punkt, sonst Festkomma für 1e-4 ≤ |x| < 1e16, darüber und darunter Exponent.
 
 ```lisp
-(number->string 42)
-(number->string 3.14)
+(number->string 42)          ; => "42"
+(number->string 3.14)        ; => "3.14"
+(number->string 1792441863.5) ; => "1792441863.5"
+(number->string 0.00001)     ; => "1e-05"
 ```
 
 ### string->list
@@ -1217,18 +1311,78 @@ Liefert das internierte Symbol zum String (die eine Symbol-Cell aus der Internin
 ; => t
 ```
 
+### regex-match
+
+**Syntax:** `(regex-match muster string)`
+
+`t`, wenn das Muster irgendwo im String passt. Alle Regex-Funktionen nehmen das Muster zuerst (wie cl-ppcre) und nutzen Go-RE2-Syntax — keine Rückverweise. Backslashes im Lisp-String doppeln.
+
+```lisp
+(regex-match "^[0-9]+$" "123")  ; => t
+(regex-match "^[0-9]+$" "12a")  ; => ()
+```
+
+### regex-find
+
+**Syntax:** `(regex-find muster string)`
+
+Erster Treffer oder `()`; zweiter Wert: Liste der Gruppen (`()` für eine Gruppe, die nicht beteiligt war).
+
+```lisp
+(regex-find "[a-z]+" "12abc34")  ; => "abc"
+(multiple-value-list (regex-find "(\\w+)@(\\w+)" "an: gq@sk"))
+; => ("gq@sk" ("gq" "sk"))
+```
+
+### regex-find-all
+
+**Syntax:** `(regex-find-all muster string)`
+
+Alle Treffer als Liste.
+
+```lisp
+(regex-find-all "[0-9]+" "a1b22c333")  ; => ("1" "22" "333")
+```
+
+### regex-replace
+
+**Syntax:** `(regex-replace muster string ersatz)`
+
+Ersetzt alle Treffer; `$1`, `${name}` stehen für Gruppen, ein wörtliches `$` als `$$`.
+
+```lisp
+(regex-replace "[0-9]+" "a1b22" "#")                 ; => "a#b#"
+(regex-replace "(\\w+)@(\\w+)" "gq@sk" "$2/$1")     ; => "sk/gq"
+```
+
+### regex-split
+
+**Syntax:** `(regex-split muster string)`
+
+Trennt den String an den Treffern; leere Felder bleiben.
+
+```lisp
+(regex-split ",\\s*" "a, b,c")  ; => ("a" "b" "c")
+```
+
 ## Formatieren
 
 ### format
 
 **Syntax:** `(format ziel format-string arg ...)`
 
-CL-FORMAT-Engine (HyperSpec 22.3). Ziel `nil` → formatierter String als Rückgabe; Ziel `t` → Ausgabe auf stdout. Direktiven wie `~a` (aesthetic), `~s` (readable), `~d`, `~f`, `~%` (newline).
+CL-FORMAT-Engine (HyperSpec 22.3). Ziel `nil` → formatierter String als Rückgabe; Ziel `t` → Ausgabe auf stdout. Direktiven wie `~a` (aesthetic), `~s` (readable), `~d`, `~f`, `~e`, `~g`, `~%` (newline).
+
+Gleitkomma wie CL: `~f` ist immer Festkomma mit Dezimalpunkt, `~e` exponentiell (ohne Parameter so viele Stellen wie nötig), `~g` wählt zwischen beiden (dann mit 4 Leerzeichen dahinter).
 
 ```lisp
 (format nil "~a + ~a = ~s" 1 2 3)
 ; => "1 + 2 = 3"
 (format t "Wert: ~a~%" 42)
+(format nil "~,2f" 3.14159)  ; => "3.14"
+(format nil "~,0f" 1.5)      ; => "2."
+(format nil "~e" 1.5)        ; => "1.5e+0"
+(format nil "~g" 1.5)        ; => "1.5    "
 ```
 
 ### sprintf
@@ -1634,6 +1788,57 @@ Wendet funktion (zwei Argumente: key, wert) auf jeden Eintrag an.
 (maphash (lambda (k v) (println k "=" v)) h)
 ```
 
+## Vektoren
+
+Eindimensionale Vektoren mit O(1)-Zugriff. Sie sind mutabel und werden geteilt, nicht kopiert (wie Hash-Tabellen). `equal?` vergleicht sie nur nach Identität (CL `equal`). Druckform `#(1 2 3)` — der Reader liest sie nicht zurück.
+
+### make-array
+
+**Syntax:** `(make-array n [:initial-element x])`
+
+Vektor der Länge n, alle Elemente `x` (Default `()`). Nur eindimensional.
+
+```lisp
+(make-array 3 :initial-element 0)  ; => #(0 0 0)
+```
+
+### vector
+
+**Syntax:** `(vector x ...)`
+
+Vektor aus den Argumenten.
+
+```lisp
+(vector 1 "a" 'b)  ; => #(1 "a" b)
+```
+
+### aref / aset
+
+**Syntax:** `(aref v i)`, `(aset v i x)`
+
+Element lesen bzw. setzen (Index 0 bis n-1, außerhalb → Fehler). `aset` liefert den Wert; `(setf (aref v i) x)` geht auch.
+
+```lisp
+(define v (vector 1 2 3))
+(aset v 0 'x)        ; => x
+(setf (aref v 1) 9)
+v                    ; => #(x 9 3)
+(aref v 2)           ; => 3
+```
+
+### vector-push-extend
+
+**Syntax:** `(vector-push-extend x v)`
+
+Hängt x an und liefert dessen Index.
+
+```lisp
+(define v (vector 1 2))
+(vector-push-extend 7 v)  ; => 2
+(length v)                ; => 3
+(coerce v 'list)          ; => (1 2 7)
+```
+
 ## Strukturen (defstruct)
 
 ### defstruct
@@ -1869,6 +2074,18 @@ Erzeugt einen Mutex für lock.
 
 ```lisp
 (define mu (lock-make))
+```
+
+### pool-map
+
+**Syntax:** `(pool-map n fn liste)`
+
+Wie `mapcar`, aber mit höchstens n gleichzeitigen Aufrufen (Arbeiterpool) — gedacht für viele langsame Aufrufe wie `sigo`. Die Ergebnisse kommen in Eingabe-Reihenfolge. Scheitert fn bei einem Element, steht dort `(:error "text")`; die anderen laufen durch.
+
+```lisp
+(pool-map 3 (lambda (x) (* x x)) '(1 2 3 4 5))  ; => (1 4 9 16 25)
+(pool-map 2 (lambda (x) (if (= x 2) (error "kaputt") x)) '(1 2 3))
+; => (1 (:error "kaputt") 3)
 ```
 
 ## KI
@@ -2145,7 +2362,7 @@ Beendet den Lisp-Prozess mit Exit-Code (Default 0).
 
 **Syntax:** `(get-working-directory)`
 
-Aktuelles Arbeitsverzeichnis.
+Das mit `set-working-directory` gesetzte Arbeitsverzeichnis, sonst das Verzeichnis des Prozesses.
 
 ```lisp
 (get-working-directory)

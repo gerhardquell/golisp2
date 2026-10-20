@@ -41,7 +41,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **准引用支持**：`` ` `` `,` `,@` 模板编程
 - **结构化错误处理**：`error` 和 `trap`（类似 CL 的条件处理器）
 - **外部程序执行**：`exec` 直接运行程序（不经过 shell），捕获 stdout、stderr 和退出码；`shell-output` 是“Shell 命令 → 字符串输出”的简写
-- **类型**：`type-of` 与 `typep`，遵循 Common Lisp——类型层级、`or`/`and`/`not`/`member`/`satisfies`、数值范围、结构体与条件
+- **类型**：`type-of` 与 `typep`，遵循 Common Lisp——类型层级、`or`/`and`/`not`/`member`/`satisfies`、数值范围、结构体与条件；另有 `typecase`/`etypecase`、`check-type`、`deftype` 与 `subtypep`
 
 ### 高级功能
 - **Scheme 风格 `do`**：支持并行步骤求值的迭代器
@@ -52,14 +52,17 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 ### 数据、文本与时间
 - **JSON**：`json-parse` / `json-encode`——对象 ↔ 哈希表（`equal`），数组 ↔ 列表，`null` ↔ `:null`
 - **字符串**：`string-split`、`string-join`、`string-find`、`string-contains`，`format` 采用 CL FORMAT 引擎
+- **正则表达式**：`regex-match`、`regex-find`（含分组）、`regex-find-all`、`regex-replace`（`$1`）、`regex-split`——Go RE2 语法，模式在前
 - **时间**：`(now)` 返回浮点型 Unix 秒数，`(format-time "%F %T" [时间] [:utc])` 按 strftime 风格格式化
 - **文件与目录**：`file-read`、`file-write` 等，以及 `directory-files`（已排序，目录以 `/` 结尾）
 - **哈希表**：`make-hash-table`、`gethash`、`puthash`、`maphash` 等（参数顺序：`(puthash KEY TABLE VALUE)`，表在第 2 位，与 Emacs Lisp 不同；推荐 `(setf (gethash k h) v)`）
+- **向量**：`make-array`、`vector`、`aref`、`aset` / `(setf (aref v i) x)`、`vector-push-extend`——O(1) 访问，一维；`length` 与 `coerce` 均支持
 - **数学**：`truncate`、`ceiling`、`round`、`gcd`、`ash`、`parse-int`、`parse-float`；通过 Maxima 子进程提供 CAS（`maxima-open`、`maxima-eval`、`maxima-close`）
 
 ### 并发编程（Go 原生支持）
 - **`parfunc`**：在并行 Goroutine 中求值表达式
 - **`spawn`**：启动 Goroutine，立即返回结果通道，其中恰有一条消息 `(:ok 值)` 或 `(:error "文本")`
+- **`pool-map`**：类似 `mapcar`，但同时最多 n 个调用（工作池，例如大量 `sigo` 调用）；结果按输入顺序，失败处为 `(:error "文本")`
 - **通道机制**：`chan-make`、`chan-send`、`chan-recv`（可带 `:timeout`，单位秒 → `(values x t)` / `(values nil nil)`）、`chan-try-recv`、`chan-try-send`、`chan-close`、`chan-closed?`、`chan-select`（多个通道中最先就绪者 → `(values x t i)`）
 - **锁机制**：`lock-make`、`lock` 用于临界区保护
 
@@ -70,6 +73,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **golisp2 前导说明**：每次 `sigo` 调用都会附带内置的 golisp2 简明参考（提供商缓存：第 2 次调用起约 99 % 命中）；用 `(sigo-system-prompt …)` 读取/设置/清空
 - **Token 与费用数据**：`(sigo* …)` 返回哈希表，含文本、模型、提示/缓存/思考 Token、`cost-usd` 与 `elapsed`；`(sigo-usage)` 汇总自启动以来的用量
 - **自由请求**：`(sigo-request h)` 发送手工构造的聊天请求（sigoREST 字段白名单，每次调用可设 `timeout`），返回完整响应及 `elapsed`
+- **默认值**：模型 `zai-glm53-f`（`GOLISP_SIGO_MODEL`），`temperature` 0.2（`GOLISP_SIGO_TEMPERATURE`），而非 sigoREST 的模型中值；`max_tokens` = 模型上限
 - **费用与预算**：`sigo-costs`（服务器范围，可设时间窗）、`sigo-budget`、`sigo-model-info`（各模型价格）——详见 `docs/sigo.md`
 
 ### 遗传算法
@@ -153,7 +157,7 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 |------|---------|-------------|
 | **标准输入（默认）** | `echo "(+ 1 2)" \| ./build/golisp2` | 从标准输入读取，仅输出结果 |
 | **交互模式** | `./build/golisp2 -i` | 带语法高亮的 REPL 环境 |
-| **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行一个或多个表达式；单个形式打印结果，多个形式抑制最终结果 |
+| **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行一个或多个表达式；单个形式打印结果——除非它自己已有输出（`(println 1)` 只出现一次）；多个形式抑制最终结果 |
 | **脚本模式** | `./build/golisp2 script.lisp [参数…]` | 运行 Lisp 脚本文件（也可通过 shebang）；`defmain` 见下 |
 | **测试模式** | `./build/golisp2 -t` | 运行内置测试套件 |
 | **版本** | `./build/golisp2 --version` | 输出 `golisp2 <版本> (<commit>, <日期>[, dirty])`（`golisp2-client --version` 同样） |
@@ -389,6 +393,10 @@ results  ; => (42 123 7)
   (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
   (puthash "timeout" h 300)
   (gethash "elapsed" (sigo-request h)))
+
+; 大量并行调用，但同时最多 4 个
+(pool-map 4 (lambda (q) (sigo q)) questions)
+; => 按顺序返回答案，失败处为 (:error "文本")
 ```
 
 **注意：** `sigo*` 和 `sigo-usage` 返回哈希表，不再是关联列表。
@@ -570,14 +578,15 @@ my-project/
 | **广义赋值（Place）** | `setf` —— 变量、`nth`、`car`/`cdr`（符号重绑定，非 CL 的别名语义）、`gethash`、结构体访问器 |
 | **结构体与 CLOS-lite** | `defstruct`、`defgeneric`、`defmethod` |
 | **哈希表** | `make-hash-table`、`gethash`、`puthash`、`remhash`、`clrhash`、`hash-table-count`、`hash-table-p`、`maphash` |
+| **向量** | `make-array`、`vector`、`aref`、`aset`、`vector-push-extend` |
 | **条件系统** | `define-condition`、`handler-case`、`signal` |
-| **字符串操作** | `string-length`、`string-append`、`substring`、`string-upcase`、`string-downcase`、`string->number`、`number->string`、`string-split`、`string-join`、`string-find`、`string-contains` |
+| **字符串操作** | `string-length`、`string-append`、`substring`、`string-upcase`、`string-downcase`、`string->number`、`number->string`、`string-split`、`string-join`、`string-find`、`string-contains`、`regex-match`、`regex-find`、`regex-find-all`、`regex-replace`、`regex-split` |
 | **JSON** | `json-parse`、`json-encode` |
 | **时间** | `now`、`format-time`、`get-universal-time`、`sleep` |
-| **类型** | `type-of`、`typep` |
+| **类型** | `type-of`、`typep`、`typecase`、`etypecase`、`check-type`、`deftype`、`subtypep` |
 | **输入输出** | `print`、`println`、`read`、`load`（带搜索路径）、`exec`、`shell-output` |
 | **文件操作** | `file-write`、`file-append`、`file-read`、`file-exists?`、`file-delete`、`directory-files` |
-| **并发** | `parfunc`、`spawn`、`chan-make`、`chan-send`、`chan-recv`、`chan-try-recv`、`chan-try-send`、`chan-close`、`chan-closed?`、`chan-select`、`lock-make` |
+| **并发** | `parfunc`、`spawn`、`chan-make`、`chan-send`、`chan-recv`、`chan-try-recv`、`chan-try-send`、`chan-close`、`chan-closed?`、`chan-select`、`lock-make`、`pool-map` |
 | **AI** | `sigo`、`sigo*`、`sigo-request`、`sigo-models`、`sigo-host`、`sigo-usage`、`sigo-usage-reset`、`sigo-system-prompt`、`sigo-reference`、`sigo-costs`、`sigo-budget`、`sigo-model-info` |
 | **遗传算法** | `ga-create`、`ga-init`、`ga-cross`、`ga-calc`、`ga-select`、`ga-result`、`ga-mut`、`ga-print`、`ga?` |
 | **PostgreSQL** | `pg-connect`、`pg-query`、`pg-exec`、`pg-close` |
@@ -605,7 +614,7 @@ my-project/
 - **Reader**：递归下降解析器，完整 Unicode 支持
 - **Eval**：基于跳板的 TCO、宏展开、特殊形式
 - **Env**：词法绑定的层次化变量作用域
-- **Types**：`Cell` 结构体，包含 `LispType`（ATOM、NUMBER、STRING、LIST、LAMBDA、FUNC、MACRO、NIL、MVALUES、HASHTABLE、SYMMACRO、FOREIGN）
+- **Types**：`Cell` 结构体，包含 `LispType`（ATOM、NUMBER、STRING、LIST、LAMBDA、FUNC、MACRO、NIL、MVALUES、HASHTABLE、SYMMACRO、FOREIGN、VECTOR）
 
 ---
 

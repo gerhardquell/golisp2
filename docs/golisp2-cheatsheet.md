@@ -276,10 +276,14 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 
 ### sigoREST (KI-Anbindung)
 ```lisp
-(sigo "prompt")                   ; KI-Call
+(sigo "prompt")                   ; KI-Call, Default-Modell zai-glm53-f (GOLISP_SIGO_MODEL)
+(sigo* "prompt" "modell")         ; → Hash: text, Tokens, cost-usd, elapsed …
 (sigo-models)                     ; Verfügbare Modelle
 (sigo-host)                       ; Aktueller Host
 ```
+Ohne Angabe schickt golisp2 `temperature` 0.2 (`GOLISP_SIGO_TEMPERATURE`), `0` ist ein
+Fehler (sigoREST liest 0 als „nicht gesetzt" → 1.0). `max_tokens` bleibt beim
+Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/sigo.md`.
 
 ### Goroutinen und Concurrency
 ```lisp
@@ -352,6 +356,8 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ```lisp
 (argv)                ; → ("/pfad/golisp2" "skript.lisp" "arg1" ...)
 ; Kommandozeile: golisp2 --version  →  golisp2 <version> (<commit>, <datum>[, dirty])
+; golisp2 -e '(+ 1 2)' → 3; Wert nur, wenn die Form nichts selbst ausgibt:
+; golisp2 -e '(println 1)' → einmal 1
 (getenv "HOME")       ; → String oder () wenn nicht gesetzt
 (environ)             ; → Alist aller Variablen
 ```
@@ -371,6 +377,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (string-downcase "ABC")           ; → "abc"
 (string->number "42")             ; → 42
 (number->string 42)               ; → "42"
+(number->string 1792441863.5)     ; → "1792441863.5" (Festkomma 1e-4 ≤ |x| < 1e16, sonst 1e-05)
 (string->list "abc")              ; → ("a" "b" "c")
 (list->string '("a" "b" "c"))     ; → "abc"
 (string-replace "abc" "b" "X")    ; → "aXc"
@@ -415,7 +422,11 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (format t "Hallo ~A" "Welt")      ; → stdout
 (format nil "~{~A~^, ~}" '(1 2 3)); → "1, 2, 3"
 (format nil "~,2F" 3.14159)       ; → "3.14"
+(format nil "~,0F" 1.5)           ; → "2."  (~F immer mit Punkt, nie Exponent)
+(format nil "~E" 1.5)             ; → "1.5e+0"
+(format nil "~G" 1.5)             ; → "1.5    " (~F + 4 Leerzeichen, sonst ~E)
 ```
+`printf "%g"` ist ein Fehler (C-%g hat kein FORMAT-Gegenstück); `%.0f` → `"2"` wie C.
 
 Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
 

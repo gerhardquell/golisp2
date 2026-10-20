@@ -26,7 +26,11 @@ golisp2/
     embed/               //go:embed Assets — zentraler Ort für Lisp-Quellen
       assets.go          Embed-Deklarationen (trennt Assets vom Go-Code)
       stdlib.lisp        Standardbibliothek (defstruct, defgeneric/defmethod,
-                         setf, reduce, assoc/List-Helfer …)
+                         setf, reduce, assoc/List-Helfer, pool-map …)
+      types.lisp         Typhierarchie (einzige Quelle): type-of, typep,
+                         typecase/etypecase, check-type, deftype, subtypep
+      loop.lisp          LOOP-Makro (Klauseln → let + while)
+      ki-referenz.md     KI-Sprachreferenz, Default-Vorspann jedes sigo-Calls
       condition.lisp     Condition-lite: define-condition, signal,
                          handler-case, ignore-errors …
       defsystem.lisp     defsystem/load-system/unload-system (topologisch,
@@ -68,6 +72,10 @@ golisp2/
       stringfuncs.go     String-Primitiven (RegisterStringFuncs)
       hashtable.go       CL-Hashtables: make-hash-table, gethash (MV!),
                          puthash, maphash, remhash, clrhash …
+      vector.go          CL-Vektoren (VECTOR, Zustand im Env-Feld): make-array,
+                         vector, aref, aset, vector-push-extend (RegisterVector)
+      regex.go           Reguläre Ausdrücke auf Go regexp: regex-match/-find/
+                         -find-all/-replace/-split (RegisterRegex)
       clcompat_prims.go  sort (Lisp-Callback als Go-Prädikat), sqrt,
                          get-universal-time — Lispbuch-Lücken (TODO 20260818 B)
       cformat.go         C-artige E/A: printf, sprintf, fprintf, sscanf
@@ -130,13 +138,14 @@ golisp2/
 
 ```go
 type Cell struct {
-  Type LispType        // ATOM, NUMBER, STRING, LIST, FUNC, MACRO, NIL
+  Type LispType        // ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL,
+                       // MVALUES, HASHTABLE, SYMMACRO, FOREIGN, VECTOR
   Val  string          // für ATOM und STRING
   Num  float64         // für NUMBER
   Car  *Cell           // Kopf einer Liste
   Cdr  *Cell           // Rest einer Liste
   Fn   func([]*Cell) (*Cell, error)  // für FUNC
-  Env  interface{}     // für Lambda-Closures (*Env) und Go-Objekte
+  Env  interface{}     // Lambda-Closures (*Env), Go-Objekte, *Vector
 }
 ```
 

@@ -17,11 +17,14 @@
 | `%cond?` | Intern: Pruefung ob Objekt eine Condition ist |
 | `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
 | `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
+| `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
+| `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
 | `%infinite?` | Intern: Pruefung auf +/-Inf (types.lisp) |
+| `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
@@ -35,13 +38,31 @@
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
 | `%number-type` | Intern: type-of fuer Zahlen: integer oder float (types.lisp) |
 | `%one-arg?` | Intern: Pruefung auf genau ein Argument (types.lisp) |
+| `%pool-arbeiter` | Intern: Arbeiter-Schleife von pool-map (stdlib.lisp) |
 | `%proper-length` | Intern: Laenge einer echten Liste, -1 bei Dotted Pair (types.lisp) |
 | `%proper-list?` | Intern: Pruefung auf echte (nicht gepunktete) Liste (types.lisp) |
 | `%reduce-fold` | Intern: Faltkern von reduce |
 | `%remove-first` | Intern: erstes Vorkommen entfernen (unload-system) |
 | `%setf-one` | Intern: einzelne setf-Zuweisung ausfuehren |
+| `%st-all` | Intern: subtypep-Teilergebnisse, alle muessen gelten (types.lisp) |
+| `%st-bound` | Intern: Bereichsgrenze normalisieren (types.lisp) |
+| `%st-bound-in?` | Intern: Grenze innerhalb einer anderen (types.lisp) |
+| `%st-cons-free?` | Intern: eingebauter Typ ohne Schnitt mit cons (Untertyp von atom) (types.lisp) |
+| `%st-deftype?` | Intern: ist die Typangabe ein deftype (types.lisp) |
+| `%st-expand` | Intern: deftype-Angabe fuer subtypep expandieren (types.lisp) |
+| `%st-ja/nein` | Intern: Wahrheitswert als sicheres subtypep-Ergebnis (types.lisp) |
+| `%st-left` | Intern: subtypep mit zusammengesetzter linker Seite (types.lisp) |
+| `%st-name-kind` | Intern: Typname einordnen: eingebaut, Struct, Condition (types.lisp) |
+| `%st-names` | Intern: subtypep fuer zwei Typnamen (types.lisp) |
+| `%st-range-bounds` | Intern: beide Grenzen eines Zahlbereichs (types.lisp) |
+| `%st-range-in?` | Intern: Zahlbereich in Zahlbereich (types.lisp) |
+| `%st-range?` | Intern: ist die Angabe ein Zahlbereich (types.lisp) |
+| `%st-right` | Intern: subtypep mit zusammengesetzter rechter Seite (types.lisp) |
+| `%st-some` | Intern: subtypep-Teilergebnisse, eines muss gelten (types.lisp) |
+| `%st-unknown-compound` | Intern: not/satisfies/member/eql unentscheidbar, sonst Fehler (types.lisp) |
 | `%strip-trailing-newlines` | Intern: abschliessende Newlines entfernen (shell-output) |
 | `%struct-instance?` | Intern: Pruefung ob x eine Instanz des Structs name ist (types.lisp) |
+| `%subtypep` | Intern: subtypep als Liste (sub? sicher?) (types.lisp) |
 | `%symbol-type` | Intern: type-of fuer Symbole: boolean, keyword oder symbol (types.lisp) |
 | `%sys-entry` | Intern: Systemeintrag aus *systems* holen |
 | `%sys-get` | Intern: Key aus System-Property-Liste lesen |
@@ -49,14 +70,18 @@
 | `%topo` | Intern: topologische Sortierung mit Zyklenerkennung (defsystem) |
 | `%type-name-warnings` | Intern: WARN-Formen bei Typnamen-Kollisionen (defstruct/define-condition) (types.lisp) |
 | `%type-start` | Intern: Einstiegstyp in *type-parents* fuer x (types.lisp) |
+| `%typecase-clause` | Intern: typecase-Klausel in cond-Klausel uebersetzen (types.lisp) |
 | `%typep-name` | Intern: typep-Aufloesung eines Typnamens: eingebaut, Struct, Condition (types.lisp) |
 | `%typep-range` | Intern: typep fuer (integer lo hi) u. ae. (types.lisp) |
 | `%typep-satisfies` | Intern: typep fuer (satisfies f) (types.lisp) |
 | `%typep-spec` | Intern: typep-Dispatch ueber die Typangabe (or/and/not/member/eql/satisfies/Range/Name) (types.lisp) |
 | `%upper-ok?` | Intern: Obergrenze einer typep-Range pruefen (types.lisp) |
 | `%valid-bound?` | Intern: Pruefung ob eine typep-Range-Grenze gueltig ist (types.lisp) |
+| `%vector->list` | Intern: Vektor als frische Liste (fuer coerce) |
+| `%vector-length` | Intern: Laenge eines Vektors (fuer length) |
 | `*` | Multiplikation aller Argumente |
 | `*condition-types*` | Registry der definierten Condition-Typen |
+| `*deftypes*` | Registry (name expander) der deftype-Definitionen (types.lisp) |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
 | `*ref-docs*` | Beschreibungstabelle des Referenz-Generators (Symbol -> Text) |
@@ -79,10 +104,12 @@
 | `any` | t, wenn mindestens ein Element das Praedikat erfuellt |
 | `append` | Listen verketten; Atom als letztes Argument ergibt dotted pair |
 | `apply` | Funktion aufrufen, letztes Argument wird als Liste gesplict |
+| `aref` | Vektor-Element lesen (O(1)), Index 0..n-1 |
 | `argv` | Kommandozeilenargumente des Prozesses als Liste |
-| `ash` | |
-| `ash-left` | |
-| `ash-right` | |
+| `aset` | Vektor-Element setzen, liefert den Wert; auch (setf (aref v i) x) |
+| `ash` | arithmetischer Shift: (ash x n) = x·2^n, negatives n schiebt nach rechts (floor) |
+| `ash-left` | Hilfsfunktion von ash: n-mal verdoppeln |
+| `ash-right` | Hilfsfunktion von ash: n-mal floor-halbieren |
 | `assert` | Makro: signalisiert Fehler, wenn Form nil ergibt |
 | `assoc` | erstes (key . val)-Paar aus Assoziationsliste (equal?) |
 | `atom` | t, wenn x kein Cons ist |
@@ -106,6 +133,7 @@
 | `chan-send` | Wert in Channel senden (blockierend; geschlossener Channel -> Fehler) |
 | `chan-try-recv` | nicht blockierend empfangen: (values x t) oder sofort (values nil nil) |
 | `chan-try-send` | nicht blockierend senden: t gesendet, nil wenn Puffer voll |
+| `check-type` | Typ zusichern: (check-type x integer) → () oder Fehler; optional Beschreibung |
 | `clrhash` | Hash-Table leeren |
 | `coerce` | Typumwandlung, unterstuetzt 'list und 'string |
 | `complement` | Funktion, die das Praedikat negiert |
@@ -123,6 +151,7 @@
 | `defstruct` | Struktur definieren: erzeugt make-name, name-slot-Accessoren, name-p |
 | `defstruct-resolve-name` | Intern: Namensaufloesung des defstruct-Makros |
 | `defsystem` | System aus Dateien (:components) mit Abhaengigkeiten (:depends-on) definieren |
+| `deftype` | Eigener Typname: (deftype ziffer () '(integer 0 9)), mit Parametern (deftype bis (&optional (n '*)) …) |
 | `defvar` | Variable definieren (Dokumentationskonvention) |
 | `destructuring-bind` | Listenelemente an Variablen binden (flache Muster) |
 | `directory-files` | sortierte Namen in dir, optional Glob-Muster; Verzeichnisse mit / |
@@ -138,6 +167,7 @@
 | `equal?` | strukturelle Gleichheit (rekursiv) |
 | `err-write` | String auf stderr schreiben |
 | `error` | Laufzeitfehler signalisieren (faengbar mit catch) |
+| `etypecase` | wie typecase, ohne Treffer ein Fehler |
 | `every` | t, wenn alle Elemente das Praedikat erfuellen |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
 | `expt` | basis hoch exp (exp ganzzahlig) |
@@ -205,6 +235,7 @@
 | `lock-make` | Mutex fuer lock erzeugen |
 | `loop` | Iteration (CL-Praxis-Kern): for/repeat/when/collect/sum/... (loop.lisp) |
 | `macroexpand-1` | einen Makro-Expansionsschritt ausfuehren |
+| `make-array` | Vektor der Laenge n anlegen, :initial-element (Default ()) |
 | `make-hash-table` | thread-sichere Hash-Table erzeugen |
 | `make-list` | Liste mit n Elementen (:initial-element) |
 | `mapcar` | Funktion elementweise anwenden, Ergebnisliste (first-class, #' moeglich) |
@@ -232,6 +263,7 @@
 | `pg-connect` | PostgreSQL-Verbindung oeffnen (Connection-String) |
 | `pg-exec` | schreibendes SQL, betroffene Zeilen zurueck |
 | `pg-query` | SELECT, Liste von Zeilen als Assoziationslisten |
+| `pool-map` | wie mapcar, hoechstens n Aufrufe gleichzeitig; Reihenfolge bleibt, Fehler → (:error text) an der Stelle |
 | `pop` | Makro: erstes Element aus Liste in var entfernen und liefern |
 | `positive?` | t, wenn groesser 0 |
 | `print` | Werte ohne Newline auf stdout, letztes Argument zurueck |
@@ -247,6 +279,11 @@
 | `redefine-policy` | Redefinitions-Politik setzen/lesen: allow, warn (Default), error |
 | `reduce` | Liste falten: (reduce f seq :initial-value ...)  |
 | `ref-lookup` | Intern: Beschreibungstext des Referenz-Generators zum Symbolnamen |
+| `regex-find` | erster Regex-Treffer oder (); 2. Wert: Liste der Gruppen |
+| `regex-find-all` | alle Regex-Treffer als Liste |
+| `regex-match` | Regex passt irgendwo im String? (regex-match re s) → t/() |
+| `regex-replace` | alle Regex-Treffer ersetzen, $1/${name} fuer Gruppen |
+| `regex-split` | String an Regex-Treffern trennen |
 | `register-setf-expander` | setf-Expander fuer eigenen Accessor registrieren |
 | `remainder` | Alias fuer mod |
 | `remhash` | Hash-Eintrag entfernen |
@@ -305,6 +342,7 @@
 | `string-upcase` | in Grossbuchstaben umwandeln |
 | `string?` | t, wenn String |
 | `substring` | Teilstring von start (inklusive) bis end (exklusive) |
+| `subtypep` | Untertyp-Prüfung, zwei Werte: (subtypep 'integer 'number) → t t; unentscheidbar → () () |
 | `symbol->string` | Symbolname als String |
 | `symbol-name` | Symbolname als String |
 | `symbol?` | t, wenn Symbol |
@@ -317,12 +355,15 @@
 | `trace?` | t, wenn Funktion gerade getraced wird |
 | `truncate` | Richtung Null runden; 2 Werte (CL): Quotient, Rest |
 | `type-of` | Typ eines Werts als Symbol (integer, string, cons, Struct-/Condition-Name …) |
+| `typecase` | Verzweigung nach Typ: (typecase x (integer …) ((or string symbol) …) (otherwise …)) |
 | `typep` | Typprüfung: (typep x 'number), (or …), (and …), (not …), (member …), (satisfies f), (integer lo hi) |
 | `union` | Vereinigungsmenge zweier Listen |
 | `unless` | Makro: body nur auswerten, wenn test falsch ist |
 | `unload-system` | System aus Ladestatistik entfernen (Definitionen bleiben) |
 | `untrace` | Tracing deaktivieren |
 | `values` | mehrere Werte liefern; Verwender sehen den Hauptwert |
+| `vector` | Vektor aus den Argumenten |
+| `vector-push-extend` | Element anhaengen, liefert dessen Index |
 | `warn` | Warnung ausgeben, Auswertung laeuft weiter |
 | `webserv` | Web-Bootstrap: HTTP-Server plus boot.js plus Browser (:html/:htmlpath Pflicht) |
 | `when` | Makro: body nur auswerten, wenn test wahr ist |

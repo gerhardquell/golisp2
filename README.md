@@ -44,7 +44,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Quasiquote**: `` ` `` `,` `,@` für Template-Programmierung
 - **Strukturierte Fehlerbehandlung**: `error` und `trap` (CL-Condition-Handler-Stil)
 - **Externe Programme**: `exec` startet Programme direkt (ohne Shell) und fängt stdout, stderr und Exit-Code ab; `shell-output` ist die Kurzform für „Shell-Befehl → Ausgabe als String“
-- **Typen**: `type-of` und `typep` nach Common Lisp — Typhierarchie, `or`/`and`/`not`/`member`/`satisfies`, Zahlbereiche, Structs und Conditions
+- **Typen**: `type-of` und `typep` nach Common Lisp — Typhierarchie, `or`/`and`/`not`/`member`/`satisfies`, Zahlbereiche, Structs und Conditions — dazu `typecase`/`etypecase`, `check-type`, `deftype` und `subtypep`
 
 ### Erweiterte Features
 - **Scheme-`do`**: Iterator mit paralleler Schritt-Auswertung
@@ -55,14 +55,17 @@ der Go-Runtime und mehreren LLM-Anbietern.
 ### Daten, Text und Zeit
 - **JSON**: `json-parse` / `json-encode` — Objekt ↔ Hash-Tabelle (`equal`), Array ↔ Liste, `null` ↔ `:null`
 - **Strings**: `string-split`, `string-join`, `string-find`, `string-contains`, `format` mit der CL-FORMAT-Engine
+- **Reguläre Ausdrücke**: `regex-match`, `regex-find` (mit Gruppen), `regex-find-all`, `regex-replace` (`$1`), `regex-split` — Go-RE2, Muster zuerst
 - **Zeit**: `(now)` liefert Unix-Sekunden als Float, `(format-time "%F %T" [zeit] [:utc])` formatiert strftime-artig
 - **Dateien und Verzeichnisse**: `file-read`, `file-write`, …, `directory-files` (sortiert, Verzeichnisse mit `/`)
 - **Hash-Tabellen**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (Argumentreihenfolge: `(puthash KEY TABLE VALUE)` – Tabelle an 2. Stelle, anders als Emacs Lisp; empfohlen `(setf (gethash k h) v)`)
+- **Vektoren**: `make-array`, `vector`, `aref`, `aset` / `(setf (aref v i) x)`, `vector-push-extend` — O(1)-Zugriff, eindimensional; `length` und `coerce` kennen sie
 - **Mathematik**: `truncate`, `ceiling`, `round`, `gcd`, `ash`, `parse-int`, `parse-float`; CAS über Maxima per Subprozess (`maxima-open`, `maxima-eval`, `maxima-close`)
 
 ### Parallelität (Go-Power)
 - **`parfunc`**: Ausdrücke in parallelen Goroutinen auswerten
 - **`spawn`**: Goroutine starten, liefert sofort einen Ergebnis-Channel mit `(:ok wert)` bzw. `(:error "text")`
+- **`pool-map`**: wie `mapcar`, aber höchstens n Aufrufe gleichzeitig (Arbeiterpool, z. B. für viele `sigo`-Calls); Ergebnisse in Eingabe-Reihenfolge, Fehler als `(:error "text")` an der Stelle
 - **Channels**: `chan-make`, `chan-send`, `chan-recv` (mit `:timeout` in Sekunden → `(values x t)` / `(values nil nil)`), `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select` (erster von mehreren Channels → `(values x t i)`)
 - **Locks**: `lock-make`, `lock` für kritische Abschnitte
 
@@ -73,6 +76,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **golisp2-Vorspann**: Jeder `sigo`-Call schickt eine eingebettete golisp2-Kurzreferenz mit (Provider-Cache: ab dem 2. Call ~99 % gecacht); lesen/setzen/leeren per `(sigo-system-prompt …)`
 - **Token- und Kostenangaben**: `(sigo* …)` liefert eine Hash-Tabelle mit Text, Modell, Prompt-, Cache-, Thinking-Tokens, `cost-usd` und `elapsed`; `(sigo-usage)` summiert seit Start
 - **Freie Requests**: `(sigo-request h)` schickt einen selbst gebauten Chat-Request (Whitelist der sigoREST-Felder, `timeout` pro Call) und liefert die volle Antwort samt `elapsed`
+- **Defaults**: Modell `zai-glm53-f` (`GOLISP_SIGO_MODEL`), `temperature` 0.2 (`GOLISP_SIGO_TEMPERATURE`) statt der sigoREST-Modellmitte; `max_tokens` = Modell-Maximum
 - **Kosten und Budget**: `sigo-costs` (serverweit, Zeitfenster), `sigo-budget`, `sigo-model-info` (Preise pro Modell) — Details: `docs/sigo.md`
 
 ### Genetische Algorithmen
@@ -157,7 +161,7 @@ GoLisp verhält sich wie ein Standard-Unix-Werkzeug mit mehreren Modi:
 |-------|----------|--------------|
 | **stdin (Default)** | `echo "(+ 1 2)" \| ./build/golisp2` | Von stdin lesen, nur das Ergebnis ausgeben |
 | **Interaktiv** | `./build/golisp2 -i` | REPL mit Syntax-Highlighting |
-| **Ausdruck** | `./build/golisp2 -e "(+ 1 2)"` | Ausdruck/Ausdrücke ausführen; einzelne Form druckt das Ergebnis, mehrere Formen unterdrücken das Endergebnis |
+| **Ausdruck** | `./build/golisp2 -e "(+ 1 2)"` | Ausdruck/Ausdrücke ausführen; einzelne Form druckt das Ergebnis — außer sie hat selbst ausgegeben (`(println 1)` erscheint einmal); mehrere Formen unterdrücken das Endergebnis |
 | **Skript** | `./build/golisp2 skript.lisp [args…]` | Lisp-Datei ausführen (auch direkt per Shebang); mit `defmain` siehe unten |
 | **Tests** | `./build/golisp2 -t` | Eingebaute Testsuite ausführen |
 | **Version** | `./build/golisp2 --version` | `golisp2 <Version> (<commit>, <Datum>[, dirty])` ausgeben (`golisp2-client --version` ebenso) |
@@ -408,6 +412,10 @@ results  ; => (42 123 11)
   (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
   (puthash "timeout" h 300)
   (gethash "elapsed" (sigo-request h)))
+
+; Viele Calls parallel, aber höchstens 4 gleichzeitig
+(pool-map 4 (lambda (frage) (sigo frage)) fragen)
+; => Antworten in Reihenfolge, Fehler als (:error "text")
 ```
 
 **Hinweis:** `sigo*` und `sigo-usage` liefern Hash-Tabellen statt Assoziationslisten.
@@ -590,14 +598,15 @@ my-project/
 | **Places (generalisierte Zuweisung)** | `setf` — Variablen, `nth`, `car`/`cdr` (Symbol-Rebind, nicht CL-Aliasing), `gethash`, Struct-Accessoren |
 | **Structs & CLOS-light** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash-Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
+| **Vektoren** | `make-array`, `vector`, `aref`, `aset`, `vector-push-extend` |
 | **Conditions** | `define-condition`, `handler-case`, `signal` |
-| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains` |
+| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains`, `regex-match`, `regex-find`, `regex-find-all`, `regex-replace`, `regex-split` |
 | **JSON** | `json-parse`, `json-encode` |
 | **Zeit** | `now`, `format-time`, `get-universal-time`, `sleep` |
-| **Typen** | `type-of`, `typep` |
+| **Typen** | `type-of`, `typep`, `typecase`, `etypecase`, `check-type`, `deftype`, `subtypep` |
 | **I/O** | `print`, `println`, `read`, `load` (mit Suchpfad), `exec`, `shell-output` |
 | **Dateien** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete`, `directory-files` |
-| **Parallelität** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select`, `lock-make` |
+| **Parallelität** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select`, `lock-make`, `pool-map` |
 | **KI** | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-usage`, `sigo-usage-reset`, `sigo-system-prompt`, `sigo-reference`, `sigo-costs`, `sigo-budget`, `sigo-model-info` |
 | **Genetische Algorithmen** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
@@ -626,7 +635,7 @@ Die vollständige, aus dem Interpreter generierte Liste steht in
 - **Reader**: Rekursive-Descent-Parser mit voller Unicode-Unterstützung
 - **Eval**: Trampolin-basierte TCO, Makro-Expansion, Spezialformen
 - **Env**: Hierarchische Variablen-Scopes mit lexikalischer Bindung
-- **Types**: `Cell`-Struct mit `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN)
+- **Types**: `Cell`-Struct mit `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN, VECTOR)
 
 ---
 

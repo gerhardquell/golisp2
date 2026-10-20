@@ -41,7 +41,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Quasiquote**: `` ` `` `,` `,@` for template programming
 - **Structured error handling**: `error` and `trap` (CL condition-handler style)
 - **External program execution**: `exec` runs programs directly (no shell) and captures stdout, stderr, and exit code; `shell-output` is the short form for "shell command → output as string"
-- **Types**: `type-of` and `typep` after Common Lisp — type hierarchy, `or`/`and`/`not`/`member`/`satisfies`, numeric ranges, structs and conditions
+- **Types**: `type-of` and `typep` after Common Lisp — type hierarchy, `or`/`and`/`not`/`member`/`satisfies`, numeric ranges, structs and conditions — plus `typecase`/`etypecase`, `check-type`, `deftype` and `subtypep`
 
 ### Advanced Features
 - **Scheme-style `do`**: Iterator with parallel step evaluation
@@ -52,14 +52,17 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 ### Data, Text and Time
 - **JSON**: `json-parse` / `json-encode` — object ↔ hash table (`equal`), array ↔ list, `null` ↔ `:null`
 - **Strings**: `string-split`, `string-join`, `string-find`, `string-contains`, `format` with the CL FORMAT engine
+- **Regular expressions**: `regex-match`, `regex-find` (with groups), `regex-find-all`, `regex-replace` (`$1`), `regex-split` — Go RE2, pattern first
 - **Time**: `(now)` returns Unix seconds as a float, `(format-time "%F %T" [time] [:utc])` formats strftime-style
 - **Files and directories**: `file-read`, `file-write`, …, `directory-files` (sorted, directories end in `/`)
 - **Hash tables**: `make-hash-table`, `gethash`, `puthash`, `maphash`, … (argument order: `(puthash KEY TABLE VALUE)` – table in 2nd position, unlike Emacs Lisp; prefer `(setf (gethash k h) v)`)
+- **Vectors**: `make-array`, `vector`, `aref`, `aset` / `(setf (aref v i) x)`, `vector-push-extend` — O(1) access, one-dimensional; `length` and `coerce` know them
 - **Math**: `truncate`, `ceiling`, `round`, `gcd`, `ash`, `parse-int`, `parse-float`; CAS via Maxima subprocess (`maxima-open`, `maxima-eval`, `maxima-close`)
 
 ### Concurrency (Go-powered)
 - **`parfunc`**: Evaluate expressions in parallel goroutines
 - **`spawn`**: Start a goroutine; returns a result channel at once carrying `(:ok value)` or `(:error "text")`
+- **`pool-map`**: like `mapcar`, but at most n calls at a time (worker pool, e.g. for many `sigo` calls); results in input order, failures as `(:error "text")` in place
 - **Channels**: `chan-make`, `chan-send`, `chan-recv` (with `:timeout` in seconds → `(values x t)` / `(values nil nil)`), `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select` (first of several channels → `(values x t i)`)
 - **Locks**: `lock-make`, `lock` for critical sections
 
@@ -70,6 +73,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **golisp2 preamble**: Every `sigo` call sends an embedded golisp2 quick reference (provider cache: ~99 % cached from the 2nd call on); read/set/clear with `(sigo-system-prompt …)`
 - **Token and cost data**: `(sigo* …)` returns a hash table with text, model, prompt/cache/thinking tokens, `cost-usd` and `elapsed`; `(sigo-usage)` sums since start
 - **Free-form requests**: `(sigo-request h)` sends a hand-built chat request (whitelist of sigoREST fields, per-call `timeout`) and returns the full response plus `elapsed`
+- **Defaults**: model `zai-glm53-f` (`GOLISP_SIGO_MODEL`), `temperature` 0.2 (`GOLISP_SIGO_TEMPERATURE`) instead of sigoREST's model midpoint; `max_tokens` = model maximum
 - **Costs and budget**: `sigo-costs` (server-wide, time window), `sigo-budget`, `sigo-model-info` (per-model prices) — details: `docs/sigo.md`
 
 ### Genetic Algorithms
@@ -153,7 +157,7 @@ GoLisp works like a standard Unix tool with multiple modes:
 |------|---------|-------------|
 | **Stdin (default)** | `echo "(+ 1 2)" \| ./build/golisp2` | Read from stdin, output result only |
 | **Interactive** | `./build/golisp2 -i` | REPL with syntax highlighting |
-| **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result, multiple forms suppress final result |
+| **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result — unless it printed output itself (`(println 1)` appears once); multiple forms suppress final result |
 | **Script** | `./build/golisp2 script.lisp [args…]` | Run a Lisp file (also via shebang); with `defmain` see below |
 | **Tests** | `./build/golisp2 -t` | Run built-in test suite |
 | **Version** | `./build/golisp2 --version` | Print `golisp2 <version> (<commit>, <date>[, dirty])` (`golisp2-client --version` too) |
@@ -396,6 +400,10 @@ results  ; => (42 123 13)
   (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
   (puthash "timeout" h 300)
   (gethash "elapsed" (sigo-request h)))
+
+; Many calls in parallel, but at most 4 at a time
+(pool-map 4 (lambda (q) (sigo q)) questions)
+; => answers in order, failures as (:error "text")
 ```
 
 **Note:** `sigo*` and `sigo-usage` return hash tables, not association lists.
@@ -577,14 +585,15 @@ my-project/
 | **Places (generalized assignment)** | `setf` — variables, `nth`, `car`/`cdr` (symbol-rebind, not CL aliasing), `gethash`, struct accessors |
 | **Structs & CLOS-lite** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
+| **Vectors** | `make-array`, `vector`, `aref`, `aset`, `vector-push-extend` |
 | **Conditions** | `define-condition`, `handler-case`, `signal` |
-| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains` |
+| **Strings** | `string-length`, `string-append`, `substring`, `string-upcase`, `string-downcase`, `string->number`, `number->string`, `string-split`, `string-join`, `string-find`, `string-contains`, `regex-match`, `regex-find`, `regex-find-all`, `regex-replace`, `regex-split` |
 | **JSON** | `json-parse`, `json-encode` |
 | **Time** | `now`, `format-time`, `get-universal-time`, `sleep` |
-| **Types** | `type-of`, `typep` |
+| **Types** | `type-of`, `typep`, `typecase`, `etypecase`, `check-type`, `deftype`, `subtypep` |
 | **I/O** | `print`, `println`, `read`, `load` (with search path), `exec`, `shell-output` |
 | **Files** | `file-write`, `file-append`, `file-read`, `file-exists?`, `file-delete`, `directory-files` |
-| **Concurrency** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select`, `lock-make` |
+| **Concurrency** | `parfunc`, `spawn`, `chan-make`, `chan-send`, `chan-recv`, `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`, `chan-select`, `lock-make`, `pool-map` |
 | **AI** | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-host`, `sigo-usage`, `sigo-usage-reset`, `sigo-system-prompt`, `sigo-reference`, `sigo-costs`, `sigo-budget`, `sigo-model-info` |
 | **Genetic Algorithms** | `ga-create`, `ga-init`, `ga-cross`, `ga-calc`, `ga-select`, `ga-result`, `ga-mut`, `ga-print`, `ga?` |
 | **PostgreSQL** | `pg-connect`, `pg-query`, `pg-exec`, `pg-close` |
@@ -613,7 +622,7 @@ The complete list, generated from the interpreter, is in
 - **Reader**: Recursive descent parser with full Unicode support
 - **Eval**: Trampoline-based TCO, macro expansion, special forms
 - **Env**: Hierarchical variable scopes with lexical binding
-- **Types**: `Cell` struct with `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN)
+- **Types**: `Cell` struct with `LispType` (ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL, MVALUES, HASHTABLE, SYMMACRO, FOREIGN, VECTOR)
 
 ---
 

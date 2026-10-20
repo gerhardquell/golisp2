@@ -164,7 +164,7 @@ Vollständige, generierte Liste (kein Ausschnitt): `docs/referenz-generiert.md`.
 
 ### Accessoren/Shortcuts
 `cadr caddr cadddr cddr cdar caar first second third fourth rest`
-`zero? positive? negative? pair?`
+`zero? positive? negative? pair?` — CL-Namen: `zerop plusp minusp evenp oddp 1+ 1-` (`evenp`/`oddp` nur für ganze Zahlen)
 
 ### Higher-Order/Functional
 `identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota max min square expt gcd`

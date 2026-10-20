@@ -3214,6 +3214,40 @@ CL-Name für zero?.
 ; => t
 ```
 
+### plusp / minusp
+
+**Syntax:** `(plusp n)`, `(minusp n)`
+
+t, wenn n größer bzw. kleiner als 0 ist (CL).
+
+```lisp
+(plusp 0.5)   ; => t
+(minusp 0)    ; => ()
+```
+
+### evenp / oddp
+
+**Syntax:** `(evenp n)`, `(oddp n)`
+
+t, wenn die ganze Zahl n gerade bzw. ungerade ist (CL). Keine ganze Zahl → Fehler.
+
+```lisp
+(evenp 4)     ; => t
+(oddp -3)     ; => t
+(evenp 1.5)   ; Fehler: evenp: ganze Zahl erwartet, got 1.5
+```
+
+### 1+ / 1-
+
+**Syntax:** `(1+ n)`, `(1- n)`
+
+n plus bzw. minus 1 (CL).
+
+```lisp
+(1+ 41)                 ; => 42
+(mapcar '1+ '(1 2 3))   ; => (2 3 4)
+```
+
 ### positive?
 
 **Syntax:** `(positive? n)`

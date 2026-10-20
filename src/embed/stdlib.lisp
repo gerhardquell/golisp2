@@ -544,6 +544,17 @@
 ;; --- Zahlen ---
 
 (defun zerop (n) (zero? n))
+(defun plusp (n) (positive? n))
+(defun minusp (n) (negative? n))
+(defun 1+ (n) (+ n 1))
+(defun 1- (n) (- n 1))
+
+;; evenp/oddp: CL definiert sie nur für ganze Zahlen — sonst laut.
+(defun %ganzzahl-pruefen (name n)
+  (if (not (and (number? n) (= n (floor n))))
+      (error (format nil "~a: ganze Zahl erwartet, got ~s" name n))))
+(defun evenp (n) (%ganzzahl-pruefen "evenp" n) (= (mod n 2) 0))
+(defun oddp (n) (%ganzzahl-pruefen "oddp" n) (not (= (mod n 2) 0)))
 
 (defmacro incf (place &optional (d 1)) `(setf ,place (+ ,place ,d)))
 (defmacro decf (place &optional (d 1)) `(setf ,place (- ,place ,d)))

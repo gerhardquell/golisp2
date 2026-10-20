@@ -384,6 +384,13 @@
     (ws-unexport . "exportierte Operation entfernen")
     (zero? . "t, wenn gleich 0")
     (zerop . "CL-Name fuer zero?")
+    (plusp . "CL-Name fuer positive?")
+    (minusp . "CL-Name fuer negative?")
+    (evenp . "t wenn ganze Zahl n gerade ist (CL), sonst Fehler bei Nicht-Ganzzahl")
+    (oddp . "t wenn ganze Zahl n ungerade ist (CL), sonst Fehler bei Nicht-Ganzzahl")
+    (1+ . "n + 1 (CL)")
+    (1- . "n - 1 (CL)")
+    (%ganzzahl-pruefen . "Intern: Fehler, wenn n keine ganze Zahl ist (evenp/oddp)")
     (zip . "zwei Listen elementweise zu Paaren verbinden")))
 
 ;; ref-lookup: Beschreibung zum Symbolnamen (String). nil kann kein

@@ -20,6 +20,7 @@
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
+| `%ganzzahl-pruefen` | Intern: Fehler, wenn n keine ganze Zahl ist (evenp/oddp) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
@@ -91,6 +92,8 @@
 | `+` | Addition aller Argumente |
 | `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0 |
 | `/` | Division; Fehler bei Division durch 0 |
+| `1+` | n + 1 (CL) |
+| `1-` | n - 1 (CL) |
 | `<` | numerisch kleiner |
 | `<=` | numerisch kleiner oder gleich |
 | `=` | numerische Gleichheit |
@@ -166,6 +169,7 @@
 | `err-write` | String auf stderr schreiben |
 | `error` | Laufzeitfehler signalisieren (faengbar mit catch) |
 | `etypecase` | wie typecase, ohne Treffer ein Fehler |
+| `evenp` | t wenn ganze Zahl n gerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
 | `every` | t, wenn alle Elemente das Praedikat erfuellen |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
 | `expt` | basis hoch exp (exp ganzzahlig) |
@@ -245,6 +249,7 @@
 | `member` | Restliste ab erstem Treffer |
 | `memstats` | Go-Runtime-Memory-Statistiken als Assoziationsliste |
 | `min` | kleinste Zahl |
+| `minusp` | CL-Name fuer negative? |
 | `mod` | Rest der Division (Gleitkomma) |
 | `negative?` | t, wenn kleiner 0 |
 | `nil` | NIL-Konstante (Singleton, MakeNil) |
@@ -254,6 +259,7 @@
 | `null?` | Alias fuer null |
 | `number->string` | Zahl in String umwandeln |
 | `number?` | t, wenn Zahl |
+| `oddp` | t wenn ganze Zahl n ungerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
 | `pair?` | t, wenn Cons |
 | `parse-float` | String strikt als Fliesskommazahl parsen, Fehler bei ungueltigem Format |
 | `parse-int` | String strikt als Ganzzahl parsen, Fehler bei ungueltigem Format |
@@ -261,6 +267,7 @@
 | `pg-connect` | PostgreSQL-Verbindung oeffnen (Connection-String) |
 | `pg-exec` | schreibendes SQL, betroffene Zeilen zurueck |
 | `pg-query` | SELECT, Liste von Zeilen als Assoziationslisten |
+| `plusp` | CL-Name fuer positive? |
 | `pool-map` | wie mapcar, hoechstens n Aufrufe gleichzeitig; Reihenfolge bleibt, Fehler → (:error text) an der Stelle |
 | `pop` | Makro: erstes Element aus Liste in var entfernen und liefern |
 | `positive?` | t, wenn groesser 0 |

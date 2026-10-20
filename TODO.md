@@ -43,10 +43,15 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       sigo-Messung 20261020 auf — KIs schreiben das. Erledigt 20.10.: `resolveFn`
       (Eval-Pfad, `funcall`, `apply`, `mapcar`, `sort`).
 
+- [ ] `mod` rechnet wie `remainder` (Richtung Null): `(mod -3 2)` → `-1`, CL → `1`
+      (CL-`mod` rundet ab, Vorzeichen des Divisors). `rem` als CL-Name fehlt.
+      Gefunden 20.10. bei `evenp`/`oddp` (dort egal, weil nur gegen 0 geprüft).
+
 ## 3. Fehlende Funktionen
 
-- [ ] CL-Zahlenprädikate fehlen: `evenp`, `oddp`, `plusp`, `minusp`, `1+`, `1-`
+- [x] CL-Zahlenprädikate fehlen: `evenp`, `oddp`, `plusp`, `minusp`, `1+`, `1-`
       (`zerop` gibt es; geprüft 20.10. beim Tutorial-Ausbau). KIs schreiben sie.
+      Erledigt 20.10. (`stdlib.lisp`, `plusp`/`minusp` delegieren an `positive?`/`negative?`).
 
 - [x] Reguläre Ausdrücke für Lisp-Code — erledigt 20.10.: `regex-match`, `regex-find`,
       `regex-find-all`, `regex-replace`, `regex-split` (`src/lib/regex.go`, Muster zuerst).

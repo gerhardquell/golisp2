@@ -26,12 +26,22 @@ import (
 func TestPrimitiveModAbs(t *testing.T) {
   evalEq(t, `(mod 10 3)`, "1")
   evalEq(t, `(mod 10 2)`, "0")
-  evalEq(t, `(remainder 10 3)`, "1")   // Alias für mod
+  evalEq(t, `(remainder 10 3)`, "1")
   evalEq(t, `(abs -5)`, "5")
   evalEq(t, `(abs 5)`, "5")
   evalEq(t, `(abs 0)`, "0")
   evalErr(t, `(mod 10 0)`)              // Division durch Null
   evalErr(t, `(mod 10)`)                // zu wenig Args
+}
+
+// CL: mod rundet ab (Vorzeichen des Divisors), rem/remainder Richtung
+// Null (Vorzeichen des Dividenden). Bei positiven Zahlen gleich.
+func TestModRemNegativ(t *testing.T) {
+  evalEq(t, `(list (mod -3 2) (mod 3 -2) (mod -3 -2) (mod 3 2))`, "(1 -1 -1 1)")
+  evalEq(t, `(list (rem -3 2) (rem 3 -2) (rem -3 -2) (rem 3 2))`, "(-1 1 -1 1)")
+  evalEq(t, `(list (remainder -3 2) (remainder 3 -2))`, "(-1 1)")
+  evalEq(t, `(list (mod -6 3) (mod 5.5 2) (mod -5.5 2))`, "(0 1.5 0.5)")
+  evalErr(t, `(rem 1 0)`)
 }
 
 // --- Typ-Prädikate ---

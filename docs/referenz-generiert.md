@@ -250,7 +250,7 @@
 | `memstats` | Go-Runtime-Memory-Statistiken als Assoziationsliste |
 | `min` | kleinste Zahl |
 | `minusp` | CL-Name fuer negative? |
-| `mod` | Rest der Division (Gleitkomma) |
+| `mod` | Rest wie CL: abgerundet, Vorzeichen des Divisors ((mod -3 2) → 1) |
 | `negative?` | t, wenn kleiner 0 |
 | `nil` | NIL-Konstante (Singleton, MakeNil) |
 | `now` | Unix-Sekunden (seit 1970) als Float |
@@ -289,7 +289,8 @@
 | `regex-replace` | alle Regex-Treffer ersetzen, $1/${name} fuer Gruppen |
 | `regex-split` | String an Regex-Treffern trennen |
 | `register-setf-expander` | setf-Expander fuer eigenen Accessor registrieren |
-| `remainder` | Alias fuer mod |
+| `rem` | Rest Richtung Null wie CL, Vorzeichen des Dividenden ((rem -3 2) → -1) |
+| `remainder` | Scheme-Name fuer rem |
 | `remhash` | Hash-Eintrag entfernen |
 | `remove` | alle Vorkommen von item entfernen (equal?) |
 | `remove-duplicates` | Duplikate entfernen (erstes Vorkommen bleibt) |

@@ -25,7 +25,8 @@ func RegisterArith(env *Env) {
 	_ = env.Set("*", makeFn(fnMul))
 	_ = env.Set("/", makeFn(fnDiv))
 	_ = env.Set("mod", makeFn(fnMod))
-	_ = env.Set("remainder", makeFn(fnMod))
+	_ = env.Set("rem", makeFn(fnRem))
+	_ = env.Set("remainder", makeFn(fnRem))
 	_ = env.Set("abs", makeFn(fnAbs))
 	_ = env.Set("floor", makeFn(fnFloor))
 	_ = env.Set("ceiling", makeFn(fnCeiling))
@@ -213,18 +214,41 @@ func fnRandom(args []*Cell) (*Cell, error) {
 	return MakeNum(float64(rand.Intn(n))), nil
 }
 
-func fnMod(args []*Cell) (*Cell, error) {
+// divArgs prüft (name a b) und liefert a, b; b = 0 ist ein Fehler.
+func divArgs(name string, args []*Cell) (float64, float64, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("mod: 2 Argumente nötig")
+		return 0, 0, fmt.Errorf("%s: 2 Argumente nötig", name)
 	}
-	if err := checkNumbers("mod", args); err != nil {
+	if err := checkNumbers(name, args); err != nil {
+		return 0, 0, err
+	}
+	if args[1].Num == 0 {
+		return 0, 0, fmt.Errorf("%s: Division durch Null", name)
+	}
+	return args[0].Num, args[1].Num, nil
+}
+
+// mod: CL — rundet ab, Ergebnis hat das Vorzeichen des Divisors:
+// (mod -3 2) → 1.
+func fnMod(args []*Cell) (*Cell, error) {
+	a, b, err := divArgs("mod", args)
+	if err != nil {
 		return nil, err
 	}
-	b := args[1].Num
-	if b == 0 {
-		return nil, fmt.Errorf("mod: Division durch Null")
+	r := math.Mod(a, b)
+	if r != 0 && (r < 0) != (b < 0) {
+		r += b
 	}
-	return MakeNum(math.Mod(args[0].Num, b)), nil
+	return MakeNum(r), nil
+}
+
+// rem/remainder: Richtung Null, Vorzeichen des Dividenden: (rem -3 2) → -1.
+func fnRem(args []*Cell) (*Cell, error) {
+	a, b, err := divArgs("rem", args)
+	if err != nil {
+		return nil, err
+	}
+	return MakeNum(math.Mod(a, b)), nil
 }
 
 func fnAbs(args []*Cell) (*Cell, error) {

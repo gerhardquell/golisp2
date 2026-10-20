@@ -43,9 +43,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       sigo-Messung 20261020 auf — KIs schreiben das. Erledigt 20.10.: `resolveFn`
       (Eval-Pfad, `funcall`, `apply`, `mapcar`, `sort`).
 
-- [ ] `mod` rechnet wie `remainder` (Richtung Null): `(mod -3 2)` → `-1`, CL → `1`
+- [x] `mod` rechnet wie `remainder` (Richtung Null): `(mod -3 2)` → `-1`, CL → `1`
       (CL-`mod` rundet ab, Vorzeichen des Divisors). `rem` als CL-Name fehlt.
-      Gefunden 20.10. bei `evenp`/`oddp` (dort egal, weil nur gegen 0 geprüft).
+      Erledigt 20.10.: `mod` wie CL, neues `rem`, `remainder` unverändert (Richtung Null).
 
 ## 3. Fehlende Funktionen
 

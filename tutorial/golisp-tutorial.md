@@ -494,21 +494,24 @@ Dividiert x durch y. Fehler bei Division durch 0.
 
 **Syntax:** `(mod x y)`
 
-Liefert den Rest der Division x durch y (Gleitkomma).
+Rest der Division x durch y wie in CL: rundet ab, das Ergebnis hat das Vorzeichen von y. Auch für Gleitkommazahlen.
 
 ```lisp
-(mod 10 3)
-(mod 7.5 2.5)
+(mod 10 3)    ; => 1
+(mod -3 2)    ; => 1
+(mod 3 -2)    ; => -1
+(mod 5.5 2)   ; => 1.5
 ```
 
-### remainder
+### rem / remainder
 
-**Syntax:** `(remainder x y)`
+**Syntax:** `(rem x y)`, `(remainder x y)`
 
-Alias für mod.
+Rest Richtung Null wie CL-`rem` (Scheme: `remainder`): das Ergebnis hat das Vorzeichen von x. Bei positiven Zahlen gleich `mod`.
 
 ```lisp
-(remainder 10 3)
+(rem -3 2)        ; => -1
+(remainder 10 3)  ; => 1
 ```
 
 ### abs

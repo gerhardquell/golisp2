@@ -107,7 +107,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 ## 3. Wichtige Primitiven (FUNC, Go-seitig)
 
 ### Arithmetik/Vergleich
-`+ - * / mod remainder abs floor random values`
+`+ - * / mod rem remainder abs floor random values` — `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
 `= < > >= <= equal? eq eq?`  — `eq`=Pointer, `equal?=strukturell`
 
 ### Listen (klassische 7)

@@ -22,6 +22,7 @@
     ("*" . "(* &rest numbers)")
     ("/" . "(/ x y)")
     ("mod" . "(mod x y)")
+    ("rem" . "(rem x y)")
     ("remainder" . "(remainder x y)")
     ("abs" . "(abs x)")
     ("random" . "(random &optional n)")

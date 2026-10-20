@@ -329,6 +329,7 @@
     (typep . "Typprüfung: (typep x 'number), (or …), (and …), (not …), (member …), (satisfies f), (integer lo hi)")
     (typecase . "Verzweigung nach Typ: (typecase x (integer …) ((or string symbol) …) (otherwise …))")
     (etypecase . "wie typecase, ohne Treffer ein Fehler")
+    (check-type . "Typ zusichern: (check-type x integer) → () oder Fehler; optional Beschreibung")
     (union . "Vereinigungsmenge zweier Listen")
     (unless . "Makro: body nur auswerten, wenn test falsch ist")
     (unload-system . "System aus Ladestatistik entfernen (Definitionen bleiben)")

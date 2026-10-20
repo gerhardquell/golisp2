@@ -227,6 +227,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (type-of x)                       ; Typ als Symbol: integer, string, cons, Struct-Name …
 (typep x 'typ)                    ; Typprüfung inkl. (or …), (and …), (not …), (integer lo hi), (satisfies f)
 (typecase x (integer …) (otherwise …)) ; Verzweigung nach Typ; etypecase: ohne Treffer Fehler
+(check-type x (integer 0 *))      ; Typ zusichern → () oder Fehler
 ```
 
 ### Symbol-Konstruktion

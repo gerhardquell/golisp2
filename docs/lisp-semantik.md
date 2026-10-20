@@ -378,6 +378,7 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
   ((or string symbol) 'text)
   (otherwise 'sonst))              ; t geht auch; ohne Treffer → ()
 (etypecase x (integer 'ganz))      ; ohne Treffer → Fehler
+(check-type x (integer 0 *))       ; → () oder Fehler "check-type: x ist -1, nicht vom Typ …"
 ```
 
 Hierarchie und Typnamen stehen an genau einer Stelle: `*type-parents*`
@@ -393,10 +394,12 @@ Condition.
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
 - Keine Characters, keine Vektoren.
+- `etypecase`/`check-type` werfen einfachen `error` (fangbar als `error`/
+  `lisp-error`), kein `type-error`; `check-type` ohne `store-value`-Restart.
 
 **Nicht vorhanden / keine Typen:**
 - Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
-- Noch nicht vorhanden: `deftype`, `check-type`, `subtypep`, `ctypecase`.
+- Noch nicht vorhanden: `deftype`, `subtypep`, `ctypecase`.
 
 ---
 

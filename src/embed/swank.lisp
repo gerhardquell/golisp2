@@ -102,6 +102,7 @@
     ("typep" . "(typep x type-spec)")
     ("typecase" . "(typecase key (type form...)... [(otherwise form...)])")
     ("etypecase" . "(etypecase key (type form...)...)")
+    ("check-type" . "(check-type place type-spec &optional description)")
     ("sleep" . "(sleep ms)")
     ("now" . "(now)")
     ("format-time" . "(format-time fmt &optional time :utc)")

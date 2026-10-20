@@ -239,3 +239,15 @@
        (cond ,@(mapcar (lambda (c) (%typecase-clause g c)) clauses)
              (t (error (format nil "etypecase: ~s passt zu keinem Typ ~s"
                                ,g ',(mapcar car clauses))))))))
+
+;; === check-type ======================================================
+
+;; (check-type place spec [beschreibung]) → () oder Fehler. Abweichung von
+;; CL: einfacher error statt type-error, kein store-value-Restart.
+(defmacro check-type (place spec &rest doc)
+  (let ((g (gensym)))
+    `(let ((,g ,place))
+       (if (typep ,g ',spec)
+           ()
+           (error (format nil "check-type: ~a ist ~s, nicht ~a" ',place ,g
+                          ,(if (null doc) (format nil "vom Typ ~a" spec) (car doc))))))))

@@ -283,3 +283,17 @@ func TestEtypecase(t *testing.T) {
   evalStdlibEq(t, `(trap (etypecase 1.5 (string 'a) (integer 'b)) (lambda (e) e))`,
     `"etypecase: 1.5 passt zu keinem Typ (string integer)"`)
 }
+
+func TestCheckType(t *testing.T) {
+  evalStdlibEq(t, `(let ((x 3)) (check-type x integer))`, "()")
+  evalStdlibEq(t, `(let ((x 3)) (check-type x (integer 0 10)) x)`, "3")
+  evalStdlibErr(t, `(let ((x 1.5)) (check-type x integer))`)
+  evalStdlibEq(t, `(let ((x 1.5)) (trap (check-type x integer) (lambda (e) e)))`,
+    `"check-type: x ist 1.5, nicht vom Typ integer"`)
+  evalStdlibEq(t, `(let ((x -1)) (trap (check-type x (integer 0 *) "eine natürliche Zahl") (lambda (e) e)))`,
+    `"check-type: x ist -1, nicht eine natürliche Zahl"`)
+  evalStdlibEq(t, `(let ((x "a")) (trap (check-type x integer) (lambda (e) e)))`,
+    `"check-type: x ist \"a\", nicht vom Typ integer"`)
+  evalStdlibEq(t, `(let ((n 0)) (check-type (setq n (+ n 1)) integer) n)`, "1") // place einmal
+  evalStdlibEq(t, `(handler-case (let ((x 1.5)) (check-type x integer)) (error (e) :gefangen))`, ":gefangen")
+}

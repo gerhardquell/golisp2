@@ -7,9 +7,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 1. Entscheidungen (Gerhard)
 
-- [ ] `swank--cell-type` (`src/lib/swank/env.go:116`) ist Beinahe-Zwilling
-      von `cellTypeName` (`src/lib/celltype.go`). Zusammenlegen ändert die
-      Labels von SLIME `describe-symbol` (`"atom"` → `symbol` …).
+- [x] `swank--cell-type` (`src/lib/swank/env.go:116`) ist Beinahe-Zwilling
+      von `cellTypeName` (`src/lib/celltype.go`). Erledigt 20.10.: Go-Zwilling entfernt,
+      `describe-symbol` nutzt `type-of` (Labels jetzt CL: `symbol`, `cons`, `compiled-function` …).
 - [ ] Lispbuch: Remote anlegen? (Repo hat keinen — 6 Commits nur lokal)
 - [ ] Lispbuch: `src/ch2/` und `src/chapters/` driften — Kap. 8/12/16/24/27
       in ch2 älter (ohne sort/sqrt-Fixes), Kap. 1 in ch2 neuer. Richtung?

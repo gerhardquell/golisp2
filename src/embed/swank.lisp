@@ -165,7 +165,7 @@
 
 (defun swank--describe-symbol (name)
   (let ((cell (trap (eval (read name)) (lambda (err) ()))))
-    (let ((type (if (null? cell) "unbound" (swank--cell-type cell)))
+    (let ((type (if (null? cell) "unbound" (format nil "~a" (type-of cell))))
           (arglist (trap (swank--arglist name) (lambda (err) ())))
           (static (swank--static-description name)))
       (string-append

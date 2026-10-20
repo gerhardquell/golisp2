@@ -134,8 +134,8 @@ func TestSwankDescribeSymbolBuiltIn(t *testing.T) {
   if !strings.Contains(s, ":title \"car\"") {
     t.Fatalf("expected title car, got: %s", s)
   }
-  if !strings.Contains(s, "function") {
-    t.Fatalf("expected type function, got: %s", s)
+  if !strings.Contains(s, `Typ: compiled-function\n`) {
+    t.Fatalf("expected type compiled-function, got: %s", s)
   }
   if !strings.Contains(s, "erste Element") {
     t.Fatalf("expected static description, got: %s", s)
@@ -168,8 +168,8 @@ func TestSwankDescribeSymbolLambda(t *testing.T) {
   if !strings.Contains(s, ":title \"mydescfn\"") {
     t.Fatalf("expected title mydescfn, got: %s", s)
   }
-  if !strings.Contains(s, "lambda") {
-    t.Fatalf("expected type lambda, got: %s", s)
+  if !strings.Contains(s, `Typ: function\n`) {
+    t.Fatalf("expected type function, got: %s", s)
   }
   if !strings.Contains(s, "(mydescfn x)") {
     t.Fatalf("expected arglist (mydescfn x), got: %s", s)
@@ -461,5 +461,38 @@ func TestSwankConnectionInfoVersion(t *testing.T) {
   }
   if !strings.Contains(s, `:features () :version "0.2"`) {
     t.Fatalf("Protokollversion 0.2 fehlt: %s", s)
+  }
+}
+
+// describe-symbol nutzt type-of (types.lisp) — eine Quelle für Typnamen,
+// auch für Typen, die früher als "unknown" erschienen.
+func TestSwankDescribeSymbolTypeOf(t *testing.T) {
+  env := lib.BaseEnv()
+  lib.LoadStdlib(env)
+  RegisterSwankEnv(env, func(c *lib.Cell) error { return nil })
+  if err := LoadSwankLisp(env); err != nil {
+    t.Fatalf("LoadSwankLisp: %v", err)
+  }
+  setup := `(begin (define dt-h (make-hash-table)) (define dt-v (vector 1)) (define dt-n 3)
+                   (define dt-s 'foo) (define dt-l '(1 2)) (defmacro dt-m (x) x)
+                   (defstruct dt-punkt x) (define dt-p (make-dt-punkt :x 1)))`
+  if _, err := lib.LoadString(setup, env); err != nil {
+    t.Fatalf("setup: %v", err)
+  }
+  for name, want := range map[string]string{
+    "dt-h": "hash-table", "dt-v": "vector", "dt-n": "integer", "dt-s": "symbol",
+    "dt-l": "cons", "dt-m": "macro", "dt-p": "dt-punkt",
+  } {
+    cell, err := lib.Read(`(:emacs-rex (swank:describe-symbol "` + name + `" "USER") nil t 1)`)
+    if err != nil {
+      t.Fatalf("read: %v", err)
+    }
+    result, err := HandleMessage(env, cell)
+    if err != nil {
+      t.Fatalf("HandleMessage %s: %v", name, err)
+    }
+    if s := result.String(); !strings.Contains(s, `Typ: `+want+`\n`) {
+      t.Errorf("%s: expected Typ: %s, got: %s", name, want, s)
+    }
   }
 }

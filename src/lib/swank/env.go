@@ -111,33 +111,6 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     b.WriteString(")")
     return lib.MakeStr(b.String()), nil
   }))
-  // swank--cell-type: Cell -> Typ-Name als String. Für describe-symbol,
-  // damit FUNC/MACRO/LIST/... unterschieden werden können.
-  _ = env.Set("swank--cell-type", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
-    if len(args) < 1 || args[0] == nil {
-      return lib.MakeStr("unknown"), nil
-    }
-    switch args[0].Type {
-    case lib.ATOM:
-      return lib.MakeStr("atom"), nil
-    case lib.NUMBER:
-      return lib.MakeStr("number"), nil
-    case lib.STRING:
-      return lib.MakeStr("string"), nil
-    case lib.LIST:
-      return lib.MakeStr("list"), nil
-    case lib.LAMBDA:
-      return lib.MakeStr("lambda"), nil
-    case lib.FUNC:
-      return lib.MakeStr("function"), nil
-    case lib.MACRO:
-      return lib.MakeStr("macro"), nil
-    case lib.NIL:
-      return lib.MakeStr("nil"), nil
-    default:
-      return lib.MakeStr("unknown"), nil
-    }
-  }))
 
   // swank--find-definition: (name) -> ("file" . line) | NIL.
   // Map-Lookup in lib.LookupDefinition (defun/defmacro/define registriert).

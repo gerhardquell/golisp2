@@ -44,11 +44,12 @@ func TestWorkingDirectory(t *testing.T) {
 
   env := BaseEnv()
 
-  // Ohne gesetztes working-directory: get → ()
+  // Ohne gesetztes working-directory: get → Prozess-Verzeichnis
+  prozessDir, _ := os.Getwd()
   got, err := LoadString(`(get-working-directory)`, env)
   if err != nil { t.Fatalf("get leer: %v", err) }
-  if got.Type != NIL {
-    t.Fatalf("get-working-directory = () erwartet, got %s", got)
+  if got.Type != STRING || got.Val != prozessDir {
+    t.Fatalf("get-working-directory = %q erwartet, got %s", prozessDir, got)
   }
 
   // Nicht existierendes Verzeichnis → Fehler

@@ -28,8 +28,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       (CL: `"1.5e+0"`). Erledigt 20.10.: ohne `d`/`e` so viele Stellen wie nötig;
       `printf "%e"` behält C-Form `e+00`, `%0We` füllt jetzt mit `0`.
       Offen: `~g` ist weiter nur `~e` (CL wählt zwischen `~f` und `~e`).
-- [ ] `(get-working-directory)` liefert `()`, wenn es nie gesetzt wurde
-      (geprüft 19.10.). Sollte es das echte Arbeitsverzeichnis liefern?
+- [x] `(get-working-directory)` liefert `()`, wenn es nie gesetzt wurde
+      (geprüft 19.10.). Erledigt 20.10.: liefert dann das Prozess-Verzeichnis.
 - [x] Kommentar an `fnAppend` (`src/lib/primitives.go:261`) sagt „single-item",
       Tests sagen CL-`append` — erledigt 20.10.: Kommentar beschreibt CL-`append`.
 - [ ] webserv deferred-minor (20260809): `fnBrowserOpen` verschluckt Fehler,

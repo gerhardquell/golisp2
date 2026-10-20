@@ -14,7 +14,7 @@
 //
 // Pfad-Auflösung:
 //   (set-working-directory "./projekt")  → Arbeitsverzeichnis setzen
-//   (get-working-directory)              → aktuelles Arbeitsverzeichnis oder ()
+//   (get-working-directory)              → gesetztes Arbeitsverzeichnis, sonst Prozess-Verzeichnis
 //   (get-file-path "datei.txt")          → erster existierender Pfad
 //   (directory-files "dir" ["*.lisp"])   → sortierte Namen, Verzeichnisse mit "/"
 //
@@ -179,12 +179,16 @@ func fnSetWorkingDirectory(args []*Cell) (*Cell, error) {
   return MakeAtom("t"), nil
 }
 
-// get-working-directory → aktuelles Arbeitsverzeichnis oder ()
+// get-working-directory → gesetztes Arbeitsverzeichnis, sonst das des Prozesses
 func fnGetWorkingDirectory(args []*Cell) (*Cell, error) {
   workingDirectoryMu.RLock()
   dir := workingDirectory
   workingDirectoryMu.RUnlock()
-  if dir == "" { return MakeNil(), nil }
+  if dir == "" {
+    cwd, err := os.Getwd()
+    if err != nil { return nil, fmt.Errorf("get-working-directory: %v", err) }
+    return MakeStr(cwd), nil
+  }
   return MakeStr(dir), nil
 }
 

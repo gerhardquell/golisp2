@@ -52,8 +52,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 4. sigo / sigoREST
 
-- [ ] Schritt 2: Default-Modell von `(sigo …)` auf ein Modell ohne Thinking
+- [x] Schritt 2: Default-Modell von `(sigo …)` auf ein Modell ohne Thinking
       (Kandidat `zai-glm53-f`); Thinking-Modelle nur gezielt, dann `max_tokens` großzügig.
+      Erledigt 20.10.: Default `zai-glm53-f` (~14× billiger, denkt wenig — 11 Reasoning-
+      Tokens gemessen, also nicht ganz „ohne“); Regel in `docs/sigo.md`.
 - [ ] Schritt 3: Für Code niedrige `temperature` und bewusstes `max_tokens` als Standard
       (pro Aufruf geht es schon über `sigo-request`).
 - [ ] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).

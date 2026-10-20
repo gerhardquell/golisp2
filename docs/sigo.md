@@ -14,7 +14,7 @@ Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo*`, `sigo-req
 | Env-Var | Default | Bedeutung |
 |---------|---------|-----------|
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo …)` |
-| `GOLISP_SIGO_MODEL` | `zai-glm53` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
+| `GOLISP_SIGO_MODEL` | `zai-glm53-f` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
 | `GOLISP_SIGO_TIMEOUT` | `120s` | Request-Timeout; z. B. `30s`, `5m`, `2m30s` |
 
 ```bash
@@ -47,6 +47,19 @@ sigoREST-Dienst unter `/v1/models` liefert — die Paarung entsteht dort, nicht
 in golisp2, ein Fix gehört ins sigoREST-Projekt. Wer z. B. "die ersten N
 Modelle" nehmen will (`(take 3 (sigo-models))`), bekommt sonst dasselbe
 Modell doppelt statt N verschiedene — muss selbst dedupen.
+
+**Default und Thinking-Modelle (gemessen 20261020):** Default ist
+`zai-glm53-f` (glm-5.3-flash) — rund 14× billiger als `zai-glm53` und denkt
+nur wenig (11 Reasoning-Tokens bei einer Ein-Wort-Antwort). Schwere Aufgaben
+gezielt an ein starkes Thinking-Modell geben, dann aber `max_tokens`
+großzügig setzen: die Denkphase zählt mit, bei zu knappem Budget kommt ein
+**leerer** Text mit `finish-reason` `length` zurück (beobachtet mit gemma4).
+`reasoning-tokens` aus `sigo*` zeigt, wie viel gedacht wurde.
+
+```lisp
+(sigo* "Beweise …" "zai-glm53")                        ; gezielt stark
+(sigo-request h)   ; mit "max_tokens" 16000 für Thinking-Modelle
+```
 
 ## Aufruf
 

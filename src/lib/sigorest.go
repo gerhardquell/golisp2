@@ -30,9 +30,10 @@ var (
   // Default 120s. Überschreibbar via GOLISP_SIGO_TIMEOUT.
   sigoTimeout = 120 * time.Second
   // Default-Modell wenn (sigo "prompt") ohne Modell aufgerufen wird.
-  // Überschreibbar via GOLISP_SIGO_MODEL. Fallback zai-glm53
-  // (Thinking-Modell; Wahl wird in TODO.md Schritt 2 neu entschieden).
-  sigoDefaultModel = "zai-glm53"
+  // Überschreibbar via GOLISP_SIGO_MODEL. zai-glm53-f (glm-5.3-flash):
+  // gemessen 20261020 ~14× billiger als zai-glm53, denkt nur wenig
+  // (11 Reasoning-Tokens bei einer Ein-Wort-Antwort).
+  sigoDefaultModel = "zai-glm53-f"
   // Rate-Limiting: max 1 Request pro 2 Sekunden pro Model
   sigoRateLimiter = time.Tick(2 * time.Second)
   // Circuit-Breaker Schutz

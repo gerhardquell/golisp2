@@ -113,6 +113,12 @@ func TestSigoRequest_DefaultsAndOverrides(t *testing.T) {
   if want := math.Ceil(sigoTimeout.Seconds()); got["timeout"] != want {
     t.Errorf("timeout: erwartet %v, got %v", want, got["timeout"])
   }
+  if got["temperature"] != sigoTemperature {
+    t.Errorf("Default-temperature: erwartet %v, got %v", sigoTemperature, got["temperature"])
+  }
+  if _, present := got["max_tokens"]; present {
+    t.Errorf("max_tokens darf ohne Angabe nicht gesendet werden (Server-Default): %v", got)
+  }
   if n := len(h.Ht.snapshot()); n != 2 {
     t.Errorf("Eingabetabelle verändert: %d Einträge statt 2", n)
   }
@@ -124,11 +130,13 @@ func TestSigoRequest_DefaultsAndOverrides(t *testing.T) {
   }
 
   h2 := reqHash("model", MakeStr("m"), "messages", userMsgs("hi"),
-    "bare", MakeAtom(":false"), "system_prompt", MakeStr("X"), "timeout", MakeNum(2.5))
+    "bare", MakeAtom(":false"), "system_prompt", MakeStr("X"), "timeout", MakeNum(2.5),
+    "temperature", MakeNum(0.9), "max_tokens", MakeNum(16000))
   if _, err := sigoRequestCell("sigo-request", h2, srv.URL); err != nil {
     t.Fatal(err)
   }
-  if got["bare"] != false || got["system_prompt"] != "X" || got["timeout"] != 3.0 {
+  if got["bare"] != false || got["system_prompt"] != "X" || got["timeout"] != 3.0 ||
+    got["temperature"] != 0.9 || got["max_tokens"] != 16000.0 {
     t.Errorf("Overrides falsch: %v", got)
   }
 
@@ -171,4 +179,30 @@ func TestSigoRequest_Lisp(t *testing.T) {
                 (gethash "model" (sigo-request h "`+srv.URL+`")))`, `"test-m"`)
   evalErr(t, `(sigo-request)`)
   evalErr(t, `(sigo-request (make-hash-table) 5)`)
+}
+
+// sigoREST liest temperature 0 als "nicht gesetzt" (→ Modellmitte, meist
+// 1.0) — golisp2 meldet das laut statt still das Gegenteil zu schicken.
+func TestSigoRequest_TemperatureNull(t *testing.T) {
+  withSigoState(t)
+  srv := fakeSigoWith(t, http.StatusOK, 0, nil)
+  for _, v := range []*Cell{MakeNum(0), MakeNum(-1), MakeStr("0.2")} {
+    h := reqHash("model", MakeStr("m"), "messages", userMsgs("hi"), "temperature", v)
+    if _, err := sigoRequestCell("sigo-request", h, srv.URL); err == nil {
+      t.Errorf("temperature %s: Fehler erwartet", v)
+    }
+  }
+}
+
+func TestSigoTemperatureEnv(t *testing.T) {
+  for s, want := range map[string]float64{"0.5": 0.5, "1": 1} {
+    if got, err := parseSigoTemperature(s); err != nil || got != want {
+      t.Errorf("parseSigoTemperature(%q) = %v, %v", s, got, err)
+    }
+  }
+  for _, s := range []string{"0", "-0.1", "abc", "2.5"} {
+    if _, err := parseSigoTemperature(s); err == nil {
+      t.Errorf("parseSigoTemperature(%q): Fehler erwartet", s)
+    }
+  }
 }

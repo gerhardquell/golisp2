@@ -17,6 +17,7 @@ import (
   "net/http"
   "net/url"
   "os"
+  "strconv"
   "strings"
   "sync"
   "time"
@@ -34,6 +35,10 @@ var (
   // gemessen 20261020 ~14× billiger als zai-glm53, denkt nur wenig
   // (11 Reasoning-Tokens bei einer Ein-Wort-Antwort).
   sigoDefaultModel = "zai-glm53-f"
+  // Default-temperature, wenn der Request keine nennt. sigoREST nähme
+  // sonst die Mitte des Modellbereichs (meist 1.0) — zu hoch für Code.
+  // sigoREST clampt auf den Modellbereich. GOLISP_SIGO_TEMPERATURE.
+  sigoTemperature = 0.2
   // Rate-Limiting: max 1 Request pro 2 Sekunden pro Model
   sigoRateLimiter = time.Tick(2 * time.Second)
   // Circuit-Breaker Schutz
@@ -75,6 +80,7 @@ func (u *sigoUsage) add(o sigoUsage) {
 //   GOLISP_SIGO_HOST     – sigoREST-Host (default http://127.0.0.1:9080)
 //   GOLISP_SIGO_MODEL    – Default-Modell für (sigo "prompt")
 //   GOLISP_SIGO_TIMEOUT  – Request-Timeout, z. B. "30s", "5m", "2m30s"
+//   GOLISP_SIGO_TEMPERATURE – Default-temperature (0 < t ≤ 2)
 func init() {
   if h := os.Getenv("GOLISP_SIGO_HOST"); h != "" {
     sigoHost = strings.TrimRight(h, "/")
@@ -87,6 +93,23 @@ func init() {
       sigoTimeout = d
     }
   }
+  if t := os.Getenv("GOLISP_SIGO_TEMPERATURE"); t != "" {
+    if v, err := parseSigoTemperature(t); err == nil {
+      sigoTemperature = v
+    } else {
+      _ = WriteError(fmt.Sprintf("WARN: GOLISP_SIGO_TEMPERATURE: %v — bleibe bei %g\n", err, sigoTemperature))
+    }
+  }
+}
+
+// parseSigoTemperature: 0 < t ≤ 2. 0 ist ausgeschlossen, weil sigoREST
+// 0 als "nicht gesetzt" liest und dann die Modellmitte nimmt.
+func parseSigoTemperature(s string) (float64, error) {
+  v, err := strconv.ParseFloat(s, 64)
+  if err != nil || !(v > 0) || v > 2 {
+    return 0, fmt.Errorf("%q ist keine temperature in (0, 2]", s)
+  }
+  return v, nil
 }
 
 // RegisterSigo registriert die sigoREST-Primitiven
@@ -386,6 +409,11 @@ func sigoBuildRequest(fname string, h *Cell, systemPrompt string) (*Cell, time.D
   }
   if _, ok := req.Ht.getStr("bare"); !ok {
     req.Ht.putStr("bare", cellT)
+  }
+  if v, ok := req.Ht.getStr("temperature"); !ok {
+    req.Ht.putStr("temperature", MakeNum(sigoTemperature))
+  } else if v.Type != NUMBER || !(v.Num > 0) {
+    return nil, 0, fmt.Errorf("%s: 'temperature' muss Zahl > 0 sein (0 liest sigoREST als 'nicht gesetzt' → Modellmitte), got %s", fname, v)
   }
   if _, ok := req.Ht.getStr("system_prompt"); !ok && systemPrompt != "" {
     req.Ht.putStr("system_prompt", MakeStr(systemPrompt))

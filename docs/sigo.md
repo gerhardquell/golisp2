@@ -16,6 +16,7 @@ Implementierung: `src/lib/sigorest.go` — Primitiven `sigo`, `sigo*`, `sigo-req
 | `GOLISP_SIGO_HOST` | `http://127.0.0.1:9080` | sigoREST-Host für `(sigo …)` |
 | `GOLISP_SIGO_MODEL` | `zai-glm53-f` | Default-Modell, wenn `(sigo "prompt")` ohne Modell |
 | `GOLISP_SIGO_TIMEOUT` | `120s` | Request-Timeout; z. B. `30s`, `5m`, `2m30s` |
+| `GOLISP_SIGO_TEMPERATURE` | `0.2` | Default-`temperature` (0 < t ≤ 2); ungültig → Warnung, Default bleibt |
 
 ```bash
 GOLISP_SIGO_HOST="http://mammouth:9080" ./build/golisp2 -i
@@ -183,8 +184,16 @@ eine Hash-Tabelle mit **genau** den Feldern, die sigoREST kennt:
 system_prompt bare channel`. Jedes andere Feld ist ein Fehler — sigoREST
 würde es still verwerfen (z. B. `response_format`). `stream` ist gesperrt,
 solange sigoREST Streaming-Kosten falsch bucht. Fehlen `bare`,
-`system_prompt` oder `timeout`, setzt golisp2 die Defaults (`t`, aktueller
-Vorspann, `GOLISP_SIGO_TIMEOUT`). Abschalten geht nur mit `:false`
+`system_prompt`, `timeout` oder `temperature`, setzt golisp2 die Defaults
+(`t`, aktueller Vorspann, `GOLISP_SIGO_TIMEOUT`, `GOLISP_SIGO_TEMPERATURE`).
+Ohne golisp2-Default nähme sigoREST die Mitte des Modellbereichs (meist 1.0 —
+zu hoch für Code); es begrenzt die temperature auf den Modellbereich,
+Modelle mit fester temperature bekommen immer ihren Wert. `temperature` 0 ist
+ein Fehler, weil sigoREST 0 als „nicht gesetzt" liest (→ Modellmitte); für
+„so deterministisch wie möglich" `0.01` nehmen. `max_tokens` setzt golisp2
+**nicht**: sigoREST nimmt dann das Modell-Maximum aus seiner Liste — das
+großzügigste sichere Budget. Ein größerer Wert geht ungeprüft an den Provider
+und kann dort mit 400 scheitern. Abschalten geht nur mit `:false`
 (`(puthash "bare" h :false)`); `()` würde als `[]` gesendet und von sigoREST
 abgewiesen. Ergebnis: die volle Antwort als
 Hash-Tabelle plus `"elapsed"` — Sekunden nur für den HTTP-Aufruf, ohne

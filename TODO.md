@@ -56,8 +56,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       (Kandidat `zai-glm53-f`); Thinking-Modelle nur gezielt, dann `max_tokens` großzügig.
       Erledigt 20.10.: Default `zai-glm53-f` (~14× billiger, denkt wenig — 11 Reasoning-
       Tokens gemessen, also nicht ganz „ohne“); Regel in `docs/sigo.md`.
-- [ ] Schritt 3: Für Code niedrige `temperature` und bewusstes `max_tokens` als Standard
-      (pro Aufruf geht es schon über `sigo-request`).
+- [x] Schritt 3: Für Code niedrige `temperature` und bewusstes `max_tokens` als Standard
+      (pro Aufruf geht es schon über `sigo-request`). Erledigt 20.10.: Default-temperature
+      0.2 (`GOLISP_SIGO_TEMPERATURE`), `0` ist Fehler; `max_tokens` bleibt beim
+      Modell-Maximum von sigoREST (bewusst, `docs/sigo.md`).
 - [ ] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).
       Greift `cached_tokens` mit dem Vorspann? Thinking-Anteil? Antworten golisp2-korrekt?
 - [ ] Cache-Feldnamen Moonshot/Gemini/DeepSeek.

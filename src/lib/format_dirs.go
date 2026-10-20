@@ -473,8 +473,9 @@ func formatFixed(f float64, d int, at bool) string {
 
 func emitE(st *fmtState, params []pval, at bool) {
   w := resolveInt(st, paramGet(params, 0), 0)
-  d := resolveInt(st, paramGet(params, 1), 0)
-  e := resolveInt(st, paramGet(params, 2), 2)
+  // ohne d/e: so viele Stellen wie nötig (CL: "~e" 1.5 → "1.5e+0")
+  d := resolveInt(st, paramGet(params, 1), -1)
+  e := resolveInt(st, paramGet(params, 2), 1)
   padchar := resolveRune(st, paramGet(params, 5), ' ')
   c := st.consume()
   f := toFloat(c)
@@ -486,9 +487,6 @@ func emitE(st *fmtState, params []pval, at bool) {
 }
 
 func formatExp(f float64, d, e int, at bool) string {
-  if d < 0 {
-    d = 0
-  }
   neg := f < 0
   if neg {
     f = -f
@@ -497,6 +495,9 @@ func formatExp(f float64, d, e int, at bool) string {
   // Normalisiere Exponenten-Breite
   parts := strings.SplitN(s, "e", 2)
   mant := parts[0]
+  if d < 0 && !strings.Contains(mant, ".") {
+    mant += ".0"
+  }
   exp := 0
   if len(parts) == 2 {
     exp, _ = strconv.Atoi(parts[1])

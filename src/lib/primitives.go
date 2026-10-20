@@ -258,7 +258,7 @@ func fnMakeStruct(args []*Cell) (*Cell, error) {
 	return Cons(tag, result), nil
 }
 
-// append: (append list item) → Liste mit item am Ende (single-item, wie helper).
+// append: (append l1 l2 ...) → CL-append: Listen verketten, letztes Argument wird geteilt.
 func fnAppend(args []*Cell) (*Cell, error) {
 	return Append(args...), nil
 }

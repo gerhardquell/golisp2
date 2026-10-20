@@ -38,6 +38,11 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~:p" 2)`, `"ies"`},
     {`(format nil "~$" 3.14159)`, `"3.14"`},
     {`(format nil "~f" 3.14)`, `"3.14"`},
+    {`(format nil "~e" 1.5)`, `"1.5e+0"`},       // ohne d: nicht runden
+    {`(format nil "~e" 1.0)`, `"1.0e+0"`},
+    {`(format nil "~e" -0.00125)`, `"-1.25e-3"`},
+    {`(format nil "~,2e" 1234.5)`, `"1.23e+3"`},
+    {`(format nil "~,2,2e" 1234.5)`, `"1.23e+03"`},
     {`(format nil "~,2f" 3.14159)`, `"3.14"`},
     {`(format nil "~5d" 42)`, `"   42"`},        // padding int
     {`(format nil "~5a" 42)`, `"42   "`},        // ~A = left-justified (pad rechts)

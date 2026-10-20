@@ -176,8 +176,12 @@ func clFloat(width, prec int, zero, left, plus bool, verb rune) (string, error) 
     b.WriteRune(',')
     if p >= 0 { b.WriteString(strconv.Itoa(p)) }
   }
+  if verb == 'E' {
+    // C schreibt mindestens 2 Exponentenstellen (e+00), CL nur so viele wie nötig
+    b.WriteString(",2")
+  }
   if zero && width > 0 {
-    // padchar steht an Parameter-Index 4 (w,d,k,overflow,padchar)
+    // padchar: ~F Index 4 (w,d,k,overflow,padchar), ~E dank ",2" Index 5 (w,d,e,k,overflow,padchar)
     b.WriteString(",,,'0")
   }
   if plus { b.WriteRune('@') }

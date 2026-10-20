@@ -78,7 +78,13 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       Greift `cached_tokens` mit dem Vorspann? Thinking-Anteil? Antworten golisp2-korrekt?
       Erledigt 20.10. (`docs/sigo.md`, „Messung 20261020"): Cache 99,5 % ab 2. Call, beide
       Modelle denken (~90 % der Completion), `zai-glm53-f` 11/12 korrekt bei 1/14 der Kosten.
-- [ ] Cache-Feldnamen Moonshot/Gemini/DeepSeek.
+- [x] Cache-Feldnamen Moonshot/Gemini/DeepSeek. Erledigt 20.10., nichts zu ändern: sigoREST
+      normalisiert `usage`; je 2 Calls gemessen, 2. Call meldet Cache bei `moo-kimik26` (6144),
+      `che-ds4-f`/`ope-ds4-f-2` (7936), `che-gem3-f` (4082). (`docs/sigo.md`)
+- [ ] sigoREST (anderes Repo): kimi-Modelle (`moo-kimik26`, `-27-cod`, `-27-codhs`, `-k3`) stehen
+      mit temperature 0–2 in der Registry, Moonshot erlaubt nur 1 → HTTP 400, seit golisp2
+      0.2 schickt (Schritt 3). Fix: min = max = 1, dann erzwingt sigoREST den Wert.
+      Umgehung bis dahin: `GOLISP_SIGO_TEMPERATURE=1` oder `temperature` 1 per `sigo-request`.
 - [ ] Streaming für `sigo*`. Achtung: sigoREST bucht bei Streaming die Kosten falsch
       (`/u/go-projekte/sigoREST/TODO-20261003-kosten.md`).
 - [x] `cost-usd` von `sigo*` gegen `/api/costs` abgleichen (Werkzeug: `(sigo-costs t0)`).

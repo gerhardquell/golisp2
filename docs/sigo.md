@@ -272,3 +272,21 @@ rechnet gecachte Prompt-Tokens zum vollen Eingabepreis. Ein Call mit 7 488 von
 Die echte Provider-Rechnung liegt bei ~99 % Cache-Treffern vermutlich deutlich
 darunter. Korrigieren lässt sich das nur in sigoREST (Spalte
 `cached_input_cost` der Modell-CSV) mit dem echten Cache-Preis des Providers.
+
+### Cache-Felder je Provider (20261020)
+
+sigoREST übersetzt die Provider-eigenen `usage`-Felder in die OpenAI-Form
+(`prompt_tokens_details.cached_tokens`); golisp2 liest nur diese. Gemessen
+mit je zwei gleichen Calls, der zweite meldet den Cache:
+
+| Modell | Weg | gecacht (2. Call) |
+|---|---|---|
+| `moo-kimik26` | Moonshot direkt | 6 144 von 7 870 |
+| `che-ds4-f` | DeepSeek über cheaperinference | 7 936 von 8 107 |
+| `ope-ds4-f-2` | DeepSeek über openrouter | 7 936 von 8 107 |
+| `che-gem3-f` | Gemini über cheaperinference | 4 082 von 8 046 |
+
+**Achtung kimi:** Die Moonshot-Modelle akzeptieren nur `temperature` 1, die
+sigoREST-Registry führt sie aber mit 0–2. Mit golisp2s Default 0.2 antworten sie
+mit HTTP 400 („only 1 is allowed"). Bis die Registry korrigiert ist:
+`GOLISP_SIGO_TEMPERATURE=1` setzen oder `temperature` 1 per `sigo-request`.

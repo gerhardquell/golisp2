@@ -32,8 +32,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       (geprüft 19.10.). Erledigt 20.10.: liefert dann das Prozess-Verzeichnis.
 - [x] Kommentar an `fnAppend` (`src/lib/primitives.go:261`) sagt „single-item",
       Tests sagen CL-`append` — erledigt 20.10.: Kommentar beschreibt CL-`append`.
-- [ ] webserv deferred-minor (20260809): `fnBrowserOpen` verschluckt Fehler,
-      `/`-Kollision → Go-Panic, `webserv-smoke` nicht in `-t`.
+- [x] webserv deferred-minor (20260809): `fnBrowserOpen` verschluckt Fehler,
+      `/`-Kollision → Go-Panic, `webserv-smoke` nicht in `-t`. Erledigt 20.10.:
+      Browser-Startfehler → Fehler (Server gestoppt), kein Browser → Warnung;
+      Routen-Kollision → `http-static`/`http-upload`-Fehler; `webbridge.lisp` läuft in `-t`.
 
 ## 3. Fehlende Funktionen
 

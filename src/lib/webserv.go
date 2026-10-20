@@ -135,7 +135,16 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
       scheme = "https"
     }
     url := fmt.Sprintf("%s://%s:%d/", scheme, host, ws.port)
-    _, _ = fnBrowserOpen([]*Cell{MakeStr(url)})
+    // Browser da, Start scheitert → Fehler; keiner installiert (z. B. headless,
+    // :open ist Default) → nur Warnung, Server läuft weiter.
+    opened, err := fnBrowserOpen([]*Cell{MakeStr(url)})
+    if err != nil {
+      _, _ = fnHTTPStop([]*Cell{srvCell})
+      return nil, fmt.Errorf("webserv: :open: %v", err)
+    }
+    if opened.Type == NIL {
+      _ = WriteError(fmt.Sprintf("webserv: kein Browser gefunden (chromium, google-chrome, xdg-open) — %s selbst öffnen\n", url))
+    }
   }
 
   return srvCell, nil

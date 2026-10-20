@@ -57,6 +57,3 @@
   (is (eq :gefangen
           (handler-case (webserv :port 0 :open ())
             (error (e) :gefangen)))))
-
-(let ((fails (run-tests 'webbridge)))
-  (exit (if (> fails 0) 1 0)))

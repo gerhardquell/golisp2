@@ -2378,7 +2378,8 @@ Schließt eine PostgreSQL-Verbindung.
 Ein-Aufruf-Bootstrap für eine Browser-Anbindung: startet einen HTTP-Server,
 liefert `:html` (Inline-String) oder `:htmlpath` (Datei, bei jedem Request
 neu gelesen) aus, injiziert automatisch `boot.js` und öffnet den Browser
-(`:open` Default `t`). Genau eines von `:html`/`:htmlpath` ist Pflicht.
+(`:open` Default `t`; ohne installierten Browser nur eine Warnung auf stderr).
+Genau eines von `:html`/`:htmlpath` ist Pflicht.
 `:host` bindet das Interface (Default `127.0.0.1`). Gibt das Server-Objekt
 zurück, auf dem `ws-export`/`ws-emit`/... normal weiterlaufen.
 

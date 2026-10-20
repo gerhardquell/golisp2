@@ -70,6 +70,22 @@ func asServer(name string, c *Cell) (*WebServer, error) {
   return ws, nil
 }
 
+// handle registriert eine Route. ServeMux meldet Kollisionen per Panic —
+// hier als Lisp-Fehler mit Funktionsnamen statt Go-Quellpfaden.
+func (ws *WebServer) handle(name, pattern string, h http.Handler) (err error) {
+  defer func() {
+    if r := recover(); r != nil {
+      if strings.Contains(fmt.Sprint(r), "conflicts") {
+        err = fmt.Errorf("%s: Route %q ist schon belegt", name, pattern)
+      } else {
+        err = fmt.Errorf("%s: Route %q: %v", name, pattern, r)
+      }
+    }
+  }()
+  ws.mux.Handle(pattern, h)
+  return nil
+}
+
 // http-serve: (http-serve port &key host tls) → Server-Cell. port=0 →
 // freier Port vom OS. :host Default "127.0.0.1". :tls t bindet mit einem
 // ephemeren, selbstsignierten Zertifikat (SAN: host + localhost/127.0.0.1,
@@ -150,7 +166,9 @@ func fnHTTPStatic(args []*Cell) (*Cell, error) {
     pattern += "/"
   }
   prefix := strings.TrimSuffix(pattern, "/") // "/" → ""
-  ws.mux.Handle(pattern, http.StripPrefix(prefix, staticHandler(dir)))
+  if err := ws.handle("http-static", pattern, http.StripPrefix(prefix, staticHandler(dir))); err != nil {
+    return nil, err
+  }
   return cellT, nil
 }
 
@@ -183,7 +201,7 @@ func fnHTTPUpload(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("http-upload: handler muss Lambda sein")
   }
 
-  ws.mux.HandleFunc(urlpath, func(w http.ResponseWriter, r *http.Request) {
+  upload := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
       http.Error(w, "http-upload: nur POST erlaubt", http.StatusMethodNotAllowed)
       return
@@ -217,7 +235,9 @@ func fnHTTPUpload(args []*Cell) (*Cell, error) {
     w.Header().Set("Content-Type", "text/plain; charset=utf-8")
     w.Write([]byte("ok")) //nolint:errcheck
   })
-
+  if err := ws.handle("http-upload", urlpath, upload); err != nil {
+    return nil, err
+  }
   return cellT, nil
 }
 
@@ -360,7 +380,7 @@ func fnHTTPStop(args []*Cell) (*Cell, error) {
   return cellT, nil
 }
 
-// browser-open: (browser-open url) → t oder nil. Sucht chromium,
+// browser-open: (browser-open url) → t, oder nil wenn kein Browser gefunden. Sucht chromium,
 // chromium-browser, google-chrome(-stable), xdg-open — in dieser Reihenfolge.
 // Chromium-Varianten bekommen --app=URL und ein frisches Profil.
 // Prozess detached, kein Warten.

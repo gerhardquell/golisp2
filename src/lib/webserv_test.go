@@ -324,3 +324,40 @@ func TestWebServErrors(t *testing.T) {
     })
   }
 }
+
+// Route-Kollision ("/" von webserv, dann http-static "/") → sauberer
+// Lisp-Fehler statt Go-Panic mit Quellpfaden.
+func TestWebServRouteCollision(t *testing.T) {
+  env := webservTestEnv(t)
+  dir := t.TempDir()
+  _, err := LoadString(`(let ((s (webserv :port 0 :html "x" :open ())))
+                          (unwind-protect (http-static s "/" "`+dir+`")
+                            (http-stop s)))`, env)
+  if err == nil {
+    t.Fatalf("Kollision: Fehler erwartet")
+  }
+  if strings.Contains(err.Error(), "panic") || !strings.Contains(err.Error(), "http-static") {
+    t.Fatalf("Kollision: sauberer http-static-Fehler erwartet, got %v", err)
+  }
+}
+
+// :open ohne auffindbaren Browser → Warnung auf stderr, Server läuft weiter.
+func TestWebServOpenWithoutBrowser(t *testing.T) {
+  t.Setenv("PATH", "")
+  var warnung strings.Builder
+  SetErrorWriter(func(s string) error { warnung.WriteString(s); return nil })
+  defer SetErrorWriter(defaultErrorWriter)
+  env := webservTestEnv(t)
+  srv, err := fnWebServ(env, []*Cell{
+    MakeAtom(":port"), MakeNum(0),
+    MakeAtom(":html"), MakeStr("x"),
+    MakeAtom(":open"), MakeAtom("t"),
+  })
+  if err != nil {
+    t.Fatalf(":open ohne Browser: kein Fehler erwartet, got %v", err)
+  }
+  defer fnHTTPStop([]*Cell{srv}) //nolint:errcheck
+  if !strings.Contains(warnung.String(), "kein Browser") {
+    t.Fatalf(":open ohne Browser: Warnung erwartet, got %q", warnung.String())
+  }
+}

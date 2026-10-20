@@ -462,9 +462,9 @@ func formatFixed(f float64, d int, at bool) string {
   }
   // CL: ~F schreibt immer einen Dezimalpunkt ("2.", "1.0")
   if d < 0 {
-    // volle Precision (minimal darstellbar)
-    g := strconv.FormatFloat(f, 'g', -1, 64)
-    if !strings.ContainsAny(g, ".e") {
+    // volle Precision (minimal darstellbar), nie Exponent wie CL-~F
+    g := strconv.FormatFloat(f, 'f', -1, 64)
+    if !strings.Contains(g, ".") {
       g += ".0"
     }
     return sign + g

@@ -43,6 +43,9 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~5,0f" 1.5)`, `"   2."`},
     {`(format nil "~,0@f" 1.5)`, `"+2."`},
     {`(format nil "~f" 1.0)`, `"1.0"`},
+    {`(format nil "~f" 1792441863.5)`, `"1792441863.5"`}, // ~F nie exponentiell
+    {`(format nil "~f" 0.00001)`, `"0.00001"`},
+    {`(format nil "~f" 1e20)`, `"100000000000000000000.0"`},
     {`(format nil "~,0:f" 1.5)`, `"2"`},          // golisp-Erweiterung für printf %.0f
     {`(format nil "~e" 1.5)`, `"1.5e+0"`},       // ohne d: nicht runden
     {`(format nil "~e" 1.0)`, `"1.0e+0"`},

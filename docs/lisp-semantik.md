@@ -398,7 +398,9 @@ Condition.
 - Structs sind Listen: `(typep p 'cons)` → `t`. Ein Literal `'(punkt 1 2)`
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
-- Keine Characters, keine Vektoren.
+- Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer und
+  ohne Reader-Literal `#(…)` (die Druckform ist nur Ausgabe); `equal?`
+  vergleicht Vektoren nach Identität (CL `equal`).
 - `deftype`: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))`
   schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler
   (der deftype wäre nie erreichbar); `defstruct`/`define-condition` über einen
@@ -447,6 +449,6 @@ Laufzeitkosten gegenüber handgeschriebener Schleife.
   `sum`/`count` **oder** `maximize`/`minimize`. Familienwechsel ist ein
   Fehler zur Expansionszeit (in CL ebenfalls ein Fehler).
 - `when`/`unless` ohne `and`-Kettung und ohne `else`.
-- Kein Destructuring in `for`, kein `across` (kein Vektor-Typ),
+- Kein Destructuring in `for`, kein `across`,
   kein `initially`, kein `= / then`-Schritt, kein `named`.
 - Syntaxfehler melden sich zur Expansionszeit mit Klausel-Angabe.

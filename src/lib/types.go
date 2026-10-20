@@ -28,6 +28,7 @@ const (
 	HASHTABLE              // CL-Hashtabelle (mutable, Pointer-Identität)
 	SYMMACRO               // symbol-macrolet-Marker: Car = unausgewertete Expansion
 	FOREIGN                // Go-Objekt (Obj), Val = Art-Tag z. B. "view"
+	VECTOR                 // CL-Vektor (mutable, Pointer-Identität), Env = *Vector
 )
 
 type Cell struct {
@@ -241,6 +242,8 @@ func (c *Cell) String() string {
 		return "#<hash-table>"
 	case FOREIGN:
 		return "#<foreign " + c.Val + ">"
+	case VECTOR:
+		return vectorStr(c)
 	case SYMMACRO:
 		return "#<symbol-macro>"
 	}

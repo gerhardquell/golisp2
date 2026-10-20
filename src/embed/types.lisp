@@ -21,6 +21,7 @@
     (real             (number))
     (number           (t))
     (string           (sequence))
+    (vector           (sequence))
     (keyword          (symbol))
     (boolean          (symbol))
     (null             (boolean list))

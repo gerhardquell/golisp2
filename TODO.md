@@ -42,7 +42,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 - [x] Reguläre Ausdrücke für Lisp-Code — erledigt 20.10.: `regex-match`, `regex-find`,
       `regex-find-all`, `regex-replace`, `regex-split` (`src/lib/regex.go`, Muster zuerst).
-- [ ] Vektoren/Arrays mit O(1)-Zugriff, `make-array`/`aref` (geprüft 19.10.: fehlen).
+- [x] Vektoren/Arrays mit O(1)-Zugriff — erledigt 20.10.: `make-array`, `vector`, `aref`,
+      `aset`, `vector-push-extend`; `length`/`coerce`/`setf`/`typep` kennen Vektoren (`src/lib/vector.go`).
 - [ ] Arbeiterpool: Bietet die Stdlib einen, oder `(pool-map n fn liste)` bauen?
       Vorlage: der Eigenbau in `/u/ki-projekte/ai-vergleiche/src/steuerung.lisp`.
 - [x] typep-Folgen (Spec-Nicht-Ziele): `typecase`/`etypecase`/`check-type`/`deftype`/`subtypep`

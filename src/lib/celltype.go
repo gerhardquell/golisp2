@@ -47,6 +47,8 @@ func cellTypeName(c *Cell) string {
     return "hash-table"
   case FOREIGN:
     return "foreign"
+  case VECTOR:
+    return "vector"
   default:
     return "t"
   }

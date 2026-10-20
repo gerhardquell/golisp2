@@ -52,7 +52,7 @@
 (defun length (lst)
   (defun len-acc (l n)
     (if (null l) n (len-acc (cdr l) (+ n 1))))
-  (len-acc lst 0))
+  (if (eq (%cell-type lst) 'vector) (%vector-length lst) (len-acc lst 0)))
 
 (defun nth (n lst)
   (cond ((null lst) ())
@@ -321,8 +321,9 @@
            ,v)
         (let ((accessor (car place))
               (arg (cadr place)))
-          (if (equal? accessor 'gethash)
-              `(puthash ,(cadr place) ,(caddr place) ,val)
+          ;; (gethash k tab) → (puthash k tab v), (aref v i) → (aset v i x)
+          (if (or (equal? accessor 'gethash) (equal? accessor 'aref))
+              `(,(if (equal? accessor 'gethash) 'puthash 'aset) ,(cadr place) ,(caddr place) ,val)
               (if (equal? accessor 'nth)
                   (let ((i (gensym)))
                     (if (not (atom (caddr place)))
@@ -566,15 +567,18 @@
 
 ;; --- Strings ---
 
-;; coerce: nur die im Buch gebrauchten Richtungen (String <-> Liste).
+;; coerce: Sequenzen String/Liste/Vektor ineinander.
 ;; Wie CL: Zieltyp schon erfüllt → x unverändert; Nicht-Sequenz → Fehler.
 (defun coerce (x type)
-  (cond ((not (or (equal? type 'list) (equal? type 'string)))
-         (error (format nil "coerce: Typ '~a' nicht unterstützt (nur 'list/'string)" type)))
-        ((not (or (list? x) (string? x)))
-         (error (format nil "coerce: ~s ist keine Sequenz, nicht nach '~a wandelbar" x type)))
-        ((equal? type 'list)   (if (list? x) x (string->list x)))
-        (t                     (if (string? x) x (list->string x)))))
+  (let ((vec? (eq (%cell-type x) 'vector)))
+    (cond ((not (or (equal? type 'list) (equal? type 'string) (equal? type 'vector)))
+           (error (format nil "coerce: Typ '~a' nicht unterstützt (nur 'list/'string/'vector)" type)))
+          ((not (or (list? x) (string? x) vec?))
+           (error (format nil "coerce: ~s ist keine Sequenz, nicht nach '~a wandelbar" x type)))
+          ((equal? type 'vector) (if vec? x (%list->vector (if (string? x) (string->list x) x))))
+          (vec?                  (coerce (%vector->list x) type))
+          ((equal? type 'list)   (if (list? x) x (string->list x)))
+          (t                     (if (string? x) x (list->string x))))))
 
 ;; shell-output: stdout von "/bin/sh -c cmd" als String — Fassade über exec.
 ;; Wie $(…): abschließende Newlines weg. Exit ≠ 0 oder Timeout (exec-Default

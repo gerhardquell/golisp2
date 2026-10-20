@@ -115,6 +115,9 @@ func BaseEnv() *Env {
 	// Reguläre Ausdrücke (Go regexp)
 	RegisterRegex(env)
 
+	// Vektoren (CL, eindimensional)
+	RegisterVector(env)
+
 	// Hashtables (CL)
 	RegisterHashtables(env)
 

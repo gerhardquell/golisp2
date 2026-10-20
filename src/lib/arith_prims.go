@@ -343,6 +343,8 @@ func cellEqual(a, b *Cell) bool {
 		return a.Val == b.Val
 	case LIST, LAMBDA, MACRO:
 		return cellEqual(a.Car, b.Car) && cellEqual(a.Cdr, b.Cdr)
+	case VECTOR:
+		return a == b // CL equal: Vektoren nur bei Identität
 	}
 	return false
 }

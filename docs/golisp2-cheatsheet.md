@@ -386,6 +386,16 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (regex-split ",\\s*" "a, b,c")     ; → ("a" "b" "c")
 ```
 
+### Vektoren (eindimensional, O(1)-Zugriff)
+```lisp
+(define v (make-array 3 :initial-element 0))  ; → #(0 0 0)
+(aset v 1 42)                     ; oder (setf (aref v 1) 42)
+(aref v 1)                        ; → 42
+(vector-push-extend 7 v)          ; → 3 (Index des neuen Elements)
+(length v)                        ; → 4
+(coerce v 'list)                  ; → (0 42 0 7); (coerce '(1 2) 'vector) → #(1 2)
+```
+
 ### Hashtable (CL-kompatibel)
 ```lisp
 (define h (make-hash-table))

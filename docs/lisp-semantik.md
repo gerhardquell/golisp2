@@ -173,6 +173,19 @@ Quelle: `src/lib/eval_control.go` (`evalCatch`, `evalThrow`, `evalTrap`).
 
 ---
 
+## Funktionsbezeichner: `'f` wie `#'f`
+
+Wo eine Funktion erwartet wird (`funcall`, `apply`, `mapcar`, `sort`,
+`reduce`, `filter` …), darf wie in CL auch ein gequotetes Symbol stehen.
+Es wird **global** aufgelöst (Root-Env), nicht lexikalisch:
+`(let ((car cdr)) (mapcar 'car '((1 2))))` → `(1)`. Dasselbe gilt für den
+Aufruf einer Variablen, deren Wert ein Symbol ist: `(let ((f '+)) (f 1 2))`
+→ `3` — so rufen in Lisp geschriebene Funktionen höherer Ordnung ihr
+Argument auf. Unbekannte Symbole und Makros bleiben ein Fehler.
+Eine Quelle: `resolveFn` (`src/lib/eval_core.go`).
+
+---
+
 ## `(eval form)` – globales Environment
 
 `(eval form)` wertet im **globalen** Environment aus (`Env.Root()`), nicht im

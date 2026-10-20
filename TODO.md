@@ -38,9 +38,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       Browser-Startfehler → Fehler (Server gestoppt), kein Browser → Warnung;
       Routen-Kollision → `http-static`/`http-upload`-Fehler; `webbridge.lisp` läuft in `-t`.
 
-- [ ] Gequotetes Symbol als Funktion: `(mapcar 'f …)`, `(apply '+ …)`, `(reduce '+ …)`
+- [x] Gequotetes Symbol als Funktion: `(mapcar 'f …)`, `(apply '+ …)`, `(reduce '+ …)`
       → „ist keine Funktion"; nur `funcall` kann es (CL: überall erlaubt). Fiel in der
-      sigo-Messung 20261020 auf — KIs schreiben das.
+      sigo-Messung 20261020 auf — KIs schreiben das. Erledigt 20.10.: `resolveFn`
+      (Eval-Pfad, `funcall`, `apply`, `mapcar`, `sort`).
 
 ## 3. Fehlende Funktionen
 

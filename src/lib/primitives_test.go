@@ -87,6 +87,25 @@ func TestFuncallSymbol(t *testing.T) {
   evalErr(t, `(funcall 'fs-gibts-nicht 1)`)
 }
 
+// CL-Funktionsbezeichner: ein gequotetes Symbol steht überall für seine
+// globale Funktion, nicht nur in funcall (fiel in der sigo-Messung auf).
+func TestSymbolAlsFunktion(t *testing.T) {
+  evalStdlibEq(t, `(mapcar 'string->number '("1" "2"))`, "(1 2)")
+  evalStdlibEq(t, `(apply '+ '(1 2 3))`, "6")
+  evalStdlibEq(t, `(apply '+ 1 '(2 3))`, "6")
+  evalStdlibEq(t, `(reduce '+ '(1 2 3))`, "6")
+  evalStdlibEq(t, `(sort '(3 1 2) '<)`, "(1 2 3)")
+  evalStdlibEq(t, `(filter 'number? '(1 a 2))`, "(1 2)")
+  evalStdlibEq(t, `(progn (defun sf-doppel (x) (* 2 x)) (mapcar 'sf-doppel '(1 2)))`, "(2 4)")
+  // global aufgelöst, nicht lexikalisch — wie funcall
+  evalStdlibEq(t, `(let ((car cdr)) (mapcar 'car '((1 2))))`, "(1)")
+  // Variable mit Symbol als Wert, direkt aufgerufen (so rufen Lisp-HOFs fn auf)
+  evalStdlibEq(t, `(let ((f '+)) (f 1 2))`, "3")
+  // unbekanntes Symbol bleibt ein Fehler; Makros sind keine Funktionen
+  evalStdlibErr(t, `(mapcar 'sf-gibts-nicht '(1))`)
+  evalStdlibErr(t, `(apply 'when '(t 1))`)
+}
+
 // TestPrimitiveAppendCL: append folgt Common-Lisp-Semantik (Listen-
 // konkatenation, variadisch). Bisher war append single-element ("snoc"),
 // was swank.lisp/flatten (CL-Stil) silent gebrochen hat.

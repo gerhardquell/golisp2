@@ -307,6 +307,9 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     fn, err := evalWithCtx(expr.Car, env, ectx.child())
     if err != nil { return nil, err }
     fn = Primary(fn)
+    if fn.Type == ATOM {
+      fn = resolveFn(env, fn) // (f x) mit f = 'name, so rufen Lisp-HOFs auf
+    }
 
     // Makro → expandieren, Loop weiter (TCO)
     if fn.Type == MACRO {
@@ -389,6 +392,34 @@ func evalArgsPooled(args *Cell, env *Env, ectx evalCtx) ([]*Cell, bool, error) {
 func putArgSlice(s []*Cell) {
   if cap(s) == 8 {
     argSlicePool.Put((*[8]*Cell)(s[:8]))
+  }
+}
+
+// resolveFn: CL-Funktionsbezeichner — ein Symbol steht für seine globale
+// Funktion (Root-Env, nicht lexikalisch), wie in funcall. Unbekannte
+// Symbole und Nicht-Funktionen bleiben unverändert und scheitern danach
+// mit der üblichen Meldung; Makros sind keine Funktionen.
+func resolveFn(env *Env, fn *Cell) *Cell {
+  if fn == nil || fn.Type != ATOM {
+    return fn
+  }
+  if v, err := env.Root().GetSym(fn); err == nil && (v.Type == FUNC || v.Type == LAMBDA) {
+    return v
+  }
+  return fn
+}
+
+// withFnDesignator: Primitive, deren i-tes Argument eine Funktion ist,
+// akzeptieren dort auch ein Symbol (resolveFn). Kopiert args nur, wenn
+// nötig — der Slice kann aus dem Arg-Pool stammen.
+func withFnDesignator(env *Env, i int, f func([]*Cell) (*Cell, error)) func([]*Cell) (*Cell, error) {
+  return func(args []*Cell) (*Cell, error) {
+    if i < len(args) && args[i] != nil && args[i].Type == ATOM {
+      cp := append([]*Cell(nil), args...)
+      cp[i] = resolveFn(env, cp[i])
+      args = cp
+    }
+    return f(args)
   }
 }
 

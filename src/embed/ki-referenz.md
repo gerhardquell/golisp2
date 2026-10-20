@@ -168,6 +168,7 @@ Vollständige, generierte Liste (kein Ausschnitt): `docs/referenz-generiert.md`.
 
 ### Higher-Order/Functional
 `identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota max min square expt gcd`
+Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgelöst wie CL) — `(mapcar 'string->number l)`, `(reduce '+ l)`, `(sort l '<)`.
 
 ### Listen-Helfer
 `alist-set alist-get union set-difference find-all set-nth`

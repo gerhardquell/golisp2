@@ -58,11 +58,11 @@ func BaseEnv() *Env {
 	_ = env.Set("nil", MakeNil())
 
 	// apply, funcall
-	_ = env.Set("apply", makeFn(fnApply))
+	_ = env.Set("apply", makeFn(withFnDesignator(env, 0, fnApply)))
 	_ = env.Set("funcall", makeFn(func(args []*Cell) (*Cell, error) {
 		return fnFuncall(env, args)
 	}))
-	_ = env.Set("mapcar", makeFn(fnMapcar))
+	_ = env.Set("mapcar", makeFn(withFnDesignator(env, 0, fnMapcar)))
 	_ = env.Set("exit", makeFn(fnExit))
 
 	// gensym
@@ -347,13 +347,9 @@ func fnFuncall(env *Env, args []*Cell) (*Cell, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("funcall: mindestens 1 Argument nötig")
 	}
-	fn := args[0]
+	fn := resolveFn(env, args[0])
 	if fn.Type == ATOM {
-		resolved, err := env.Root().GetSym(fn)
-		if err != nil {
-			return nil, fmt.Errorf("funcall: '%s' ist keine Funktion", fn)
-		}
-		fn = resolved
+		return nil, fmt.Errorf("funcall: '%s' ist keine Funktion", fn)
 	}
 	return apply(fn, args[1:])
 }

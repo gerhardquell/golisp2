@@ -27,7 +27,7 @@ var clEpoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // RegisterCLCompatPrims hängt sort/sqrt/get-universal-time ins Environment ein.
 func RegisterCLCompatPrims(env *Env) {
-  _ = env.Set("sort", makeFn(fnSort))
+  _ = env.Set("sort", makeFn(withFnDesignator(env, 1, fnSort)))
   _ = env.Set("sqrt", makeFn(fnSqrt))
   _ = env.Set("get-universal-time", makeFn(fnGetUniversalTime))
 }

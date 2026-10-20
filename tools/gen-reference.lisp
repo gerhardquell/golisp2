@@ -92,8 +92,6 @@
     (*condition-types* . "Registry der definierten Condition-Typen")
     (*loaded-files* . "Liste der bereits geladenen Dateien (defsystem)")
     (*loaded-systems* . "Liste der geladenen Systeme (defsystem)")
-    (*ref-docs* . "Beschreibungstabelle des Referenz-Generators (Symbol -> Text)")
-    (*ref-out* . "Ausgabedatei des Referenz-Generators")
     (*setf-expanders* . "Registry der setf-Expander")
     (*struct-types* . "Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp)")
     (*systems* . "Registry der definierten Systeme (defsystem)")
@@ -269,7 +267,6 @@
     (push . "Makro: wert vor Liste in var einfuegen")
     (puthash . "Hash-Eintrag setzen: (puthash key tabelle wert)")
     (random . "Zufallszahl; mit n aus [0, n)")
-    (ref-lookup . "Intern: Beschreibungstext des Referenz-Generators zum Symbolnamen")
     (read . "String in Lisp-Datenstruktur parsen")
     (read-line . "eine Zeile von stdin lesen")
     (redef-log . "Ringpuffer der Redefinitionen")
@@ -378,7 +375,6 @@
     (warn . "Warnung ausgeben, Auswertung laeuft weiter")
     (webserv . "Web-Bootstrap: HTTP-Server plus boot.js plus Browser (:html/:htmlpath Pflicht)")
     (when . "Makro: body nur auswerten, wenn test wahr ist")
-    (write-reference . "docs/referenz-generiert.md neu generieren")
     (ws-call . "JS im Browser des Clients aufrufen, blockiert auf Ergebnis (:timeout)")
     (ws-clients . "Liste der verbundenen Client-IDs")
     (ws-emit . "Server-Push an alle Clients, Anzahl Empfaenger zurueck")
@@ -399,8 +395,12 @@
       (let ((hit (assoc (intern name) *ref-docs*)))
         (if hit (cdr hit) ""))))
 
+;; Die eigenen Definitionen dieses Skripts landen beim Lauf im Root-Env,
+;; gehören aber nicht zur Sprache.
+(define *ref-eigene* '("*ref-out*" "*ref-docs*" "*ref-eigene*" "ref-lookup" "write-reference"))
+
 (defun write-reference ()
-  (let* ((names (env-symbols))
+  (let* ((names (filter (lambda (n) (not (member n *ref-eigene*))) (env-symbols)))
          (rows (mapcar (lambda (n)
                          (let ((doc (ref-lookup n)))
                            (if (equal? doc "")

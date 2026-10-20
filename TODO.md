@@ -45,6 +45,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 3. Fehlende Funktionen
 
+- [ ] CL-Zahlenprädikate fehlen: `evenp`, `oddp`, `plusp`, `minusp`, `1+`, `1-`
+      (`zerop` gibt es; geprüft 20.10. beim Tutorial-Ausbau). KIs schreiben sie.
+
 - [x] Reguläre Ausdrücke für Lisp-Code — erledigt 20.10.: `regex-match`, `regex-find`,
       `regex-find-all`, `regex-replace`, `regex-split` (`src/lib/regex.go`, Muster zuerst).
 - [x] Vektoren/Arrays mit O(1)-Zugriff — erledigt 20.10.: `make-array`, `vector`, `aref`,

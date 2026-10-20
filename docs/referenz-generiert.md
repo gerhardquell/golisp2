@@ -84,8 +84,6 @@
 | `*deftypes*` | Registry (name expander) der deftype-Definitionen (types.lisp) |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
-| `*ref-docs*` | Beschreibungstabelle des Referenz-Generators (Symbol -> Text) |
-| `*ref-out*` | Ausgabedatei des Referenz-Generators |
 | `*setf-expanders*` | Registry der setf-Expander |
 | `*struct-types*` | Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp) |
 | `*systems*` | Registry der definierten Systeme (defsystem) |
@@ -278,7 +276,6 @@
 | `redef-log-clear` | Redefinitions-Log leeren |
 | `redefine-policy` | Redefinitions-Politik setzen/lesen: allow, warn (Default), error |
 | `reduce` | Liste falten: (reduce f seq :initial-value ...)  |
-| `ref-lookup` | Intern: Beschreibungstext des Referenz-Generators zum Symbolnamen |
 | `regex-find` | erster Regex-Treffer oder (); 2. Wert: Liste der Gruppen |
 | `regex-find-all` | alle Regex-Treffer als Liste |
 | `regex-match` | Regex passt irgendwo im String? (regex-match re s) → t/() |
@@ -367,7 +364,6 @@
 | `warn` | Warnung ausgeben, Auswertung laeuft weiter |
 | `webserv` | Web-Bootstrap: HTTP-Server plus boot.js plus Browser (:html/:htmlpath Pflicht) |
 | `when` | Makro: body nur auswerten, wenn test wahr ist |
-| `write-reference` | docs/referenz-generiert.md neu generieren |
 | `ws-call` | JS im Browser des Clients aufrufen, blockiert auf Ergebnis (:timeout) |
 | `ws-clients` | Liste der verbundenen Client-IDs |
 | `ws-emit` | Server-Push an alle Clients, Anzahl Empfaenger zurueck |

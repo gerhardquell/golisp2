@@ -433,6 +433,17 @@ cd
 ; => -1
 ```
 
+### loop
+
+**Syntax:** `(loop klausel ...)`
+
+Iteration im Stil von CL-`loop` (Praxis-Kern): `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`, `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`, `finally`, `return`. Wird zur Expansionszeit in `let` + `while` übersetzt. Nicht vorhanden: `across`, Destructuring, `named`.
+
+```lisp
+(loop for i from 1 to 5 collect (* i i))           ; => (1 4 9 16 25)
+(loop for x in '(1 2 3 4) when (= (mod x 2) 0) sum x) ; => 6
+```
+
 ## Arithmetik
 
 ### +
@@ -564,6 +575,51 @@ Liefert eine Zufallszahl. Ohne Argument eine große ganze Zahl, mit n einen Wert
 ```lisp
 (random 6)
 (random 100)
+```
+
+### round
+
+**Syntax:** `(round x [teiler])`
+
+Rundet x (bzw. x/teiler) zur nächsten ganzen Zahl, bei genau .5 zur geraden (CL). Zwei Werte: Quotient und Rest.
+
+```lisp
+(round 2.5)                      ; => 2   (zweiter Wert 0.5)
+(multiple-value-list (round 3.5)) ; => (4 -0.5)
+(multiple-value-list (round 7 2)) ; => (4 -1)
+```
+
+### ceiling
+
+**Syntax:** `(ceiling x [teiler])`
+
+Rundet auf (Richtung +∞). Zwei Werte: Quotient und Rest.
+
+```lisp
+(ceiling 2.1)  ; => 3
+```
+
+### truncate
+
+**Syntax:** `(truncate x [teiler])`
+
+Rundet Richtung Null. Zwei Werte: Quotient und Rest.
+
+```lisp
+(truncate -2.7)                       ; => -2
+(multiple-value-list (truncate 7 2))  ; => (3 1)
+```
+
+### ash
+
+**Syntax:** `(ash x n)`
+
+Arithmetischer Shift: x·2ⁿ; negatives n schiebt nach rechts und rundet ab (floor).
+
+```lisp
+(ash 1 4)    ; => 16
+(ash 16 -2)  ; => 4
+(ash -5 -1)  ; => -3
 ```
 
 ## Vergleiche
@@ -1311,6 +1367,39 @@ Liefert das internierte Symbol zum String (die eine Symbol-Cell aus der Internin
 ; => t
 ```
 
+### string-split
+
+**Syntax:** `(string-split s [trenner])`
+
+Mit Trenner wörtlich trennen, leere Felder bleiben; ohne Trenner an Whitespace trennen, leere Felder entfallen (wie awk).
+
+```lisp
+(string-split "a,b,,c" ",")  ; => ("a" "b" "" "c")
+(string-split "  a  b ")      ; => ("a" "b")
+```
+
+### string-join
+
+**Syntax:** `(string-join liste trenner)`
+
+Verbindet eine Liste von Strings; der Trenner ist Pflicht (ohne Trenner: `list->string`).
+
+```lisp
+(string-join '("a" "b" "c") ", ")  ; => "a, b, c"
+```
+
+### parse-int / parse-float
+
+**Syntax:** `(parse-int s)`, `(parse-float s)`
+
+Parsen einen String strikt als Ganz- bzw. Gleitkommazahl; ungültiges Format ist ein Fehler (anders als `string->number`).
+
+```lisp
+(parse-int "42")     ; => 42
+(parse-float "3.5")  ; => 3.5
+(parse-int "4x")     ; Fehler
+```
+
 ### regex-match
 
 **Syntax:** `(regex-match muster string)`
@@ -1701,6 +1790,18 @@ Liefert den Docstring einer defun/defmacro-Definition (String-Literal nach der P
 ; => "addiert zwei Zahlen"
 ```
 
+### defparameter
+
+**Syntax:** `(defparameter name wert [doc])`
+
+Definiert eine globale Variable und setzt sie **immer** — anders als `defvar`, das einen vorhandenen Wert behält.
+
+```lisp
+(defparameter *grenze* 10)
+(defparameter *grenze* 20)
+*grenze*  ; => 20
+```
+
 ## Hash-Tables
 
 ### make-hash-table
@@ -1786,6 +1887,35 @@ Wendet funktion (zwei Argumente: key, wert) auf jeden Eintrag an.
 
 ```lisp
 (maphash (lambda (k v) (println k "=" v)) h)
+```
+
+## JSON
+
+Objekte werden zu Hash-Tabellen mit `:test 'equal` und String-Schlüsseln, Arrays zu Listen. `true` ↔ `t`, `null` ↔ `:null`, `false` → `()`; beim Kodieren wird `()` zu `[]` und `:false` zu `false`. Alisten sind **keine** Objekte (Fehler beim Kodieren).
+
+### json-parse
+
+**Syntax:** `(json-parse text)`
+
+Liest JSON-Text.
+
+```lisp
+(define h (json-parse "{\"name\": \"golisp2\", \"tags\": [1, 2], \"aktiv\": true}"))
+(gethash "name" h)  ; => "golisp2"
+(gethash "tags" h)  ; => (1 2)
+```
+
+### json-encode
+
+**Syntax:** `(json-encode wert)`
+
+Schreibt einen Wert als JSON-String.
+
+```lisp
+(json-encode (list 1 "a" :null))  ; => "[1,\"a\",null]"
+(define o (make-hash-table :test 'equal))
+(puthash "x" o 1)
+(json-encode o)                   ; => "{\"x\":1}"
 ```
 
 ## Vektoren
@@ -2033,6 +2163,16 @@ Löscht eine Datei. Gibt t zurück.
 (file-delete "./tmp/demo.txt")
 ```
 
+### directory-files
+
+**Syntax:** `(directory-files verzeichnis [muster])`
+
+Sortierte Namen im Verzeichnis, optional gefiltert mit Glob-Muster; Verzeichnisse enden auf `/`. Relative Pfade wie bei `file-read`.
+
+```lisp
+(directory-files "tests" "*.lisp")  ; => ("condition-tests.lisp" ...)
+```
+
 ## Nebenläufigkeit
 
 ### chan-make
@@ -2074,6 +2214,55 @@ Erzeugt einen Mutex für lock.
 
 ```lisp
 (define mu (lock-make))
+```
+
+### spawn
+
+**Syntax:** `(spawn fn)`
+
+Startet fn (ohne Argumente) in einer neuen Goroutine und liefert sofort einen Ergebnis-Channel mit genau einer Nachricht: `(:ok wert)` oder `(:error "text")`.
+
+```lisp
+(define r (spawn (lambda () (+ 1 2))))
+(chan-recv r)  ; => (:ok 3)
+```
+
+### chan-try-send / chan-try-recv
+
+**Syntax:** `(chan-try-send ch x)`, `(chan-try-recv ch)`
+
+Nie blockierend: `chan-try-send` liefert `t` oder `()` (Puffer voll); `chan-try-recv` liefert `(values x t)` oder sofort `(values () ())`.
+
+```lisp
+(define c (chan-make 1))
+(chan-try-send c 'a)                    ; => t
+(chan-try-send c 'b)                    ; => ()
+(multiple-value-list (chan-try-recv c)) ; => (a t)
+```
+
+### chan-select
+
+**Syntax:** `(chan-select channels [:timeout sek])`
+
+Wartet auf den ersten Channel der Liste, der etwas liefert: `(values x t i)` mit i = Index ab 0; bei Timeout oder wenn alle geschlossen `(values () () ())`.
+
+```lisp
+(define c1 (chan-make 1))
+(define c2 (chan-make 1))
+(chan-send c2 "zwei")
+(multiple-value-list (chan-select (list c1 c2) :timeout 1))  ; => ("zwei" t 1)
+```
+
+### chan-close / chan-closed?
+
+**Syntax:** `(chan-close ch)`, `(chan-closed? ch)`
+
+`chan-close` schließt den Channel (`t`; ein zweites Mal ist ein Fehler). `chan-closed?` ist `t` nur, wenn er geschlossen **und** leer ist.
+
+```lisp
+(define c (chan-make 1))
+(chan-close c)    ; => t
+(chan-closed? c)  ; => t
 ```
 
 ### pool-map
@@ -2119,6 +2308,65 @@ Setzt oder liest den sigoREST-Host.
 
 ```lisp
 (sigo-host "http://mammouth:9080")
+```
+
+### sigo*
+
+**Syntax:** `(sigo* prompt [modell] [session-id] [host])`
+
+Wie `sigo`, liefert aber eine Hash-Tabelle: `text`, `model`, `finish-reason`, `prompt-tokens`, `completion-tokens`, `cached-tokens`, `reasoning-tokens`, `cost-usd`, `elapsed`. Default-Modell `zai-glm53-f`, `temperature` 0.2.
+
+```lisp
+(let ((r (sigo* "Was ist 2+2?")))
+  (list (gethash "text" r) (gethash "cost-usd" r) (gethash "elapsed" r)))
+```
+
+### sigo-request
+
+**Syntax:** `(sigo-request h [host])`
+
+Schickt einen frei gebauten Chat-Request (Hash-Tabelle mit genau den sigoREST-Feldern `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`; anderes ist ein Fehler, `temperature` 0 auch). Liefert die volle Antwort plus `elapsed`.
+
+```lisp
+(let ((h (make-hash-table :test 'equal)))
+  (puthash "model" h "zai-glm53")
+  (puthash "messages" h (list (json-parse "{\"role\":\"user\",\"content\":\"2+2?\"}")))
+  (puthash "max_tokens" h 16000)
+  (sigo-request h))
+```
+
+### sigo-system-prompt / sigo-reference
+
+**Syntax:** `(sigo-system-prompt [text])`, `(sigo-reference)`
+
+Jeder `sigo`-Call schickt einen Vorspann mit; Default ist die eingebettete golisp2-KI-Referenz (`sigo-reference`). `sigo-system-prompt` liest ihn, setzt ihn oder leert ihn mit `""`.
+
+```lisp
+(string-length (sigo-reference))  ; => ~23000
+(sigo-system-prompt "Antworte knapp.")
+(sigo-system-prompt "")             ; kein Vorspann
+```
+
+### sigo-usage / sigo-usage-reset
+
+**Syntax:** `(sigo-usage)`, `(sigo-usage-reset)`
+
+Summen aller `sigo`-Calls dieses Prozesses (Tokens, `cost-usd`, `elapsed`, `calls`) als Hash-Tabelle; `sigo-usage-reset` setzt sie auf 0.
+
+```lisp
+(gethash "cost-usd" (sigo-usage))
+(sigo-usage-reset)
+```
+
+### sigo-costs / sigo-budget / sigo-model-info
+
+**Syntax:** `(sigo-costs [seit [bis]])`, `(sigo-budget)`, `(sigo-model-info [modell])`
+
+Abfragen bei sigoREST, kostenlos: Kosten im Zeitfenster (Unix-Sekunden wie `now`, aufgeteilt nach Modell), Tagesbudget, Preise pro Modell in USD je 1 Mio. Tokens (0 = unbekannt, nicht gratis).
+
+```lisp
+(gethash "total_cost_usd" (sigo-costs (- (now) 3600)))  ; letzte Stunde
+(gethash "input_cost" (sigo-model-info "zai-glm53-f"))   ; => 0.07
 ```
 
 ## Genetische Algorithmen
@@ -2245,6 +2493,27 @@ Sekunden seit 1.1.1900 00:00 UTC (CL-universal-time).
 ; => z.B. 3996832127
 ```
 
+### now
+
+**Syntax:** `(now)`
+
+Unix-Sekunden seit 1970 als Gleitkommazahl.
+
+```lisp
+(now)  ; => 1792441863.9679012
+```
+
+### format-time
+
+**Syntax:** `(format-time format [zeit] [:utc])`
+
+Formatiert eine Zeit (Default: jetzt) mit strftime-Direktiven (`%Y %m %d %H %M %S %F %T` …); Ortszeit oder `:utc`.
+
+```lisp
+(format-time "%F %T")              ; jetzt, Ortszeit
+(format-time "%Y-%m-%d" 0 :utc)    ; => "1970-01-01"
+```
+
 ## Memory
 
 ### memstats
@@ -2358,6 +2627,27 @@ Beendet den Lisp-Prozess mit Exit-Code (Default 0).
 (exit 1)
 ```
 
+### shell-output
+
+**Syntax:** `(shell-output befehl)`
+
+stdout von `/bin/sh -c befehl` als String, abschließende Zeilenumbrüche entfernt (wie `$(…)`). Exit-Code ≠ 0 oder Timeout ist ein Fehler, der stderr zeigt. Für Exit-Codes ohne Fehler: `exec`.
+
+```lisp
+(shell-output "echo hallo")  ; => "hallo"
+(shell-output "exit 3")      ; Fehler
+```
+
+### lisp-implementation-version
+
+**Syntax:** `(lisp-implementation-version)`
+
+Version von golisp2 als String (CL); dieselbe wie `golisp2 --version`.
+
+```lisp
+(lisp-implementation-version)  ; => z. B. "0.16.0"
+```
+
 ### get-working-directory
 
 **Syntax:** `(get-working-directory)`
@@ -2386,6 +2676,23 @@ Löst einen Pfad auf (inklusive Suchpfad-Logik von load).
 
 ```lisp
 (get-file-path "stdlib.lisp")
+```
+
+## Computeralgebra (Maxima)
+
+Symbolisches Rechnen über eine Maxima-Session als Subprozess; der Zustand bleibt zwischen den Aufrufen erhalten. Braucht ein installiertes `maxima`.
+
+### maxima-open / maxima-eval / maxima-close
+
+**Syntax:** `(maxima-open)`, `(maxima-eval session ausdruck [timeout])`, `(maxima-close session)`
+
+Session starten, Ausdruck auswerten (Ergebnis als String), Session beenden.
+
+```lisp
+(define m (maxima-open))
+(maxima-eval m "integrate(x^2, x)")  ; => "x^3/3"
+(maxima-eval m "factor(x^2-1)")      ; => "(x-1)*(x+1)"
+(maxima-close m)
 ```
 
 ## Shared Memory

@@ -379,6 +379,9 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
   (otherwise 'sonst))              ; t geht auch; ohne Treffer → ()
 (etypecase x (integer 'ganz))      ; ohne Treffer → Fehler
 (check-type x (integer 0 *))       ; → () oder Fehler "check-type: x ist -1, nicht vom Typ …"
+(deftype ziffer () '(integer 0 9)) ; eigener Typname
+(deftype bis (&optional (n '*))    ; mit Parametern: (typep x '(bis 5))
+  (list 'integer 0 n))
 ```
 
 Hierarchie und Typnamen stehen an genau einer Stelle: `*type-parents*`
@@ -394,12 +397,17 @@ Condition.
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
 - Keine Characters, keine Vektoren.
+- `deftype`: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))`
+  schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler
+  (der deftype wäre nie erreichbar); `defstruct`/`define-condition` über einen
+  deftype-Namen warnt, der Struct bzw. die Condition gewinnt. Ein deftype,
+  der sich selbst enthält, läuft endlos (wie in CL).
 - `etypecase`/`check-type` werfen einfachen `error` (fangbar als `error`/
   `lisp-error`), kein `type-error`; `check-type` ohne `store-value`-Restart.
 
 **Nicht vorhanden / keine Typen:**
 - Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
-- Noch nicht vorhanden: `deftype`, `subtypep`, `ctypecase`.
+- Noch nicht vorhanden: `subtypep`, `ctypecase`.
 
 ---
 

@@ -297,3 +297,35 @@ func TestCheckType(t *testing.T) {
   evalStdlibEq(t, `(let ((n 0)) (check-type (setq n (+ n 1)) integer) n)`, "1") // place einmal
   evalStdlibEq(t, `(handler-case (let ((x 1.5)) (check-type x integer)) (error (e) :gefangen))`, ":gefangen")
 }
+
+func TestDeftype(t *testing.T) {
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9))`, "ziffer")
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (list (typep 5 'ziffer) (typep 10 'ziffer))`, "(t ())")
+  // Parameter, &optional mit CL-Default *
+  bis := `(deftype bis (&optional (n '*)) (list 'integer 0 n)) `
+  evalStdlibEq(t, bis+`(list (typep 5 '(bis 5)) (typep 6 '(bis 5)) (typep 1000 'bis))`, "(t () t)")
+  // geschachtelt in Kombinatoren, typecase, check-type
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (typep 3 '(or string ziffer))`, "t")
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (typecase 3 (ziffer 'z) (t 'n))`, "z")
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (trap (let ((x 12)) (check-type x ziffer)) (lambda (e) e))`,
+    `"check-type: x ist 12, nicht vom Typ ziffer"`)
+  // deftype auf deftype, Neudefinition gewinnt
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (deftype kleine-ziffer () '(and ziffer (integer * 4))) (typep 7 'kleine-ziffer)`, "()")
+  evalStdlibEq(t, `(deftype ziffer () '(integer 0 9)) (deftype ziffer () 'string) (typep "a" 'ziffer)`, "t")
+}
+
+func TestDeftypeKollision(t *testing.T) {
+  // eingebauter Typ, Struct, Condition: deftype wäre tot → laut
+  evalStdlibEq(t, `(trap (deftype integer () 'string) (lambda (e) e))`,
+    `"deftype: integer ist ein eingebauter Typ"`)
+  evalStdlibEq(t, `(defstruct punkt x) (trap (deftype punkt () 'string) (lambda (e) e))`,
+    `"deftype: punkt ist ein Struct"`)
+  evalStdlibEq(t, `(define-condition mein-f (error) ()) (trap (deftype mein-f () 'string) (lambda (e) e))`,
+    `"deftype: mein-f ist ein Condition-Typ"`)
+  evalStdlibErr(t, `(deftype "x" () 'string)`)
+  // umgekehrt: defstruct über deftype-Namen → Warnung, Struct gewinnt
+  out := stderrVon(t, `(deftype ding () 'string) (defstruct ding a)`)
+  if !strings.Contains(out, "WARN: defstruct ding: Name ist auch ein deftype") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+}

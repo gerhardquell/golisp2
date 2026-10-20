@@ -18,7 +18,7 @@ import (
 )
 
 // Version von golisp2 – von Hand gepflegt (SemVer)
-const Version = "0.8.0"
+const Version = "0.9.0"
 
 // lisp-implementation-version: (lisp-implementation-version) → Version als String (CL)
 func fnLispImplementationVersion(args []*Cell) (*Cell, error) {

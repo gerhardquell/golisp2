@@ -37,6 +37,13 @@
     (atom             (t))
     (t                ())))
 
+;; *deftypes*: (name expander) im alist-set-Format; expander liefert die
+;; Typangabe (deftype). defvar: Reload darf Definitionen nicht löschen.
+(defvar *deftypes* '())
+
+(defun %deftype-expand (name args)
+  (apply (alist-get name *deftypes*) args))
+
 (defun %builtin-type? (name)
   (if (assoc name *type-parents*) t ()))
 
@@ -119,6 +126,7 @@
         ((%builtin-type? name)          (%builtin-subtype? (%type-start x) name))
         ((assoc name *struct-types*)    (%struct-instance? x name))
         ((assoc name *condition-types*) (if (%cond-type? x name) t ()))
+        ((assoc name *deftypes*)        (%typep-spec x (%deftype-expand name '())))
         (t (error (format nil "typep: unbekannter Typ '~a'" name)))))
 
 (defun %valid-bound? (b)
@@ -193,6 +201,8 @@
                       (%typep-satisfies x spec))
                      ((member head '(integer float real rational))
                       (%typep-range x head args spec))
+                     ((assoc head *deftypes*)
+                      (%typep-spec x (%deftype-expand head args)))
                      (t (%bad-spec spec))))))))
 
 (defun typep (x spec)
@@ -215,6 +225,10 @@
                   ())
               (if (and (eq kind 'define-condition) (assoc name *struct-types*))
                   (format nil "WARN: define-condition ~a: Name ist auch ein Struct → typep sieht den Struct" name)
+                  ())
+              (if (assoc name *deftypes*)
+                  (format nil "WARN: ~a ~a: Name ist auch ein deftype → typep sieht ~a" kind name
+                          (if (eq kind 'defstruct) "den Struct" "die Condition"))
                   ())))))
 
 ;; === typecase / etypecase ===========================================
@@ -251,3 +265,27 @@
            ()
            (error (format nil "check-type: ~a ist ~s, nicht ~a" ',place ,g
                           ,(if (null doc) (format nil "vom Typ ~a" spec) (car doc))))))))
+
+;; === deftype =========================================================
+
+;; Ein deftype auf einen eingebauten, Struct- oder Condition-Namen würde
+;; von typep nie erreicht (Auflösungsreihenfolge) — laut statt tot.
+(defun %deftype-check (name)
+  (cond ((not (symbol? name))
+         (error (format nil "deftype: Name muss Symbol sein, nicht ~s" name)))
+        ((%builtin-type? name)
+         (error (format nil "deftype: ~a ist ein eingebauter Typ" name)))
+        ((assoc name *struct-types*)
+         (error (format nil "deftype: ~a ist ein Struct" name)))
+        ((assoc name *condition-types*)
+         (error (format nil "deftype: ~a ist ein Condition-Typ" name)))
+        (t name)))
+
+;; (deftype name lambda-liste rumpf…) → name. Der Rumpf liefert die
+;; Typangabe; (typep x '(name args…)) ruft ihn mit args. Abweichung von CL:
+;; &optional ohne Default ist (), nicht * — (&optional (n '*)) schreiben.
+(defmacro deftype (name lambda-list &rest body)
+  `(begin
+     (%deftype-check ',name)
+     (set! *deftypes* (alist-set ',name (lambda ,lambda-list ,@body) *deftypes*))
+     ',name))

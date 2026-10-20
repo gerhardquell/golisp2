@@ -136,6 +136,7 @@ sortiert (Basis von `tools/gen-reference.lisp`)
   - `(chan-send ch x)` blockiert; auf geschlossenem Channel Fehler. `(chan-try-send ch x)` → `t` / `nil` (Puffer voll); `(chan-close ch)` → `t`, zweites Mal Fehler; `(chan-closed? ch)` → `t` nur wenn geschlossen **und** leer
   - `(chan-select chans [:timeout sek])` → `(values x t i)` (`i` = Index in `chans`, ab 0); Timeout oder alle geschlossen+leer → `(values nil nil nil)`
   - `(spawn fn)` → sofort Ergebnis-Channel mit genau einer Nachricht `(:ok wert)` bzw. `(:error "text")`; Fehler gehen zusätzlich auf stderr. Gegenstück zu `parfunc` (wartet)
+  - `(pool-map n fn liste)` → wie `mapcar`, aber höchstens `n` Aufrufe gleichzeitig (Arbeiterpool, z. B. für viele `sigo`-Aufrufe); Ergebnisse in Eingabe-Reihenfolge, ein gescheitertes Element wird `(:error "text")`, die anderen laufen durch
 - **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → nur Exit-Code; `(shell-output "cmd")` → stdout als String (wie `$(…)`), Exit ≠ 0 → Fehler; `shell-assoc` ist nur `assoc`, kein Shell-Aufruf

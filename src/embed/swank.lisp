@@ -95,6 +95,7 @@
     ("chan-closed?" . "(chan-closed? ch)")
     ("chan-select" . "(chan-select chans &key timeout)")
     ("spawn" . "(spawn fn)")
+    ("pool-map" . "(pool-map n fn list)")
     ("lock-make" . "(lock-make)")
     ("sigo" . "(sigo prompt &optional model session-id host)")
     ("sigo-models" . "(sigo-models)")

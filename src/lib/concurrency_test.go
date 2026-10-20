@@ -449,3 +449,40 @@ func TestTimeoutArgNaNInf(t *testing.T) {
     t.Errorf("timeoutArg(1e300) = %v, %v, want MaxInt64", d, ok)
   }
 }
+
+func TestPoolMap(t *testing.T) {
+  evalStdlibEq(t, `(pool-map 3 (lambda (x) (* x x)) '(1 2 3 4 5))`, "(1 4 9 16 25)") // Reihenfolge bleibt
+  evalStdlibEq(t, `(pool-map 2 (lambda (x) x) '())`, "()")
+  evalStdlibEq(t, `(pool-map 10 (lambda (x) (+ x 1)) '(1 2))`, "(2 3)") // n > Länge
+  // Fehler bleiben im Ergebnis stehen, die anderen Elemente laufen durch
+  evalStdlibEq(t, `(pool-map 2 (lambda (x) (if (= x 2) (error "kaputt") x)) '(1 2 3))`, `(1 (:error "kaputt") 3)`)
+}
+
+// Höchstens n gleichzeitig: jeder Auftrag belegt einen Platz in einem
+// Channel der Kapazität n; gäbe es mehr gleichzeitige, schlüge try-send fehl.
+func TestPoolMapObergrenze(t *testing.T) {
+  evalStdlibEq(t, `(let ((sem (chan-make 2)))
+                     (pool-map 2 (lambda (x)
+                                   (if (chan-try-send sem t)
+                                       (begin (sleep 20) (chan-recv sem) 'ok)
+                                       'zuviel))
+                               '(1 2 3 4 5 6)))`, "(ok ok ok ok ok ok)")
+}
+
+func TestPoolMapParallel(t *testing.T) {
+  // 4 × 100 ms mit 4 Arbeitern: deutlich unter seriellen 400 ms
+  evalStdlibEq(t, `(let ((t0 (now)))
+                     (pool-map 4 (lambda (x) (sleep 100)) '(1 2 3 4))
+                     (< (- (now) t0) 0.35))`, "t")
+}
+
+func TestPoolMapFehler(t *testing.T) {
+  for _, src := range []string{
+    `(pool-map 0 (lambda (x) x) '(1))`,
+    `(pool-map 1.5 (lambda (x) x) '(1))`,
+    `(pool-map "2" (lambda (x) x) '(1))`,
+    `(pool-map 2 (lambda (x) x) 5)`,
+  } {
+    evalStdlibErr(t, src)
+  }
+}

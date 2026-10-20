@@ -315,6 +315,8 @@
     (sleep . "Millisekunden pausieren")
     (slurp . "stdin komplett als String lesen")
     (sort . "Liste nach Vergleich sortieren (neue Liste)")
+    (pool-map . "wie mapcar, hoechstens n Aufrufe gleichzeitig; Reihenfolge bleibt, Fehler → (:error text) an der Stelle")
+    (%pool-arbeiter . "Intern: Arbeiter-Schleife von pool-map (stdlib.lisp)")
     (spawn . "fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text)")
     (sprintf . "C-Format in String umwandeln")
     (sqrt . "Quadratwurzel")

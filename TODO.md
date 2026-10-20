@@ -44,8 +44,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       `regex-find-all`, `regex-replace`, `regex-split` (`src/lib/regex.go`, Muster zuerst).
 - [x] Vektoren/Arrays mit O(1)-Zugriff — erledigt 20.10.: `make-array`, `vector`, `aref`,
       `aset`, `vector-push-extend`; `length`/`coerce`/`setf`/`typep` kennen Vektoren (`src/lib/vector.go`).
-- [ ] Arbeiterpool: Bietet die Stdlib einen, oder `(pool-map n fn liste)` bauen?
-      Vorlage: der Eigenbau in `/u/ki-projekte/ai-vergleiche/src/steuerung.lisp`.
+- [x] Arbeiterpool — erledigt 20.10.: `(pool-map n fn liste)` in `stdlib.lisp`, Ergebnisse in
+      Eingabe-Reihenfolge, Fehler als `(:error text)` an der Stelle. Vorlage war der Eigenbau in
+      `/u/ki-projekte/ai-vergleiche/src/steuerung.lisp` (dort könnte er jetzt ersetzt werden).
 - [x] typep-Folgen (Spec-Nicht-Ziele): `typecase`/`etypecase`/`check-type`/`deftype`/`subtypep`
       erledigt 20.10. (`src/embed/types.lisp`).
 

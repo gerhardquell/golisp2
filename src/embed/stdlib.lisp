@@ -623,3 +623,46 @@
   (let ((tmp (gensym)))
     `(let ((,tmp ,expr))
        ,(%db-bindings vars tmp body))))
+
+;; === Arbeiterpool ====================================================
+
+;; %pool-arbeiter: holt (index . element) aus auftraege, bis 'ende kommt;
+;; schickt (index . ergebnis) — ein Fehler wird zu (:error text).
+(defun %pool-arbeiter (fn auftraege ergebnisse)
+  (let ((job (chan-recv auftraege)))
+    (if (eq job 'ende)
+        ()
+        (begin
+          (chan-send ergebnisse
+                     (cons (car job)
+                           (trap (funcall fn (cdr job)) (lambda (e) (list :error e)))))
+          (%pool-arbeiter fn auftraege ergebnisse)))))
+
+;; pool-map: (pool-map n fn liste) → Ergebnisse in Eingabe-Reihenfolge, wie
+;; mapcar, aber höchstens n Aufrufe gleichzeitig. Scheitert fn bei einem
+;; Element, steht dort (:error text); die anderen laufen durch. Beide
+;; Channels sind gepuffert, damit Einstellen und Abholen nicht verklemmen.
+(defun pool-map (n fn lst)
+  (cond ((not (and (number? n) (= n (floor n)) (> n 0)))
+         (error (format nil "pool-map: Arbeiterzahl muss ganze Zahl > 0 sein, got ~s" n)))
+        ((not (list? lst))
+         (error (format nil "pool-map: Liste erwartet, got ~s" lst)))
+        ((null lst) ())
+        (t
+         (let* ((len        (length lst))
+                (k          (min n len))
+                (auftraege  (chan-make (+ len k)))
+                (ergebnisse (chan-make len))
+                (aus        (make-array len))
+                (i          0))
+           (dotimes (w k)
+             (spawn (lambda () (%pool-arbeiter fn auftraege ergebnisse))))
+           (dolist (x lst)
+             (chan-send auftraege (cons i x))
+             (set! i (+ i 1)))
+           (dotimes (w k)
+             (chan-send auftraege 'ende))
+           (dotimes (w len)
+             (let ((r (chan-recv ergebnisse)))
+               (aset aus (car r) (cdr r))))
+           (coerce aus 'list)))))

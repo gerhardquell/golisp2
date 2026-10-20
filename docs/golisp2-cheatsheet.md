@@ -294,6 +294,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 (chan-select (list c1 c2) :timeout 1)  ; -> (values x t i) / (values nil nil nil)
 (define r (spawn (lambda () (+ 1 2))))  ; sofort Ergebnis-Channel
 (chan-recv r)                     ; -> (:ok 3) bzw. (:error "text")
+(pool-map 4 fn zellen)            ; wie mapcar, max. 4 gleichzeitig; Fehler → (:error "text") an der Stelle
 (define l (lock-make))            ; Mutex
 ```
 `:timeout` ist in **Sekunden** (Bruchteile ok), `(sleep ms)` in Millisekunden.

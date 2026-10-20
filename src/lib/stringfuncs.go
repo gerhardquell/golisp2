@@ -202,10 +202,7 @@ func fnNumberToString(args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != NUMBER {
     return nil, fmt.Errorf("number->string: Zahl erwartet")
   }
-  if args[0].Num == float64(int(args[0].Num)) {
-    return MakeStr(fmt.Sprintf("%d", int(args[0].Num))), nil
-  }
-  return MakeStr(fmt.Sprintf("%g", args[0].Num)), nil
+  return MakeStr(FormatNumber(args[0].Num)), nil
 }
 
 // string->list: Wandelt String in Liste von Single-Character-Strings um

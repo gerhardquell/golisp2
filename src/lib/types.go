@@ -10,6 +10,8 @@ package lib
 
 import (
   "fmt"
+  "math"
+  "strconv"
   "sync"
 )
 
@@ -204,6 +206,20 @@ func Primary(c *Cell) *Cell {
   return c
 }
 
+// FormatNumber ist die eine Druckform für Zahlen (Printer, ~a,
+// number->string). Ganzzahlig im int64-Bereich → ohne Punkt; sonst
+// kürzeste Ziffern, Festkomma für 1e-4 ≤ |x| < 1e16 wie Python-repr —
+// darüber täuschte Festkomma Stellen vor, die float64 nicht hat.
+func FormatNumber(n float64) string {
+	if n == float64(int64(n)) && math.Abs(n) < 9.2e18 {
+		return strconv.FormatInt(int64(n), 10)
+	}
+	if a := math.Abs(n); a >= 1e-4 && a < 1e16 {
+		return strconv.FormatFloat(n, 'f', -1, 64)
+	}
+	return strconv.FormatFloat(n, 'g', -1, 64)
+}
+
 // String-Darstellung für Print
 func (c *Cell) String() string {
 	if c == nil {
@@ -215,10 +231,7 @@ func (c *Cell) String() string {
 	case ATOM:
 		return c.Val
 	case NUMBER:
-		if c.Num == float64(int(c.Num)) {
-			return fmt.Sprintf("%d", int(c.Num))
-		}
-		return fmt.Sprintf("%g", c.Num)
+		return FormatNumber(c.Num)
 	case STRING:
 		return fmt.Sprintf("%q", c.Val)
 	case FUNC:

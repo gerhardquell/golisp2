@@ -220,6 +220,16 @@ stdout.
 
 ---
 
+## Zahlen drucken
+
+Eine Druckform für Printer, `~a` und `number->string` (`FormatNumber`,
+`src/lib/types.go`): ganzzahlige Werte ohne Punkt (`3.0` → `3`), sonst die
+kürzesten Ziffern — Festkomma für 1e-4 ≤ |x| < 1e16, darüber und darunter
+Exponent (Regel wie Python-`repr`). `(now)` → `1792441863.9679012`,
+`0.00001` → `1e-05`. Eigene Darstellung: `(format nil "~,3f" x)`.
+
+---
+
 ## FORMAT
 
 `format` folgt Common-Lisp-HyperSpec 22.3.

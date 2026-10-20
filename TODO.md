@@ -15,9 +15,9 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       in ch2 älter (ohne sort/sqrt-Fixes), Kap. 1 in ch2 neuer. Richtung?
 - [ ] Lispbuch-`CLAUDE.md`: Sprachabschnitt veraltet („keine Hash-Maps",
       „KEIN CL-Condition-System").
-- [ ] Printer: Große Floats erscheinen in Exponentialschreibweise
-      (geprüft 19.10.: `(now)` → `1.7924418639679012e+09`). Regel festlegen.
-      Umgehung heute: `(format nil "~,3f" x)`.
+- [x] Printer: Große Floats erscheinen in Exponentialschreibweise
+      (geprüft 19.10.: `(now)` → `1.7924418639679012e+09`). Erledigt 20.10.: Regel wie
+      Python-`repr` (Festkomma 1e-4 ≤ |x| < 1e16), eine Quelle `FormatNumber`.
 - [x] `golisp2 -e` druckt den Wert zusätzlich zur Ausgabe (geprüft 19.10.:
       `(println 1)` → zwei Zeilen `1`). Erledigt 20.10.: Wert nur, wenn die Form
       nichts selbst nach stdout geschrieben hat (`docs/cli.md`).

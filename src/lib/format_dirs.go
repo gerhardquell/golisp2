@@ -33,8 +33,6 @@ func aesthetic(c *Cell) string {
     return c.Val
   case ATOM:
     return c.Val
-  case NUMBER:
-    return numStr(c.Num)
   default:
     return c.String()
   }
@@ -46,13 +44,6 @@ func readable(c *Cell) string {
     return "()"
   }
   return c.String()
-}
-
-func numStr(n float64) string {
-  if n == float64(int64(n)) {
-    return strconv.FormatInt(int64(n), 10)
-  }
-  return strconv.FormatFloat(n, 'g', -1, 64)
 }
 
 // ---- Padding ----

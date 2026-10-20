@@ -263,3 +263,23 @@ func TestTypepFehler(t *testing.T) {
   evalStdlibEq(t, `(trap (typep 1 'foo) (lambda (e) e))`, `"typep: unbekannter Typ 'foo'"`)
   evalStdlibEq(t, `(trap (typep 1 '(satisfies foo)) (lambda (e) e))`, `"typep: satisfies: 'foo' ist keine Funktion"`)
 }
+
+func TestTypecase(t *testing.T) {
+  klass := `(defun klass (x) (typecase x (integer 'ganz) ((or string symbol) 'text) (t 'sonst)))`
+  evalStdlibEq(t, klass+` (klass 3)`, "ganz")
+  evalStdlibEq(t, klass+` (klass "a")`, "text")
+  evalStdlibEq(t, klass+` (klass 'a)`, "text")
+  evalStdlibEq(t, klass+` (klass 1.5)`, "sonst")
+  evalStdlibEq(t, `(typecase 1.5 (integer 'ganz))`, "()")              // kein Treffer → nil
+  evalStdlibEq(t, `(typecase 1 (integer))`, "()")                       // leerer Rumpf → nil
+  evalStdlibEq(t, `(typecase 1 (string 'a) (otherwise 'b))`, "b")
+  evalStdlibEq(t, `(typecase 1 (number 'a 'b))`, "b")                   // mehrere Formen
+  evalStdlibEq(t, `(let ((n 0)) (typecase (setq n (+ n 1)) (string 'a) (integer n)))`, "1") // key einmal
+}
+
+func TestEtypecase(t *testing.T) {
+  evalStdlibEq(t, `(etypecase 1 (string 'a) (integer 'b))`, "b")
+  evalStdlibErr(t, `(etypecase 1.5 (string 'a) (integer 'b))`)
+  evalStdlibEq(t, `(trap (etypecase 1.5 (string 'a) (integer 'b)) (lambda (e) e))`,
+    `"etypecase: 1.5 passt zu keinem Typ (string integer)"`)
+}

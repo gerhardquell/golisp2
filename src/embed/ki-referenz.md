@@ -186,7 +186,7 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 
 ### Typen
 - `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table`, Struct- oder Condition-Name. `(typep x spec)` mit Typnamen, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exklusiv, `*` = offen). `3.0` ist `integer`.
-  Als Typnamen zusätzlich gültig (nicht von `type-of` geliefert, aber `typep`-Obertypen): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Nicht vorhanden → `typep: unbekannter Typ '…'`: `fixnum` `character` `vector` `double-float` `single-float`. Typnamen sind case-sensitiv — `'INTEGER` ist unbekannt, nur `'integer`. Kein `check-type`/`subtypep`/`typecase`/`etypecase`/`deftype`.
+  Als Typnamen zusätzlich gültig (nicht von `type-of` geliefert, aber `typep`-Obertypen): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Nicht vorhanden → `typep: unbekannter Typ '…'`: `fixnum` `character` `vector` `double-float` `single-float`. Typnamen sind case-sensitiv — `'INTEGER` ist unbekannt, nur `'integer`. `(typecase x (integer …) ((or string symbol) …) (otherwise …))` verzweigt nach Typ, `etypecase` wirft ohne Treffer. Kein `check-type`/`subtypep`/`deftype`.
 
 ---
 

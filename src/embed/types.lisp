@@ -216,3 +216,26 @@
               (if (and (eq kind 'define-condition) (assoc name *struct-types*))
                   (format nil "WARN: define-condition ~a: Name ist auch ein Struct → typep sieht den Struct" name)
                   ())))))
+
+;; === typecase / etypecase ===========================================
+
+;; Klausel (typ form…) → cond-Klausel; t/otherwise ist der Sonst-Zweig.
+;; Leerer Rumpf → () (cond gäbe sonst den Testwert zurück).
+(defun %typecase-clause (g clause)
+  (let ((body (if (null (cdr clause)) '(()) (cdr clause))))
+    (if (member (car clause) '(t otherwise))
+        `(t ,@body)
+        `((typep ,g ',(car clause)) ,@body))))
+
+(defmacro typecase (key &rest clauses)
+  (let ((g (gensym)))
+    `(let ((,g ,key))
+       (cond ,@(mapcar (lambda (c) (%typecase-clause g c)) clauses)))))
+
+;; etypecase: wie typecase, ohne Treffer ein Fehler mit allen Typen.
+(defmacro etypecase (key &rest clauses)
+  (let ((g (gensym)))
+    `(let ((,g ,key))
+       (cond ,@(mapcar (lambda (c) (%typecase-clause g c)) clauses)
+             (t (error (format nil "etypecase: ~s passt zu keinem Typ ~s"
+                               ,g ',(mapcar car clauses))))))))

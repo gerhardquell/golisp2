@@ -100,6 +100,8 @@
     ("sigo-usage-reset" . "(sigo-usage-reset)")
     ("type-of" . "(type-of x)")
     ("typep" . "(typep x type-spec)")
+    ("typecase" . "(typecase key (type form...)... [(otherwise form...)])")
+    ("etypecase" . "(etypecase key (type form...)...)")
     ("sleep" . "(sleep ms)")
     ("now" . "(now)")
     ("format-time" . "(format-time fmt &optional time :utc)")

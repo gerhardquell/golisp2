@@ -373,6 +373,11 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
 (typep x '(or string symbol))
 (typep n '(integer 0 (10)))        ; 0 ≤ n < 10
 (typep x '(satisfies gerade?))     ; eigenes Prädikat
+(typecase x                        ; Verzweigung nach Typ, key einmal ausgewertet
+  (integer 'ganz)
+  ((or string symbol) 'text)
+  (otherwise 'sonst))              ; t geht auch; ohne Treffer → ()
+(etypecase x (integer 'ganz))      ; ohne Treffer → Fehler
 ```
 
 Hierarchie und Typnamen stehen an genau einer Stelle: `*type-parents*`
@@ -391,7 +396,7 @@ Condition.
 
 **Nicht vorhanden / keine Typen:**
 - Alist/Plist sind keine Typen (auch in CL nicht) → `(satisfies …)`.
-- Noch nicht vorhanden: `deftype`, `check-type`, `subtypep`, `typecase`.
+- Noch nicht vorhanden: `deftype`, `check-type`, `subtypep`, `ctypecase`.
 
 ---
 

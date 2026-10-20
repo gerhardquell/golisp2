@@ -50,8 +50,9 @@ Modelle" nehmen will (`(take 3 (sigo-models))`), bekommt sonst dasselbe
 Modell doppelt statt N verschiedene — muss selbst dedupen.
 
 **Default und Thinking-Modelle (gemessen 20261020):** Default ist
-`zai-glm53-f` (glm-5.3-flash) — rund 14× billiger als `zai-glm53` und denkt
-nur wenig (11 Reasoning-Tokens bei einer Ein-Wort-Antwort). Schwere Aufgaben
+`zai-glm53-f` (glm-5.3-flash) — rund 14× billiger als `zai-glm53` und bei
+golisp2-Aufgaben praktisch gleich gut (Messung unten). **Beide denken**: bei
+Code-Aufgaben sind ~90 % der Completion-Tokens Reasoning. Schwere Aufgaben
 gezielt an ein starkes Thinking-Modell geben, dann aber `max_tokens`
 großzügig setzen: die Denkphase zählt mit, bei zu knappem Budget kommt ein
 **leerer** Text mit `finish-reason` `length` zurück (beobachtet mit gemma4).
@@ -231,3 +232,28 @@ will, prüft vorher `(sigo-model-info m)`. Messfenster:
 
 HTTP 402 von sigoREST (Budget-Stopp) kommt als Fehler
 `sigo-request: HTTP 402: …` an.
+
+### Messung 20261020 (TODO Schritt 4)
+
+Je 6 golisp2-Aufgaben × 2 Durchläufe, `temperature` 0.2, per `pool-map 4`
+parallel; jede Antwort wurde geladen und gegen einen Testfall ausgeführt
+(Regex, Vektoren, `typecase`, Hash-Tabelle, `format`, Listen).
+
+| | `zai-glm53-f` | `zai-glm53` |
+|---|---|---|
+| korrekt | 11/12 | 12/12 |
+| Markdown-Fences trotz Verbot | 4/12 | 0/12 |
+| Reasoning-Tokens gesamt | 9 137 | 12 546 |
+| Kosten gesamt | 0,010 USD | 0,143 USD |
+| Zeit je Aufruf | 8–24 s | 8–48 s |
+
+- **Cache greift:** Ab dem zweiten Aufruf je Modell sind 7 488 von ~7 520
+  Prompt-Tokens gecacht (99,5 %). Die ersten parallelen Aufrufe treffen den
+  Cache noch nicht (66 % über alles) — vor einem großen `pool-map` einen
+  einzelnen Aufruf vorausschicken, dann ist der Vorspann warm.
+- **Thinking dominiert** Laufzeit und Completion-Kosten, auch beim „flash"-Modell.
+- **Der eine Fehlschlag** war korrektes CL: `(mapcar 'string->number …)` —
+  golisp2 akzeptiert gequotete Symbole als Funktion nur in `funcall`, nicht in
+  `mapcar`/`apply`/`reduce` (TODO.md).
+- **Fences:** `zai-glm53-f` hält sich schlechter an „kein Markdown" — vor
+  `(eval (read …))` Fences entfernen, z. B. `(regex-replace "(?m)^```.*$" text "")`.

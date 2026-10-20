@@ -38,6 +38,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       Browser-Startfehler → Fehler (Server gestoppt), kein Browser → Warnung;
       Routen-Kollision → `http-static`/`http-upload`-Fehler; `webbridge.lisp` läuft in `-t`.
 
+- [ ] Gequotetes Symbol als Funktion: `(mapcar 'f …)`, `(apply '+ …)`, `(reduce '+ …)`
+      → „ist keine Funktion"; nur `funcall` kann es (CL: überall erlaubt). Fiel in der
+      sigo-Messung 20261020 auf — KIs schreiben das.
+
 ## 3. Fehlende Funktionen
 
 - [x] Reguläre Ausdrücke für Lisp-Code — erledigt 20.10.: `regex-match`, `regex-find`,
@@ -52,6 +56,7 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 4. sigo / sigoREST
 
+
 - [x] Schritt 2: Default-Modell von `(sigo …)` auf ein Modell ohne Thinking
       (Kandidat `zai-glm53-f`); Thinking-Modelle nur gezielt, dann `max_tokens` großzügig.
       Erledigt 20.10.: Default `zai-glm53-f` (~14× billiger, denkt wenig — 11 Reasoning-
@@ -60,8 +65,10 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       (pro Aufruf geht es schon über `sigo-request`). Erledigt 20.10.: Default-temperature
       0.2 (`GOLISP_SIGO_TEMPERATURE`), `0` ist Fehler; `max_tokens` bleibt beim
       Modell-Maximum von sigoREST (bewusst, `docs/sigo.md`).
-- [ ] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).
+- [x] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).
       Greift `cached_tokens` mit dem Vorspann? Thinking-Anteil? Antworten golisp2-korrekt?
+      Erledigt 20.10. (`docs/sigo.md`, „Messung 20261020"): Cache 99,5 % ab 2. Call, beide
+      Modelle denken (~90 % der Completion), `zai-glm53-f` 11/12 korrekt bei 1/14 der Kosten.
 - [ ] Cache-Feldnamen Moonshot/Gemini/DeepSeek.
 - [ ] Streaming für `sigo*`. Achtung: sigoREST bucht bei Streaming die Kosten falsch
       (`/u/go-projekte/sigoREST/TODO-20261003-kosten.md`).

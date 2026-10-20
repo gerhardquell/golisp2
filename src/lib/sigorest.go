@@ -32,8 +32,8 @@ var (
   sigoTimeout = 120 * time.Second
   // Default-Modell wenn (sigo "prompt") ohne Modell aufgerufen wird.
   // Überschreibbar via GOLISP_SIGO_MODEL. zai-glm53-f (glm-5.3-flash):
-  // gemessen 20261020 ~14× billiger als zai-glm53, denkt nur wenig
-  // (11 Reasoning-Tokens bei einer Ein-Wort-Antwort).
+  // gemessen 20261020 an 6 golisp2-Aufgaben ~14× billiger als zai-glm53,
+  // gleich gut (11/12 vs. 12/12), denkt etwas weniger (docs/sigo.md).
   sigoDefaultModel = "zai-glm53-f"
   // Default-temperature, wenn der Request keine nennt. sigoREST nähme
   // sonst die Mitte des Modellbereichs (meist 1.0) — zu hoch für Code.

@@ -172,7 +172,7 @@
 | `evenp` | t wenn ganze Zahl n gerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
 | `every` | t, wenn alle Elemente das Praedikat erfuellen |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
-| `expt` | basis hoch exp (exp ganzzahlig) |
+| `expt` | basis hoch exp, auch negativ und gebrochen |
 | `file-append` | Inhalte an Datei anhaengen |
 | `file-delete` | Datei loeschen |
 | `file-exists?` | t, wenn Datei existiert |
@@ -331,6 +331,8 @@
 | `spawn` | fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text) |
 | `sprintf` | C-Format in String umwandeln |
 | `sqrt` | Quadratwurzel |
+| `exp` | e hoch x |
+| `log` | natuerlicher Logarithmus, x > 0 |
 | `square` | x quadrieren |
 | `sscanf` | String nach C-scanf-Muster parsen, Liste der Werte |
 | `string->list` | String in Liste von Einzelzeichen-Strings |

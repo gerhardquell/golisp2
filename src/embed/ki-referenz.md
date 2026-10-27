@@ -107,7 +107,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 ## 3. Wichtige Primitiven (FUNC, Go-seitig)
 
 ### Arithmetik/Vergleich
-`+ - * / mod rem remainder abs floor random values` — `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
+`+ - * / mod rem remainder abs floor random values sqrt exp log expt` — `(log x)` nur natürlich, x > 0; `expt` auch negativ/gebrochen (`(expt 0.9 -2)`), NaN/Inf → Fehler; `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
 `= < > >= <= equal? eq eq?`  — `eq`=Pointer, `equal?=strukturell`
 
 ### Listen (klassische 7)
@@ -167,7 +167,7 @@ Vollständige, generierte Liste (kein Ausschnitt): `docs/referenz-generiert.md`.
 `zero? positive? negative? pair?` — CL-Namen: `zerop plusp minusp evenp oddp 1+ 1-` (`evenp`/`oddp` nur für ganze Zahlen)
 
 ### Higher-Order/Functional
-`identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota max min square expt gcd`
+`identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota max min square gcd`
 Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgelöst wie CL) — `(mapcar 'string->number l)`, `(reduce '+ l)`, `(sort l '<)`.
 
 ### Listen-Helfer

@@ -25,10 +25,13 @@ import (
 // (CLHS 25.1.4), 70 Jahre vor der Unix-Epoche.
 var clEpoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
 
-// RegisterCLCompatPrims hängt sort/sqrt/get-universal-time ins Environment ein.
+// RegisterCLCompatPrims hängt sort/sqrt/exp/log/expt/get-universal-time ins Environment ein.
 func RegisterCLCompatPrims(env *Env) {
   _ = env.Set("sort", makeFn(withFnDesignator(env, 1, fnSort)))
   _ = env.Set("sqrt", makeFn(fnSqrt))
+  _ = env.Set("exp", makeFn(fnExp))
+  _ = env.Set("log", makeFn(fnLog))
+  _ = env.Set("expt", makeFn(fnExpt))
   _ = env.Set("get-universal-time", makeFn(fnGetUniversalTime))
 }
 
@@ -106,6 +109,38 @@ func fnSqrt(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("sqrt: negative Zahl nicht unterstützt (keine komplexen Zahlen)")
   }
   return MakeNum(math.Sqrt(args[0].Num)), nil
+}
+
+// exp: (exp x) → e hoch x.
+func fnExp(args []*Cell) (*Cell, error) {
+  if len(args) != 1 || args[0].Type != NUMBER {
+    return nil, fmt.Errorf("exp: 1 Zahl erwartet")
+  }
+  return MakeNum(math.Exp(args[0].Num)), nil
+}
+
+// log: (log x) → natürlicher Logarithmus, nur x > 0 (keine komplexen Zahlen).
+func fnLog(args []*Cell) (*Cell, error) {
+  if len(args) != 1 || args[0].Type != NUMBER {
+    return nil, fmt.Errorf("log: 1 Zahl erwartet")
+  }
+  if args[0].Num <= 0 {
+    return nil, fmt.Errorf("log: nur Zahlen > 0 (keine komplexen Zahlen)")
+  }
+  return MakeNum(math.Log(args[0].Num)), nil
+}
+
+// expt: (expt basis exp) → basis hoch exp, auch negativ und gebrochen.
+// NaN (negative Basis, gebrochener Exponent) und ±Inf (0 hoch negativ) sind Fehler.
+func fnExpt(args []*Cell) (*Cell, error) {
+  if len(args) != 2 || args[0].Type != NUMBER || args[1].Type != NUMBER {
+    return nil, fmt.Errorf("expt: 2 Zahlen erwartet (basis exp)")
+  }
+  r := math.Pow(args[0].Num, args[1].Num)
+  if math.IsNaN(r) || math.IsInf(r, 0) {
+    return nil, fmt.Errorf("expt: %v hoch %v nicht darstellbar", args[0].Num, args[1].Num)
+  }
+  return MakeNum(r), nil
 }
 
 // get-universal-time: (get-universal-time) → Sekunden seit CL-Epoche

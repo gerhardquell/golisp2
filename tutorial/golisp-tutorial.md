@@ -558,6 +558,28 @@ Quadratwurzel.
 ; => 4
 ```
 
+### exp
+
+**Syntax:** `(exp x)`
+
+e hoch x.
+
+```lisp
+(exp 1)
+; => 2.718281828459045
+```
+
+### log
+
+**Syntax:** `(log x)`
+
+Natürlicher Logarithmus, nur für x > 0.
+
+```lisp
+(log (exp 2))
+; => 2
+```
+
 ### floor
 
 **Syntax:** `(floor x)`
@@ -3488,11 +3510,15 @@ Quadriert x.
 
 **Syntax:** `(expt base exp)`
 
-Berechnet base hoch exp (exp ganze Zahl, rekursiv).
+Berechnet base hoch exp, auch negativ und gebrochen. Negative Basis mit gebrochenem Exponenten und 0 hoch negativ sind Fehler.
 
 ```lisp
 (expt 2 10)
-(expt 3 3)
+; => 1024
+(expt 2 -1)
+; => 0.5
+(expt 4 0.5)
+; => 2
 ```
 
 ### gcd

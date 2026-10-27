@@ -157,11 +157,7 @@
 
 (defun square (x) (* x x))
 
-(defun expt (base exp)
-  (cond
-    ((= exp 0) 1)
-    ((= exp 1) base)
-    (t         (* base (expt base (- exp 1))))))
+; expt ist Go-Primitiv (clcompat_prims.go) – die Lisp-Fassung rekursierte bei exp < 1 endlos
 
 ;; Euklid über mod — / ist Float-Division und taugt hier nicht
 (defun gcd (a b)

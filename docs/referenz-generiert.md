@@ -111,6 +111,7 @@
 | `apply` | Funktion aufrufen, letztes Argument wird als Liste gesplict |
 | `aref` | Vektor-Element lesen (O(1)), Index 0..n-1 |
 | `argv` | Kommandozeilenargumente des Prozesses als Liste |
+| `arrayp` | t, wenn Array (= Vektor, nur eindimensional) |
 | `aset` | Vektor-Element setzen, liefert den Wert; auch (setf (aref v i) x) |
 | `ash` | arithmetischer Shift: (ash x n) = x·2^n, negatives n schiebt nach rechts (floor) |
 | `ash-left` | Hilfsfunktion von ash: n-mal verdoppeln |
@@ -143,10 +144,14 @@
 | `coerce` | Typumwandlung, unterstuetzt 'list und 'string |
 | `complement` | Funktion, die das Praedikat negiert |
 | `compose` | Funktion f(g(x)) |
+| `concatenate` | Sequenzen verketten zu 'list oder 'vector |
 | `cons` | neues Cons (x vor Liste) |
 | `constantly` | Funktion, die stets x zurueckgibt |
 | `copy-list` | flache Listenkopie |
+| `copy-seq` | flache Kopie gleichen Typs |
 | `copy-tree` | tiefe Kopie (rekursiv) |
+| `count` | Anzahl passender Elemente (:test :key) |
+| `count-if` | Anzahl Elemente mit Praedikat (:key) |
 | `decf` | Makro: place um d (Default 1) vermindern |
 | `defclass` | Klasse fuer Objekte mit Identitaet (Hashtabelle, setf in place) |
 | `defgeneric` | generische Funktion definieren (Dispatch erstes Argument) |
@@ -165,6 +170,7 @@
 | `dolist` | Makro: ueber Liste iterieren, Ergebnisform () |
 | `dotimes` | Makro: var von 0 bis n-1 wiederholen |
 | `drop` | Liste ohne die ersten n Elemente |
+| `elt` | Element einer Liste/eines Vektors an Index |
 | `env-symbols` | Liste aller Root-Environment-Symbole |
 | `environ` | Umgebungsvariablen als Assoziationsliste |
 | `eq` | Pointer-Identitaet; Symbole sind interniert, Zahlen/Strings nicht |
@@ -186,7 +192,9 @@
 | `file-stat` | Assoziationsliste mit size und mtime oder nil |
 | `file-write` | Inhalte in Datei schreiben (ueberschreibt) |
 | `filter` | Elemente, fuer die das Praedikat wahr ist |
+| `find` | erstes passendes Element (:test :key) |
 | `find-all` | alle Vorkommen von item (Default-Test equal?) |
+| `find-if` | erstes Element mit Praedikat (:key) |
 | `first` | Alias fuer car |
 | `flatten` | rekursiv flache Liste |
 | `floor` | zur naechsten ganzen Zahl abrunden |
@@ -247,6 +255,7 @@
 | `make-array` | Vektor der Laenge n anlegen, :initial-element (Default ()) |
 | `make-hash-table` | thread-sichere Hash-Table erzeugen |
 | `make-list` | Liste mit n Elementen (:initial-element) |
+| `map` | Funktion ueber Sequenzen, Ergebnis 'list/'vector/nil |
 | `mapcar` | Funktion elementweise anwenden, Ergebnisliste (first-class, #' moeglich) |
 | `maphash` | Funktion (key wert) auf jeden Hash-Eintrag anwenden |
 | `max` | groesste Zahl |
@@ -277,6 +286,8 @@
 | `plusp` | CL-Name fuer positive? |
 | `pool-map` | wie mapcar, hoechstens n Aufrufe gleichzeitig; Reihenfolge bleibt, Fehler → (:error text) an der Stelle |
 | `pop` | Makro: erstes Element aus Liste in var entfernen und liefern |
+| `position` | Index des ersten passenden Elements (:test :key) |
+| `position-if` | Index des ersten Elements mit Praedikat (:key) |
 | `positive?` | t, wenn groesser 0 |
 | `print` | Werte ohne Newline auf stdout, letztes Argument zurueck |
 | `printf` | C-Format direkt auf stdout ausgeben |
@@ -335,6 +346,7 @@
 | `sigo-usage-reset` | sigo-usage-Summen auf 0 setzen |
 | `sleep` | Millisekunden pausieren |
 | `slurp` | stdin komplett als String lesen |
+| `some` | erster wahrer Wert des Praedikats |
 | `sort` | Liste oder Vektor nach Vergleich sortieren (neue Sequenz) |
 | `spawn` | fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text) |
 | `sprintf` | C-Format in String umwandeln |
@@ -360,6 +372,7 @@
 | `string>` | Index der ersten Abweichung, wenn groesser, sonst () |
 | `string>=` | wie string>, bei Gleichheit die Laenge |
 | `string?` | t, wenn String |
+| `subseq` | Teilsequenz gleichen Typs |
 | `substring` | Teilstring von start (inklusive) bis end (exklusive) |
 | `subtypep` | Untertyp-Prüfung, zwei Werte: (subtypep 'integer 'number) → t t; unentscheidbar → () () |
 | `symbol->string` | Symbolname als String |
@@ -382,7 +395,9 @@
 | `untrace` | Tracing deaktivieren |
 | `values` | mehrere Werte liefern; Verwender sehen den Hauptwert |
 | `vector` | Vektor aus den Argumenten |
+| `vector-pop` | letztes Element entfernen und liefern |
 | `vector-push-extend` | Element anhaengen, liefert dessen Index |
+| `vectorp` | t, wenn Vektor |
 | `warn` | Warnung ausgeben, Auswertung laeuft weiter |
 | `webserv` | Web-Bootstrap: HTTP-Server plus boot.js plus Browser (:html/:htmlpath Pflicht) |
 | `when` | Makro: body nur auswerten, wenn test wahr ist |

@@ -410,6 +410,21 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (vector-push-extend 7 v)          ; → 3 (Index des neuen Elements)
 (length v)                        ; → 4
 (coerce v 'list)                  ; → (0 42 0 7); (coerce '(1 2) 'vector) → #(1 2)
+(vector-pop v)                    ; → 7          #(1 2 3) ist ein Literal
+(loop for x across #(1 2 3) sum x) ; → 6
+```
+
+### Sequenzen (Listen und Vektoren, keine Strings)
+```lisp
+(elt '(a b c) 1)                  ; → b
+(subseq #(1 2 3) 1)               ; → #(2 3)   Typ bleibt
+(map 'vector '1+ '(1 2))          ; → #(2 3)
+(concatenate 'list '(1) #(2))     ; → (1 2)
+(find 3 '((1 . a) (3 . b)) :key 'car)  ; → (3 . b)   Default-Test eql
+(find "a" '("a") :test 'equal?)   ; → "a"
+(position 'c '(a b c))            ; → 2
+(count-if 'evenp #(2 4 5))        ; → 2
+(some 'evenp '(1 2))              ; → t
 ```
 
 ### Hashtable (CL-kompatibel)

@@ -445,11 +445,17 @@ Condition.
   dürfen zyklisch sein). Eine Tabelle mit `:class` → unregistriertes Symbol
   bleibt `hash-table` für `type-of`, druckt sich aber als `#<symbol>`.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
-- Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer und
-  ohne Reader-Literal `#(…)` (die Druckform ist nur Ausgabe); `equal?`
+- Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer. Das
+  Literal `#(…)` wertet seine Elemente nicht aus und liefert bei jedem
+  Lesen einen neuen Vektor; Vektoren sind selbstauswertend. `equal?`
   vergleicht Vektoren nach Identität (CL `equal`). `sort` nimmt Vektoren
   (neuer Vektor, nicht-destruktiv); `mapcar`/`apply`/`append` sind wie in
   CL nur für Listen und werfen bei Vektoren oder Punktpaaren einen Fehler.
+- Sequenzfunktionen (`elt subseq copy-seq concatenate map some find
+  find-if position position-if count count-if`) nehmen Listen und Vektoren,
+  **keine Strings** (keine Characters). Nur `:test`/`:key`, kein
+  `:start`/`:end`/`:from-end`. Default-Test `eql` (Go-Primitive; Zahlen nach
+  Wert, sonst Identität) — Strings mit `:test 'equal?` suchen.
 - `deftype`: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))`
   schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler
   (der deftype wäre nie erreichbar); `defstruct`/`define-condition` über einen

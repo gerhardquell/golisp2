@@ -304,7 +304,7 @@ to avoid guessing:
 ### 10.12 LOOP as practical core only, No Series, No Iterate
 - `loop`: `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`,
   `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`,
-  `finally`, `return`. Not available: `across`, destructuring, `named`.
+  `finally`, `return`, `for x across vector`. Not available: destructuring, `named`.
 - No `series`, no `iterate`.
 
 ---

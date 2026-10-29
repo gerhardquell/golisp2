@@ -437,7 +437,7 @@ cd
 
 **Syntax:** `(loop klausel ...)`
 
-Iteration im Stil von CL-`loop` (Praxis-Kern): `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`, `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`, `finally`, `return`. Wird zur Expansionszeit in `let` + `while` übersetzt. Nicht vorhanden: `across`, Destructuring, `named`.
+Iteration im Stil von CL-`loop` (Praxis-Kern): `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`, `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`, `finally`, `return`, `for x across vektor`. Wird zur Expansionszeit in `let` + `while` übersetzt. Nicht vorhanden: Destructuring, `named`.
 
 ```lisp
 (loop for i from 1 to 5 collect (* i i))           ; => (1 4 9 16 25)
@@ -2029,7 +2029,7 @@ Schreibt einen Wert als JSON-String.
 
 ## Vektoren
 
-Eindimensionale Vektoren mit O(1)-Zugriff. Sie sind mutabel und werden geteilt, nicht kopiert (wie Hash-Tabellen). `equal?` vergleicht sie nur nach Identität (CL `equal`). Druckform `#(1 2 3)` — der Reader liest sie nicht zurück.
+Eindimensionale Vektoren mit O(1)-Zugriff. Sie sind mutabel und werden geteilt, nicht kopiert (wie Hash-Tabellen). `equal?` vergleicht sie nur nach Identität (CL `equal`). Literal und Druckform `#(1 2 3)` (Elemente werden nicht ausgewertet, Vektoren werten sich selbst aus). `(loop for x across v ...)` iteriert über Vektoren.
 
 ### make-array
 
@@ -2076,6 +2076,175 @@ Hängt x an und liefert dessen Index.
 (vector-push-extend 7 v)  ; => 2
 (length v)                ; => 3
 (coerce v 'list)          ; => (1 2 7)
+```
+
+### vector-pop
+
+**Syntax:** `(vector-pop v)`
+
+Entfernt das letzte Element und liefert es. Leerer Vektor → Fehler.
+
+```lisp
+(define v (vector 1 2 3))
+(vector-pop v)  ; => 3
+v               ; => #(1 2)
+```
+
+### vectorp
+
+**Syntax:** `(vectorp x)`
+
+t, wenn x ein Vektor ist.
+
+```lisp
+(vectorp #(1 2))  ; => t
+(vectorp '(1 2))  ; => ()
+```
+
+### arrayp
+
+**Syntax:** `(arrayp x)`
+
+Wie `vectorp` — golisp2 hat nur eindimensionale Arrays.
+
+```lisp
+(arrayp (make-array 2))  ; => t
+```
+
+## Sequenzen
+
+Diese Funktionen nehmen Listen **und** Vektoren (nicht Strings — dafür `substring`, `string->list`). Sie verändern nichts, sondern liefern neue Werte. Wo CL sie hat, gibt es die Keywords `:test` (Vergleich, Default `eql`) und `:key` (wird vor dem Vergleich auf jedes Element angewandt); Funktionen dürfen als Symbol übergeben werden (`'car`, `'equal?`).
+
+### elt
+
+**Syntax:** `(elt seq i)`
+
+Element an Position i; außerhalb → Fehler (auch bei Listen).
+
+```lisp
+(elt '(a b c) 1)   ; => b
+(elt #(10 20) 0)   ; => 10
+```
+
+### subseq
+
+**Syntax:** `(subseq seq start [end])`
+
+Teilsequenz vom gleichen Typ.
+
+```lisp
+(subseq '(1 2 3 4) 1 3)  ; => (2 3)
+(subseq #(1 2 3) 1)      ; => #(2 3)
+```
+
+### copy-seq
+
+**Syntax:** `(copy-seq seq)`
+
+Flache Kopie vom gleichen Typ — wichtig bei Vektoren, die sonst geteilt werden.
+
+```lisp
+(define v #(1 2))
+(define w (copy-seq v))
+(setf (aref w 0) 9)
+v  ; => #(1 2)
+w  ; => #(9 2)
+```
+
+### concatenate
+
+**Syntax:** `(concatenate typ seq ...)`
+
+Hängt Sequenzen aneinander; `typ` ist `'list` oder `'vector`.
+
+```lisp
+(concatenate 'list '(1) #(2 3))    ; => (1 2 3)
+(concatenate 'vector '(1) #(2))    ; => #(1 2)
+```
+
+### map
+
+**Syntax:** `(map typ f seq ...)`
+
+Wie `mapcar`, aber für Listen und Vektoren; mehrere Sequenzen laufen parallel bis zur kürzesten. `typ` ist `'list`, `'vector` oder `nil` (nur Nebenwirkung, Ergebnis `()`).
+
+```lisp
+(map 'vector (lambda (x) (* x x)) '(1 2 3))  ; => #(1 4 9)
+(map 'list + '(1 2 3) #(10 20))              ; => (11 22)
+```
+
+### some
+
+**Syntax:** `(some pred seq ...)`
+
+Erster wahre Wert von `pred`, sonst `()`.
+
+```lisp
+(some (lambda (x) (and (> x 1) (* x 10))) '(1 2 3))  ; => 20
+(some 'evenp #(1 3))                                 ; => ()
+```
+
+### find
+
+**Syntax:** `(find x seq [:test f] [:key f])`
+
+Erstes passendes Element oder `()`. Default-Vergleich ist `eql` — Strings brauchen `:test 'equal?`.
+
+```lisp
+(find 2 '(1 2 3))                            ; => 2
+(find "a" '("a" "b") :test 'equal?)          ; => "a"
+(find 3 '((1 . a) (3 . b)) :key 'car)        ; => (3 . b)
+```
+
+### find-if
+
+**Syntax:** `(find-if pred seq [:key f])`
+
+Erstes Element, für das `pred` wahr ist.
+
+```lisp
+(find-if 'evenp #(1 4 6))  ; => 4
+```
+
+### position
+
+**Syntax:** `(position x seq [:test f] [:key f])`
+
+Index des ersten passenden Elements oder `()`.
+
+```lisp
+(position 'c '(a b c))  ; => 2
+(position 9 #(1 2))     ; => ()
+```
+
+### position-if
+
+**Syntax:** `(position-if pred seq [:key f])`
+
+Index des ersten Elements, für das `pred` wahr ist.
+
+```lisp
+(position-if 'evenp '(1 3 4))  ; => 2
+```
+
+### count
+
+**Syntax:** `(count x seq [:test f] [:key f])`
+
+Anzahl der passenden Elemente.
+
+```lisp
+(count 1 '(1 2 1))  ; => 2
+```
+
+### count-if
+
+**Syntax:** `(count-if pred seq [:key f])`
+
+Anzahl der Elemente, für die `pred` wahr ist.
+
+```lisp
+(count-if 'evenp #(2 4 5))  ; => 2
 ```
 
 ## Strukturen (defstruct)

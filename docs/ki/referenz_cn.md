@@ -302,7 +302,7 @@
 ### 10.12 LOOP 仅实用核心，无 Series、无 Iterate
 - `loop`：`for x in`/`from … to`/`below`/`by`、`repeat`、`while`/`until`、
   `when`/`unless`、`collect`/`sum`/`count`/`maximize`/`minimize`、`do`、
-  `finally`、`return`。不支持：`across`、解构、`named`。
+  `finally`、`return`、`for x across 向量`。不支持：解构、`named`。
 - 无 `series`、无 `iterate`。
 
 ---

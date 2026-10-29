@@ -84,7 +84,7 @@
 (defun %struct-instance? (x name)
   (let ((entry (assoc name *struct-types*)))
     (if (and entry (pair? x) (eq (car x) name)
-             (= (%proper-length x) (+ (cadr entry) 1)))
+             (= (%proper-length x) (+ (length (cadr entry)) 1)))
         t
         ())))
 

@@ -63,10 +63,12 @@ func TestKeineWarnungOhneKollision(t *testing.T) {
 }
 
 func TestStructRegistry(t *testing.T) {
-  evalStdlibEq(t, `(defstruct punkt x y) *struct-types*`, "((punkt 2))")
-  evalStdlibEq(t, `(defstruct leer) *struct-types*`, "((leer 0))")
+  evalStdlibEq(t, `(defstruct punkt x y) *struct-types*`, "((punkt (x y)))")
+  evalStdlibEq(t, `(defstruct leer) *struct-types*`, "((leer ()))")
   // Reload ersetzt, dupliziert nicht
-  evalStdlibEq(t, `(defstruct punkt x y) (defstruct punkt x y z) *struct-types*`, "((punkt 3))")
+  evalStdlibEq(t, `(defstruct punkt x y) (defstruct punkt x y z) *struct-types*`, "((punkt (x y z)))")
+  // Default-Werte: nur der Name landet in der Registry
+  evalStdlibEq(t, `(defstruct boot (laenge 3) name) *struct-types*`, "((boot (laenge name)))")
 }
 
 func TestTypeOfKern(t *testing.T) {

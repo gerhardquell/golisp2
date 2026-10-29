@@ -380,7 +380,8 @@
       (cons val (cdr lst))
       (cons (car lst) (set-nth (cdr lst) (- n 1) val))))
 
-;; *struct-types*: Registry (name slot-anzahl) für type-of/typep (types.lisp).
+;; *struct-types*: Registry (name (slot-namen)) für type-of/typep (types.lisp)
+;; und den SWANK-Inspector.
 ;; defvar: Mehrfach-Load darf registrierte Structs nicht löschen.
 (defvar *struct-types* '())
 
@@ -419,7 +420,7 @@
                             `((warn ,(format nil "WARN: defstruct ~a: '~a' existiert → Prädikat heißt '~a'" name pred-p pred-p-final))))))
     `(begin
        ,@(if (bound? '%type-name-warnings) (%type-name-warnings 'defstruct name) '())
-       (set! *struct-types* (alist-set ',name ,n *struct-types*))
+       (set! *struct-types* (alist-set ',name ',slot-names *struct-types*))
        (defun ,mk (&key ,@slots) (%make-struct ',name ,@slot-names))
        ,@(mapcar (lambda (p)
                    (let* ((s (car p))

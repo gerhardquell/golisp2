@@ -93,7 +93,7 @@
     (*loaded-files* . "Liste der bereits geladenen Dateien (defsystem)")
     (*loaded-systems* . "Liste der geladenen Systeme (defsystem)")
     (*setf-expanders* . "Registry der setf-Expander")
-    (*struct-types* . "Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp)")
+    (*struct-types* . "Registry (name (slot-namen)) der definierten Structs, fuer type-of/typep und SWANK-Inspector (stdlib.lisp)")
     (*systems* . "Registry der definierten Systeme (defsystem)")
     (*type-parents* . "Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp)")
     (+ . "Addition aller Argumente")

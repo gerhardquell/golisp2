@@ -13,6 +13,7 @@
 package swank
 
 import (
+  "strconv"
   "testing"
 
   "golisp2/src/lib"
@@ -161,5 +162,58 @@ func TestInspectorFehler(t *testing.T) {
   env := inspEnv(t, "")
   if st, _ := rex(t, env, `(swank:init-inspector "(car 5)")`); st != ":abort" {
     t.Errorf("Status = %s, want :abort", st)
+  }
+}
+
+func itoa(n int) string { return strconv.Itoa(n) }
+
+func TestInspectorNavigation(t *testing.T) {
+  env := inspEnv(t, schiffSetup+`
+(define heim (make-schiff :name "Erde"))
+(setf (schiff-heimat s) heim)`)
+  v := openOK(t, env, `(swank:init-inspector "s")`)
+  _, n := valueAfter(t, v, "  heimat = ")
+  v = openOK(t, env, `(swank:inspect-nth-part `+itoa(n)+`)`)
+  if name, _ := valueAfter(t, v, "  name = "); name != `"Erde"` {
+    t.Fatalf("nth-part: name = %q", name)
+  }
+  v = openOK(t, env, `(swank:inspector-pop)`)
+  if name, _ := valueAfter(t, v, "  name = "); name != `"Beagle"` {
+    t.Fatalf("pop: name = %q", name)
+  }
+  v = openOK(t, env, `(swank:inspector-next)`)
+  if name, _ := valueAfter(t, v, "  name = "); name != `"Erde"` {
+    t.Fatalf("next: name = %q", name)
+  }
+  // Vorwärts-Stack ist jetzt leer
+  if _, v := rex(t, env, `(swank:inspector-next)`); v.Type != lib.NIL {
+    t.Errorf("next ohne Ziel = %s, want ()", v)
+  }
+}
+
+func TestInspectorLeereHistoryUndUnbekannterTeil(t *testing.T) {
+  env := inspEnv(t, schiffSetup)
+  openOK(t, env, `(swank:init-inspector "s")`)
+  if _, v := rex(t, env, `(swank:inspector-pop)`); v.Type != lib.NIL {
+    t.Errorf("pop ohne History = %s, want ()", v)
+  }
+  if st, _ := rex(t, env, `(swank:inspect-nth-part 999)`); st != ":abort" {
+    t.Errorf("unbekannter Teil: Status %s, want :abort", st)
+  }
+}
+
+// Kernnutzen: Reinspect zeigt Änderungen am geteilten Zustand.
+func TestInspectorReinspectZeigtMutation(t *testing.T) {
+  env := inspEnv(t, schiffSetup)
+  openOK(t, env, `(swank:init-inspector "s")`)
+  if _, err := lib.LoadString(`(decf (schiff-energie s) 30)`, env); err != nil {
+    t.Fatal(err)
+  }
+  v := openOK(t, env, `(swank:inspector-reinspect)`)
+  if e, _ := valueAfter(t, v, "  energie = "); e != "70" {
+    t.Errorf("energie nach Mutation = %q", e)
+  }
+  if _, v := rex(t, env, `(swank:quit-inspector)`); v.Type != lib.NIL {
+    t.Errorf("quit = %s", v)
   }
 }

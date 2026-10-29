@@ -249,6 +249,16 @@
       ;; Inspector (C-c I)
       ((equal? op 'swank:init-inspector)
        (swank:init-inspector (cadr form) id))
+      ((equal? op 'swank:inspect-nth-part)
+       (swank:inspect-nth-part (cadr form) id))
+      ((equal? op 'swank:inspector-pop)
+       (swank:inspector-pop id))
+      ((equal? op 'swank:inspector-next)
+       (swank:inspector-next id))
+      ((equal? op 'swank:inspector-reinspect)
+       (swank:inspector-reinspect id))
+      ((equal? op 'swank:quit-inspector)
+       (swank:quit-inspector id))
       ;; Unbekannte Ops: graceful leere Liste statt :abort. SLIME-Contribs
       ;; degradieren sauber; :abort wuerfe Sync-Eval-Fehler in Emacs.
       (else
@@ -595,3 +605,40 @@
       (list (list :return (list :ok (swank--insp-open x)) id)))
     (lambda (err)
       (list (list :return (list :abort (swank--value-string err)) id)))))
+
+(defun swank:inspect-nth-part (n id)
+  (let ((hit (multiple-value-list (gethash n swank--insp-parts))))
+    (if (null (cadr hit))
+        (list (list :return (list :abort (format nil "inspect-nth-part: kein Teil ~a" n)) id))
+        (begin
+          (set! swank--insp-back (cons *inspectee* swank--insp-back))
+          (set! swank--insp-fwd ())
+          (list (list :return (list :ok (swank--insp-open (car hit))) id))))))
+
+(defun swank:inspector-pop (id)
+  (if (null swank--insp-back)
+      (list (list :return (list :ok ()) id))
+      (let ((x (car swank--insp-back)))
+        (set! swank--insp-back (cdr swank--insp-back))
+        (set! swank--insp-fwd (cons *inspectee* swank--insp-fwd))
+        (list (list :return (list :ok (swank--insp-open x)) id)))))
+
+(defun swank:inspector-next (id)
+  (if (null swank--insp-fwd)
+      (list (list :return (list :ok ()) id))
+      (let ((x (car swank--insp-fwd)))
+        (set! swank--insp-fwd (cdr swank--insp-fwd))
+        (set! swank--insp-back (cons *inspectee* swank--insp-back))
+        (list (list :return (list :ok (swank--insp-open x)) id)))))
+
+(defun swank:inspector-reinspect (id)
+  (list (list :return (list :ok (swank--insp-open *inspectee*)) id)))
+
+(defun swank:quit-inspector (id)
+  (clrhash swank--insp-parts)
+  (set! swank--insp-count 0)
+  (set! *inspectee* ())
+  (set! swank--insp-content ())
+  (set! swank--insp-back ())
+  (set! swank--insp-fwd ())
+  (list (list :return (list :ok ()) id)))

@@ -133,3 +133,17 @@ func TestHashTableDruckformKlasse(t *testing.T) {
   evalEq(t, `(format nil "~a" (make-hash-table))`, `"#<hash-table>"`)
   evalEq(t, `(let ((h (make-hash-table))) (puthash :class h "text") (format nil "~a" h))`, `"#<hash-table>"`)
 }
+
+// equal-Schlüssel: String-/Symbolinhalt darf nicht als Listenstruktur
+// gelesen werden ("a s:b" ≠ "a" "b").
+func TestHashTableEqualSchluesselEindeutig(t *testing.T) {
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal)))
+      (puthash (list "a s:b") h 'eins)
+      (list (gethash (list "a" "b") h) (hash-table-count h)))`, "(() 1)")
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal)))
+      (puthash (list "x )") h 1)
+      (puthash (list "x" ")") h 2)
+      (hash-table-count h))`, "2")
+}

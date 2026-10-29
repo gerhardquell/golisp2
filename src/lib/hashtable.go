@@ -52,7 +52,8 @@ func (ht *HashTable) keyOf(c *Cell) string {
 }
 
 // equalKey: Listen elementweise, Rest via eqlKey. Nicht über Print —
-// sonst kollidieren alle #<hash-table>/#<lambda>.
+// sonst kollidieren alle #<hash-table>/#<lambda>. eqlKey quotet Inhalte,
+// damit "a s:b" nicht wie die Liste ("a" "b") aussieht.
 func equalKey(c *Cell) string {
   if c == nil || c.Type != LIST {
     return eqlKey(c)
@@ -72,17 +73,17 @@ func equalKey(c *Cell) string {
 
 func eqlKey(c *Cell) string {
   if c == nil {
-    return "a:nil"
+    return "a:" + strconv.Quote("nil")
   }
   switch c.Type {
   case NUMBER:
     return "n:" + strconv.FormatFloat(c.Num, 'g', -1, 64)
   case ATOM:
-    return "a:" + c.Val
+    return "a:" + strconv.Quote(c.Val)
   case STRING:
-    return "s:" + c.Val
+    return "s:" + strconv.Quote(c.Val)
   case NIL:
-    return "a:nil"
+    return "a:" + strconv.Quote("nil")
   default:
     return fmt.Sprintf("p:%p", c)
   }

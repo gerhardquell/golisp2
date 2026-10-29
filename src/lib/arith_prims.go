@@ -42,6 +42,7 @@ func RegisterArith(env *Env) {
 	_ = env.Set("<=", makeFn(fnLe))
 	_ = env.Set("equal?", makeFn(fnEqual))
 	_ = env.Set("eq", makeFn(fnEqPtr))
+	_ = env.Set("eql", makeFn(fnEql))
 }
 
 // ---- Arithmetik ----
@@ -198,6 +199,25 @@ func fnEqPtr(args []*Cell) (*Cell, error) {
 		if args[0] != nil && args[0].Type == NUMBER {
 			return MakeNil(), nil
 		}
+		return cellT, nil
+	}
+	return MakeNil(), nil
+}
+
+// eql: Zahlen nach Wert (golisp2 kennt nur float64, also (eql 1.0 1) → t),
+// sonst Pointer-Identität wie eq. Default-Test der Sequenzfunktionen.
+func eql(a, b *Cell) bool {
+	if a != nil && b != nil && a.Type == NUMBER && b.Type == NUMBER {
+		return a.Num == b.Num
+	}
+	return a == b
+}
+
+func fnEql(args []*Cell) (*Cell, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("eql: 2 Argumente nötig")
+	}
+	if eql(args[0], args[1]) {
 		return cellT, nil
 	}
 	return MakeNil(), nil

@@ -608,14 +608,6 @@
 (defmacro incf (place &optional (d 1)) `(setf ,place (+ ,place ,d)))
 (defmacro decf (place &optional (d 1)) `(setf ,place (- ,place ,d)))
 
-;; --- Vergleich ---
-
-;; eql: bei Zahlen wertbasiert, sonst wie eq (Pointer-Identität) — keine
-;; strukturelle Gleichheit wie equal?. golisp2 hat keine Chars/Rationals,
-;; daher genügt die Zahlen/Rest-Unterscheidung für CL-Kompat.
-(defun eql (a b)
-  (if (and (number? a) (number? b)) (= a b) (eq a b)))
-
 ;; --- Makros ---
 
 (defmacro assert (form)

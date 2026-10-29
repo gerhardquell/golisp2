@@ -118,6 +118,9 @@ func BaseEnv() *Env {
 	// Vektoren (CL, eindimensional)
 	RegisterVector(env)
 
+	// Sequenzfunktionen für Listen und Vektoren
+	RegisterSequence(env)
+
 	// Hashtables (CL)
 	RegisterHashtables(env)
 

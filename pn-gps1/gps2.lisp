@@ -62,12 +62,7 @@
 
 ;; === Hilfsfunktionen ================================================
 
-(defun some (pred lst)
-  "Wie any, gibt aber das erste nicht-nil Ergebnis zurück."
-  (if (null lst)
-      ()
-      (let ((r (pred (car lst))))
-        (if r r (some pred (cdr lst))))))
+;; some ist eingebaut (CL, sequence.go)
 
 (defun remove-if (pred lst)
   "Behält alle Elemente, für die pred falsch ist."

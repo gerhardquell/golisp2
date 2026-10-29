@@ -13,6 +13,7 @@
 ;;   (repeat n)
 ;;   (for v from a [to|below|downto b] [by s])
 ;;   (for v in liste)
+;;   (for v across vektor)
 ;;   (do expr ...)  (finally expr ...)
 ;;   (while test)   (until test)
 ;;   (when test klausel)  (unless test klausel)
@@ -24,7 +25,7 @@
 ;;     Familienwechsel ist ein Fehler zur Expansionszeit.
 ;;   - when/unless gilt für genau eine Folgeklausel
 ;;     (do mit mehreren Formen oder eine Akkumulation), kein and/else.
-;;   - Kein Destructuring in for, kein across (kein Vektor-Typ),
+;;   - Kein Destructuring in for,
 ;;   - kein initially, kein named, kein =/then-Schritt.
 ;;   - Syntaxfehler werden zur Expansionszeit per error gemeldet.
 ;; ********************************************************************
@@ -126,9 +127,19 @@
                       acts
                       (cons `(set! ,xs (cdr ,xs)) posts)
                       fins acc)))
+      ((eq dir 'across)
+       ;; %vector-length statt length: Liste (auch leer) → lauter Fehler
+       (let ((xs (gensym)) (i (gensym)))
+         (%loop-parse (cddr (cdr cs))
+                      (cons (list i 0) (cons (list xs (caddr cs)) (cons (list v '()) inits)))
+                      (cons `(< ,i (%vector-length ,xs)) guards)
+                      (cons `(set! ,v (aref ,xs ,i)) pres)
+                      acts
+                      (cons `(set! ,i (+ ,i 1)) posts)
+                      fins acc)))
       ((eq dir 'from)
        (%loop-from v (cddr cs) inits guards pres acts posts fins acc))
-      (t (error (format nil "loop: for: erwartet in|from, got ~a" dir))))))
+      (t (error (format nil "loop: for: erwartet in|across|from, got ~a" dir))))))
 
 ;; --- when / unless ----------------------------------------------------
 ;; Genau eine Folgeklausel: do (mehrere Formen) oder eine Akkumulation.

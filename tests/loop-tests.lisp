@@ -37,6 +37,12 @@
   (is (equal? '(2 4 6)     (loop for x in '(1 2 3) collect (* 2 x))))
   (is (equal? '()          (loop for x in '() collect x))))
 
+(deftest loop-for-across :suite 'loop-iteration
+  (is (equal? '(1 4 9)     (loop for x across (vector 1 2 3) collect (* x x))))
+  (is (equal? 6            (loop for x across #(1 2 3) sum x)))
+  (is (equal? '()          (loop for x across (vector) collect x)))
+  (is (equal? '((a 1) (b 2)) (loop for x across #(a b) for i from 1 collect (list x i)))))
+
 (deftest loop-repeat :suite 'loop-iteration
   (is (equal? '(x x x)     (loop repeat 3 collect 'x)))
   (is (equal? '()          (loop repeat 0 collect 'x))))
@@ -114,6 +120,15 @@
   (is (equal? 'fehler
               (handler-case (begin (macroexpand '(loop for i from 1 to 3 collect i sum i))
                                    'kein-fehler)
+                (lisp-error (e) 'fehler)))))
+
+(deftest loop-fehler-across-liste :suite 'loop-fehler
+  ;; across nur für Vektoren; Liste (auch leer) → Laufzeitfehler
+  (is (equal? 'fehler
+              (handler-case (loop for x across '(1 2) collect x)
+                (lisp-error (e) 'fehler))))
+  (is (equal? 'fehler
+              (handler-case (loop for x across '() collect x)
                 (lisp-error (e) 'fehler)))))
 
 (deftest loop-fehler-unbekannte-klausel :suite 'loop-fehler

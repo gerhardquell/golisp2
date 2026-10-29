@@ -315,7 +315,7 @@
     (sigo-usage-reset . "sigo-usage-Summen auf 0 setzen")
     (sleep . "Millisekunden pausieren")
     (slurp . "stdin komplett als String lesen")
-    (sort . "Liste nach Vergleich sortieren (neue Liste)")
+    (sort . "Liste oder Vektor nach Vergleich sortieren (neue Sequenz)")
     (ash . "arithmetischer Shift: (ash x n) = x·2^n, negatives n schiebt nach rechts (floor)")
     (ash-left . "Hilfsfunktion von ash: n-mal verdoppeln")
     (ash-right . "Hilfsfunktion von ash: n-mal floor-halbieren")

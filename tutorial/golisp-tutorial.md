@@ -1030,13 +1030,15 @@ Ruft eine Funktion mit den angegebenen Argumenten auf.
 
 ### sort
 
-**Syntax:** `(sort liste vergleich)`
+**Syntax:** `(sort sequenz vergleich [:key f])`
 
-Liefert eine neue, nach vergleich sortierte Liste. Die Original-Liste bleibt unverändert.
+Liefert eine neue, nach vergleich sortierte Liste bzw. einen neuen Vektor. Das Original bleibt unverändert.
 
 ```lisp
 (sort '(3 1 2) <)
 ; => (1 2 3)
+(sort (vector 3 1 2) <)
+; => #(1 2 3)
 ```
 
 ### remove

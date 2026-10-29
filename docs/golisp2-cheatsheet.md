@@ -536,6 +536,7 @@ bei Start automatisch geladen.
 (expt 2 10)                       ; → 1024
 (gcd 12 8)                        ; → 4
 (sort '(3 1 2) <)                 ; → (1 2 3) — Prädikat ist Lisp-Fn
+(sort (vector 3 1 2) <)           ; → #(1 2 3) — neuer Vektor
 ```
 
 ### Funktor-Muster

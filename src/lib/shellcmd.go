@@ -38,16 +38,15 @@ func fnAssoc(args []*Cell) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("shell-assoc: 2 Argumente nötig")
   }
-  key  := args[0]
-  list := args[1]
-  for list != nil && list.Type == LIST {
-    pair := list.Car
-    if pair != nil && (pair.Type == LIST) {
-      if cellEqual(pair.Car, key) {
-        return pair, nil
-      }
+  key := args[0]
+  pairs, err := properList("shell-assoc", args[1])
+  if err != nil {
+    return nil, err
+  }
+  for _, pair := range pairs {
+    if pair != nil && pair.Type == LIST && cellEqual(pair.Car, key) {
+      return pair, nil
     }
-    list = list.Cdr
   }
   return MakeNil(), nil
 }

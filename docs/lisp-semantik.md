@@ -447,7 +447,9 @@ Condition.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
 - Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer und
   ohne Reader-Literal `#(…)` (die Druckform ist nur Ausgabe); `equal?`
-  vergleicht Vektoren nach Identität (CL `equal`).
+  vergleicht Vektoren nach Identität (CL `equal`). `sort` nimmt Vektoren
+  (neuer Vektor, nicht-destruktiv); `mapcar`/`apply`/`append` sind wie in
+  CL nur für Listen und werfen bei Vektoren oder Punktpaaren einen Fehler.
 - `deftype`: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))`
   schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler
   (der deftype wäre nie erreichbar); `defstruct`/`define-condition` über einen

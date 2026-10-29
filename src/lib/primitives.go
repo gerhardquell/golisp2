@@ -265,8 +265,29 @@ func fnMakeStruct(args []*Cell) (*Cell, error) {
 }
 
 // append: (append l1 l2 ...) → CL-append: Listen verketten, letztes Argument wird geteilt.
+// append: alle außer dem letzten Argument müssen echte Listen sein (CL);
+// das letzte darf alles sein und wird zum Rest.
 func fnAppend(args []*Cell) (*Cell, error) {
+	for i := 0; i+1 < len(args); i++ {
+		if _, err := properList("append", args[i]); err != nil {
+			return nil, err
+		}
+	}
 	return Append(args...), nil
+}
+
+// properList: Elemente einer echten Liste. Vektor, Punktpaar oder Atom
+// sind ein Fehler — eine Schleife über LIST-Cells sähe sie still als ().
+func properList(name string, c *Cell) ([]*Cell, error) {
+	var items []*Cell
+	p := c
+	for ; p != nil && p.Type == LIST; p = p.Cdr {
+		items = append(items, p.Car)
+	}
+	if p != nil && p.Type != NIL {
+		return nil, fmt.Errorf("%s: Liste erwartet, got %s", name, c)
+	}
+	return items, nil
 }
 
 // ---- Ausgabe ----
@@ -334,11 +355,11 @@ func fnApply(args []*Cell) (*Cell, error) {
 		combined = append(combined, args[i])
 	}
 	// letzte Liste entfalten
-	last := args[len(args)-1]
-	for lst := last; lst != nil && lst.Type == LIST; lst = lst.Cdr {
-		combined = append(combined, lst.Car)
+	rest, err := properList("apply", args[len(args)-1])
+	if err != nil {
+		return nil, err
 	}
-	return apply(fn, combined)
+	return apply(fn, append(combined, rest...))
 }
 
 // funcall: (funcall fn arg1 arg2 ...) → fn auf Argumente anwenden.
@@ -378,9 +399,13 @@ func fnMapcar(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("mapcar: 2 Argumente nötig")
 	}
 	fn := args[0]
+	items, err := properList("mapcar", args[1])
+	if err != nil {
+		return nil, err
+	}
 	var results []*Cell
-	for lst := args[1]; lst != nil && lst.Type == LIST; lst = lst.Cdr {
-		res, err := apply(fn, []*Cell{lst.Car})
+	for _, x := range items {
+		res, err := apply(fn, []*Cell{x})
 		if err != nil {
 			return nil, err
 		}

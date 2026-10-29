@@ -35,9 +35,9 @@ func RegisterCLCompatPrims(env *Env) {
   _ = env.Set("get-universal-time", makeFn(fnGetUniversalTime))
 }
 
-// sort: (sort liste pred &key key) → neue, sortierte Liste (nicht-
-// destruktiv, immutable cells). pred(a b) wahr → a kommt vor b. key
-// (optional) wird vor dem Vergleich auf jedes Element angewandt.
+// sort: (sort seq pred &key key) → neue, sortierte Liste bzw. neuer Vektor
+// (nicht-destruktiv, auch bei Vektoren). pred(a b) wahr → a kommt vor b.
+// key (optional) wird vor dem Vergleich auf jedes Element angewandt.
 func fnSort(args []*Cell) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("sort: mindestens 2 Argumente nötig (liste pred)")
@@ -56,9 +56,23 @@ func fnSort(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("sort: :key muss aufrufbar sein")
   }
 
-  items := CellToSlice(args[0])
-  sorted := make([]*Cell, len(items))
-  copy(sorted, items)
+  var sorted []*Cell
+  isVec := args[0] != nil && args[0].Type == VECTOR
+  if isVec {
+    v, err := asVector("sort", args[0])
+    if err != nil {
+      return nil, err
+    }
+    v.mu.RLock()
+    sorted = append([]*Cell{}, v.items...)
+    v.mu.RUnlock()
+  } else {
+    items, err := properList("sort", args[0])
+    if err != nil {
+      return nil, err
+    }
+    sorted = items
+  }
 
   keyOf := func(c *Cell) (*Cell, error) {
     if key == nil {
@@ -92,6 +106,9 @@ func fnSort(args []*Cell) (*Cell, error) {
   })
   if callErr != nil {
     return nil, callErr
+  }
+  if isVec {
+    return makeVector(sorted), nil
   }
   return SliceToCell(sorted), nil
 }

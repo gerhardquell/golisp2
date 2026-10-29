@@ -103,6 +103,20 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
     return c.Val, nil
   case HASHTABLE:
     return hashToJSONObject(c.Ht, depth)
+  case VECTOR:
+    v := c.Env.(*Vector)
+    v.mu.RLock()
+    items := append([]*Cell(nil), v.items...)
+    v.mu.RUnlock()
+    arr := make([]interface{}, 0, len(items))
+    for _, x := range items {
+      e, err := cellToJSONValue(x, depth+1)
+      if err != nil {
+        return nil, err
+      }
+      arr = append(arr, e)
+    }
+    return arr, nil
   case LIST:
     arr := []interface{}{}
     p := c

@@ -216,7 +216,7 @@ func (r *Reader) readString() (*Cell, error) {
   return MakeStr(sb.String()), nil
 }
 
-// readDispatch: #' → (function expr)
+// readDispatch: #' → (function expr), #(…) → Vektor
 func (r *Reader) readDispatch() (*Cell, error) {
   r.next() // '#'
   ch, ok := r.peek()
@@ -226,6 +226,13 @@ func (r *Reader) readDispatch() (*Cell, error) {
     expr, err := r.readExpr()
     if err != nil { return nil, err }
     return Cons(MakeAtom("function"), Cons(expr, MakeNil())), nil
+  }
+  if ch == '(' { // #(…) → Vektor, Elemente unausgewertet (CL)
+    lst, err := r.readList()
+    if err != nil { return nil, err }
+    items, err := properList("reader", lst)
+    if err != nil { return nil, fmt.Errorf("reader: Punktnotation in #(…) nicht erlaubt") }
+    return makeVector(items), nil
   }
   return nil, fmt.Errorf("reader: unbekanntes Dispatch-Zeichen #%c", ch)
 }

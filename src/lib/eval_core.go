@@ -105,7 +105,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     if expr == nil { return MakeNil(), nil }
 
     switch expr.Type {
-    case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO: return expr, nil
+    case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO, VECTOR: return expr, nil
     case ATOM:
       if len(expr.Val) > 0 && expr.Val[0] == ':' { return expr, nil } // Keywords selbst-auswertend
       v, err := env.GetSym(expr)

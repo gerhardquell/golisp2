@@ -9,8 +9,9 @@
 // Hash-Tabellen; equal? vergleicht nur Identität (CL equal).
 //   (make-array n &key initial-element)  (vector x …)
 //   (aref v i)  (aset v i x)  (vector-push-extend x v) → neuer Index
+//   (vector-pop v)  (vectorp x)  (arrayp x)
 // length/coerce/setf (stdlib.lisp) nutzen %vector-length/%vector->list/
-// %list->vector. Kein Reader-Literal #(…) — Druckform ist nur Ausgabe.
+// %list->vector. Reader-Literal #(…) in reader.go (readDispatch).
 //**********************************************************************
 
 package lib
@@ -34,6 +35,9 @@ func RegisterVector(env *Env) {
   _ = env.Set("aref",               makeFn(fnAref))
   _ = env.Set("aset",               makeFn(fnAset))
   _ = env.Set("vector-push-extend", makeFn(fnVectorPushExtend))
+  _ = env.Set("vector-pop",         makeFn(fnVectorPop))
+  _ = env.Set("vectorp",            makeFn(fnVectorp))
+  _ = env.Set("arrayp",             makeFn(fnVectorp)) // nur eindimensional: arrayp = vectorp
   _ = env.Set("%vector-length",     makeFn(fnVectorLength))
   _ = env.Set("%vector->list",      makeFn(fnVectorToList))
   _ = env.Set("%list->vector",      makeFn(fnListToVector))
@@ -145,6 +149,35 @@ func fnVectorPushExtend(args []*Cell) (*Cell, error) {
   defer v.mu.Unlock()
   v.items = append(v.items, args[0])
   return MakeNum(float64(len(v.items) - 1)), nil
+}
+
+// vector-pop: (vector-pop v) → letztes Element, entfernt es.
+func fnVectorPop(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("vector-pop: 1 Argument erwartet (vektor)")
+  }
+  v, err := asVector("vector-pop", args[0])
+  if err != nil { return nil, err }
+  v.mu.Lock()
+  defer v.mu.Unlock()
+  n := len(v.items)
+  if n == 0 {
+    return nil, fmt.Errorf("vector-pop: Vektor ist leer")
+  }
+  x := v.items[n-1]
+  v.items[n-1] = nil
+  v.items = v.items[:n-1]
+  return x, nil
+}
+
+func fnVectorp(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("vectorp: 1 Argument erwartet")
+  }
+  if args[0] != nil && args[0].Type == VECTOR {
+    return cellT, nil
+  }
+  return MakeNil(), nil
 }
 
 func fnVectorLength(args []*Cell) (*Cell, error) {

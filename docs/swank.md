@@ -119,6 +119,13 @@ golisp2> :quit
 | `swank:compile-string-for-emacs` | `(:ok t)` nach stillem Evaluieren |
 | `swank:compile-file-for-emacs` | `(:ok (:filename file :result …))` via `(load file)` — C-c C-k |
 | `swank:find-definitions-for-emacs` | Map-Lookup → `:location (:file … :line N)`; REPL-Snippet-Fallback; Built-in → `:error` — M-. |
+| `swank:init-inspector` | Ausdruck evaluieren → `(:ok (:title s :id 0 :content (ispecs len start end)))`, History geleert — C-c I |
+| `swank:inspect-nth-part` | Teil n öffnen (aktuelles Objekt auf den Rück-Stack); unbekanntes n → `:abort` |
+| `swank:inspector-pop` / `inspector-next` | History zurück/vor; leer → `(:ok ())` |
+| `swank:inspector-reinspect` | aktuelles Objekt neu rendern — zeigt Mutationen |
+| `swank:quit-inspector` | Zustand zurücksetzen → `(:ok ())` |
+| `swank:inspector-range` | Ausschnitt der ispec-Liste (Client holt nach, solange `end < len`; Limit 500) |
+| `swank:inspector-eval` | Formen evaluieren, `*inspectee*` = aktuelles Objekt → `(:ok "<wert>")` |
 | *sonstige* | graceful `(:ok ())` statt `:abort` — SLIME-Contribs degradieren sauber |
 
 ### Fallstricke (teuer gelernt)
@@ -142,6 +149,31 @@ golisp2> :quit
   registrieren `SrcFile`/`SrcLine`). REPL-definierte Funktionen (kein SrcFile)
   → Snippet-Buffer. Built-ins → `:error`.
 
+### Inspector
+
+Spec: `docs/superpowers/specs/2026-10-29-swank-inspector-design.md`.
+Reines Lisp am Ende von `src/embed/swank.lisp`, Tests in
+`src/lib/swank/inspector_test.go`.
+
+- **Tasten im Inspector-Buffer:** `C-c I` öffnen (fragt nach Ausdruck),
+  `RET` Teil öffnen, `l` zurück, `n` vor, `g` neu rendern, `e` eval, `q` schließen.
+- **Darstellung:** erste Zeile `Typ:`, danach je nach Objekt die
+  defclass-Slots in Definitionsreihenfolge, Hashtabellen-Einträge,
+  Struct-Slots (Namen aus `*struct-types*`), Listen-/Vektor-Elemente,
+  `car`/`cdr` bei Punktpaaren, bei Symbolen Wert/Arglist/Quelle.
+  Alle Werte klickbar, Druckform über `swank--value-string` (zyklenfest).
+- **`*inspectee*` statt `*`:** SLIME bindet `*` an das Objekt; in golisp2
+  ist `*` die Multiplikation (Lisp-1). Also `e (decf (schiff-energie *inspectee*) 5)`,
+  danach `g` — der Buffer aktualisiert sich nicht selbst.
+- **Hashtabellen unsortiert** (Go-Map-Reihenfolge, kann bei `g` springen) —
+  es gibt noch kein `string<`.
+- **Zustand** ist global im Env: bei `--swank` pro Verbindung, bei
+  `ServeEnv` (golisp2web) teilen sich alle Verbindungen einen Inspector.
+- **Nicht dabei** (→ `(:ok ())`): `describe-inspectee`,
+  `pprint-inspector-part`, `inspector-history`, `inspector-toggle-verbose`,
+  `inspector-call-nth-action`, `inspect-current-condition`/`inspect-frame-var`
+  (kein Debugger), Quelle per `.`. Anonyme Funktionen zeigen nur ihre Druckform.
+
 ### Offen (nicht im aktuellen Scope)
 
-Inspector, Debugger/Restarts, `disassemble-symbol`.
+Debugger/Restarts, `disassemble-symbol`.

@@ -9,6 +9,7 @@
 | `%builtin-subtype?` | Intern: Subtyp-Pruefung in *type-parents* (types.lisp) |
 | `%builtin-type?` | Intern: Pruefung ob Name ein eingebauter Typ ist (types.lisp) |
 | `%cell-type` | Intern: Kern-Typ einer Cell als Symbol (celltype.go) |
+| `%class-instance?` | |
 | `%cond-coerce` | Intern: Argument in Condition umwandeln (condition.lisp) |
 | `%cond-get` | Intern: Key aus Property-Liste lesen |
 | `%cond-slot` | Intern: Slot-Wert einer Condition |
@@ -68,6 +69,7 @@
 | `%sys-entry` | Intern: Systemeintrag aus *systems* holen |
 | `%sys-get` | Intern: Key aus System-Property-Liste lesen |
 | `%sys-loaded?` | Intern: System bereits geladen? |
+| `%table-type` | |
 | `%topo` | Intern: topologische Sortierung mit Zyklenerkennung (defsystem) |
 | `%type-name-warnings` | Intern: WARN-Formen bei Typnamen-Kollisionen (defstruct/define-condition) (types.lisp) |
 | `%type-start` | Intern: Einstiegstyp in *type-parents* fuer x (types.lisp) |
@@ -81,13 +83,14 @@
 | `%vector->list` | Intern: Vektor als frische Liste (fuer coerce) |
 | `%vector-length` | Intern: Laenge eines Vektors (fuer length) |
 | `*` | Multiplikation aller Argumente |
+| `*class-types*` | Registry (name (slot-namen)) der defclass-Klassen, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
 | `*condition-types*` | Registry der definierten Condition-Typen |
 | `*deftypes*` | Registry (name expander) der deftype-Definitionen (types.lisp) |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
 | `*setf-expanders*` | Registry der setf-Expander |
 | `*setf-mutators*` | |
-| `*struct-types*` | Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp) |
+| `*struct-types*` | Registry (name (slot-namen)) der definierten Structs, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
 | `*systems*` | Registry der definierten Systeme (defsystem) |
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
 | `+` | Addition aller Argumente |

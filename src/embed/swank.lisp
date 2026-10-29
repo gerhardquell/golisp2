@@ -246,6 +246,9 @@
        (swank:create-repl id))
       ((equal? op 'swank:listener-eval)
        (swank:listener-eval (cadr form) id))
+      ;; Inspector (C-c I)
+      ((equal? op 'swank:init-inspector)
+       (swank:init-inspector (cadr form) id))
       ;; Unbekannte Ops: graceful leere Liste statt :abort. SLIME-Contribs
       ;; degradieren sauber; :abort wuerfe Sync-Eval-Fehler in Emacs.
       (else
@@ -491,3 +494,104 @@
                   (list :source snippet))
             (list :position 1)
             (list)))))
+
+;; === Inspector ======================================================
+;; Spec: docs/superpowers/specs/2026-10-29-swank-inspector-design.md
+;; Zustand global im Env (--swank: ein Env pro Verbindung). Teil 0 ist
+;; immer das Objekt selbst (= :id des Titels).
+
+;; *inspectee*: aktuelles Objekt für inspector-eval. Nicht `*` wie in CL —
+;; `*` ist die Multiplikation (Lisp-1).
+(defvar *inspectee* ())
+(defvar swank--insp-parts (make-hash-table))
+(defvar swank--insp-count 0)
+(defvar swank--insp-content ())
+(defvar swank--insp-back ())
+(defvar swank--insp-fwd ())
+(defvar swank--insp-limit 500)
+
+;; swank--insp-part: obj in die Teil-Tabelle, liefert seine Nummer.
+(defun swank--insp-part (obj)
+  (let ((n swank--insp-count))
+    (puthash n swank--insp-parts obj)
+    (set! swank--insp-count (+ n 1))
+    n))
+
+(defun swank--insp-value (obj)
+  (list :value (swank--value-string obj) (swank--insp-part obj)))
+
+(defun swank--insp-line (label obj)
+  (list label (swank--insp-value obj) "\n"))
+
+(defun swank--insp-lines (labels objs)
+  (apply append (mapcar (lambda (p) (swank--insp-line (car p) (cadr p)))
+                        (zip labels objs))))
+
+(defun swank--insp-indexed (objs)
+  (swank--insp-lines (mapcar (lambda (i) (format nil "  ~a: " i)) (iota (length objs)))
+                     objs))
+
+(defun swank--insp-slots (slots vals)
+  (append (list (list :label "Slots:") "\n")
+          (swank--insp-lines (mapcar (lambda (s) (format nil "  ~a = " s)) slots) vals)))
+
+;; Reihenfolge = Go-Map-Reihenfolge (unsortiert, Spec: kein string<).
+(defun swank--insp-hash (h)
+  (let ((rows ()))
+    (maphash (lambda (k v)
+               (set! rows (cons (list "  " (swank--insp-value k) " = " (swank--insp-value v) "\n")
+                                rows)))
+             h)
+    (append (list (format nil "Einträge: ~a" (hash-table-count h)) "\n")
+            (apply append rows))))
+
+(defun swank--insp-symbol (s)
+  (let* ((name (symbol-name s))
+         (val  (trap (list (eval s)) (lambda (e) ())))
+         (al   (swank--arglist name))
+         (loc  (swank--find-definition name)))
+    (append (if (null val) (list "Ungebunden" "\n") (swank--insp-line "Wert: " (car val)))
+            (if (null al) () (list (string-append "Arglist: " al) "\n"))
+            (if (null loc) () (list (format nil "Quelle: ~a:~a" (car loc) (cdr loc)) "\n")))))
+
+;; Prüfreihenfolge wie Spec: Klasse vor Hashtabelle, Struct vor Liste.
+(defun swank--insp-body (x)
+  (let ((k (type-of x)))
+    (cond ((assoc k *class-types*)
+           (let ((slots (cadr (assoc k *class-types*))))
+             (swank--insp-slots slots (mapcar (lambda (s) (gethash s x)) slots))))
+          ((hash-table-p x) (swank--insp-hash x))
+          ((assoc k *struct-types*)
+           (swank--insp-slots (cadr (assoc k *struct-types*)) (cdr x)))
+          ((eq k 'vector)
+           (swank--insp-indexed (mapcar (lambda (i) (aref x i)) (iota (length x)))))
+          ((and (pair? x) (>= (%proper-length x) 0)) (swank--insp-indexed x))
+          ((pair? x)
+           (append (swank--insp-line "  car: " (car x)) (swank--insp-line "  cdr: " (cdr x))))
+          ((and (symbol? x) (not (null x))) (swank--insp-symbol x))
+          (t (list (string-append "Wert: " (swank--value-string x)) "\n")))))
+
+(defun swank--insp-range (from to)
+  (let* ((len (length swank--insp-content))
+         (end (min to len)))
+    (list (take (- end from) (drop from swank--insp-content)) len from end)))
+
+;; swank--insp-open: x rendern und zum aktuellen Objekt machen.
+(defun swank--insp-open (x)
+  (clrhash swank--insp-parts)
+  (set! swank--insp-count 0)
+  (set! *inspectee* x)
+  (let ((id (swank--insp-part x)))
+    (set! swank--insp-content
+          (append (swank--insp-line "Typ: " (type-of x)) (swank--insp-body x)))
+    (list :title (swank--value-string x) :id id
+          :content (swank--insp-range 0 swank--insp-limit))))
+
+(defun swank:init-inspector (string id)
+  (trap
+    (let ((x (swank--eval1 (car (swank--read-all string)))))
+      (set! swank--insp-back ())
+      (set! swank--insp-fwd ())
+      (list (list :return (list :ok (swank--insp-open x)) id)))
+    (lambda (err)
+      (list (list :return (list :abort (swank--value-string err)) id)))))

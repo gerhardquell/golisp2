@@ -217,3 +217,38 @@ func TestInspectorReinspectZeigtMutation(t *testing.T) {
     t.Errorf("quit = %s", v)
   }
 }
+
+func TestInspectorRange(t *testing.T) {
+  env := inspEnv(t, "")
+  v := openOK(t, env, `(swank:init-inspector "(iota 1000)")`)
+  ispecs, n, start, end := chunk(t, plist(v, ":content"))
+  if start != 0 || end != 500 || len(ispecs) != 500 || n <= 500 {
+    t.Fatalf("erster Chunk: len(ispecs)=%d n=%d start=%d end=%d", len(ispecs), n, start, end)
+  }
+  r := openOK(t, env, `(swank:inspector-range 500 1000)`)
+  ispecs, n2, start, end := chunk(t, r)
+  if n2 != n || start != 500 || end != 1000 || len(ispecs) != 500 {
+    t.Errorf("range: len(ispecs)=%d n=%d start=%d end=%d", len(ispecs), n2, start, end)
+  }
+  // Client schickt als Obergrenze gern most-positive-fixnum
+  r = openOK(t, env, `(swank:inspector-range 2900 4611686018427387903)`)
+  if _, _, _, end := chunk(t, r); end != n {
+    t.Errorf("range bis Ende: end=%d, want %d", end, n)
+  }
+}
+
+func TestInspectorEval(t *testing.T) {
+  env := inspEnv(t, schiffSetup)
+  openOK(t, env, `(swank:init-inspector "s")`)
+  st, v := rex(t, env, `(swank:inspector-eval "(setf (schiff-energie *inspectee*) (* 2 21))")`)
+  if st != ":ok" || v.Type != lib.STRING || v.Val != "42" {
+    t.Fatalf("inspector-eval = %s %s, want :ok \"42\"", st, v)
+  }
+  v = openOK(t, env, `(swank:inspector-reinspect)`)
+  if e, _ := valueAfter(t, v, "  energie = "); e != "42" {
+    t.Errorf("energie = %q", e)
+  }
+  if st, _ := rex(t, env, `(swank:inspector-eval "(car 5)")`); st != ":abort" {
+    t.Errorf("Fehler: Status %s, want :abort", st)
+  }
+}

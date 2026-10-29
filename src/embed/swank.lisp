@@ -259,6 +259,10 @@
        (swank:inspector-reinspect id))
       ((equal? op 'swank:quit-inspector)
        (swank:quit-inspector id))
+      ((equal? op 'swank:inspector-range)
+       (swank:inspector-range (cadr form) (caddr form) id))
+      ((equal? op 'swank:inspector-eval)
+       (swank:inspector-eval (cadr form) id))
       ;; Unbekannte Ops: graceful leere Liste statt :abort. SLIME-Contribs
       ;; degradieren sauber; :abort wuerfe Sync-Eval-Fehler in Emacs.
       (else
@@ -642,3 +646,20 @@
   (set! swank--insp-back ())
   (set! swank--insp-fwd ())
   (list (list :return (list :ok ()) id)))
+
+(defun swank:inspector-range (from to id)
+  (list (list :return (list :ok (swank--insp-range from to)) id)))
+
+(defun swank--insp-eval-all (forms last)
+  (if (null forms)
+      last
+      (swank--insp-eval-all (cdr forms) (swank--eval1 (car forms)))))
+
+;; inspector-eval: Formen im Root-Env, *inspectee* = aktuelles Objekt.
+;; Buffer aktualisiert sich nicht selbst (wie SBCL) — `g` in Emacs.
+(defun swank:inspector-eval (string id)
+  (trap
+    (let ((result (swank--insp-eval-all (swank--read-all string) ())))
+      (list (list :return (list :ok (swank--value-string result)) id)))
+    (lambda (err)
+      (list (list :return (list :abort (swank--value-string err)) id)))))

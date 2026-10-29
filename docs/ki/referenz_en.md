@@ -251,11 +251,11 @@ to avoid guessing:
 - No `defpackage`, `in-package`, `export`, `import`.
 - Avoid collisions by naming convention only (prefixes like `ga-`, `shm-`).
 
-### 10.2 No CLOS
+### 10.2 No full CLOS
 - `defstruct` (constructor, accessors, predicate).
-- CLOS-light: `defgeneric`/`defmethod` — single dispatch on the struct tag, `t` = default method.
-- No classes, no inheritance, no `call-next-method`, no method combination.
-- `defclass`, `call-method` — **not present**.
+- CLOS-light: `defgeneric`/`defmethod` — single dispatch on the struct tag or defclass class, `t` = default method.
+- `(defclass name (slot (slot default) ...))` — objects with identity (hash table, `:class`); `make-name`, `name?`, `name-slot`; `setf` mutates in place; prints as `#<name>`. **Not** CL syntax: no superclass list, no `:initarg`.
+- No inheritance, no `call-next-method`, no method combination, no `call-method`.
 
 ### 10.3 Condition-lite only, no full CL condition system
 - `define-condition`/`signal`/`handler-case` present (hierarchy, slots,
@@ -296,13 +296,16 @@ to avoid guessing:
 - `memstats` yields Go runtime stats.
 - No `tweak`, `make-hash-table` without weak refs.
 
-### 10.11 No Type System
+### 10.11 Lean Type System
 - `declare` and `the` are no-ops.
-- No `check-type`, `typecase`, `ctypecase`, `etypecase`.
+- `type-of`, `typep`, `typecase`, `etypecase`, `check-type`, `deftype`,
+  `subtypep` are available (see Types). No `ctypecase`, `ccase`.
 
-### 10.12 No LOOP, No Series, No Iterate
-- Iteration only via `dolist`, `dotimes`, `do`, `do*`, `mapcar`, `reduce`.
-- No `loop` macro, no `series`, no `iterate`.
+### 10.12 LOOP as practical core only, No Series, No Iterate
+- `loop`: `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`,
+  `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`,
+  `finally`, `return`. Not available: `across`, destructuring, `named`.
+- No `series`, no `iterate`.
 
 ---
 

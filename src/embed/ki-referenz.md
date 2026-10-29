@@ -299,7 +299,7 @@ kennen, um nicht zu raten:
 - Kein `defpackage`, `in-package`, `export`, `import`.
 - Kollisionen nur durch Namenskonvention vermeiden (Präfixe wie `ga-`, `shm-`).
 
-### 10.2 Kein CLOS
+### 10.2 Kein volles CLOS
 - `defstruct` (Constructor, Accessoren, Prädikat).
 - CLOS-light: `defgeneric`/`defmethod` — Single-Dispatch auf Struct-Tag oder defclass-Klasse, `t` = Default-Methode.
 - `(defclass name (slot (slot default) ...))` — Objekte mit Identität (Hashtabelle, `:class`); `make-name`, `name?`, `name-slot`; `setf` ändert in place; druckt als `#<name>`. **Nicht** CL-Syntax: keine Superklassen-Liste, kein `:initarg`.
@@ -344,18 +344,19 @@ kennen, um nicht zu raten:
 - `memstats` liefert Go-Runtime-Stats.
 - Kein `tweak`, `make-hash-table` ohne Weak-Refs.
 
-### 10.11 Kein Typ-System
+### 10.11 Schlankes Typ-System
 - `declare` und `the` sind No-ops.
-- Kein `check-type`, `typecase`, `ctypecase`, `etypecase`.
+- `type-of`, `typep`, `typecase`, `etypecase`, `check-type`, `deftype`,
+  `subtypep` vorhanden (siehe Typen). Kein `ctypecase`, `ccase`.
 
-### 10.12 Kein LOOP, kein Series, kein Iterate
-- Iteration nur über `dolist`, `dotimes`, `do`, `do*`, `mapcar`, `reduce`.
-- Kein `loop`-Makro, kein `series`, kein `iterate`.
+### 10.12 LOOP nur als Praxis-Kern, kein Series, kein Iterate
+- `loop`: `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`,
+  `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`,
+  `finally`, `return`. Nicht vorhanden: `across`, Destructuring, `named`.
+- Kein `series`, kein `iterate`.
 
-### 10.13 Kein Function-Definitions-Zucker bei `define`
-- `(define name value)` ist die einzige Syntax — `(define (f p) body)` ist
-  ein Syntaxfehler, nicht Sugar für `defun`.
-- Funktionen immer über `defun` oder `(define name (lambda (p) body))`.
+### 10.13 `define` mit Funktions-Zucker
+- `(define (f p) body)` ist Kurzform für `(define f (lambda (p) body))`.
 
 ---
 

@@ -249,11 +249,11 @@
 - 无 `defpackage`、`in-package`、`export`、`import`。
 - 只能通过命名约定避免冲突（如 `ga-`、`shm-` 前缀）。
 
-### 10.2 无 CLOS
+### 10.2 无完整 CLOS
 - `defstruct`（构造函数、访问器、谓词）。
-- CLOS-light：`defgeneric`/`defmethod` — 对结构体标签的单分派，`t` = 默认方法。
-- 无类、无继承、无 `call-next-method`、无方法组合。
-- `defclass`、`call-method` — **不存在**。
+- CLOS-light：`defgeneric`/`defmethod` — 对结构体标签或 defclass 类的单分派，`t` = 默认方法。
+- `(defclass name (slot (slot default) ...))` — 具有身份的对象（哈希表，`:class`）；`make-name`、`name?`、`name-slot`；`setf` 原地修改；打印为 `#<name>`。**不是** CL 语法：无超类列表、无 `:initarg`。
+- 无继承、无 `call-next-method`、无方法组合、无 `call-method`。
 
 ### 10.3 仅有 Condition-lite，无完整 CL 条件系统
 - 有 `define-condition`/`signal`/`handler-case`（层次结构、槽、
@@ -294,13 +294,16 @@
 - `memstats` 返回 Go 运行时统计。
 - 无 `tweak`，`make-hash-table` 无弱引用。
 
-### 10.11 无类型系统
+### 10.11 精简类型系统
 - `declare` 和 `the` 是无操作。
-- 无 `check-type`、`typecase`、`ctypecase`、`etypecase`。
+- 提供 `type-of`、`typep`、`typecase`、`etypecase`、`check-type`、`deftype`、
+  `subtypep`（见"类型"一节）。无 `ctypecase`、`ccase`。
 
-### 10.12 无 LOOP、无 Series、无 Iterate
-- 迭代只能用 `dolist`、`dotimes`、`do`、`do*`、`mapcar`、`reduce`。
-- 无 `loop` 宏、无 `series`、无 `iterate`。
+### 10.12 LOOP 仅实用核心，无 Series、无 Iterate
+- `loop`：`for x in`/`from … to`/`below`/`by`、`repeat`、`while`/`until`、
+  `when`/`unless`、`collect`/`sum`/`count`/`maximize`/`minimize`、`do`、
+  `finally`、`return`。不支持：`across`、解构、`named`。
+- 无 `series`、无 `iterate`。
 
 ---
 

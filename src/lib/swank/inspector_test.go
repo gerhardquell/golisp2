@@ -14,6 +14,7 @@ package swank
 
 import (
   "strconv"
+  "strings"
   "testing"
 
   "golisp2/src/lib"
@@ -250,5 +251,22 @@ func TestInspectorEval(t *testing.T) {
   }
   if st, _ := rex(t, env, `(swank:inspector-eval "(car 5)")`); st != ":abort" {
     t.Errorf("Fehler: Status %s, want :abort", st)
+  }
+}
+
+// Hashtabellen-Einträge sortiert nach Druckform des Schlüssels — stabil bei `g`.
+func TestInspectorHashSortiert(t *testing.T) {
+  env := inspEnv(t, `(define h (make-hash-table))
+(puthash 'c h 3) (puthash 'a h 1) (puthash 'b h 2) (puthash 'd h 4)`)
+  v := openOK(t, env, `(swank:init-inspector "h")`)
+  ispecs, _, _, _ := chunk(t, plist(v, ":content"))
+  var keys []string
+  for i, s := range ispecs {
+    if s.Type == lib.STRING && s.Val == "  " && i+1 < len(ispecs) {
+      keys = append(keys, lib.CellToSlice(ispecs[i+1])[1].Val)
+    }
+  }
+  if got := strings.Join(keys, " "); got != "a b c d" {
+    t.Errorf("Reihenfolge = %q, want \"a b c d\"", got)
   }
 }

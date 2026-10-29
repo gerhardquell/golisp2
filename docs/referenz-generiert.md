@@ -353,6 +353,12 @@
 | `string-split` | an Trenner (woertlich, leere Felder bleiben) oder an Whitespace trennen |
 | `string-trim` | fuehrende und abschliessende Leerzeichen entfernen |
 | `string-upcase` | in Grossbuchstaben umwandeln |
+| `string/=` | Index der ersten Abweichung, () bei Gleichheit |
+| `string<` | Index der ersten Abweichung, wenn kleiner, sonst () |
+| `string<=` | wie string<, bei Gleichheit die Laenge |
+| `string=` | t, wenn Strings/Symbole zeichenweise gleich |
+| `string>` | Index der ersten Abweichung, wenn groesser, sonst () |
+| `string>=` | wie string>, bei Gleichheit die Laenge |
 | `string?` | t, wenn String |
 | `substring` | Teilstring von start (inklusive) bis end (exklusive) |
 | `subtypep` | Untertyp-Prüfung, zwei Werte: (subtypep 'integer 'number) → t t; unentscheidbar → () () |

@@ -64,6 +64,12 @@
     ("string-replace" . "(string-replace str old new)")
     ("string-trim" . "(string-trim str)")
     ("string-contains" . "(string-contains str sub)")
+    ("string=" . "(string= a b)")
+    ("string/=" . "(string/= a b) => index | nil")
+    ("string<" . "(string< a b) => index | nil")
+    ("string>" . "(string> a b) => index | nil")
+    ("string<=" . "(string<= a b) => index | nil")
+    ("string>=" . "(string>= a b) => index | nil")
     ("string-split" . "(string-split str &optional sep)")
     ("regex-match" . "(regex-match regex str)")
     ("regex-find" . "(regex-find regex str) => match, groups")
@@ -549,15 +555,16 @@
   (append (list (list :label "Slots:") "\n")
           (swank--insp-lines (mapcar (lambda (s) (format nil "  ~a = " s)) slots) vals)))
 
-;; Reihenfolge = Go-Map-Reihenfolge (unsortiert, Spec: kein string<).
+;; Einträge sortiert nach Druckform des Schlüssels — stabil bei `g`.
 (defun swank--insp-hash (h)
   (let ((rows ()))
-    (maphash (lambda (k v)
-               (set! rows (cons (list "  " (swank--insp-value k) " = " (swank--insp-value v) "\n")
-                                rows)))
-             h)
+    (maphash (lambda (k v) (set! rows (cons (list (swank--value-string k) k v) rows))) h)
     (append (list (format nil "Einträge: ~a" (hash-table-count h)) "\n")
-            (apply append rows))))
+            (apply append
+                   (mapcar (lambda (r)
+                             (list "  " (swank--insp-value (cadr r)) " = "
+                                   (swank--insp-value (caddr r)) "\n"))
+                           (sort rows (lambda (a b) (string< (car a) (car b)))))))))
 
 (defun swank--insp-symbol (s)
   (let* ((name (symbol-name s))

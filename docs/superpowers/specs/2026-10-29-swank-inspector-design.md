@@ -142,6 +142,6 @@ Version 0.21.0.
 
 ## Folgearbeit (nicht Teil dieser Spec)
 
-- `string<`/`string=`-Familie → dann Hashtabellen-Einträge sortiert anzeigen.
+- ~~`string<`/`string=`-Familie → dann Hashtabellen-Einträge sortiert anzeigen.~~ Erledigt 0.22.0.
 - Veraltete Aussagen „kein defclass“: Lispbuch Kap. 17/25,
   `cltl2/CLOS.md`, Zutat `golisp2.md` §10.2.

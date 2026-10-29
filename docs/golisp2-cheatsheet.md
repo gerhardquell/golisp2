@@ -388,6 +388,9 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (string-replace "abc" "b" "X")    ; → "aXc"
 (string-trim "  abc  ")           ; → "abc"
 (string-contains "abc" "b")       ; → t
+(string= "abc" "abc")             ; → t
+(string< "abc" "abd")             ; → 2  (Index der Abweichung, CL) / ()
+(sort (list "b" "a") string<)     ; → ("a" "b")   auch > <= >= /=
 ```
 
 ### Reguläre Ausdrücke (Go-RE2, Muster zuerst)

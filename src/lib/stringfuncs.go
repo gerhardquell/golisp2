@@ -35,6 +35,65 @@ func RegisterStringFuncs(env *Env) {
   _ = env.Set("string-contains", makeFn(fnStringContains))
   _ = env.Set("string-split",    makeFn(fnStringSplit))
   _ = env.Set("string-join",     makeFn(fnStringJoin))
+  for _, c := range stringCompares {
+    _ = env.Set(c.name, makeFn(stringCompareFn(c.name, c.ok)))
+  }
+}
+
+// string=, string/=, string<, … (CL): Vergleich nach Zeichen (Runen).
+// string= liefert t/(), die anderen den Index der ersten Abweichung oder ().
+// Keine :start/:end-Keywords, keine case-insensitiven Varianten.
+var stringCompares = []struct {
+  name string
+  ok   func(cmp int) bool
+}{
+  {"string=", func(c int) bool { return c == 0 }},
+  {"string/=", func(c int) bool { return c != 0 }},
+  {"string<", func(c int) bool { return c < 0 }},
+  {"string>", func(c int) bool { return c > 0 }},
+  {"string<=", func(c int) bool { return c <= 0 }},
+  {"string>=", func(c int) bool { return c >= 0 }},
+}
+
+func stringCompareFn(name string, ok func(int) bool) func([]*Cell) (*Cell, error) {
+  return func(args []*Cell) (*Cell, error) {
+    if len(args) != 2 {
+      return nil, fmt.Errorf("%s: 2 Argumente nötig", name)
+    }
+    for _, a := range args {
+      if a == nil || (a.Type != STRING && a.Type != ATOM) {
+        return nil, fmt.Errorf("%s: String oder Symbol erwartet, got %s", name, a)
+      }
+    }
+    i, cmp := runeMismatch([]rune(args[0].Val), []rune(args[1].Val))
+    if !ok(cmp) {
+      return MakeNil(), nil
+    }
+    if name == "string=" {
+      return MakeAtom("t"), nil
+    }
+    return MakeNum(float64(i)), nil
+  }
+}
+
+// runeMismatch: Index der ersten Abweichung (bei Gleichheit len(a)) und
+// Vergleichsergebnis -1/0/1.
+func runeMismatch(a, b []rune) (int, int) {
+  for i := 0; i < len(a) && i < len(b); i++ {
+    if a[i] != b[i] {
+      if a[i] < b[i] {
+        return i, -1
+      }
+      return i, 1
+    }
+  }
+  switch {
+  case len(a) < len(b):
+    return len(a), -1
+  case len(a) > len(b):
+    return len(b), 1
+  }
+  return len(a), 0
 }
 
 // string-split: (string-split s [sep]) → Liste von Strings

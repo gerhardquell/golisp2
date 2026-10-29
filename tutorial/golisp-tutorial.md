@@ -1322,6 +1322,78 @@ Entfernt führende und abschließende Leerzeichen.
 (string-trim "  hallo  ")
 ```
 
+### string=
+
+**Syntax:** `(string= a b)`
+
+Vergleicht zwei Strings (oder Symbole) zeichenweise: t bei Gleichheit, sonst (). Wie `equal?` auf Strings, nimmt aber auch Symbole.
+
+```lisp
+(string= "abc" "abc")
+; => t
+(string= 'abc "abc")
+; => t
+```
+
+### string/=
+
+**Syntax:** `(string/= a b)`
+
+Index der ersten Abweichung (in Zeichen), () bei Gleichheit (CL).
+
+```lisp
+(string/= "abc" "aXc")
+; => 1
+```
+
+### string<
+
+**Syntax:** `(string< a b)`
+
+Lexikographisch kleiner? Liefert den Index der ersten Abweichung oder () (CL — jeder Index ist wahr). Taugt direkt als Prädikat für `sort`.
+
+```lisp
+(string< "abc" "abd")
+; => 2
+(string< "ab" "abc")
+; => 2
+(sort (list "b" "c" "a") string<)
+; => ("a" "b" "c")
+```
+
+### string>
+
+**Syntax:** `(string> a b)`
+
+Lexikographisch größer? Index der ersten Abweichung oder ().
+
+```lisp
+(string> "b" "a")
+; => 0
+```
+
+### string<=
+
+**Syntax:** `(string<= a b)`
+
+Kleiner oder gleich; bei Gleichheit die Länge.
+
+```lisp
+(string<= "abc" "abc")
+; => 3
+```
+
+### string>=
+
+**Syntax:** `(string>= a b)`
+
+Größer oder gleich; bei Gleichheit die Länge.
+
+```lisp
+(string>= "b" "abc")
+; => 0
+```
+
 ### string-contains
 
 **Syntax:** `(string-contains str sub)`

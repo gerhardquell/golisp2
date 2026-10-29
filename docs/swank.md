@@ -165,8 +165,8 @@ Reines Lisp am Ende von `src/embed/swank.lisp`, Tests in
 - **`*inspectee*` statt `*`:** SLIME bindet `*` an das Objekt; in golisp2
   ist `*` die Multiplikation (Lisp-1). Also `e (decf (schiff-energie *inspectee*) 5)`,
   danach `g` — der Buffer aktualisiert sich nicht selbst.
-- **Hashtabellen unsortiert** (Go-Map-Reihenfolge, kann bei `g` springen) —
-  es gibt noch kein `string<`.
+- **Hashtabellen** sortiert nach Druckform des Schlüssels (`string<`) —
+  Reihenfolge bleibt bei `g` stabil.
 - **Zustand** ist global im Env: bei `--swank` pro Verbindung, bei
   `ServeEnv` (golisp2web) teilen sich alle Verbindungen einen Inspector.
 - **Nicht dabei** (→ `(:ok ())`): `describe-inspectee`,

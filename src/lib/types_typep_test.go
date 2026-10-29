@@ -422,3 +422,17 @@ func TestKollisionDefclass(t *testing.T) {
   }
   evalStdlibEq(t, `(defclass floss (a)) (trap (deftype floss () 'integer) (lambda (e) 'fehler))`, "fehler")
 }
+
+// defstruct-Name muss ein Symbol sein — CL-Optionen wie (:include …) gibt
+// es nicht; früher entstand still ein Struct namens "(sport (:include pkt))".
+func TestDefstructNameKeinSymbol(t *testing.T) {
+  _, err := evalStdlib(t, `(defstruct pkt x) (defstruct (sport (:include pkt)) turbo)`)
+  if err == nil || !strings.Contains(err.Error(), "defstruct: Name muss ein Symbol sein") {
+    t.Errorf("Fehler erwartet, got %v", err)
+  }
+  evalStdlibEq(t, `(trap (defstruct (sport (:include pkt)) turbo) (lambda (e) 'fehler)) *struct-types*`, "()")
+  _, err = evalStdlib(t, `(defclass (boot fahrzeug) (laenge))`)
+  if err == nil || !strings.Contains(err.Error(), "defclass: Name muss ein Symbol sein") {
+    t.Errorf("defclass: Fehler erwartet, got %v", err)
+  }
+}

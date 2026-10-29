@@ -406,6 +406,9 @@
 ;; Beim erneuten Laden desselben defstruct bleiben die Primärnamen erhalten,
 ;; damit alte Aufrufer nicht auf ausgewichene Namen verweisen.
 (defmacro defstruct (name &rest body)
+  ;; CL-Optionen wie (name (:include …)) gibt es nicht — laut statt kaputtem Namen.
+  (if (not (symbol? name))
+      (error (format nil "defstruct: Name muss ein Symbol sein, got ~a (Optionen wie :include gibt es nicht)" name)))
   (let* ((slots      (filter (lambda (x) (not (string? x))) body))
          (slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
          (n          (length slots))
@@ -513,6 +516,8 @@
 (defvar *class-types* '())
 
 (defmacro defclass (name slots)
+  (if (not (symbol? name))
+      (error (format nil "defclass: Name muss ein Symbol sein, got ~a (Superklassen gibt es nicht)" name)))
   (let ((slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
         (mk   (intern (format nil "make-~a" name)))
         (pred (intern (format nil "~a?" name))))

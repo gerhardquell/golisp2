@@ -118,4 +118,30 @@
         (handler-case (gf-ohne-default)
           (error (e) "kein-arg")))))
 
+;; === defclass: Objekte mit Identität ===================================
+
+(deftest clos-defclass-identitaet :suite 'clos-light
+  (eval '(defclass gf-schiff (name (energie 100))))
+  (let* ((s (make-gf-schiff :name "Beagle"))
+         (alias s))
+    (is (equal? "Beagle" (gf-schiff-name s)))
+    (is (equal? 100 (gf-schiff-energie s)))
+    (is (gf-schiff? s))
+    (is (not (gf-schiff? (make-hash-table))))
+    (setf (gf-schiff-energie s) 80)
+    (decf (gf-schiff-energie s) 5)
+    (is (equal? 75 (gf-schiff-energie alias)))
+    (setf (gf-schiff-energie (car (list s))) 1)
+    (is (equal? 1 (gf-schiff-energie alias)))))
+
+(deftest clos-defclass-dispatch :suite 'clos-light
+  (eval '(defmethod gf-fläche ((x gf-schiff)) 'schiff))
+  (is (equal? 'schiff (gf-fläche (make-gf-schiff))))
+  (is (equal? -1 (gf-fläche (make-hash-table)))))
+
+(deftest clos-defclass-fremdes-objekt :suite 'clos-light
+  (is (equal? "fehler"
+        (handler-case (gf-schiff-name (make-hash-table))
+          (error (e) "fehler")))))
+
 "stdlib-test: registriert"

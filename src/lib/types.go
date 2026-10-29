@@ -252,7 +252,7 @@ func (c *Cell) String() string {
 		// MV ist für Nicht-MV-Kontexte unsichtbar: Primärwert drucken
 		return Primary(c).String()
 	case HASHTABLE:
-		return "#<hash-table>"
+		return "#<" + c.Ht.printName() + ">"
 	case FOREIGN:
 		return "#<foreign " + c.Val + ">"
 	case VECTOR:

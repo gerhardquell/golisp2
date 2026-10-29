@@ -1769,6 +1769,16 @@ Registriert einen setf-Expander für eigene Accessor-Funktionen.
 ;; Details: siehe src/embed/stdlib.lisp (*setf-expanders*)
 ```
 
+### register-setf-mutator
+
+**Syntax:** `(register-setf-mutator accessor setter)`
+
+Wie `register-setf-expander`, aber für Accessoren auf Objekten mit Identität: `(setf (accessor obj) v)` wird zu `(setter obj v)` ohne Neubindung von obj — obj darf ein beliebiger Ausdruck sein. Der Setter muss in place ändern und v liefern. `defclass` nutzt das.
+
+```lisp
+;; Details: siehe src/embed/stdlib.lisp (*setf-mutators*)
+```
+
 ## Werte & Bindung
 
 ### values
@@ -2040,7 +2050,7 @@ Definiert eine generische Funktion; die Methodenauswahl erfolgt per Dispatch auf
 
 **Syntax:** `(defmethod name (parameter) body ...)`
 
-Definiert eine Methode für eine generische Funktion. Das Dispatch-Argument wird als `(var typ)` geschrieben — typ ist ein defstruct-Name oder `(eql wert)`.
+Definiert eine Methode für eine generische Funktion. Das Dispatch-Argument wird als `(var typ)` geschrieben — typ ist ein defstruct- oder defclass-Name oder `t` (Default-Methode).
 
 ```lisp
 (defstruct punkt x y)
@@ -2050,9 +2060,31 @@ Definiert eine Methode für eine generische Funktion. Das Dispatch-Argument wird
 (flaeche p)
 ; => 20
 
-(defmethod flaeche ((obj (eql :einheit-quadrat))) 1)
+(defmethod flaeche ((obj t)) 0)
 (flaeche :einheit-quadrat)
-; => 1
+; => 0
+```
+
+### defclass
+
+**Syntax:** `(defclass name (slot (slot default) ...))`
+
+Definiert eine Klasse für Objekte mit Identität und geteiltem, veränderlichem Zustand (anders als `defstruct`, dessen Werte beim Setzen kopiert werden). Ein Objekt ist eine Hashtabelle mit `:class` → name. Erzeugt `make-name` (&key), `name?`, `name-slot` und `set-name-slot`; `setf` ändert das Objekt in place, auch über einen Ausdruck als Place. `defmethod` dispatcht auf den Klassennamen; `type-of`/`typep` kennen ihn, die Druckform ist `#<name>`. Keine Vererbung, kein automatisches Lock — Lesen-Ändern-Schreiben aus mehreren Goroutinen mit `(lock m ...)` klammern.
+
+```lisp
+(defclass schiff (name (energie 100)))
+(define s (make-schiff :name "Beagle"))
+(define alias s)
+(decf (schiff-energie s) 30)
+(schiff-energie alias)
+; => 70
+(defmethod flaeche ((obj schiff)) 'schiff)
+(flaeche s)
+; => schiff
+(type-of s)
+; => schiff
+s
+; => #<schiff>
 ```
 
 ## Systeme (defsystem)

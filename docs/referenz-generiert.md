@@ -86,6 +86,7 @@
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
 | `*setf-expanders*` | Registry der setf-Expander |
+| `*setf-mutators*` | |
 | `*struct-types*` | Registry (name slot-anzahl) der definierten Structs, fuer type-of/typep (stdlib.lisp) |
 | `*systems*` | Registry der definierten Systeme (defsystem) |
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
@@ -144,10 +145,11 @@
 | `copy-list` | flache Listenkopie |
 | `copy-tree` | tiefe Kopie (rekursiv) |
 | `decf` | Makro: place um d (Default 1) vermindern |
+| `defclass` | Klasse fuer Objekte mit Identitaet (Hashtabelle, setf in place) |
 | `defgeneric` | generische Funktion definieren (Dispatch erstes Argument) |
 | `define-condition` | Condition-Typ mit Slots definieren |
 | `defined-in` | Liste der Symbole, die in der geladenen Datei definiert wurden |
-| `defmethod` | Methode fuer generische Funktion definieren; Dispatch (var typ) oder (eql wert) |
+| `defmethod` | Methode fuer generische Funktion definieren; Dispatch (var typ), typ = Struct, Klasse oder t |
 | `defparameter` | globale Variable definieren, ueberschreibt immer (CL-Compat) |
 | `defstruct` | Struktur definieren: erzeugt make-name, name-slot-Accessoren, name-p |
 | `defstruct-resolve-name` | Intern: Namensaufloesung des defstruct-Makros |
@@ -172,6 +174,7 @@
 | `evenp` | t wenn ganze Zahl n gerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
 | `every` | t, wenn alle Elemente das Praedikat erfuellen |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
+| `exp` | e hoch x |
 | `expt` | basis hoch exp, auch negativ und gebrochen |
 | `file-append` | Inhalte an Datei anhaengen |
 | `file-delete` | Datei loeschen |
@@ -235,6 +238,7 @@
 | `load-system` | System topologisch sortiert laden (Abhaengigkeiten zuerst) |
 | `loaded-systems` | Liste der geladenen Systeme |
 | `lock-make` | Mutex fuer lock erzeugen |
+| `log` | natuerlicher Logarithmus, x > 0 |
 | `loop` | Iteration (CL-Praxis-Kern): for/repeat/when/collect/sum/... (loop.lisp) |
 | `macroexpand-1` | einen Makro-Expansionsschritt ausfuehren |
 | `make-array` | Vektor der Laenge n anlegen, :initial-element (Default ()) |
@@ -289,6 +293,7 @@
 | `regex-replace` | alle Regex-Treffer ersetzen, $1/${name} fuer Gruppen |
 | `regex-split` | String an Regex-Treffern trennen |
 | `register-setf-expander` | setf-Expander fuer eigenen Accessor registrieren |
+| `register-setf-mutator` | setf-Mutator fuer Accessor auf Objekt mit Identitaet registrieren |
 | `rem` | Rest Richtung Null wie CL, Vorzeichen des Dividenden ((rem -3 2) → -1) |
 | `remainder` | Scheme-Name fuer rem |
 | `remhash` | Hash-Eintrag entfernen |
@@ -331,8 +336,6 @@
 | `spawn` | fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text) |
 | `sprintf` | C-Format in String umwandeln |
 | `sqrt` | Quadratwurzel |
-| `exp` | e hoch x |
-| `log` | natuerlicher Logarithmus, x > 0 |
 | `square` | x quadrieren |
 | `sscanf` | String nach C-scanf-Muster parsen, Liste der Werte |
 | `string->list` | String in Liste von Einzelzeichen-Strings |

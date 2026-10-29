@@ -278,6 +278,14 @@
 (defun register-setf-expander (accessor setter)
   (set! *setf-expanders* (cons (cons accessor setter) *setf-expanders*)))
 
+;; *setf-mutators*: Accessoren mit Identität (defclass). Setter mutiert in
+;; place und liefert den Wert — kein set! auf das Argument, daher darf es
+;; ein beliebiger Ausdruck sein: (setf (schiff-energie (car flotte)) 5).
+(define *setf-mutators* '())
+
+(defun register-setf-mutator (accessor setter)
+  (set! *setf-mutators* (cons (cons accessor setter) *setf-mutators*)))
+
 ;; setf: generalisierte Zuweisung (CL-Compat).
 ;; - Variable: (setf x 1) → (begin (set! x 1) 1)
 ;; - gethash-Place: (setf (gethash k t) v) → (puthash k t v)
@@ -343,14 +351,17 @@
                                      (error "setf: (cdr nil) ist kein gueltiger Place (nil ist keine Cons-Zelle, CL: rplacd)")
                                      (set! ,arg (cons (car ,arg) ,v)))
                                  ,v))
-                          (if (not (atom arg))
-                              (error "setf: Place-Argument muss ein Symbol sein")
-                              (let ((entry (assoc accessor *setf-expanders*)))
-                                (if (null? entry)
-                                    (error "setf: unbekannter Place")
-                                    `(let ((,v ,val))
-                                       (set! ,arg (,(cdr entry) ,arg ,v))
-                                       ,v))))))))))))
+                          (let ((mut (assoc accessor *setf-mutators*)))
+                            (if mut
+                                `(,(cdr mut) ,arg ,val)
+                                (if (not (atom arg))
+                                    (error "setf: Place-Argument muss ein Symbol sein")
+                                    (let ((entry (assoc accessor *setf-expanders*)))
+                                      (if (null? entry)
+                                          (error "setf: unbekannter Place")
+                                          `(let ((,v ,val))
+                                             (set! ,arg (,(cdr entry) ,arg ,v))
+                                             ,v))))))))))))))
 
 ;; === Fehlerbehandlung ============================================
 
@@ -460,9 +471,9 @@
   (if (null args)
       (error (format nil "~a: generische Funktion braucht mindestens 1 Argument" name)))
   (let* ((obj (car args))
-         (tag (if (and (list? obj) (symbol? (car obj)))
-                  (car obj)
-                  '()))
+         (tag (cond ((and (list? obj) (symbol? (car obj))) (car obj))
+                    ((hash-table-p obj) (gethash :class obj))
+                    (t '())))
          (tbl (%generic-methods name))
          (fn  (gethash tag tbl)))
     (if (null fn)
@@ -489,6 +500,42 @@
           (tag (car (cdr spec))))
       `(puthash ',tag (%generic-methods ',name)
                 (lambda (,var ,@params) ,@body)))))
+
+;; defclass: (defclass schiff (name (energie 100))) — Objekte mit Identität
+;; und geteiltem, veränderlichem Zustand: eql-Hashtabelle, :class → Name.
+;; Erzeugt make-NAME (&key), NAME?, NAME-SLOT und set-NAME-SLOT (setf-fähig,
+;; ändert das Objekt in place). Accessoren prüfen die Klasse — laut statt
+;; still nil. defmethod dispatcht über :class wie über den Struct-Tag.
+;; Keine Vererbung, kein automatisches Lock: Lesen-Ändern-Schreiben aus
+;; mehreren Goroutinen braucht (lock m ...).
+;; *class-types*: Registry (name slot-namen) für type-of/typep (types.lisp).
+(defvar *class-types* '())
+
+(defmacro defclass (name slots)
+  (let ((slot-names (mapcar (lambda (s) (if (list? s) (car s) s)) slots))
+        (mk   (intern (format nil "make-~a" name)))
+        (pred (intern (format nil "~a?" name))))
+    `(begin
+       ,@(if (bound? '%type-name-warnings) (%type-name-warnings 'defclass name) '())
+       (set! *class-types* (alist-set ',name ',slot-names *class-types*))
+       (defun ,pred (x) (and (hash-table-p x) (eq (gethash :class x) ',name)))
+       (defun ,mk (&key ,@slots)
+         (let ((o (make-hash-table)))
+           (puthash :class o ',name)
+           ,@(mapcar (lambda (s) `(puthash ',s o ,s)) slot-names)
+           o))
+       ,@(mapcar (lambda (s)
+                   (let ((acc    (intern (format nil "~a-~a" name s)))
+                         (setter (intern (format nil "set-~a-~a" name s)))
+                         (fehler (format nil "~a-~a: kein ~a-Objekt: ~~a" name s name)))
+                     `(begin
+                        (defun ,acc (o)
+                          (if (,pred o) (gethash ',s o) (error (format nil ,fehler o))))
+                        (defun ,setter (o v)
+                          (if (,pred o) (puthash ',s o v) (error (format nil ,fehler o))))
+                        (register-setf-mutator ',acc ',setter))))
+                 slot-names)
+       ',name)))
 
 ;; === CL-Kompat: Lispbuch-Lücken (TODO 20260818 Gruppe A) ========
 ;; Aus der Analyse von /u/golisp2-projekte/lispbuch (27 Kapitel) extrahiert:

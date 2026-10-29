@@ -189,8 +189,8 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 `(setf place val)` — generisch, `(defstruct ...)` registriert Accessoren automatisch
 
 ### Typen
-- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector`, Struct- oder Condition-Name. `(typep x spec)` mit Typnamen, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exklusiv, `*` = offen). `3.0` ist `integer`.
-  Als Typnamen zusätzlich gültig (nicht von `type-of` geliefert, aber `typep`-Obertypen): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Nicht vorhanden → `typep: unbekannter Typ '…'`: `fixnum` `character` `double-float` `single-float`. Typnamen sind case-sensitiv — `'INTEGER` ist unbekannt, nur `'integer`. `(typecase x (integer …) ((or string symbol) …) (otherwise …))` verzweigt nach Typ, `etypecase` wirft ohne Treffer. `(check-type x (integer 0 *) ["Beschreibung"])` → `()` oder Fehler. Beide werfen einfachen `error`, kein `type-error`. `(deftype ziffer () '(integer 0 9))` definiert Typnamen, mit Parametern `(deftype bis (&optional (n '*)) (list 'integer 0 n))` → `(typep x '(bis 5))`; Namen eingebauter Typen, Structs, Conditions → Fehler. `(subtypep 'integer 'number)` → zwei Werte `t t`; nicht entscheidbar (`not`, `satisfies`, Teilbereiche) → `() ()`.
+- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector`, Struct-, Klassen- (defclass) oder Condition-Name; Klassen sind Untertyp von `hash-table`. `(typep x spec)` mit Typnamen, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exklusiv, `*` = offen). `3.0` ist `integer`.
+  Als Typnamen zusätzlich gültig (nicht von `type-of` geliefert, aber `typep`-Obertypen): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Nicht vorhanden → `typep: unbekannter Typ '…'`: `fixnum` `character` `double-float` `single-float`. Typnamen sind case-sensitiv — `'INTEGER` ist unbekannt, nur `'integer`. `(typecase x (integer …) ((or string symbol) …) (otherwise …))` verzweigt nach Typ, `etypecase` wirft ohne Treffer. `(check-type x (integer 0 *) ["Beschreibung"])` → `()` oder Fehler. Beide werfen einfachen `error`, kein `type-error`. `(deftype ziffer () '(integer 0 9))` definiert Typnamen, mit Parametern `(deftype bis (&optional (n '*)) (list 'integer 0 n))` → `(typep x '(bis 5))`; Namen eingebauter Typen, Structs, Klassen, Conditions → Fehler. `(subtypep 'integer 'number)` → zwei Werte `t t`; nicht entscheidbar (`not`, `satisfies`, Teilbereiche) → `() ()`.
 
 ---
 
@@ -301,9 +301,9 @@ kennen, um nicht zu raten:
 
 ### 10.2 Kein CLOS
 - `defstruct` (Constructor, Accessoren, Prädikat).
-- CLOS-light: `defgeneric`/`defmethod` — Single-Dispatch auf Struct-Tag, `t` = Default-Methode.
-- Keine Klassen, keine Vererbung, kein `call-next-method`, keine Method-Combination.
-- `defclass`, `call-method` — **nicht vorhanden**.
+- CLOS-light: `defgeneric`/`defmethod` — Single-Dispatch auf Struct-Tag oder defclass-Klasse, `t` = Default-Methode.
+- `(defclass name (slot (slot default) ...))` — Objekte mit Identität (Hashtabelle, `:class`); `make-name`, `name?`, `name-slot`; `setf` ändert in place; druckt als `#<name>`. **Nicht** CL-Syntax: keine Superklassen-Liste, kein `:initarg`.
+- Keine Vererbung, kein `call-next-method`, keine Method-Combination, kein `call-method`.
 
 ### 10.3 Nur Condition-lite, kein volles CL-Condition-System
 - `define-condition`/`signal`/`handler-case` vorhanden (Hierarchie, Slots,

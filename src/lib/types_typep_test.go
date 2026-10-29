@@ -388,3 +388,35 @@ func TestSubtypepNutzertypen(t *testing.T) {
   st(`(deftype ziffer () '(integer 0 9))`, "(eql 3)", "ziffer", "(t t)")
   evalStdlibErr(t, `(subtypep 'gibts-nicht 'integer)`)
 }
+
+// defclass-Objekte: type-of/typep/subtypep kennen den Klassennamen,
+// eine Klasse ist Untertyp von hash-table (Repräsentation) und atom.
+func TestTypenDefclass(t *testing.T) {
+  def := `(defclass schiff (name)) (define s (make-schiff :name "B")) `
+  evalStdlibEq(t, def+`(type-of s)`, "schiff")
+  evalStdlibEq(t, def+`(list (typep s 'schiff) (typep s 'hash-table) (typep s 'atom) (typep s 'cons))`, "(t t t ())")
+  evalStdlibEq(t, def+`(typep (make-hash-table) 'schiff)`, "()")
+  evalStdlibEq(t, `(type-of (make-hash-table))`, "hash-table")
+  // :class ohne registrierte Klasse bleibt hash-table
+  evalStdlibEq(t, `(let ((h (make-hash-table))) (puthash :class h 'nix) (type-of h))`, "hash-table")
+  evalStdlibEq(t, def+`(multiple-value-list (subtypep 'schiff 'hash-table))`, "(t t)")
+  evalStdlibEq(t, def+`(multiple-value-list (subtypep 'schiff 'atom))`, "(t t)")
+  evalStdlibEq(t, def+`(multiple-value-list (subtypep 'schiff 'cons))`, "(() t)")
+  evalStdlibEq(t, def+`(typecase s (schiff 'ja) (t 'nein))`, "ja")
+}
+
+func TestKollisionDefclass(t *testing.T) {
+  out := stderrVon(t, `(defclass vector (a))`)
+  if !strings.Contains(out, "WARN: defclass vector: Name ist ein eingebauter Typ") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  out = stderrVon(t, `(defstruct boot a) (defclass boot (a))`)
+  if !strings.Contains(out, "WARN: defclass boot: Name ist auch ein Struct") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  out = stderrVon(t, `(defclass kahn (a)) (defstruct kahn a)`)
+  if !strings.Contains(out, "WARN: defstruct kahn: Name ist auch eine Klasse") {
+    t.Errorf("Warnung fehlt, stderr = %q", out)
+  }
+  evalStdlibEq(t, `(defclass floss (a)) (trap (deftype floss () 'integer) (lambda (e) 'fehler))`, "fehler")
+}

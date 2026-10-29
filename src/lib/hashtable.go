@@ -20,6 +20,7 @@ package lib
 import (
   "fmt"
   "strconv"
+  "strings"
   "sync"
 )
 
@@ -41,10 +42,37 @@ type HashTable struct {
 // eql/eq: Zahlen nach Wert, Symbole nach Name, Strings nach Inhalt
 // (bewusste Abweichung: CL-eql vergleicht Strings nach Identität —
 // golisp2-Strings haben keine vom Nutzer beobachtbare Identität),
-// alles andere nach Pointer. equal: struktureller Vergleich via Print.
+// alles andere nach Pointer. equal: Listen strukturell, Elemente wie eql
+// (mutable Objekte nach Identität, wie CL-equal).
 func (ht *HashTable) keyOf(c *Cell) string {
   if ht.test == "equal" {
-    return "E:" + c.String()
+    return "E:" + equalKey(c)
+  }
+  return eqlKey(c)
+}
+
+// equalKey: Listen elementweise, Rest via eqlKey. Nicht über Print —
+// sonst kollidieren alle #<hash-table>/#<lambda>.
+func equalKey(c *Cell) string {
+  if c == nil || c.Type != LIST {
+    return eqlKey(c)
+  }
+  var b strings.Builder
+  b.WriteString("(")
+  for ; c != nil && c.Type == LIST; c = c.Cdr {
+    b.WriteString(equalKey(c.Car))
+    b.WriteString(" ")
+  }
+  if c != nil && c.Type != NIL {
+    b.WriteString(". " + equalKey(c))
+  }
+  b.WriteString(")")
+  return b.String()
+}
+
+func eqlKey(c *Cell) string {
+  if c == nil {
+    return "a:nil"
   }
   switch c.Type {
   case NUMBER:
@@ -254,6 +282,19 @@ func (ht *HashTable) putStr(key string, val *Cell) {
   ht.mu.Lock()
   ht.m[ht.keyOf(k)] = hashEntry{key: k, val: val}
   ht.mu.Unlock()
+}
+
+// printName: Klassenname bei defclass-Objekten (:class → Symbol), sonst
+// hash-table. Nur der Name, keine Slots — Objekte dürfen zyklisch sein.
+func (ht *HashTable) printName() string {
+  k := MakeAtom(":class")
+  ht.mu.RLock()
+  e, ok := ht.m[ht.keyOf(k)]
+  ht.mu.RUnlock()
+  if ok && e.val != nil && e.val.Type == ATOM {
+    return e.val.Val
+  }
+  return "hash-table"
 }
 
 // snapshot: alle Einträge, unter Lock kopiert.

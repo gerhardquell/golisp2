@@ -99,3 +99,37 @@ func TestHashTableFehler(t *testing.T) {
   evalErr(t, `(make-hash-table :test 'equalp)`)
   evalErr(t, `(maphash 'keine-fn (let ((h (make-hash-table))) (puthash 'a h 1) h))`)
 }
+
+// equal-Tabellen: mutable Objekte (Tabellen, Vektoren, Funktionen) sind
+// Schlüssel nach Identität wie in CL — auch eingebettet in Listen. Früher
+// kollidierten sie über ihre Druckform (#<hash-table>).
+func TestHashTableEqualIdentitaetsSchluessel(t *testing.T) {
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal))
+          (o1 (make-hash-table)) (o2 (make-hash-table)))
+      (puthash o1 h 'eins)
+      (puthash o2 h 'zwei)
+      (list (gethash o1 h) (gethash o2 h) (hash-table-count h)))`, "(eins zwei 2)")
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal))
+          (o1 (make-hash-table)) (o2 (make-hash-table)))
+      (puthash (list 'k o1) h 'L1)
+      (list (gethash (list 'k o1) h) (gethash (list 'k o2) h)))`, "(L1 ())")
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal)))
+      (puthash (lambda (x) x) h 1)
+      (puthash (lambda (x) x) h 2)
+      (hash-table-count h))`, "2")
+  // Punktpaar bleibt vom Listenende unterscheidbar
+  evalEq(t, `
+    (let ((h (make-hash-table :test 'equal)))
+      (puthash (cons 1 2) h 'paar)
+      (list (gethash (cons 1 2) h) (gethash (list 1 2) h)))`, "(paar ())")
+}
+
+// Druckform: Objekte mit :class-Symbol zeigen die Klasse, sonst #<hash-table>.
+func TestHashTableDruckformKlasse(t *testing.T) {
+  evalEq(t, `(let ((h (make-hash-table))) (puthash :class h 'schiff) (format nil "~a" h))`, `"#<schiff>"`)
+  evalEq(t, `(format nil "~a" (make-hash-table))`, `"#<hash-table>"`)
+  evalEq(t, `(let ((h (make-hash-table))) (puthash :class h "text") (format nil "~a" h))`, `"#<hash-table>"`)
+}

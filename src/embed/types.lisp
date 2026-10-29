@@ -8,7 +8,8 @@
 ;; Einzige Quelle der Typhierarchie (Spec:
 ;; docs/superpowers/specs/2026-09-29-typep-design.md).
 ;; Kernfakten liefert %cell-type (Go, celltype.go), Structs kommen aus
-;; *struct-types* (stdlib.lisp), Conditions aus *condition-types*
+;; *struct-types* (stdlib.lisp), Klassen aus *class-types* (stdlib.lisp,
+;; defclass; Repräsentation hash-table), Conditions aus *condition-types*
 ;; (condition.lisp). Abweichungen von CL: docs/lisp-semantik.md, "Typen".
 ;; ********************************************************************
 
@@ -87,6 +88,19 @@
         t
         ())))
 
+;; %class-instance?: x ist defclass-Objekt name (registriert, :class passt).
+(defun %class-instance? (x name)
+  (if (and (hash-table-p x) (eq (gethash :class x) name) (assoc name *class-types*))
+      t
+      ()))
+
+;; Klassennamen, die eingebaute Typen verdecken würden, zählen nicht.
+(defun %table-type (x)
+  (let ((c (gethash :class x)))
+    (if (and (symbol? c) (not (%builtin-type? c)) (%class-instance? x c))
+        c
+        'hash-table)))
+
 ;; Struct-/Condition-Namen, die eingebaute Typen verdecken würden, zählen
 ;; nicht (Kollision wird bei der Definition gewarnt).
 (defun %cons-type (x)
@@ -105,6 +119,7 @@
           ((eq k 'lambda) 'function)
           ((eq k 'func)   'compiled-function)
           ((eq k 'cons)   (%cons-type x))
+          ((eq k 'hash-table) (%table-type x))
           (t              k))))
 
 ;; === typep ===========================================================
@@ -113,19 +128,21 @@
   (error (format nil "typep: ungültige Typangabe ~a" spec)))
 
 ;; %type-start: Einstieg in *type-parents* für x. Structs starten bei
-;; structure-object, Conditions bei cons.
+;; structure-object, Conditions bei cons, Klassen bei hash-table.
 (defun %type-start (x)
   (let ((k (type-of x)))
     (cond ((%builtin-type? k) k)
           ((%cond? x)         'cons)
+          ((hash-table-p x)   'hash-table)
           (t                  'structure-object))))
 
-;; Auflösung: eingebaut → Struct → Condition → Fehler (Spec).
+;; Auflösung: eingebaut → Struct → Klasse → Condition → Fehler (Spec).
 (defun %typep-name (x name)
   (cond ((eq name t)                    t)
         ((eq name 'atom)                (not (pair? x)))
         ((%builtin-type? name)          (%builtin-subtype? (%type-start x) name))
         ((assoc name *struct-types*)    (%struct-instance? x name))
+        ((assoc name *class-types*)     (%class-instance? x name))
         ((assoc name *condition-types*) (if (%cond-type? x name) t ()))
         ((assoc name *deftypes*)        (%typep-spec x (%deftype-expand name '())))
         (t (error (format nil "typep: unbekannter Typ '~a'" name)))))
@@ -212,8 +229,8 @@
 ;; === Kollisionen =====================================================
 
 ;; %type-name-warnings: (warn …)-Formen für defstruct/define-condition,
-;; wenn name einen eingebauten Typ oder die jeweils andere Registry trifft.
-;; Wird zur Expansionszeit aufgerufen; kind = 'defstruct | 'define-condition.
+;; wenn name einen eingebauten Typ oder eine andere Registry trifft.
+;; Wird zur Expansionszeit aufgerufen; kind = 'defstruct | 'define-condition | 'defclass.
 (defun %type-name-warnings (kind name)
   (mapcar (lambda (m) (list 'warn m))
           (filter identity
@@ -227,9 +244,20 @@
               (if (and (eq kind 'define-condition) (assoc name *struct-types*))
                   (format nil "WARN: define-condition ~a: Name ist auch ein Struct → typep sieht den Struct" name)
                   ())
+              (if (and (eq kind 'defclass) (assoc name *struct-types*))
+                  (format nil "WARN: defclass ~a: Name ist auch ein Struct → typep sieht den Struct, defmethod teilt den Namen" name)
+                  ())
+              (if (and (eq kind 'defstruct) (assoc name *class-types*))
+                  (format nil "WARN: defstruct ~a: Name ist auch eine Klasse → typep sieht den Struct, defmethod teilt den Namen" name)
+                  ())
+              (if (and (eq kind 'defclass) (assoc name *condition-types*))
+                  (format nil "WARN: defclass ~a: Name ist auch ein Condition-Typ → typep sieht die Klasse" name)
+                  ())
               (if (assoc name *deftypes*)
                   (format nil "WARN: ~a ~a: Name ist auch ein deftype → typep sieht ~a" kind name
-                          (if (eq kind 'defstruct) "den Struct" "die Condition"))
+                          (cond ((eq kind 'defstruct) "den Struct")
+                                ((eq kind 'defclass)  "die Klasse")
+                                (t                    "die Condition")))
                   ())))))
 
 ;; === typecase / etypecase ===========================================
@@ -278,6 +306,8 @@
          (error (format nil "deftype: ~a ist ein eingebauter Typ" name)))
         ((assoc name *struct-types*)
          (error (format nil "deftype: ~a ist ein Struct" name)))
+        ((assoc name *class-types*)
+         (error (format nil "deftype: ~a ist eine Klasse" name)))
         ((assoc name *condition-types*)
          (error (format nil "deftype: ~a ist ein Condition-Typ" name)))
         (t name)))
@@ -318,6 +348,7 @@
 (defun %st-name-kind (name)
   (cond ((%builtin-type? name)            'builtin)
         ((assoc name *struct-types*)      'struct)
+        ((assoc name *class-types*)       'class)
         ((assoc name *condition-types*)   'condition)
         (t (error (format nil "subtypep: unbekannter Typ '~a'" name)))))
 
@@ -325,12 +356,14 @@
 (defun %st-cons-free? (name)
   (and (not (%builtin-subtype? 'cons name)) (not (%builtin-subtype? name 'cons))))
 
-;; Structs sind Listen (structure-object → cons), Conditions auch (cons).
+;; Structs sind Listen (structure-object → cons), Conditions auch (cons),
+;; Klassen sind Hashtabellen (hash-table → atom).
 (defun %st-names (a b)
   (let ((ka (%st-name-kind a))
         (kb (%st-name-kind b)))
-    (cond ((eq b 'atom)          (%st-ja/nein (and (eq ka 'builtin) (%st-cons-free? a))))
+    (cond ((eq b 'atom)          (%st-ja/nein (or (eq ka 'class) (and (eq ka 'builtin) (%st-cons-free? a)))))
           ((eq a 'atom)          (%st-ja/nein (eq b t)))
+          ((eq ka 'class)        (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? 'hash-table b))))
           ((eq ka 'builtin)      (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? a b))))
           ((eq ka 'struct)       (%st-ja/nein (and (eq kb 'builtin) (%builtin-subtype? 'structure-object b))))
           ((eq kb 'condition)    (%st-ja/nein (%cond-subtype? a b)))

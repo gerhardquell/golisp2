@@ -349,7 +349,12 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (defmethod fläche ((x t))        -1)     ; t = Default
 (fläche (make-kreis :radius 2))          ; Single-Dispatch auf Struct-Tag
 ; Extra-Params: (defmethod skaliere ((x kreis) f) ...)
-; Kein: Vererbung, call-next-method, :before/:after
+(defclass schiff (name (energie 100)))   ; Objekt mit Identität (Hashtabelle)
+(define s (make-schiff :name "Beagle"))
+(decf (schiff-energie s) 30)             ; ändert s in place, alle Aliase sehen es
+(defmethod fläche ((x schiff)) 0)        ; Dispatch auf Klasse
+(type-of s)  ; → schiff   s ; → #<schiff>
+; Kein: Vererbung, call-next-method, :before/:after, Auto-Lock (→ lock)
 ```
 
 ### CLI & Environment

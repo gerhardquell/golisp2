@@ -158,7 +158,12 @@
     ("parfunc" . "Wertet Ausdrücke parallel aus und speichert die Ergebnisse.")
     ("trap" . "Fängt Lisp-Laufzeitfehler ab.")
     ("error" . "Löst einen Lisp-Laufzeitfehler aus.")
-    ("gensym" . "Erzeugt ein eindeutiges Symbol.")))
+    ("gensym" . "Erzeugt ein eindeutiges Symbol.")
+    ("defstruct" . "Definiert einen Struct (getaggte Liste, Wertsemantik: setf bindet neu).")
+    ("defclass" . "Definiert eine Klasse: Objekte mit Identität (Hashtabelle), setf ändert in place. Keine Vererbung.")
+    ("defgeneric" . "Deklariert eine generische Funktion (Single-Dispatch auf das erste Argument).")
+    ("defmethod" . "Definiert eine Methode für Struct-, Klassen-Name oder t (Default).")
+    ("register-setf-mutator" . "Registriert einen Setter, mit dem setf das Objekt in place ändert (ohne Neubindung).")))
 
 (defun swank--static-description (name)
   (let ((entry (assoc name *swank-symbol-descriptions*)))

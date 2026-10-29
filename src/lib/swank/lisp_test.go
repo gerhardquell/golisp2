@@ -475,13 +475,14 @@ func TestSwankDescribeSymbolTypeOf(t *testing.T) {
   }
   setup := `(begin (define dt-h (make-hash-table)) (define dt-v (vector 1)) (define dt-n 3)
                    (define dt-s 'foo) (define dt-l '(1 2)) (defmacro dt-m (x) x)
-                   (defstruct dt-punkt x) (define dt-p (make-dt-punkt :x 1)))`
+                   (defstruct dt-punkt x) (define dt-p (make-dt-punkt :x 1))
+                   (defclass dt-schiff (x)) (define dt-o (make-dt-schiff :x 1)))`
   if _, err := lib.LoadString(setup, env); err != nil {
     t.Fatalf("setup: %v", err)
   }
   for name, want := range map[string]string{
     "dt-h": "hash-table", "dt-v": "vector", "dt-n": "integer", "dt-s": "symbol",
-    "dt-l": "cons", "dt-m": "macro", "dt-p": "dt-punkt",
+    "dt-l": "cons", "dt-m": "macro", "dt-p": "dt-punkt", "dt-o": "dt-schiff",
   } {
     cell, err := lib.Read(`(:emacs-rex (swank:describe-symbol "` + name + `" "USER") nil t 1)`)
     if err != nil {
@@ -493,6 +494,33 @@ func TestSwankDescribeSymbolTypeOf(t *testing.T) {
     }
     if s := result.String(); !strings.Contains(s, `Typ: `+want+`\n`) {
       t.Errorf("%s: expected Typ: %s, got: %s", name, want, s)
+    }
+  }
+}
+
+// CLOS-light-Makros haben Kurzbeschreibungen für describe-symbol.
+func TestSwankDescribeSymbolClosLight(t *testing.T) {
+  env := lib.BaseEnv()
+  lib.LoadStdlib(env)
+  RegisterSwankEnv(env, func(c *lib.Cell) error { return nil })
+  if err := LoadSwankLisp(env); err != nil {
+    t.Fatalf("LoadSwankLisp: %v", err)
+  }
+  for name, want := range map[string]string{
+    "defclass": "Identität", "defgeneric": "generische Funktion",
+    "defmethod": "Methode", "register-setf-mutator": "in place",
+    "defstruct": "Wertsemantik",
+  } {
+    cell, err := lib.Read(`(:emacs-rex (swank:describe-symbol "` + name + `" "USER") nil t 1)`)
+    if err != nil {
+      t.Fatalf("read: %v", err)
+    }
+    result, err := HandleMessage(env, cell)
+    if err != nil {
+      t.Fatalf("HandleMessage %s: %v", name, err)
+    }
+    if s := result.String(); !strings.Contains(s, want) {
+      t.Errorf("%s: expected %q, got: %s", name, want, s)
     }
   }
 }

@@ -360,6 +360,25 @@ Single-Dispatch auf den Struct-Tag (`car`) des ersten Arguments.
 - Explizit nicht dabei: Vererbung, `call-next-method`, `:before`/`:after`,
   Multi-Dispatch. Implementierung rein Lisp, kein Kernel-Eingriff.
 
+### defclass — Objekte mit Identität
+
+`defstruct` hat Wertsemantik: `(setf (punkt-x p) 9)` bindet `p` an eine
+neue Liste, andere Referenzen sehen den alten Wert. Für geteilten,
+veränderlichen Zustand: `(defclass schiff (name (energie 100)))`.
+
+- Objekt = eql-Hashtabelle mit `:class` → `schiff`; `eq` ist Identität.
+- `make-schiff` (&key), `schiff?`, `schiff-SLOT`, `set-schiff-SLOT`.
+  Accessoren auf fremden Objekten → Fehler (nicht still `nil`).
+- `setf`/`incf`/`decf` ändern in place über `*setf-mutators*`
+  (`register-setf-mutator`) — der Place darf ein Ausdruck sein:
+  `(setf (schiff-energie (car flotte)) 5)`.
+- `defmethod` dispatcht über `(gethash :class obj)` wie über den Struct-Tag.
+- `type-of`/`typep`/`typecase` kennen den Klassennamen (`*class-types*`),
+  Druckform `#<schiff>`. Siehe „Typen“.
+- Jede Tabelle hat ein eigenes Lock — Einzelzugriffe sind sicher,
+  Lesen-Ändern-Schreiben aus mehreren Goroutinen nicht: `(lock m ...)`.
+- Keine Vererbung. Syntax bewusst nicht CL (`(defclass n (supers) (slots))`).
+
 ---
 
 ## `defvar` vs. `defparameter`
@@ -420,6 +439,11 @@ Condition.
 - `type-of` liefert `integer`/`float`, nicht `fixnum`/`double-float`.
 - Structs sind Listen: `(typep p 'cons)` → `t`. Ein Literal `'(punkt 1 2)`
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
+- defclass-Objekte sind Hashtabellen: `(type-of s)` → `schiff`,
+  `(typep s 'hash-table)` und `(typep s 'atom)` → `t`, `(subtypep 'schiff
+  'hash-table)` → `t t`. Druckform `#<schiff>` (nur der Name — Objekte
+  dürfen zyklisch sein). Eine Tabelle mit `:class` → unregistriertes Symbol
+  bleibt `hash-table` für `type-of`, druckt sich aber als `#<symbol>`.
 - Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
 - Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer und
   ohne Reader-Literal `#(…)` (die Druckform ist nur Ausgabe); `equal?`

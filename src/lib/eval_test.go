@@ -259,6 +259,38 @@ func TestEvalSetq(t *testing.T) {
   evalEq(t, `(begin (setq* a 1 b (+ a 1) c (+ b 1)) (list a b c))`, "(1 2 3)")
 }
 
+// CL (SBCL): Zuweisung an eine ungebundene Variable legt sie global an und
+// warnt — auch aus einer Funktion heraus. Früher landete sie still im
+// Funktions-Frame und war nach dem Aufruf weg.
+func TestSetqUnboundGlobalMitWarnung(t *testing.T) {
+  cases := []struct{ form, src string }{
+    {"setq", `(begin (defun zz-f () (setq zz-v 5)) (zz-f) zz-v)`},
+    {"setq*", `(begin (defun zz-f () (setq* zz-v 5)) (zz-f) zz-v)`},
+    {"multiple-value-setq", `(begin (defun zz-f () (multiple-value-setq (zz-v) (values 5))) (zz-f) zz-v)`},
+    {"setf", `(begin (defun zz-f () (setf zz-v 5)) (zz-f) zz-v)`},
+  }
+  for _, c := range cases {
+    var got *Cell
+    var err error
+    stderr := captureStderr(t, func() { got, err = evalStdlib(t, c.src) })
+    if err != nil {
+      t.Errorf("%s: Fehler: %v", c.form, err)
+      continue
+    }
+    if got.String() != "5" {
+      t.Errorf("%s: zz-v = %s, want 5", c.form, got)
+    }
+    if !strings.Contains(stderr, "WARN") || !strings.Contains(stderr, "zz-v") {
+      t.Errorf("%s: keine Warnung auf stderr, got %q", c.form, stderr)
+    }
+  }
+  // gebundene Variable: keine Warnung
+  stderr := captureStderr(t, func() { _, _ = evalStdlib(t, `(begin (define zz-b 1) (setq zz-b 2) (setf zz-b 3))`) })
+  if stderr != "" {
+    t.Errorf("gebundene Variable warnt: %q", stderr)
+  }
+}
+
 func TestEvalQuasiquote(t *testing.T) {
   evalEq(t, "`(a b c)", "(a b c)")              // ohne unquote = reines quote
   evalEq(t, "`(a ,(+ 1 1) c)", "(a 2 c)")       // unquote

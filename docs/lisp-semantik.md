@@ -52,11 +52,23 @@ hat. Kompass bei Unklarheiten ist die Common-Lisp-Semantik.
 
 ## `setq` und `setq*`
 
-`setq` ist ein Alias für `define` — setzt eine Variable global oder lokal:
+`setq` setzt eine bestehende Variable entlang der Env-Kette und liefert den
+Wert (CL):
 
 ```lisp
-(setq x 10)            ; → x
-x                      ; → 10
+(define x 1)
+(setq x 10)            ; → 10
+```
+
+Ist die Variable ungebunden, wird sie wie in SBCL **global** angelegt, mit
+Warnung auf stderr — auch aus einer Funktion heraus. Gilt gleich für
+`setq*`, `setf` (Symbol-Place) und `multiple-value-setq` (`assignVar` in
+`eval_specialforms.go`). `set!` bleibt strikt: Fehler bei ungebunden.
+
+```lisp
+(defun f () (setq neu 5))
+(f)                    ; stderr: WARN: undefinierte Variable neu – global angelegt
+neu                    ; → 5
 ```
 
 `setq*` setzt mehrere Variablen **sequentiell** (analog `let*`):

@@ -306,8 +306,8 @@
 ;;   → (begin (set! p (set-pt-x p 9)) 9)
 ;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
 ;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
-;; Ungebundenes Symbol wird CL-artig global definiert: eval läuft im
-;; Root-Env, das quote um den Wert verhindert Re-Evaluierung.
+;; Symbol-Place → setq: ungebundenes Symbol wird CL-artig global
+;; angelegt, mit Warnung (assignVar).
 ;; Multi-Place: (setf a 1 b 2 …) — je Paar eine setf-Form, sequenziell in
 ;; einem (begin …), Rückgabe ist der letzte zugewiesene Wert (CL-Semantik).
 (defmacro setf (place val &rest more)
@@ -318,11 +318,7 @@
 (defun %setf-one (place val)
   (let ((v (gensym)))
     (if (atom place)
-        `(let ((,v ,val))
-           (if (bound? ',place)
-               (set! ,place ,v)
-               (eval (list 'define ',place (list 'quote ,v))))
-           ,v)
+        `(setq ,place ,val)
         (let ((accessor (car place))
               (arg (cadr place)))
           ;; (gethash k tab) → (puthash k tab v), (aref v i) → (aset v i x)

@@ -46,8 +46,8 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname; wirkt nur auf oberster Ebene/in Spezialformen der Hauptdatei, nicht über `funcall`/`apply`/`mapcar` |
 | `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
-| `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; legt neu an, falls ungebunden (Top-Level-Verhalten) |
-| `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen, legt neu an falls ungebunden | **Rückgabe:** letztes **Symbol** (nicht dessen Wert) — anders als `setq`, das den letzten **Wert** liefert |
+| `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; ungebunden → **global** angelegt + `WARN` auf stderr (wie SBCL; gilt auch für `setq*`, `setf`, `multiple-value-setq`) |
+| `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen, ungebunden → global + `WARN` | **Rückgabe:** letztes **Symbol** (nicht dessen Wert) — anders als `setq`, das den letzten **Wert** liefert |
 | `(psetq v1 val1 v2 val2 ...)` | Paralleles Setzen | Erst alle Werte auswerten, dann zuweisen |
 | `(macrolet ((m . spec)) . body)` | Lokales Makro | Nicht-rekursiv |
 | `(symbol-macrolet ((s expansion)) . body)` | Symbol-Macro | |

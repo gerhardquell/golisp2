@@ -54,8 +54,7 @@ func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 
 // setq: (setq var1 val1 var2 val2 ...) → sequentielles Setzen, liefert den
 // letzten Wert (CL). Bestehende Bindung wird entlang der Env-Kette
-// aktualisiert; ungebundene Variable wird im aktuellen Env angelegt
-// (clisp-Top-Level-Verhalten).
+// aktualisiert; ungebundene Variable siehe assignVar.
 func evalSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   result := MakeNil()
   for a := args; a != nil && a.Type == LIST; a = a.Cdr.Cdr {
@@ -74,10 +73,8 @@ func evalSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if err != nil {
       return nil, err
     }
-    if err := env.Update(name, val); err != nil {
-      if err := env.Set(name, val); err != nil {
-        return nil, err
-      }
+    if err := assignVar(env, name, val); err != nil {
+      return nil, err
     }
     result = val
   }
@@ -332,12 +329,7 @@ func evalSetQStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
     if err != nil { return nil, err }
     val = Primary(val)
-    // Update existierende Variable oder neu definieren
-    if _, getErr := env.Get(name); getErr == nil {
-      if err := env.Update(name, val); err != nil { return nil, err }  // Existiert → updaten
-    } else {
-      if err := env.Set(name, val); err != nil { return nil, err }     // Neu → definieren
-    }
+    if err := assignVar(env, name, val); err != nil { return nil, err }
   }
   return MakeAtom(lastName), nil
 }
@@ -453,6 +445,17 @@ func evalSymbolMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 // auf den Fall beschränkt, dass die Expansion selbst ein Symbol ist).
 // Eine echte (shadownde) Bindung gewinnt, weil env.Get die Kette in
 // Reihenfolge durchläuft und den Marker dann gar nicht sieht.
+// assignVar: Zuweisung für setq/setq*/multiple-value-setq. Eine ungebundene
+// Variable wird wie in CL (SBCL) global angelegt, mit Warnung — im aktuellen
+// Env angelegt wäre sie aus einer Funktion heraus nach dem Aufruf still weg.
+func assignVar(env *Env, name string, val *Cell) error {
+  if env.Update(name, val) == nil {
+    return nil
+  }
+  _ = WriteError(fmt.Sprintf("WARN: undefinierte Variable %s – global angelegt\n", name))
+  return env.Root().Set(name, val)
+}
+
 func symMacroTarget(env *Env, name string) (string, error) {
   cur, err := env.Get(name)
   if err != nil || cur.Type != SYMMACRO {

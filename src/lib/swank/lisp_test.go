@@ -369,6 +369,9 @@ func TestSwankListenerEvalMultipleValues(t *testing.T) {
     {`(round 3.5)`, `((:write-string "4\n-0.5\n" :repl-result) (:return (:ok ()) 1))`},
     {`(values)`, `((:write-string "; No values\n" :repl-result) (:return (:ok ()) 1))`},
     {`(+ 1 2)`, `((:write-string "3\n" :repl-result) (:return (:ok ()) 1))`},
+    // Ausgabe-Formen: Rückgabewert unterdrückt (golisp2-Eigenheit, SBCL zeigt ihn)
+    {`(println 5)`, `((:return (:ok ()) 1))`},
+    {`(printf "%d" 5)`, `((:return (:ok ()) 1))`},
   }
   for _, c := range cases {
     msg := lib.SliceToCell([]*lib.Cell{lib.MakeAtom(":emacs-rex"),

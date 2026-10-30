@@ -106,7 +106,7 @@ golisp2> :quit
 | `swank:swank-require` | Stub `(:ok ())` — keine Contribs |
 | `swank:init-presentations` | Stub `(:ok ())` |
 | `swank-repl:create-repl` | `(:ok ("USER" "USER"))` + `:new-package` |
-| `swank-repl:listener-eval` | alle Formen via `ReadAll` → pro Ergebnis `:write-string "<w>\n" :repl-result` + `(:ok nil)` |
+| `swank-repl:listener-eval` | alle Formen via `ReadAll` → pro Form alle Werte (je eine Zeile, `(values)` → `; No values`) als `:write-string … :repl-result` + `(:ok nil)`. Ausnahme: äußerste Form `print`/`println`/`printf`/`(format t …)` u. a. — Rückgabewert unterdrückt, nur die Ausgabe erscheint (`swank--output-only-form?`; SBCL zeigt ihn immer) |
 | `swank:simple-completions` | `(:ok (strings…))` |
 | `swank:completions` | `(:ok ((name) (name) …))` — c-p-c Contrib; das Op, das SLIME für TAB sendet |
 | `swank:load-file` | `(load filename)` → `(:ok "<r>")` — C-c C-l |

@@ -432,6 +432,7 @@
        (let ((op (car form)))
          (or (equal? op 'print)
              (equal? op 'println)
+             (equal? op 'printf)
              (equal? op 'swank-print)
              (equal? op 'swank-println)
              (equal? op 'ga-print)

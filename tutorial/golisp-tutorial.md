@@ -651,7 +651,7 @@ Arithmetischer Shift: x·2ⁿ; negatives n schiebt nach rechts und rundet ab (fl
 
 ### =
 
-**Syntax:** `(= x y)`
+**Syntax:** `(= x y ...)`
 
 Numerische Gleichheit.
 
@@ -660,9 +660,20 @@ Numerische Gleichheit.
 (= 1 2)
 ```
 
+### /=
+
+**Syntax:** `(/= x y ...)`
+
+Numerisch ungleich: `t`, wenn alle Argumente paarweise verschieden sind (CL).
+
+```lisp
+(/= 1 2)    ; => t
+(/= 1 2 1)  ; => ()
+```
+
 ### <
 
-**Syntax:** `(< x y)`
+**Syntax:** `(< x y ...)`
 
 Numerisch kleiner.
 
@@ -673,7 +684,7 @@ Numerisch kleiner.
 
 ### >
 
-**Syntax:** `(> x y)`
+**Syntax:** `(> x y ...)`
 
 Numerisch größer.
 
@@ -684,7 +695,7 @@ Numerisch größer.
 
 ### >=
 
-**Syntax:** `(>= x y)`
+**Syntax:** `(>= x y ...)`
 
 Numerisch größer oder gleich.
 
@@ -694,7 +705,7 @@ Numerisch größer oder gleich.
 
 ### <=
 
-**Syntax:** `(<= x y)`
+**Syntax:** `(<= x y ...)`
 
 Numerisch kleiner oder gleich.
 

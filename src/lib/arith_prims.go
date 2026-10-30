@@ -36,6 +36,7 @@ func RegisterArith(env *Env) {
 
 	// Vergleiche
 	_ = env.Set("=", makeFn(fnEq))
+	_ = env.Set("/=", makeFn(fnNumNe))
 	_ = env.Set("<", makeFn(fnLt))
 	_ = env.Set(">", makeFn(fnGt))
 	_ = env.Set(">=", makeFn(fnGe))
@@ -113,69 +114,58 @@ func fnDiv(args []*Cell) (*Cell, error) {
 
 // ---- Vergleiche (numerisch, strict) ----
 
-func fnEq(args []*Cell) (*Cell, error) {
+// numChain: CL-Vergleichskette – t, wenn cmp für jedes benachbarte Paar gilt.
+func numChain(name string, args []*Cell, cmp func(a, b float64) bool) (*Cell, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("=: 2 Argumente nötig")
+		return nil, fmt.Errorf("%s: 2 Argumente nötig", name)
 	}
-	if err := checkNumbers("=", args); err != nil {
+	if err := checkNumbers(name, args); err != nil {
 		return nil, err
 	}
-	if args[0].Num == args[1].Num {
-		return cellT, nil
+	for i := 1; i < len(args); i++ {
+		if !cmp(args[i-1].Num, args[i].Num) {
+			return MakeNil(), nil
+		}
 	}
-	return MakeNil(), nil
+	return cellT, nil
+}
+
+func fnEq(args []*Cell) (*Cell, error) {
+	return numChain("=", args, func(a, b float64) bool { return a == b })
+}
+
+// fnNumNe: CL-/= – t, wenn alle Argumente paarweise verschieden sind.
+func fnNumNe(args []*Cell) (*Cell, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("/=: 2 Argumente nötig")
+	}
+	if err := checkNumbers("/=", args); err != nil {
+		return nil, err
+	}
+	for i := range args {
+		for j := i + 1; j < len(args); j++ {
+			if args[i].Num == args[j].Num {
+				return MakeNil(), nil
+			}
+		}
+	}
+	return cellT, nil
 }
 
 func fnLt(args []*Cell) (*Cell, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf("<: 2 Argumente nötig")
-	}
-	if err := checkNumbers("<", args); err != nil {
-		return nil, err
-	}
-	if args[0].Num < args[1].Num {
-		return cellT, nil
-	}
-	return MakeNil(), nil
+	return numChain("<", args, func(a, b float64) bool { return a < b })
 }
 
 func fnGt(args []*Cell) (*Cell, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf(">: 2 Argumente nötig")
-	}
-	if err := checkNumbers(">", args); err != nil {
-		return nil, err
-	}
-	if args[0].Num > args[1].Num {
-		return cellT, nil
-	}
-	return MakeNil(), nil
+	return numChain(">", args, func(a, b float64) bool { return a > b })
 }
 
 func fnGe(args []*Cell) (*Cell, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf(">=: 2 Argumente nötig")
-	}
-	if err := checkNumbers(">=", args); err != nil {
-		return nil, err
-	}
-	if args[0].Num >= args[1].Num {
-		return cellT, nil
-	}
-	return MakeNil(), nil
+	return numChain(">=", args, func(a, b float64) bool { return a >= b })
 }
 
 func fnLe(args []*Cell) (*Cell, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf("<=: 2 Argumente nötig")
-	}
-	if err := checkNumbers("<=", args); err != nil {
-		return nil, err
-	}
-	if args[0].Num <= args[1].Num {
-		return cellT, nil
-	}
-	return MakeNil(), nil
+	return numChain("<=", args, func(a, b float64) bool { return a <= b })
 }
 
 func fnEqual(args []*Cell) (*Cell, error) {

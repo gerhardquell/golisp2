@@ -203,6 +203,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ### Vergleiche
 ```lisp
 (= 5 5)                           ; Zahlen-Vergleich
+(/= 1 2 3)                        ; ungleich: t, wenn paarweise verschieden
 (< 3 5) (> 5 3) (>= 5 5) (<= 3 5)
 (equal? "a" "a")                  ; Strukturell (für Zahlen, Listen, Strings)
 (eq 'foo 'foo)                    ; Pointer-Identität (⚠️ für Zahlen oft nil)

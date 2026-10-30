@@ -44,6 +44,25 @@ func TestModRemNegativ(t *testing.T) {
   evalErr(t, `(rem 1 0)`)
 }
 
+// CL: /= ist t, wenn alle Argumente paarweise verschieden sind.
+func TestNumNotEqual(t *testing.T) {
+  evalEq(t, `(list (/= 1 2) (/= 1 1) (/= 1.0 1))`, "(t () ())")
+  evalEq(t, `(list (/= 1 2 3) (/= 1 2 1))`, "(t ())")
+  evalErr(t, `(/= 1)`)
+  evalErr(t, `(/= 1 "a")`)
+}
+
+// CL: = < > <= >= vergleichen alle benachbarten Paare, nicht nur die ersten zwei.
+func TestNumCompareChain(t *testing.T) {
+  evalEq(t, `(list (= 1 1 1) (= 1 1 2))`, "(t ())")
+  evalEq(t, `(list (< 1 2 3) (< 1 2 0) (< 1 2 2))`, "(t () ())")
+  evalEq(t, `(list (> 3 2 1) (> 3 2 5))`, "(t ())")
+  evalEq(t, `(list (<= 1 1 2) (<= 1 2 1))`, "(t ())")
+  evalEq(t, `(list (>= 2 2 1) (>= 2 1 2))`, "(t ())")
+  evalErr(t, `(< 1)`)
+  evalErr(t, `(< 1 2 "a")`)
+}
+
 // --- Typ-Prädikate ---
 
 func TestPrimitiveTypePredicates(t *testing.T) {

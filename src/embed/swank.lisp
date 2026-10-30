@@ -442,14 +442,21 @@
 (defun swank--eval-forms (forms acc)
   (if (null? forms)
       acc
-      (let ((result (swank--eval1 (car forms))))
+      (let ((results (multiple-value-list (swank--eval1 (car forms)))))
         (if (swank--output-only-form? (car forms))
             (swank--eval-forms (cdr forms) acc)
             (swank--eval-forms
               (cdr forms)
               (append acc (list (list :write-string
-                                      (string-append (swank--value-string result) "\n")
+                                      (swank--values-string results)
                                       :repl-result))))))))
+
+;; Jeder Wert auf eigener Zeile, (values) → "; No values" (wie SBCL).
+(defun swank--values-string (vals)
+  (if (null? vals)
+      "; No values\n"
+      (apply string-append
+             (mapcar (lambda (v) (string-append (swank--value-string v) "\n")) vals))))
 
 ;; swank--eval-forms-silently: wie swank--eval-forms, aber ohne
 ;; :write-string Events. Für compile-string-for-emacs.

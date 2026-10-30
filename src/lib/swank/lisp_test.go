@@ -356,6 +356,34 @@ func TestSwankListenerEvalNormalResult(t *testing.T) {
   }
 }
 
+// Mehrere Werte: jeder auf eigener Zeile, (values) → "; No values" (wie SBCL).
+func TestSwankListenerEvalMultipleValues(t *testing.T) {
+  env := lib.BaseEnv()
+  lib.LoadStdlib(env)
+  RegisterSwankEnv(env, func(c *lib.Cell) error { return nil })
+  if err := LoadSwankLisp(env); err != nil {
+    t.Fatalf("LoadSwankLisp: %v", err)
+  }
+  cases := []struct{ code, want string }{
+    {`(values 1 2)`, `((:write-string "1\n2\n" :repl-result) (:return (:ok ()) 1))`},
+    {`(round 3.5)`, `((:write-string "4\n-0.5\n" :repl-result) (:return (:ok ()) 1))`},
+    {`(values)`, `((:write-string "; No values\n" :repl-result) (:return (:ok ()) 1))`},
+    {`(+ 1 2)`, `((:write-string "3\n" :repl-result) (:return (:ok ()) 1))`},
+  }
+  for _, c := range cases {
+    msg := lib.SliceToCell([]*lib.Cell{lib.MakeAtom(":emacs-rex"),
+      lib.SliceToCell([]*lib.Cell{lib.MakeAtom("swank-repl:listener-eval"), lib.MakeStr(c.code)}),
+      lib.MakeStr("USER"), lib.MakeAtom("t"), lib.MakeNum(1)})
+    result, err := HandleMessage(env, msg)
+    if err != nil {
+      t.Fatalf("%s: HandleMessage: %v", c.code, err)
+    }
+    if result.String() != c.want {
+      t.Errorf("%s:\n got  %s\n want %s", c.code, result.String(), c.want)
+    }
+  }
+}
+
 func TestSwankFindDefinitionsFileLocation(t *testing.T) {
   lib.ClearDefinitions()
   env := lib.BaseEnv()

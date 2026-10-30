@@ -219,3 +219,21 @@ func TestSwankFindDefinition(t *testing.T) {
     t.Fatalf("expected NIL für missing, got %v", result2)
   }
 }
+
+// stderr (warn, WARN-Meldungen, trace) muss in SLIME ankommen, nicht im
+// Journal des Dienstes.
+func TestSwankErrorWriterGehtNachEmacs(t *testing.T) {
+  env := lib.BaseEnv()
+  var sent *lib.Cell
+  RegisterSwankEnv(env, func(c *lib.Cell) error { sent = c; return nil })
+  cell, err := lib.Read(`(warn "achtung")`)
+  if err != nil {
+    t.Fatalf("read failed: %v", err)
+  }
+  if _, err := lib.Eval(cell, env); err != nil {
+    t.Fatalf("eval failed: %v", err)
+  }
+  if sent == nil || sent.String() != `(:write-string "\"achtung\"\n")` {
+    t.Fatalf("unexpected event: %v", sent)
+  }
+}

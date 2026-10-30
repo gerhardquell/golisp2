@@ -21,14 +21,17 @@ import (
 // RegisterSwankEnv registers connection-bound SWANK primitives.
 // send writes an event Cell to Emacs.
 func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
-  // Redirect all lib output (format t, ga-print, print, println) to Emacs.
-  lib.SetOutputWriter(func(s string) error {
+  // Redirect all lib output (format t, ga-print, print, println) to Emacs —
+  // stderr (warn, WARN-Meldungen, trace) ebenso, sonst landet es im Journal.
+  toEmacs := func(s string) error {
     event := lib.Cons(
       lib.MakeAtom(":write-string"),
       lib.Cons(lib.MakeStr(s), lib.MakeNil()),
     )
     return send(event)
-  })
+  }
+  lib.SetOutputWriter(toEmacs)
+  lib.SetErrorWriter(toEmacs)
 
   _ = env.Set("swank-send-event", makeFn(func(args []*lib.Cell) (*lib.Cell, error) {
     if len(args) < 1 {

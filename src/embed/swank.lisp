@@ -16,7 +16,7 @@
 ;; Schluessel sind Strings, damit (assoc name ...) mit dem vom Protokoll
 ;; gelieferten String-Namen funktioniert.
 
-(setq *swank-built-in-arglists*
+(defparameter *swank-built-in-arglists*
   '(("+" . "(+ &rest numbers)")
     ("-" . "(- x &rest numbers)")
     ("*" . "(* &rest numbers)")
@@ -162,7 +162,7 @@
 ;; Statische Kurzbeschreibungen fuer describe-symbol. Erweiterbar zur
 ;; Laufzeit via (setq *swank-symbol-descriptions* ...).
 
-(setq *swank-symbol-descriptions*
+(defparameter *swank-symbol-descriptions*
   '(("car" . "Gibt das erste Element einer Liste zurück.")
     ("cdr" . "Gibt den Rest einer Liste zurück.")
     ("cons" . "Konstruiert ein neues Paar (car . cdr).")

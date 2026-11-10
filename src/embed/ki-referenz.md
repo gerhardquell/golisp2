@@ -110,7 +110,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 `+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` — `(log x)` nur natürlich, x > 0; `expt` auch negativ/gebrochen (`(expt 0.9 -2)`), NaN/Inf → Fehler; `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
 `(floor x [d])` `ceiling` `truncate` `round` wie CL: zwei Werte (Quotient, Rest) — `(truncate 7 2)` → `3 1`; `round` auf gerade (`(round 2.5)` → 2, `(round 3.5)` → 4); `(ash x n)` Bit-Shift, n < 0 nach rechts
 `(parse-int "42")` `(parse-float "4.5")` — nur dezimal, kein Radix; ungültig → Fehler (nicht `nil`)
-`= /= < > >= <= equal? eql eq eq?` — numerische Vergleiche als CL-Kette: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (alle paarweise verschieden); `eq`=Pointer, `eql` wie CL (Zahlen nach Wert, Strings nie), `equal?`=strukturell
+`= /= < > >= <= equal? eql eq eq?` — numerische Vergleiche als CL-Kette: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (alle paarweise verschieden); `eq`=Pointer, `eql` wie CL (Zahlen nach Wert, Strings nie), `equal?`=strukturell (Hash-Tabellen, Vektoren, Channels nur nach Identität, wie CL `equal`)
 
 ### Listen (klassische 7)
 `car cdr cons atom null list append`

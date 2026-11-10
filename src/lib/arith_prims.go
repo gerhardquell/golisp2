@@ -357,7 +357,7 @@ func fnRound(args []*Cell) (*Cell, error) {
 
 // cellEqual: struktureller Vergleich zweier Cells (rekursiv)
 func cellEqual(a, b *Cell) bool {
-	if a == nil && b == nil {
+	if a == b { // CL: (equal x x) ist immer t — auch für Typen ohne eigenen case
 		return true
 	}
 	if a == nil || b == nil {

@@ -312,6 +312,19 @@ func TestEvalEqEqual(t *testing.T) {
   evalEq(t, `(eq 5 5)`, "()")
 }
 
+// CL: (equal x x) ist immer t. Früher fielen Typen ohne eigenen case in
+// cellEqual (Hash-Tabelle, FUNC, Channel) auf false — auch fürs selbe Objekt,
+// womit member/case/assoc sie nicht fanden.
+func TestEqualIdentitaet(t *testing.T) {
+  evalEq(t, `(let ((h (make-hash-table))) (equal? h h))`, "t")
+  evalEq(t, `(equal? car car)`, "t")
+  evalEq(t, `(let ((c (chan-make 1))) (equal? c c))`, "t")
+  evalEq(t, `(let ((h (make-hash-table))) (equal? (list 1 h) (list 1 h)))`, "t")
+  // verschiedene Objekte bleiben ungleich
+  evalEq(t, `(equal? (make-hash-table) (make-hash-table))`, "()")
+  evalEq(t, `(equal? (chan-make 1) (chan-make 1))`, "()")
+}
+
 func TestEvalErrors(t *testing.T) {
   evalErr(t, `undefined-symbol`)          // unbekanntes Symbol
   evalErr(t, `(/ 1 0)`)                   // Division durch Null

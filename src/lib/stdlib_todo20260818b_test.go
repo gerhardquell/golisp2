@@ -87,4 +87,18 @@ func TestBuchluecken20260818DestructuringBind(t *testing.T) {
                      (define zz-calls 0)
                      (defun zz-src () (begin (setf zz-calls (+ zz-calls 1)) '(1 2)))
                      (destructuring-bind (a b) (zz-src) (list a b zz-calls)))`, "(1 2 1)")
+  // Nicht unterstützte Muster: laut statt still falsch. Früher wurde &rest
+  // als Variablenname gebunden: (a b &rest c) auf (1 2 3 4) → c = 4.
+  for _, src := range []string{
+    `(destructuring-bind (a b &rest c) '(1 2 3 4) c)`,
+    `(destructuring-bind (a &key k) '(1 :k 2) k)`,
+    `(destructuring-bind (a &optional b) '(1) b)`,
+    `(destructuring-bind (a (b c)) '(1 (2 3)) b)`,
+    `(destructuring-bind (a . b) '(1 2) b)`,
+  } {
+    _, err := evalStdlib(t, src)
+    if err == nil || !strings.Contains(err.Error(), "destructuring-bind:") {
+      t.Errorf("%s: will Fehler mit \"destructuring-bind:\", got %v", src, err)
+    }
+  }
 }

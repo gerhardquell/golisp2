@@ -29,6 +29,7 @@
     (%cond? . "Intern: Pruefung ob Objekt eine Condition ist")
     (%cons-type . "Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp)")
     (%db-bindings . "Intern: Codegenerator fuer destructuring-bind")
+    (%db-var-pruefen . "Intern: lehnt nicht-flache destructuring-bind-Muster laut ab")
     (%file-shared? . "Intern: Datei bereits durch anderes System geladen (defsystem)")
     (%generic-dispatch . "Intern: Methodendispatch der generischen Funktionen")
     (%generic-methods . "Intern: Methodenliste einer generischen Funktion")

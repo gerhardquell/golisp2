@@ -681,12 +681,22 @@
 ;; destructuring-bind: nur flaches Pattern (a b c) — verschachtelte Patterns
 ;; haben dieselbe Symbol-Rebind-Grenze wie nested-setf (siehe golisp2-fehler.md
 ;; B4). expr wird über ein gensym-Let genau einmal ausgewertet.
+;; Nicht unterstützte Muster werfen beim Expandieren — früher wurde z. B.
+;; &rest still als Variablenname gebunden und lieferte falsche Werte.
+(defun %db-var-pruefen (v)
+  (cond ((not (symbol? v))
+         (error (format nil "destructuring-bind: verschachteltes Muster ~s nicht unterstützt (nur flach)" v)))
+        ((equal? (substring (symbol-name v) 0 1) "&")
+         (error (format nil "destructuring-bind: ~a nicht unterstützt (nur flach, ohne Lambda-Keywords)" v)))))
+
 (defun %db-bindings (vars tmp body)
-  (if (null vars)
-      `(begin ,@body)
-      `(let ((,(car vars) (car ,tmp)))
-         (let ((,tmp (cdr ,tmp)))
-           ,(%db-bindings (cdr vars) tmp body)))))
+  (cond ((null vars) `(begin ,@body))
+        ((not (pair? vars))
+         (error (format nil "destructuring-bind: Punktpaar-Muster (… . ~a) nicht unterstützt" vars)))
+        (t (%db-var-pruefen (car vars))
+           `(let ((,(car vars) (car ,tmp)))
+              (let ((,tmp (cdr ,tmp)))
+                ,(%db-bindings (cdr vars) tmp body))))))
 
 (defmacro destructuring-bind (vars expr &rest body)
   (let ((tmp (gensym)))

@@ -1881,11 +1881,13 @@ Liefert mehrere Werte; verwendende Stellen sehen den Hauptwert (CL-multiple-valu
 
 **Syntax:** `(destructuring-bind (var ...) expr body ...)`
 
-Bindet Listenelemente an Variablen. Flache Muster — keine dotted pairs, keine Verschachtelung.
+Bindet Listenelemente an Variablen. Nur flache Muster: Verschachtelung, Punktpaare und Lambda-Keywords (`&rest`, `&key`, `&optional`) sind ein Fehler. Für den Rest der Liste: `(cddr l)` o. ä.
 
 ```lisp
 (destructuring-bind (a b c) '(1 2 3) (list a b c))
 ; => (1 2 3)
+(destructuring-bind (a &rest r) '(1 2 3) r)
+; Fehler: destructuring-bind: &rest nicht unterstützt (nur flach, ohne Lambda-Keywords)
 ```
 
 ### defvar

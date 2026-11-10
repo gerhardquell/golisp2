@@ -183,7 +183,7 @@ Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgel
 - `(incf place [d])`/`(decf place [d])` über `setf`; `defparameter` überschreibt immer, `defvar` nur wenn ungebunden
 - `(ignore-errors . body)` → Wert oder `()` bei Fehler (nur ein Wert, kein Condition-Objekt; `throw`/`return-from` laufen durch)
 - `(assert form)` → `t` oder Fehler `assert failed: form` — nur ein Argument, keine eigene Meldung
-- `(destructuring-bind (a b c) liste . body)` — **nur flach**, kein verschachteltes Muster; `&rest`/`&key` werden **nicht** erkannt, sondern still als Variablennamen gebunden → falsche Werte. Für Rest: `(destructuring-bind (a b) l …)` plus `(cddr l)`
+- `(destructuring-bind (a b c) liste . body)` — **nur flach**: verschachtelte Muster, Punktpaare und `&rest`/`&key`/`&optional` → Fehler. Für Rest: `(destructuring-bind (a b) l …)` plus `(cddr l)`
 - `macroexpand-1` = `macroexpand` (beide genau eine Stufe)
 
 **Achtung:** `let*` steht hier nur als CL-Gewohnheits-Anker — die
@@ -291,7 +291,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | String-Schlüssel in `(make-hash-table)` (Default `eql`) | nach Inhalt: zweimal `"rot"` = ein Schlüssel | `eql` → Identität, zwei `"rot"`-Literale = zwei Schlüssel; dafür `:test 'equal` |
 | `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` | vorhanden |
-| `destructuring-bind` mit `&rest`/`&key` | still falsch (Lambda-Keywords als Variablen gebunden) | voll unterstützt |
+| `destructuring-bind` mit `&rest`/`&key`, verschachtelt, Punktpaar | Fehler — nur flache Muster | voll unterstützt |
 | `(member x l)` | kein `:test`; vergleicht Strings strukturell | `eql` (Strings nur mit `:test 'equal`) |
 | `(last l)` | liefert das **Element**, nicht die Zelle | letzte Cons-Zelle |
 | `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |

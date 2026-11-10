@@ -18,6 +18,7 @@
 | `%cond?` | Intern: Pruefung ob Objekt eine Condition ist |
 | `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
 | `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
+| `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |

@@ -40,9 +40,10 @@ type HashTable struct {
 
 // keyOf bildet den Map-Schlüssel je nach Testmodus.
 // eql/eq: Zahlen nach Wert, Symbole nach Name, Strings nach Inhalt
-// (bewusste Abweichung: CL-eql vergleicht Strings nach Identität —
-// golisp2-Strings haben keine vom Nutzer beobachtbare Identität),
-// alles andere nach Pointer. equal: Listen strukturell, Elemente wie eql
+// (bewusste Abweichung: CL-eql vergleicht Strings nach Identität, und
+// auch golisp2s eql/eq unterscheiden gleiche Strings — (eql "a" "a") → ().
+// Die Tabelle weicht davon ab, damit String-Schlüssel ohne :test 'equal
+// wie erwartet funktionieren), alles andere nach Pointer. equal: Listen strukturell, Elemente wie eql
 // (mutable Objekte nach Identität, wie CL-equal).
 func (ht *HashTable) keyOf(c *Cell) string {
   if ht.test == "equal" {

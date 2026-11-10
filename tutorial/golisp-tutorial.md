@@ -10,7 +10,7 @@
 
 Dieses Dokument beschreibt die öffentlichen Funktionen, Spezialformen und Makros von GoLisp mit kurzen, lauffähigen Beispielen. Dateioperationen nutzen immer das Projekt-temp-Verzeichnis `./tmp`. Funktionen, die externe Dienste benötigen (sigo, PostgreSQL), enthalten beschreibende Beispiele.
 
-Stand: 20261020 — inklusive Hash-Tables, Vektoren, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Typen (typep, typecase, deftype, subtypep), Regex, Arbeiterpool, Shared Memory, Trace.
+Stand: 20261111 — inklusive Hash-Tables, Vektoren, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Typen (typep, typecase, deftype, subtypep), Regex, Arbeiterpool, Shared Memory, Trace.
 
 ## Spezialformen
 

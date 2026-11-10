@@ -41,10 +41,10 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(let (bind) . body)` | Parallel-Bindung | Tail-fähig |
 | `(let* (bind) . body)` | Sequentielle Bindung | Tail-fähig; **native Spezialform** (nicht Stdlib — jede Bindung sieht die vorherigen) |
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest` |
-| `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin`; **kein** `(define (f p) ...)`-Zucker |
+| `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin` |
 | `(defmacro m (p) . body)` | Globales Makro | |
 | `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname; wirkt nur auf oberster Ebene/in Spezialformen der Hauptdatei, nicht über `funcall`/`apply`/`mapcar` |
-| `(define sym val)` | Var-Def | Global oder lokal; nur `(define name value)`, keine Funktions-Sugar |
+| `(define sym val)` | Var-Def | Global oder lokal; `(define (f p) body)` = Kurzform für `(define f (lambda (p) body))` |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
 | `(setq v1 val1 v2 val2 ...)` | Sequentielles Setzen (CL) | Mehrere Paare; ungebunden → **global** angelegt + `WARN` auf stderr (wie SBCL; gilt auch für `setq*`, `setf`, `multiple-value-setq`) |
 | `(setq* v1 val1 v2 val2 ...)` | Sequentielles Setzen, ungebunden → global + `WARN` | **Rückgabe:** letztes **Symbol** (nicht dessen Wert) — anders als `setq`, das den letzten **Wert** liefert |
@@ -107,8 +107,10 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 ## 3. Wichtige Primitiven (FUNC, Go-seitig)
 
 ### Arithmetik/Vergleich
-`+ - * / mod rem remainder abs floor random values sqrt exp log expt` — `(log x)` nur natürlich, x > 0; `expt` auch negativ/gebrochen (`(expt 0.9 -2)`), NaN/Inf → Fehler; `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
-`= < > >= <= equal? eq eq?`  — `eq`=Pointer, `equal?=strukturell`
+`+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` — `(log x)` nur natürlich, x > 0; `expt` auch negativ/gebrochen (`(expt 0.9 -2)`), NaN/Inf → Fehler; `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
+`(floor x [d])` `ceiling` `truncate` `round` wie CL: zwei Werte (Quotient, Rest) — `(truncate 7 2)` → `3 1`; `round` auf gerade (`(round 2.5)` → 2, `(round 3.5)` → 4); `(ash x n)` Bit-Shift, n < 0 nach rechts
+`(parse-int "42")` `(parse-float "4.5")` — nur dezimal, kein Radix; ungültig → Fehler (nicht `nil`)
+`= /= < > >= <= equal? eql eq eq?` — numerische Vergleiche als CL-Kette: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (alle paarweise verschieden); `eq`=Pointer, `eql` wie CL (Zahlen nach Wert, Strings nie), `equal?`=strukturell
 
 ### Listen (klassische 7)
 `car cdr cons atom null list append`
@@ -126,8 +128,8 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 `exit` — Prozess sofort beenden, Code als Zahl (kein Cleanup!)
 
 ### Environment/Introspection
-`memstats sleep env-symbols` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
-sortiert (Basis von `tools/gen-reference.lisp`)
+`memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
+sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.24.0"`
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler; ohne `temperature` schickt golisp2 0.2, `0` ist Fehler; ohne `max_tokens` gilt das Modell-Maximum), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
@@ -150,6 +152,7 @@ sortiert (Basis von `tools/gen-reference.lisp`)
 - **FORMAT:** `format` — CL-HyperSpec 22.3, `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~; ~^ ~/fun/ ~~`
   - Rundung: half-to-even (Go-`strconv`), nicht half-up wie C — `%.2f` von `2.25` → `"2.2"`
 - **PostgreSQL:** `pg-connect pg-query pg-exec pg-close`
+- **Maxima (CAS, externer Prozess):** `(maxima-open)` → Session; `(maxima-eval s "integrate(x^2,x)" [timeout-sek])` → Ergebnis als String (Zustand bleibt in der Session); `(maxima-close s)` → `t`. Braucht installiertes `maxima`
 - **GenAlg:** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **Redefine:** `redefine-policy redef-log redef-log-clear defined-in`
 - **Trace:** `trace untrace trace?`
@@ -161,21 +164,27 @@ Vollständige, generierte Liste (kein Ausschnitt): `docs/referenz-generiert.md`.
 
 ---
 
-## 4. Stdlib (embed/stdlib.lisp, ~50 Definitionen)
+## 4. Stdlib (embed/stdlib.lisp, ~90 Definitionen)
 
 ### Accessoren/Shortcuts
 `cadr caddr cadddr cddr cdar caar first second third fourth rest`
 `zero? positive? negative? pair?` — CL-Namen: `zerop plusp minusp evenp oddp 1+ 1-` (`evenp`/`oddp` nur für ganze Zahlen)
 
 ### Higher-Order/Functional
-`identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota max min square gcd`
+`identity constantly complement compose reverse length nth last member assoc filter drop take reduce for-each any every flatten zip list-tail iota shuffle randomlist max min square gcd` — `(shuffle l)` → neue, zufällig gemischte Liste (nur Listen, Original bleibt); `(randomlist n)` = `(shuffle (iota n))`
 Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgelöst wie CL) — `(mapcar 'string->number l)`, `(reduce '+ l)`, `(sort l '<)`.
 
 ### Listen-Helfer
 `alist-set alist-get union set-difference find-all set-nth`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen; `(remove x l)` vergleicht mit `equal?`, **kein** `:test`/`:key` (→ Fehler „zu viele Argumente“); `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Makros
-`when unless let* dotimes dolist push pop defvar setf defstruct defgeneric defmethod`
+`when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
+- `(incf place [d])`/`(decf place [d])` über `setf`; `defparameter` überschreibt immer, `defvar` nur wenn ungebunden
+- `(ignore-errors . body)` → Wert oder `()` bei Fehler (nur ein Wert, kein Condition-Objekt; `throw`/`return-from` laufen durch)
+- `(assert form)` → `t` oder Fehler `assert failed: form` — nur ein Argument, keine eigene Meldung
+- `(destructuring-bind (a b c) liste . body)` — **nur flach**, kein verschachteltes Muster; `&rest`/`&key` werden **nicht** erkannt, sondern still als Variablennamen gebunden → falsche Werte. Für Rest: `(destructuring-bind (a b) l …)` plus `(cddr l)`
+- `macroexpand-1` = `macroexpand` (beide genau eine Stufe)
 
 **Achtung:** `let*` steht hier nur als CL-Gewohnheits-Anker — die
 tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
@@ -276,11 +285,12 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `the` | Typ ignoriert | Type-Checks |
 | `(eval form)` | Global | Global (ok) |
 | `macrolet` | Nicht-rekursiv | Rekursiv |
-| `(define (f p) ...)` | **Syntaxfehler** — nur `(define name value)` | Nicht-Standard, aber viele Schemes erlauben es |
+| `(define (f p) ...)` | Kurzform für `(define f (lambda (p) ...))` (Scheme-Stil) | Nicht vorhanden — `defun` |
 | Structs sind Listen | `(typep p 'cons)` → `t` | eigener Typ, nicht `cons` |
 | Ganzzahlige Floats sind integer | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 ist ein Float) |
 | `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
-| `stringp` `consp` `string=` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` (auch für `string=`) | vorhanden |
+| `stringp` `consp` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` | vorhanden |
+| `destructuring-bind` mit `&rest`/`&key` | still falsch (Lambda-Keywords als Variablen gebunden) | voll unterstützt |
 | `(member x l)` | kein `:test`; vergleicht Strings strukturell | `eql` (Strings nur mit `:test 'equal`) |
 | `(last l)` | liefert das **Element**, nicht die Zelle | letzte Cons-Zelle |
 | `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |
@@ -389,7 +399,7 @@ src/
 | Arithmetik | `+ - * / mod` |
 | Vergleich | `equal?` (Zahlen!), `eq` (Pointer) |
 | Liste bauen | `cons list append` |
-| Iteration | `dolist dotimes mapcar reduce` |
+| Iteration | `dolist dotimes loop mapcar reduce` |
 | Parallel | `parfunc` |
 | Fehler | `error` + `trap` |
 | Dynamisch | `catch/throw` |

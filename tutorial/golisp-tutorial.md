@@ -3781,6 +3781,30 @@ Erzeugt die Liste (0 1 ... n-1).
 (iota 0)
 ```
 
+### shuffle
+
+**Syntax:** `(shuffle liste)`
+
+Neue Liste mit denselben Elementen in zufälliger Reihenfolge (Fisher-Yates, jede Permutation gleich wahrscheinlich). Nicht-destruktiv: die Originalliste bleibt unverändert, die Elemente selbst werden nicht kopiert. Nur Listen — Vektor oder String → Fehler (vorher `(coerce v 'list)`).
+
+```lisp
+(shuffle '(herz pik kreuz karo))   ; => z. B. (kreuz herz karo pik)
+(shuffle '())                      ; => ()
+(shuffle "abc")                    ; Fehler: shuffle: Liste erwartet, got "abc"
+```
+
+### randomlist
+
+**Syntax:** `(randomlist n)`
+
+Liefert jede Zahl von 0 bis n-1 genau einmal, in zufälliger Reihenfolge — also `(shuffle (iota n))`. n ≤ 0 → `()`; keine ganze Zahl → Fehler.
+
+```lisp
+(randomlist 5)               ; => z. B. (2 1 4 3 0)
+(sort (randomlist 5) '<)     ; => (0 1 2 3 4)
+(randomlist 2.5)             ; Fehler: randomlist: ganze Zahl erwartet, got 2.5
+```
+
 ### square
 
 **Syntax:** `(square x)`

@@ -19,6 +19,27 @@
   (is (equal? '(a b c)     (union '(a b) '(b c))))
   (is (equal? '()          (union '() '()))))
 
+(deftest shuffle-ops :suite 'stdlib-mengen
+  (let* ((orig (list 'a "b" 3 '(4 5)))
+         (gemischt (shuffle orig)))
+    (is (equal? '(a "b" 3 (4 5)) orig))                 ; nicht-destruktiv
+    (is (= 4 (length gemischt)))
+    (is (every (lambda (x) (member x gemischt)) orig))) ; nichts verloren, nichts doppelt
+  (let ((h (make-hash-table)))                           ; Elemente werden nicht kopiert
+    (is (eq h (find-if (lambda (x) (hash-table-p x)) (shuffle (list 1 h 2))))))
+  (is (equal? '() (shuffle '())))
+  (is (equal? '(x) (shuffle '(x))))
+  (is (equal? "fehler"
+        (handler-case (shuffle (vector 1 2)) (error (e) "fehler")))))
+
+(deftest randomlist-ops :suite 'stdlib-mengen
+  (is (equal? '() (randomlist 0)))
+  (is (equal? '() (randomlist -3)))
+  (is (equal? '(0) (randomlist 1)))
+  (is (equal? (iota 20) (sort (randomlist 20) '<)))   ; Permutation: nichts fehlt, nichts doppelt
+  (is (equal? "fehler"
+        (handler-case (randomlist 2.5) (error (e) "fehler")))))
+
 (deftest set-difference-ops :suite 'stdlib-mengen
   (is (equal? '(1 3)       (set-difference '(1 2 3 4) '(2 4))))
   (is (equal? '(1 2 3)     (set-difference '(1 2 3) '())))

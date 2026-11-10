@@ -96,6 +96,7 @@
 | `+` | Addition aller Argumente |
 | `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0 |
 | `/` | Division; Fehler bei Division durch 0 |
+| `/=` | numerisch paarweise verschieden (CL) |
 | `1+` | n + 1 (CL) |
 | `1-` | n - 1 (CL) |
 | `<` | numerisch kleiner |
@@ -295,6 +296,7 @@
 | `push` | Makro: wert vor Liste in var einfuegen |
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
 | `random` | Zufallszahl; mit n aus [0, n) |
+| `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |
 | `read` | String in Lisp-Datenstruktur parsen |
 | `read-line` | eine Zeile von stdin lesen |
 | `redef-log` | Ringpuffer der Redefinitionen |
@@ -331,6 +333,7 @@
 | `shm-read` | Block (maximal n Zeichen) als String lesen |
 | `shm-status` | Pool-Statistik als Assoziationsliste (total, used, free) |
 | `shm-write` | String in Shared-Memory-Block schreiben |
+| `shuffle` | neue Liste mit den Elementen in zufaelliger Reihenfolge (Fisher-Yates) |
 | `signal` | Condition des definierten Typs signalisieren (:msg ...) |
 | `sigo` | Prompt an sigoREST senden, Antwort als String |
 | `sigo*` | Wie sigo, Ergebnis als Hash-Tabelle (text, model, finish-reason, Tokens, cost-usd, elapsed) |

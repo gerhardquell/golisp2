@@ -150,6 +150,27 @@
     (if (< i 0) acc (iota-acc (- i 1) (cons i acc))))
   (iota-acc (- n 1) ()))
 
+;; shuffle: neue Liste mit den Elementen von lst in zufälliger Reihenfolge,
+;; Fisher-Yates über einen Vektor (O(n), aref/aset statt nth auf der Liste).
+;; Nicht-destruktiv: coerce baut einen frischen Vektor, lst bleibt unverändert.
+(defun shuffle (lst)
+  (unless (list? lst)
+    (error (format nil "shuffle: Liste erwartet, got ~s" lst)))
+  (let* ((v (coerce lst 'vector))
+         (i (- (length v) 1)))
+    (while (> i 0)
+      (let* ((j (random (+ i 1)))
+             (tmp (aref v i)))
+        (aset v i (aref v j))
+        (aset v j tmp))
+      (setq i (- i 1)))
+    (coerce v 'list)))
+
+;; randomlist: zufällige Permutation von (0 1 ... n-1).
+(defun randomlist (n)
+  (%ganzzahl-pruefen "randomlist" n)
+  (shuffle (iota n)))
+
 ;; === Zahlen =====================================================
 
 (defun max (a &rest rest) (reduce (lambda (x y) (if (>= x y) x y)) rest :initial-value a))

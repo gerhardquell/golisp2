@@ -546,6 +546,8 @@ bei Start automatisch geladen.
 (zip '(a b) '(1 2))               ; → ((a 1) (b 2))
 (list-tail '(1 2 3) 1)            ; → (2 3)
 (iota 5)                          ; → (0 1 2 3 4)
+(shuffle '(a b c d))              ; → z. B. (c a d b) — neue Liste, Original bleibt
+(randomlist 5)                    ; → z. B. (3 0 4 1 2) — (shuffle (iota 5))
 (max 3 1 4 1 5)                   ; → 5
 (min 3 1 4 1 5)                   ; → 1
 (square 5)                        ; → 25

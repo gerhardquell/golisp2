@@ -1,8 +1,8 @@
 # GoLisp2 – Sprachreferenz
 
 GoLisp2 ist ein Lisp-Interpreter in Go mit nativer KI-Anbindung.
-Alle Features sind im interaktiven REPL (`go run .`) und in Skript-Dateien
-(`go run . skript.lisp`) verfügbar.
+Alle Features sind im interaktiven REPL (`go run ./src`) und in Skript-Dateien
+(`go run ./src skript.lisp`) verfügbar.
 
 ---
 
@@ -273,9 +273,9 @@ und thread-sicher sein (keine Mutation geteilter Variablen).
 ## REPL
 
 ```bash
-go run .              # REPL starten
-go run . skript.lisp  # Skript ausführen
-go run . -t           # Testmodus
+go run ./src              # REPL starten
+go run ./src skript.lisp  # Skript ausführen
+go run ./src -t           # Testmodus
 ```
 
 | Feature | Beschreibung |
@@ -288,15 +288,15 @@ go run . -t           # Testmodus
 
 ---
 
-## Server-Modus (golisp2d)
+## Server-Modus (`golisp2 --swank`)
 
-GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
+GoLisp2 kann als TCP-Server mit echtem SWANK-Protokoll laufen:
 
 ### Server starten
 
 ```bash
-./build/golisp2d --port 4321        # Default: localhost:4321
-./build/golisp2d --host 0.0.0.0     # Externe Verbindungen erlauben
+./build/golisp2 --swank 127.0.0.1:4321   # host:port Pflicht
+./build/golisp2 --swank 0.0.0.0:4321     # externe Verbindungen erlauben
 ```
 
 ### Mit Emacs/SLIME verbinden
@@ -305,10 +305,14 @@ GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 M-x slime-connect → Host: 127.0.0.1 → Port: 4321
 ```
 
-### Protokoll (S-Expression-RPC)
+### Protokoll (SWANK)
 
-**Request:** `(:id 1 :method "eval" :params ("(+ 1 2)"))`
-**Response:** `(:id 1 :status "ok" :result "3")`
+- **Framing:** 6-stellige Hex-Länge + S-Expression, kein Newline
+- **Request:** `(:emacs-rex (swank-repl:listener-eval "(+ 1 2)") "USER" t 1)`
+- **Response:** `(:write-string "3\n" :repl-result)` je Ergebnis, zum Schluss
+  `(:return (:ok ()) 1)` bzw. `(:return (:abort "msg") 1)` bei Fehler
+
+Details und alle Ops: `docs/swank.md`.
 
 Jede Verbindung bekommt ein eigenes, frisches Environment; der Zustand bleibt nur innerhalb einer Verbindung erhalten.
 

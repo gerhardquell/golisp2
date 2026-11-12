@@ -161,9 +161,28 @@ func TestInspectorStructHashListe(t *testing.T) {
 
 func TestInspectorFehler(t *testing.T) {
   env := inspEnv(t, "")
-  if st, _ := rex(t, env, `(swank:init-inspector "(car 5)")`); st != ":abort" {
+  st, v := rex(t, env, `(swank:init-inspector "(car 5)")`)
+  if st != ":abort" {
     t.Errorf("Status = %s, want :abort", st)
   }
+  abortText(t, v)
+}
+
+// abortText prüft: Fehlertext ist ein STRING ohne erneutes Quoting.
+func abortText(t *testing.T, v *lib.Cell) {
+  t.Helper()
+  if v.Type != lib.STRING || strings.HasPrefix(v.Val, `"`) || !strings.Contains(v.Val, "Liste erwartet") {
+    t.Errorf("abort-Text = %s, want STRING \"car: Liste erwartet\"", v)
+  }
+}
+
+func TestListenerEvalFehler(t *testing.T) {
+  env := inspEnv(t, "")
+  st, v := rex(t, env, `(swank-repl:listener-eval "(car 5)")`)
+  if st != ":abort" {
+    t.Errorf("Status = %s, want :abort", st)
+  }
+  abortText(t, v)
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }

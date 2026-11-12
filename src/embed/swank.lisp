@@ -202,12 +202,15 @@
         (if (null? arglist) "" (string-append "Arglist: " arglist "\n"))
         (if (null? static) "" (string-append "\n" static))))))
 
+;; err aus trap ist meist schon Text; value-string würde ihn erneut quoten.
+(defun swank--fehler-text (err) (if (string? err) err (swank--value-string err)))
+
 (defun swank:describe-symbol (name id)
   (trap
     (let ((content (swank--describe-symbol name)))
       (list (list :return (list :ok (list :title name :content content)) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 (defun swank-dispatch (msg)
   (case (car msg)
@@ -377,7 +380,7 @@
       (let ((expanded (macroexpand form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; swank:swank-macroexpand / swank-expand (string) -> (:ok "<expanded>").
 ;; Wiederhole macroexpand bis stabil auf Top-Level.
@@ -387,7 +390,7 @@
       (let ((expanded (swank--expand-top form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; swank:swank-macroexpand-all / swank-expand-all (string) -> (:ok "<expanded>").
 ;; Echte rekursive Expansion in alle Subformen via GoLisp macroexpand-all.
@@ -397,7 +400,7 @@
       (let ((expanded (macroexpand-all form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 (defun swank--expand-top (form)
   (let ((expanded (macroexpand form)))
@@ -412,7 +415,7 @@
     (let ((result (eval (list (quote load) filename))))
       (list (list :return (list :ok (swank--value-string result)) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 (defun swank:listener-eval (string id)
   (trap
@@ -420,7 +423,7 @@
       (let ((events (swank--eval-forms forms (list))))
         (append events (list (list :return (list :ok (list)) id)))))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; Wertet alle Formen, sammelt (:write-string "<wert>\n" :repl-result)
 ;; Events. eval ist Spezialform, daher Wrapper als echte FUNC.
@@ -477,7 +480,7 @@
       (list (list :return (list :ok (list :filename filename
                                           :result (swank--value-string result))) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; swank:compile-string-for-emacs (string) -> (:ok t).
 ;; Wertet alle Formen im String still aus.
@@ -487,7 +490,7 @@
       (swank--eval-forms-silently forms)
       (list (list :return (list :ok t) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; swank:find-definitions-for-emacs (name) -> (:ok ((name location))) | (:ok (:error "...")).
 ;; M-. in SLIME. Map-Lookup zuerst; sonst REPL-Snippet-Fallback oder :error.
@@ -508,7 +511,7 @@
                     (list (list name location)))))
           (list (list :return (list :ok result) id)))))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; Test ob eine Location ein :error-Ergebnis ist (kein Sprung-Ziel).
 (defun swank--error-location? (loc)
@@ -639,7 +642,7 @@
       (set! swank--insp-fwd ())
       (list (list :return (list :ok (swank--insp-open x)) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 (defun swank:inspect-nth-part (n id)
   (let ((hit (multiple-value-list (gethash n swank--insp-parts))))
@@ -693,4 +696,4 @@
     (let ((result (swank--insp-eval-all (swank--read-all string) ())))
       (list (list :return (list :ok (swank--value-string result)) id)))
     (lambda (err)
-      (list (list :return (list :abort (swank--value-string err)) id)))))
+      (list (list :return (list :abort (swank--fehler-text err)) id)))))

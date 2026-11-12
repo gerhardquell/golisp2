@@ -126,7 +126,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 环境/内省
 `memstats sleep env-symbols lisp-implementation-version` —— `(sleep ms)` 单位为毫秒；`(env-symbols)` 返回根环境中所有名字
-（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.24.0"`
+（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.24.1"`
 
 ### 领域模块（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` —— `(sigo "prompt" [model] [session-id] [host])` → 文本；`sigo*` → 哈希表（`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`）；`(sigo-request h [host])`：哈希表的键必须恰好来自 `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`（其他键 → 报错；未给 `temperature` 时 golisp2 发送 0.2，`0` 会报错；未给 `max_tokens` 时使用模型最大值），结果 = 完整响应的哈希表外加 `elapsed`（秒）；`(sigo-usage)` 累计值，含 `calls`/`elapsed`；`(sigo-costs [since [until]])`（Unix 秒，同 `(now)`），`(sigo-budget)`，`(sigo-model-info [model])`（价格为美元/百万 token，**0 = 未知，不是免费**）；`(sigo-system-prompt "")` → 模型只看到提示词（若有 session-id 则加上会话历史）

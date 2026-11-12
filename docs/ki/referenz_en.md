@@ -129,7 +129,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.24.0"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.24.1"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)

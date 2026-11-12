@@ -290,7 +290,7 @@ go run ./src -t           # Testmodus
 
 ## Server-Modus (`golisp2 --swank`)
 
-GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
+GoLisp2 kann als TCP-Server mit echtem SWANK-Protokoll laufen:
 
 ### Server starten
 
@@ -305,10 +305,14 @@ GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 M-x slime-connect → Host: 127.0.0.1 → Port: 4321
 ```
 
-### Protokoll (S-Expression-RPC)
+### Protokoll (SWANK)
 
-**Request:** `(:id 1 :method "eval" :params ("(+ 1 2)"))`
-**Response:** `(:id 1 :status "ok" :result "3")`
+- **Framing:** 6-stellige Hex-Länge + S-Expression, kein Newline
+- **Request:** `(:emacs-rex (swank-repl:listener-eval "(+ 1 2)") "USER" t 1)`
+- **Response:** `(:write-string "3\n" :repl-result)` je Ergebnis, zum Schluss
+  `(:return (:ok ()) 1)` bzw. `(:return (:abort "msg") 1)` bei Fehler
+
+Details und alle Ops: `docs/swank.md`.
 
 Jede Verbindung bekommt ein eigenes, frisches Environment; der Zustand bleibt nur innerhalb einer Verbindung erhalten.
 

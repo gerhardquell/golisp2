@@ -310,7 +310,7 @@ M-x slime-connect → Host: 127.0.0.1 → Port: 4321
 **Request:** `(:id 1 :method "eval" :params ("(+ 1 2)"))`
 **Response:** `(:id 1 :status "ok" :result "3")`
 
-Alle Clients teilen sich dasselbe Environment (Zustand bleibt erhalten).
+Jede Verbindung bekommt ein eigenes, frisches Environment; der Zustand bleibt nur innerhalb einer Verbindung erhalten.
 
 ---
 

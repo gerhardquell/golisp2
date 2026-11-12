@@ -95,7 +95,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 
 ### Server Mode (`golisp2 --swank`)
 - **SWANK TCP Server**: real SWANK protocol (`:emacs-rex`) for IDE integration
-- **Persistent environment**: Shared state across client connections
+- **Per-connection environment**: state persists within one SLIME session; each new connection starts fresh
 - **Protocol methods**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
 - **Emacs/SLIME**: `M-x slime-connect` connects directly
 
@@ -221,7 +221,7 @@ GoLisp can run as a TCP server speaking the real SWANK protocol
 ```
 
 **Server Features:**
-- Shared environment across all client connections
+- Fresh environment per connection (shared only when embedded via `swank.RunServerEnv`)
 - Autocomplete for IDE integration
 - SWANK protocol (localhost:4321 default)
 

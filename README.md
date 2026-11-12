@@ -98,7 +98,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 
 ### Server-Modus (`golisp2 --swank`)
 - **SWANK-TCP-Server**: echtes SWANK-Protokoll (`:emacs-rex`) für IDE-Integration
-- **Persistentes Environment**: Geteilter Zustand über Client-Verbindungen hinweg
+- **Environment pro Verbindung**: Zustand bleibt innerhalb einer SLIME-Sitzung erhalten; jede neue Verbindung startet frisch
 - **Protokoll-Methoden**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
 - **Emacs/SLIME**: `M-x slime-connect` verbindet direkt
 
@@ -231,7 +231,7 @@ GoLisp kann als TCP-Server mit echtem SWANK-Protokoll laufen
 ```
 
 **Server-Features:**
-- Geteiltes Environment über alle Client-Verbindungen
+- Eigenes, frisches Environment pro Verbindung (geteilt nur eingebettet über `swank.RunServerEnv`)
 - Autovervollständigung für IDE-Integration
 - SWANK-Protokoll (Default localhost:4321)
 

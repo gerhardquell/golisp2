@@ -95,7 +95,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 
 ### 服务器模式 (`golisp2 --swank`)
 - **SWANK TCP 服务器**：真正的 SWANK 协议（`:emacs-rex`），支持 IDE 集成
-- **持久化环境**：客户端连接间共享状态
+- **每连接独立环境**：同一 SLIME 会话内保持状态；每个新连接从全新环境开始
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
 - **Emacs/SLIME**：`M-x slime-connect` 可直接连接
 
@@ -216,7 +216,7 @@ GoLisp 可以作为 TCP 服务器运行，使用真正的 SWANK 协议（长度�
 ```
 
 **服务器特性：**
-- 所有客户端连接共享同一环境
+- 每个连接使用全新的独立环境（仅嵌入式 `swank.RunServerEnv` 共享环境）
 - 支持 IDE 集成的自动补全
 - SWANK 协议（默认 localhost:4321）
 

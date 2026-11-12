@@ -133,9 +133,7 @@ GoLisp can also run as a TCP server for IDE integration:
 # Terminal 1: Start server
 golisp2 --swank 127.0.0.1:4321
 
-# Terminal 2: Use client
-golisp2-client --port 4321 --eval "(+ 1 2 3)"
-golisp2-client --port 4321 --repl
+# Emacs: M-x slime-connect → host 127.0.0.1 → port 4321
 ```
 
 ---

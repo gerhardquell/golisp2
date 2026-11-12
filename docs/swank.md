@@ -1,11 +1,10 @@
-# GoLisp2 – SWANK-Server & Client
+# GoLisp2 – SWANK-Server
 
 `src/lib/swank/` implementiert das **echte SWANK-Protokoll** (length-prefixed
 `:emacs-rex`-RPC). `M-x slime-connect` aus Emacs funktioniert damit direkt.
 
 `golisp2 --swank host:port` startet den Server (`src/lib/swank/server.go` →
-`swank.RunServer`). Es gibt kein separates Custom-RPC. Der `golisp2-client`
-spricht ebenfalls SWANK.
+`swank.RunServer`). Es gibt kein separates Custom-RPC.
 
 Status: 2026-06-21 getestet mit SLIME v2.32.
 
@@ -14,11 +13,11 @@ Status: 2026-06-21 getestet mit SLIME v2.32.
 ```
 ┌─────────────┐     TCP / SWANK       ┌─────────────────┐
 │   Client    │ ◄──────────────────►  │ golisp2 --swank │
-│ (golisp2-   │  :emacs-rex Frames    │  (SWANK-Srv)    │
-│  client,    │  %06x<sexpr>          └────────┬────────┘
-│  Emacs/     │                                │
-│  SLIME)     │                         ┌──────┴──────┐
-└─────────────┘                         │  GoLisp2    │
+│  (Emacs/    │  :emacs-rex Frames    │  (SWANK-Srv)    │
+│   SLIME)    │  %06x<sexpr>          └────────┬────────┘
+└─────────────┘                                │
+                                        ┌──────┴──────┐
+                                        │  GoLisp2    │
                                         │  Runtime    │
                                         └─────────────┘
 ```
@@ -50,41 +49,6 @@ M-x slime-connect → Host: 127.0.0.1 → Port: 4242 → y (Versionswarnung)
 
 Der REPL `*slime-repl USER*` öffnet sich. Definitionen halten, Rekursion klappt.
 
-## Client (`golisp2-client`)
-
-`src/cmd/golisp2-client/main.go`, nutzt `golisp2/src/lib` für robuste Cell-Verarbeitung.
-
-| Client-Flag | SWANK-Op | Antwort |
-|-------------|----------|---------|
-| `--ping` | `swank:connection-info` | `:ok`-Plist |
-| `--eval CODE` | `swank-repl:listener-eval` | `:write-string`-Events pro Ergebnis |
-| `--complete PFX` | `swank:simple-completions` | `:ok ("m1" "m2" …)` |
-| `--load FILE` | `swank:load-file` | `:ok "result"` |
-| `--repl` | Schleife aus `listener-eval` | s. o. |
-
-```bash
-./build/golisp2-client --ping
-# => Server ist erreichbar: pong (SWANK connection-info ok)
-
-./build/golisp2-client --eval "(+ 1 2 3)"
-# => 6
-
-./build/golisp2-client --complete "ca"
-# => car cadddr cadr caddr caar
-
-./build/golisp2-client --load myscript.lisp
-
-./build/golisp2-client --repl
-golisp2> (defun square (x) (* x x))
-golisp2> (square 5)
-25
-golisp2> :quit
-```
-
-**REPL-Modus:**
-- Multiline: automatische Fortsetzung bei offenen Klammern
-- Kommandos: `:quit`, `:complete prefix`, `:load datei`
-- Error Recovery: Fehler brechen den REPL nicht ab (`:abort` → stderr, weiter)
 - **Pro-Connection-Env:** jede Verbindung bekommt ein frisches Environment
   (`lib.BaseEnv()` + `LoadStdlib` in `handleConn`) — kein Zustand zwischen
   Verbindungen

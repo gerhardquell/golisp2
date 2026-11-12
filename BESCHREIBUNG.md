@@ -299,29 +299,11 @@ GoLisp2 kann als SWANK-ähnlicher TCP-Server laufen:
 ./build/golisp2 --swank 0.0.0.0:4321     # externe Verbindungen erlauben
 ```
 
-### Client verwenden
+### Mit Emacs/SLIME verbinden
 
-```bash
-# Expression auswerten
-./build/golisp2-client --eval "(+ 1 2 3)"
-
-# Autocomplete
-./build/golisp2-client --complete "def"
-
-# Datei laden
-./build/golisp2-client --load skript.lisp
-
-# Interaktiver REPL
-./build/golisp2-client --repl
 ```
-
-### REPL-Kommandos
-
-| Kommando | Beschreibung |
-|----------|-------------|
-| `:quit`, `:q` | REPL beenden |
-| `:complete pre` | Autocomplete für Prefix |
-| `:load datei` | Datei laden |
+M-x slime-connect → Host: 127.0.0.1 → Port: 4321
+```
 
 ### Protokoll (S-Expression-RPC)
 

@@ -97,7 +97,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **SWANK TCP 服务器**：真正的 SWANK 协议（`:emacs-rex`），支持 IDE 集成
 - **持久化环境**：客户端连接间共享状态
 - **协议方法**：`eval`、`complete`、`symbols`、`describe`、`load-file`、`ping`
-- **客户端 REPL**：通过 `golisp2-client --repl` 使用交互式 REPL
+- **Emacs/SLIME**：`M-x slime-connect` 可直接连接
 
 ### Web 桥接（浏览器集成）
 - **面向浏览器的 Swank 式活镜像**：`http-serve` + WebSocket RPC，双向通信
@@ -146,7 +146,6 @@ cd golisp2
 
 ```bash
 go build -o build/golisp2 ./src/
-go build -o build/golisp2-client ./src/cmd/golisp2-client/
 ```
 
 ### 命令行使用
@@ -160,7 +159,7 @@ GoLisp 作为标准 Unix 工具运行，支持多种模式：
 | **表达式模式** | `./build/golisp2 -e "(+ 1 2)"` | 执行一个或多个表达式；单个形式打印结果——除非它自己已有输出（`(println 1)` 只出现一次）；多个形式抑制最终结果 |
 | **脚本模式** | `./build/golisp2 script.lisp [参数…]` | 运行 Lisp 脚本文件（也可通过 shebang）；`defmain` 见下 |
 | **测试模式** | `./build/golisp2 -t` | 运行内置测试套件 |
-| **版本** | `./build/golisp2 --version` | 输出 `golisp2 <版本> (<commit>, <日期>[, dirty])`（`golisp2-client --version` 同样） |
+| **版本** | `./build/golisp2 --version` | 输出 `golisp2 <版本> (<commit>, <日期>[, dirty])` |
 
 **退出码：** `0` = 成功，`1` = 错误；使用 `defmain` 的脚本则为其返回值（0–255）
 
@@ -204,7 +203,7 @@ EOF
 
 详见 `docs/cli.md`。
 
-### 服务器模式 (`golisp2 --swank` + `golisp2-client`)
+### 服务器模式 (`golisp2 --swank`)
 
 GoLisp 可以作为 TCP 服务器运行，使用真正的 SWANK 协议（长度前缀 `:emacs-rex` RPC — 非自定义协议）：
 
@@ -213,31 +212,13 @@ GoLisp 可以作为 TCP 服务器运行，使用真正的 SWANK 协议（长度�
 ./build/golisp2 --swank 127.0.0.1:4321
 # => SWANK 服务器运行在 127.0.0.1:4321
 
-# 终端 2：使用客户端
-./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"
-# => 6
-
-./build/golisp2-client --port 4321 --complete "def"
-# => ((define . "Define variable") (defun . "Lambda/Closure") ...)
-
-# 通过服务器使用交互式 REPL
-./build/golisp2-client --port 4321 --repl
-golisp2> (defun square (x) (* x x))
-=> square
-golisp2> (square 5)
-=> 25
-golisp2> :quit
+# Emacs：M-x slime-connect → 主机 127.0.0.1 → 端口 4321
 ```
 
 **服务器特性：**
 - 所有客户端连接共享同一环境
 - 支持 IDE 集成的自动补全
-- REPL 支持多行表达式
 - SWANK 协议（默认 localhost:4321）
-
-**环境变量：**
-- `GOLISP_HOST` - 服务器绑定地址（默认：localhost）
-- `GOLISP_PORT` - 服务器端口（默认：4321）
 
 ### REPL 交互环境
 

@@ -100,7 +100,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **SWANK-TCP-Server**: echtes SWANK-Protokoll (`:emacs-rex`) für IDE-Integration
 - **Persistentes Environment**: Geteilter Zustand über Client-Verbindungen hinweg
 - **Protokoll-Methoden**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
-- **Client-REPL**: Interaktives REPL über `golisp2-client --repl`
+- **Emacs/SLIME**: `M-x slime-connect` verbindet direkt
 
 ### Web-Bridge (Browser-Integration)
 - **Swank-artiges Live-Image für Browser**: `http-serve` + WebSocket-RPC, bidirektional
@@ -146,11 +146,10 @@ cd golisp2
 ./build.sh
 ```
 
-Die Binaries landen in `./build/`. manueller Build:
+Das Binary landet in `./build/`. manueller Build:
 
 ```bash
 go build -o build/golisp2 ./src/
-go build -o build/golisp2-client ./src/cmd/golisp2-client/
 ```
 
 ### CLI-Verwendung
@@ -164,7 +163,7 @@ GoLisp verhält sich wie ein Standard-Unix-Werkzeug mit mehreren Modi:
 | **Ausdruck** | `./build/golisp2 -e "(+ 1 2)"` | Ausdruck/Ausdrücke ausführen; einzelne Form druckt das Ergebnis — außer sie hat selbst ausgegeben (`(println 1)` erscheint einmal); mehrere Formen unterdrücken das Endergebnis |
 | **Skript** | `./build/golisp2 skript.lisp [args…]` | Lisp-Datei ausführen (auch direkt per Shebang); mit `defmain` siehe unten |
 | **Tests** | `./build/golisp2 -t` | Eingebaute Testsuite ausführen |
-| **Version** | `./build/golisp2 --version` | `golisp2 <Version> (<commit>, <Datum>[, dirty])` ausgeben (`golisp2-client --version` ebenso) |
+| **Version** | `./build/golisp2 --version` | `golisp2 <Version> (<commit>, <Datum>[, dirty])` ausgeben |
 
 **Exit-Codes:** `0` = Erfolg, `1` = Fehler; bei Skripten mit `defmain` der Rückgabewert (0–255)
 
@@ -218,7 +217,7 @@ Definitionen stehen dann als Bibliothek zur Verfügung.
 
 Details: `docs/cli.md`.
 
-### Server-Modus (`golisp2 --swank` + `golisp2-client`)
+### Server-Modus (`golisp2 --swank`)
 
 GoLisp kann als TCP-Server mit echtem SWANK-Protokoll laufen
 (length-prefixed `:emacs-rex`-RPC — kein Custom-Protokoll):
@@ -228,31 +227,13 @@ GoLisp kann als TCP-Server mit echtem SWANK-Protokoll laufen
 ./build/golisp2 --swank 127.0.0.1:4321
 # => SWANK-Server läuft auf 127.0.0.1:4321
 
-# Terminal 2: Client benutzen
-./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"
-# => 6
-
-./build/golisp2-client --port 4321 --complete "def"
-# => ((define . "Define variable") (defun . "Lambda/Closure") ...)
-
-# Interaktives REPL über den Server
-./build/golisp2-client --port 4321 --repl
-golisp2> (defun square (x) (* x x))
-=> square
-golisp2> (square 5)
-=> 25
-golisp2> :quit
+# Emacs: M-x slime-connect → Host 127.0.0.1 → Port 4321
 ```
 
 **Server-Features:**
 - Geteiltes Environment über alle Client-Verbindungen
 - Autovervollständigung für IDE-Integration
-- Mehrzeilige Ausdrücke im REPL
 - SWANK-Protokoll (Default localhost:4321)
-
-**Umgebungsvariablen:**
-- `GOLISP_HOST` - Bind-Adresse des Servers (Default: localhost)
-- `GOLISP_PORT` - Server-Port (Default: 4321)
 
 ### REPL
 

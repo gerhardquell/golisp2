@@ -97,7 +97,7 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **SWANK TCP Server**: real SWANK protocol (`:emacs-rex`) for IDE integration
 - **Persistent environment**: Shared state across client connections
 - **Protocol methods**: `eval`, `complete`, `symbols`, `describe`, `load-file`, `ping`
-- **Client REPL**: Interactive REPL via `golisp2-client --repl`
+- **Emacs/SLIME**: `M-x slime-connect` connects directly
 
 ### Web Bridge (Browser Integration)
 - **Swank-style live image for browsers**: `http-serve` + WebSocket RPC, bidirectional
@@ -142,11 +142,10 @@ cd golisp2
 ./build.sh
 ```
 
-Binaries land in `./build/`. For manual builds:
+The binary lands in `./build/`. For manual builds:
 
 ```bash
 go build -o build/golisp2 ./src/
-go build -o build/golisp2-client ./src/cmd/golisp2-client/
 ```
 
 ### CLI Usage
@@ -160,7 +159,7 @@ GoLisp works like a standard Unix tool with multiple modes:
 | **Expression** | `./build/golisp2 -e "(+ 1 2)"` | Execute expression(s); single form prints result — unless it printed output itself (`(println 1)` appears once); multiple forms suppress final result |
 | **Script** | `./build/golisp2 script.lisp [args…]` | Run a Lisp file (also via shebang); with `defmain` see below |
 | **Tests** | `./build/golisp2 -t` | Run built-in test suite |
-| **Version** | `./build/golisp2 --version` | Print `golisp2 <version> (<commit>, <date>[, dirty])` (`golisp2-client --version` too) |
+| **Version** | `./build/golisp2 --version` | Print `golisp2 <version> (<commit>, <date>[, dirty])` |
 
 **Exit codes:** `0` = success, `1` = error; for scripts with `defmain`, its return value (0–255)
 
@@ -208,7 +207,7 @@ then available as a library.
 
 Details: `docs/cli.md`.
 
-### Server Mode (`golisp2 --swank` + `golisp2-client`)
+### Server Mode (`golisp2 --swank`)
 
 GoLisp can run as a TCP server speaking the real SWANK protocol
 (length-prefixed `:emacs-rex` RPC — no custom protocol):
@@ -218,31 +217,13 @@ GoLisp can run as a TCP server speaking the real SWANK protocol
 ./build/golisp2 --swank 127.0.0.1:4321
 # => SWANK server listening on 127.0.0.1:4321
 
-# Terminal 2: Use the client
-./build/golisp2-client --port 4321 --eval "(+ 1 2 3)"
-# => 6
-
-./build/golisp2-client --port 4321 --complete "def"
-# => ((define . "Define variable") (defun . "Lambda/Closure") ...)
-
-# Interactive REPL via server
-./build/golisp2-client --port 4321 --repl
-golisp2> (defun square (x) (* x x))
-=> square
-golisp2> (square 5)
-=> 25
-golisp2> :quit
+# Emacs: M-x slime-connect → host 127.0.0.1 → port 4321
 ```
 
 **Server Features:**
 - Shared environment across all client connections
 - Autocomplete for IDE integration
-- Multiline expression support in REPL
 - SWANK protocol (localhost:4321 default)
-
-**Environment Variables:**
-- `GOLISP_HOST` - Server bind address (default: localhost)
-- `GOLISP_PORT` - Server port (default: 4321)
 
 ### REPL
 

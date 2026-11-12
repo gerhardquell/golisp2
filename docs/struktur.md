@@ -6,8 +6,7 @@ Referenz. Bei Widerspruch zum Code gewinnt der Code.
 golisp2/
   build/                 Build-Artefakte (via ./build.sh)
     golisp2              Hauptbinary: CLI + REPL + --swank-Modus (SWANK-Server)
-    golisp2-client       CLI-Client mit REPL
-  build.sh               baut alle Binaries nach ./build/
+  build.sh               baut golisp2 nach ./build/
   tmp/                   temporäres Verzeichnis des Projekts (nicht /tmp !)
 
   tools/
@@ -18,10 +17,6 @@ golisp2/
   src/
     main.go              Unix-Style CLI: stdin / -i / -e / -t / --swank / Datei + Exit-Codes
     main_test.go         Go-Tests für die CLI
-
-    cmd/
-      golisp2-client/
-        main.go          CLI-Client mit REPL (spricht SWANK, nutzt golisp2/src/lib)
 
     embed/               //go:embed Assets — zentraler Ort für Lisp-Quellen
       assets.go          Embed-Deklarationen (trennt Assets vom Go-Code)

@@ -36,7 +36,7 @@ Im Zweifel: `rg` statt raten.
 - **Kommentare:** sparsam — sprechende Namen bevorzugt
 - **Datei-Header:** Autor, CoAutor, Copyright, Erstellt (YYYYMMDD)
 - **Fehler:** `fmt.Errorf("funktionsname: beschreibung")`
-- **Build:** immer `./build.sh` (baut beide Binaries nach `./build/`)
+- **Build:** immer `./build.sh` (baut `golisp2` nach `./build/`)
 - **tmp:** `./tmp/` verwenden — **nicht** `/tmp` !
 - **Dateigröße:** Richtwert 800, hart bei 1000 Zeilen.
   *Bewusste Projektausnahme zur globalen 300/500-Regel:* Kohäsion schlägt
@@ -174,7 +174,7 @@ go test ./... -count=1                     # bei überraschenden Ergebnissen (Ca
 ./build/golisp2 -i                         # REPL (braucht TTY)
 ```
 
-Weitere Flags, stdin, SWANK, Client, Exit-Codes: `docs/cli.md`.
+Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 
 ---
 

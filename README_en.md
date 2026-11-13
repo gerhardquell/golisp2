@@ -662,6 +662,11 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 
 Unlicense (public domain) — see [LICENSE](LICENSE) for details. Free of any restrictions: use, modify, sell, distribute, no attribution required.
 
+The header line “Copyright: 2026 Gerhard Quell” in the source files only names
+the author; use remains free under the Unlicense. The built binary contains
+third-party libraries under MIT and BSD licenses — their license texts are in
+[THIRD_PARTY.md](THIRD_PARTY.md) and belong with every distributed build.
+
 Contributions are released into the public domain as well (Unlicense) — by
 opening a pull request you agree to that.
 

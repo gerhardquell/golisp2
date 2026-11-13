@@ -644,6 +644,8 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 
 Unlicense（公共领域）— 详见 [LICENSE](LICENSE) 文件。不受任何限制：使用、修改、销售、分发均可，无需署名。
 
+源文件头部的 “Copyright: 2026 Gerhard Quell” 仅表明作者身份；按 Unlicense 使用仍然完全自由。编译出的二进制文件包含采用 MIT 和 BSD 许可证的第三方库——其许可证文本见 [THIRD_PARTY.md](THIRD_PARTY.md)，分发构建产物时须一并附上。
+
 贡献的代码同样进入公共领域（Unlicense）——提交 Pull Request 即表示你同意这一点。
 
 ---

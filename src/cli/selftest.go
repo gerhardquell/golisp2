@@ -97,10 +97,8 @@ func runTests(env *lib.Env) {
   test(env, `(load "tests/loop-tests.lisp")`)
   // Web-Bridge + webserv-Smoke: Server auf Port 0, kein Browser
   test(env, `(load "tests/webbridge.lisp")`)
-  // Norvigs drei bekannte GPS-Fehler (Timeout für rekursiven Fall)
-  test(env, `(load "pn-gps1/gps-norvig-bugs.lisp")`)
-  // GPS Version 2: state-passing, goroutine-tauglich
-  test(env, `(load "pn-gps1/gps2-tests.lisp")`)
+  // Endlose Rekursion in parfunc bricht sauber ab (Ersatz für Norvig-GPS-Bug 3)
+  test(env, `(load "tests/endlosrekursion.lisp")`)
   // Genetischer Algorithmus
   test(env, `(define ga (ga-create 'bit1 5 4 (lambda (g) (apply + g))))`)
   test(env, `(ga-init ga)`)

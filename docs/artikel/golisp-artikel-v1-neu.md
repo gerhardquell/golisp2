@@ -169,7 +169,7 @@ Und die Retrospektiven sind wirklich wichtig und zwar gleich nach den letzten Te
 
 ## Das U-Boot taucht auf
 
-GoLisp ist auf GitHub, MIT-Lizenz. Es ist kein fertiges Produkt — es ist ein Werkzeug das wächst. Mit PostgreSQL-Anbindung, Autopoiesis-Experimenten, und der Fähigkeit, sich durch KI-Calls selbst zu erweitern.
+GoLisp ist auf GitHub, MIT-Lizenz.[^lizenz] Es ist kein fertiges Produkt — es ist ein Werkzeug das wächst. Mit PostgreSQL-Anbindung, Autopoiesis-Experimenten, und der Fähigkeit, sich durch KI-Calls selbst zu erweitern.
 
 Ich nenne es ein *U-Boot-Projekt*: In Ruhe entwickeln, Vertrauen aufbauen,
 bevor man es der Welt zeigt.
@@ -199,4 +199,6 @@ Das ist das Ehrlichste, was ich anbieten kann.
 *GoLisp: [github.com/gerhardquell/golisp](https://github.com/gerhardquell/golisp)*
 *sigoREST: [github.com/gerhardquell/sigoREST](https://github.com/gerhardquell/sigoREST)*
 
-*Lizenz: MIT*
+*Lizenz: MIT*[^lizenz]
+
+[^lizenz]: Stand bei Erscheinen. GoLisp2 steht inzwischen unter der Unlicense (gemeinfrei), siehe `LICENSE` im Repository.

@@ -6,9 +6,9 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
+[![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp2)
 
-GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI 功能。它结合了 Lisp 语言的优雅与 Go 语言运行时的强大性能，支持**尾调用优化（TCO）**、**卫生宏**、**基于 Goroutine 的并发编程**，以及通过 sigoREST 实现的多 LLM 提供商原生 AI 集成。
+GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI 功能。它结合了 Lisp 语言的优雅与 Go 语言运行时的强大性能，支持**尾调用优化（TCO）**、**宏（`gensym`）**、**基于 Goroutine 的并发编程**，以及通过 sigoREST 实现的多 LLM 提供商原生 AI 集成。
 
 ```lisp
 ; 经典示例 — 百万次迭代，无栈溢出
@@ -37,7 +37,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 ### 语言核心
 - **完整 Lisp 实现**：支持原子、数字、字符串、列表、Lambda 和宏
 - **尾调用优化**：无限递归深度，O(1) 栈空间
-- **卫生宏系统**：`defmacro` 配合 `gensym` 实现安全的代码生成
+- **宏系统**：`defmacro` 配合 `gensym` 避免命名冲突
 - **准引用支持**：`` ` `` `,` `,@` 模板编程
 - **结构化错误处理**：`error` 和 `trap`（类似 CL 的条件处理器）
 - **外部程序执行**：`exec` 直接运行程序（不经过 shell），捕获 stdout、stderr 和退出码；`shell-output` 是“Shell 命令 → 字符串输出”的简写
@@ -137,7 +137,7 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 ### 安装方法
 
 ```bash
-git clone https://github.com/gerhardquell/golisp.git
+git clone https://github.com/gerhardquell/golisp2.git
 cd golisp2
 ./build.sh
 ```

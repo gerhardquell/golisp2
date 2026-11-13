@@ -57,3 +57,6 @@ golisp2web/
 
 # Gespraechs-Exports/Notizen, nicht fuer Versionierung gedacht
 docs/gespraeche/
+
+# Norvig-GPS-Port (PAIP): lokal behalten, nicht im öffentlichen Repo (Lizenz ungeklärt)
+pn-gps1/

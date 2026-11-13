@@ -1,12 +1,12 @@
 //**********************************************************************
-//  lib/swank/gps_bug_test.go
+//  src/lib/swank/endlosrekursion_test.go
 //  Autor    : Gerhard Quell - gquell@skequell.de
 //  CoAutor  : kimi-k2.7-code
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260716
 //**********************************************************************
 // Integrationstest: der SWANK-Server (golisp2 --swank) überlebt das Laden
-// von gps-norvig-bugs.lisp. Lädt das Skript per swank:load-file über TCP und
+// von tests/endlosrekursion.lisp. Lädt das Skript per swank:load-file über TCP und
 // prüft, ob der Server danach noch auf Signal 0 antwortet (also lebt).
 //**********************************************************************
 
@@ -28,7 +28,7 @@ import (
   "golisp2/src/lib"
 )
 
-func TestSwankSurvivesNorvigBugs(t *testing.T) {
+func TestSwankSurvivesEndlosrekursion(t *testing.T) {
   if runtime.GOOS != "linux" {
     t.Skip("nur auf Linux")
   }
@@ -45,7 +45,7 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
   port := ln.Addr().(*net.TCPAddr).Port
   ln.Close()
 
-  logFile := filepath.Join(repoRoot, "tmp", "swank-norvig-test.log")
+  logFile := filepath.Join(repoRoot, "tmp", "swank-endlosrekursion-test.log")
   if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {
     t.Fatalf("mkdir: %v", err)
   }
@@ -79,7 +79,7 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
   }
   defer conn.Close()
 
-  msg, err := lib.Read(`(:emacs-rex (swank:load-file ` + strconv.Quote("pn-gps1/gps-norvig-bugs.lisp") + `) "USER" t 1)`)
+  msg, err := lib.Read(`(:emacs-rex (swank:load-file ` + strconv.Quote("tests/endlosrekursion.lisp") + `) "USER" t 1)`)
   if err != nil {
     t.Fatalf("read msg: %v", err)
   }
@@ -118,5 +118,5 @@ func TestSwankSurvivesNorvigBugs(t *testing.T) {
   }
 
   log, _ := os.ReadFile(logFile)
-  t.Fatalf("server died after Norvig bugs script:\n%s", log)
+  t.Fatalf("server died after endlosrekursion script:\n%s", log)
 }

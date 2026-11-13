@@ -6,10 +6,10 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp)
+[![Status](https://img.shields.io/badge/Status-Active-success)](https://github.com/gerhardquell/golisp2)
 
 GoLisp2 ist ein moderner Lisp-Interpreter in Go mit **Tail-Call-Optimierung**,
-**hygienischen Makros**, **Goroutine-basierter Parallelität** und **nativer
+**Makros mit `gensym`**, **Goroutine-basierter Parallelität** und **nativer
 KI-Anbindung** über sigoREST. Er verbindet die Eleganz von Lisp mit der Power
 der Go-Runtime und mehreren LLM-Anbietern.
 
@@ -40,7 +40,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 ### Sprachkern
 - **Vollständige Lisp-Implementierung**: Atome, Zahlen, Strings, Listen, Lambdas, Makros
 - **Tail-Call-Optimierung**: Unbegrenzte Rekursionstiefe
-- **Hygienische Makros**: `defmacro` mit `gensym` für sichere Codegenerierung
+- **Makros**: `defmacro` mit `gensym` gegen Namenskollisionen
 - **Quasiquote**: `` ` `` `,` `,@` für Template-Programmierung
 - **Strukturierte Fehlerbehandlung**: `error` und `trap` (CL-Condition-Handler-Stil)
 - **Externe Programme**: `exec` startet Programme direkt (ohne Shell) und fängt stdout, stderr und Exit-Code ab; `shell-output` ist die Kurzform für „Shell-Befehl → Ausgabe als String“
@@ -141,7 +141,7 @@ bleiben für Multi-File-Sites oder eigene Setups:
 ### Installation
 
 ```bash
-git clone https://github.com/gerhardquell/golisp.git
+git clone https://github.com/gerhardquell/golisp2.git
 cd golisp2
 ./build.sh
 ```

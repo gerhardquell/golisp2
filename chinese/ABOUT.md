@@ -15,7 +15,7 @@ This document introduces **GoLisp** to Chinese developers. While the primary doc
 **GoLisp** is a modern Lisp interpreter written in Go, featuring:
 
 - **Tail-Call Optimization (TCO)** – Unlimited recursion depth
-- **Hygienic Macros** – Safe code generation with `defmacro` and `gensym`
+- **Macros** – `defmacro` with `gensym` against name collisions
 - **Goroutine-based Concurrency** – Parallel execution with `parfunc`, channels, and locks
 - **Native AI Integration** – Query multiple LLMs via sigoREST
 - **PostgreSQL Support** – Direct database connectivity
@@ -111,7 +111,7 @@ GoLisp bridges:
 
 ```bash
 # Clone and build
-git clone https://github.com/gerhardquell/golisp.git
+git clone https://github.com/gerhardquell/golisp2.git
 cd golisp2
 go build .
 
@@ -141,8 +141,8 @@ golisp2 --swank 127.0.0.1:4321
 ## Contact & Community
 
 - **Author**: Gerhard Quell (gquell@skequell.de)
-- **Repository**: https://github.com/gerhardquell/golisp
-- **License**: MIT
+- **Repository**: https://github.com/gerhardquell/golisp2
+- **License**: Unlicense (public domain)
 
 *February 2026 – A submarine project surfacing.*
 

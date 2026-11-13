@@ -161,7 +161,7 @@ And retrospectives are really important — right after the last tests and befor
 
 ## The Submarine Surfaces
 
-GoLisp is on GitHub, MIT license. It is not a finished product — it is a tool that grows. With PostgreSQL connection, autopoiesis experiments, and the ability to extend itself through AI calls.
+GoLisp is on GitHub, MIT license.[^license] It is not a finished product — it is a tool that grows. With PostgreSQL connection, autopoiesis experiments, and the ability to extend itself through AI calls.
 
 I call it a *submarine project*: Develop in peace, build trust, before showing it to the world.
 
@@ -190,4 +190,6 @@ That's the most honest thing I can offer.
 *GoLisp: [github.com/gerhardquell/golisp](https://github.com/gerhardquell/golisp)*
 *sigoREST: [github.com/gerhardquell/sigoREST](https://github.com/gerhardquell/sigoREST)*
 
-*License: MIT*
+*License: MIT*[^license]
+
+[^license]: As of publication. GoLisp2 is now released under the Unlicense (public domain), see `LICENSE` in the repository.

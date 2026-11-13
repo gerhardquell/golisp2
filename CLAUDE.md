@@ -231,7 +231,6 @@ Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 | `docs/referenz-generiert.md` | Vollständige Funktionsreferenz, generiert aus `(env-symbols)` | du eine konkrete Funktion nachschlägst |
 | `docs/golisp2-cheatsheet.md` | Cheatsheet + Semantik-Überblick (Mensch-Referenz); KI-Version: `src/embed/ki-referenz.md` | du Sprachsemantik kompakt nachschlägst |
 | `docs/golisp2-fehler.md` | Fehler- und Fallstrick-Archiv mit Status | du nach bekannten Stolperfallen suchst |
-| `todos/PerfTODO.md` | Offene Performance-Arbeit | du optimierst |
 
 ### Was es bewusst *nicht* gibt
 

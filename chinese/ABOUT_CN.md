@@ -15,7 +15,7 @@
 **GoLisp** 是一个用 Go 语言编写的现代 Lisp 解释器，具有以下特性：
 
 - **尾调用优化（TCO）** – 无限递归深度，O(1) 栈空间
-- **卫生宏系统** – 使用 `defmacro` 和 `gensym` 进行安全的代码生成
+- **宏系统** – 使用 `defmacro` 和 `gensym` 避免命名冲突
 - **基于 Goroutine 的并发** – 通过 `parfunc`、通道和锁实现并行执行
 - **原生 AI 集成** – 通过 sigoREST 查询多个大语言模型
 - **PostgreSQL 支持** – 直接数据库连接
@@ -116,7 +116,7 @@ GoLisp 桥接了：
 
 ```bash
 # 克隆并构建
-git clone https://github.com/gerhardquell/golisp.git
+git clone https://github.com/gerhardquell/golisp2.git
 cd golisp2
 go build .
 
@@ -146,8 +146,8 @@ golisp2 --swank 127.0.0.1:4321
 ## 联系与社区
 
 - **作者**：Gerhard Quell (gquell@skequell.de)
-- **仓库**：https://github.com/gerhardquell/golisp
-- **许可证**：MIT
+- **仓库**：https://github.com/gerhardquell/golisp2
+- **许可证**：Unlicense（公共领域）
 
 *2026年2月 — 一个浮出水面的潜艇项目。*
 

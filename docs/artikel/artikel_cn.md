@@ -161,7 +161,7 @@ echo "(+ 1 2)" | ./golisp2
 
 ## 潜艇浮出水面
 
-GoLisp 在 GitHub 上，MIT 许可证。它不是一个成品 —— 它是一个成长的工具。带有 PostgreSQL 连接、自创生实验，以及通过 AI 调用自我扩展的能力。
+GoLisp 在 GitHub 上，MIT 许可证[^lizenz]。它不是一个成品 —— 它是一个成长的工具。带有 PostgreSQL 连接、自创生实验，以及通过 AI 调用自我扩展的能力。
 
 我称之为*潜艇项目*：在平静中发展，建立信任，再向世界展示。
 
@@ -190,8 +190,10 @@ GoLisp 在 GitHub 上，MIT 许可证。它不是一个成品 —— 它是一�
 *GoLisp：[github.com/gerhardquell/golisp](https://github.com/gerhardquell/golisp)*
 *sigoREST：[github.com/gerhardquell/sigoREST](https://github.com/gerhardquell/sigoREST)*
 
-*许可证：MIT*
+*许可证：MIT*[^lizenz]
 
 ---
 
 *中文翻译：由 Kimi 2.5 协助完成，以表达对中文读者社区的尊重。*
+
+[^lizenz]: 发表时的状态。GoLisp2 现已采用 Unlicense（公共领域），见仓库中的 `LICENSE`。

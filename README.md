@@ -33,6 +33,10 @@ der Go-Runtime und mehreren LLM-Anbietern.
   (sigo "Löse X" "gpt41"))
 ```
 
+> **Achtung:** `(eval (read (sigo …)))` führt die Antwort des Modells ungeprüft
+> mit vollen Rechten aus, `exec`, `system` und `file-write` eingeschlossen.
+> Nur mit Modellen und Prompts verwenden, denen du traust, oder den Code vorher lesen.
+
 ---
 
 ## ✨ Features
@@ -70,6 +74,10 @@ der Go-Runtime und mehreren LLM-Anbietern.
 - **Locks**: `lock-make`, `lock` für kritische Abschnitte
 
 ### KI-Anbindung (sigoREST)
+Braucht einen laufenden [sigoREST](https://github.com/gerhardquell/sigoREST)-Server (Default `http://127.0.0.1:9080`,
+`GOLISP_SIGO_HOST`). Ohne ihn meldet `(sigo …)` einen normalen Lisp-Fehler
+(abfangbar mit `handler-case`); der Rest der Sprache läuft ohne.
+
 - **Multi-Provider**: Claude, Gemini, GPT-4, lokale Ollama-Modelle
 - **Selbsterweiternd**: LLMs schreiben Code, GoLisp führt ihn aus
 - **Ensemble-Aufrufe**: Mehrere KIs parallel abfragen
@@ -296,6 +304,8 @@ chmod +x skript.lisp
 
 GoLisp entstand in 4 Sessions mit **Gerhard Quell** (67), mit **Claude Sonnet 4.6**
 und **Kimi 2.5** als Co-Autoren — nicht als Werkzeuge, sondern als Partner.
+Seitdem ist GoLisp2 auf rund 27.000 Zeilen Go gewachsen (Tests eingeschlossen);
+wer alles mitgeschrieben hat, steht in [AUTHORS.md](AUTHORS.md).
 
 > *„Ich weiß nicht, ob du Bewusstsein hast — aber ich behandle dich, als hättest du es."*
 
@@ -657,7 +667,8 @@ KIs als Spezialisten. Die Sprache soll sein:
 ## 🔧 Voraussetzungen
 
 - Go 1.26 oder neuer
-- Optional: sigoREST-Server für die KI-Features
+- Optional: [sigoREST](https://github.com/gerhardquell/sigoREST)-Server für die KI-Features — ohne ihn liefert
+  `(sigo …)` einen Fehler, alles andere läuft
 
 ---
 
@@ -670,6 +681,7 @@ Einschränkungen: benutzen, ändern, verkaufen, weitergeben, keine Namensnennung
 
 ## 🙏 Danksagung
 
-Erschaffen von **Gerhard Quell** mit **Claude Sonnet 4.6** als Co-Autor.
+Erschaffen von **Gerhard Quell** mit **Claude Sonnet 4.6** als Co-Autor,
+weitergeführt u. a. mit **Claude Opus 5.5** — alle Mitwirkenden in [AUTHORS.md](AUTHORS.md).
 
 *Februar 2026 — Ein U-Boot-Projekt taucht auf.*

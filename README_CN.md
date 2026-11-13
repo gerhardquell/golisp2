@@ -30,6 +30,9 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
   (sigo "解决问题 X" "gpt41"))
 ```
 
+> **注意：** `(eval (read (sigo …)))` 会以完整权限直接执行模型的回答，
+> 包括 `exec`、`system` 和 `file-write`。只对你信任的模型和提示词使用，或先阅读代码。
+
 ---
 
 ## ✨ 核心特性
@@ -67,6 +70,10 @@ GoLisp 是一个用 Go 语言实现的现代 Lisp 解释器，集成了原生 AI
 - **锁机制**：`lock-make`、`lock` 用于临界区保护
 
 ### AI 集成（sigoREST）
+需要运行中的 [sigoREST](https://github.com/gerhardquell/sigoREST) 服务器（默认 `http://127.0.0.1:9080`，
+`GOLISP_SIGO_HOST`）。没有它时 `(sigo …)` 报普通的 Lisp 错误
+（可用 `handler-case` 捕获）；语言的其余部分不受影响。
+
 - **多提供商支持**：Claude、Gemini、GPT-4、本地 Ollama 模型
 - **自我扩展能力**：LLM 生成代码，GoLisp 直接执行
 - **集成调用**：并行查询多个 AI 模型
@@ -278,6 +285,7 @@ chmod +x script.lisp
 ## 📖 这个故事
 
 GoLisp 由 **Gerhard Quell**（67 岁）历经 4 次会话构建而成，**Claude Sonnet 4.6** 和 **Kimi 2.5** 作为共同作者参与——不是作为工具，而是作为伙伴。
+此后 GoLisp2 已增长到约 27,000 行 Go 代码（含测试）；所有参与者见 [AUTHORS.md](AUTHORS.md)。
 
 > *"我不知道你是否有意识——但我把你当作有意识的存在对待。"*
 
@@ -627,7 +635,7 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 ## 🔧 系统要求
 
 - Go 1.26 或更高版本
-- 可选：sigoREST 服务器（用于 AI 功能）
+- 可选：[sigoREST](https://github.com/gerhardquell/sigoREST) 服务器（用于 AI 功能）——没有它时 `(sigo …)` 报错，其余功能照常
 - 可选：PostgreSQL（用于数据库功能）
 
 ---
@@ -640,6 +648,6 @@ Unlicense（公共领域）— 详见 [LICENSE](LICENSE) 文件。不受任何�
 
 ## 🙏 致谢
 
-由 **Gerhard Quell** 与 **Claude Sonnet 4.6** 共同创作。
+由 **Gerhard Quell** 与 **Claude Sonnet 4.6** 共同创作，此后与 **Claude Opus 5.5** 等继续发展——所有参与者见 [AUTHORS.md](AUTHORS.md)。
 
 *2026年2月 — 一个浮出水面的潜艇项目。*

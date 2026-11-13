@@ -30,6 +30,10 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
   (sigo "Solve X" "gpt41"))
 ```
 
+> **Caution:** `(eval (read (sigo …)))` runs the model's answer unchecked with
+> full privileges, including `exec`, `system` and `file-write`. Only use it with
+> models and prompts you trust, or read the code first.
+
 ---
 
 ## ✨ Features
@@ -67,6 +71,10 @@ GoLisp2 is a modern Lisp interpreter built in Go, featuring **tail-call optimiza
 - **Locks**: `lock-make`, `lock` for critical sections
 
 ### AI Integration (sigoREST)
+Requires a running [sigoREST](https://github.com/gerhardquell/sigoREST) server (default `http://127.0.0.1:9080`,
+`GOLISP_SIGO_HOST`). Without it, `(sigo …)` signals an ordinary Lisp error
+(catchable with `handler-case`); the rest of the language works without it.
+
 - **Multi-provider**: Claude, Gemini, GPT-4, local Ollama models
 - **Self-extending**: LLMs write code, GoLisp executes it
 - **Ensemble calls**: Query multiple AIs in parallel
@@ -285,6 +293,8 @@ chmod +x script.lisp
 ## 📖 The Story
 
 GoLisp was built in 4 sessions by **Gerhard Quell** (67), with **Claude Sonnet 4.6** and **Kimi 2.5** as co-authors — not as tools, but as partners.
+Since then GoLisp2 has grown to about 27,000 lines of Go (tests included);
+all contributors are listed in [AUTHORS.md](AUTHORS.md).
 
 > *"I don't know if you have consciousness — but I treat you as if you do."*
 
@@ -643,7 +653,8 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 ## 🔧 Requirements
 
 - Go 1.26 or later
-- Optional: sigoREST server for AI features
+- Optional: [sigoREST](https://github.com/gerhardquell/sigoREST) server for AI features — without it `(sigo …)`
+  signals an error, everything else works
 
 ---
 
@@ -655,5 +666,6 @@ Unlicense (public domain) — see [LICENSE](LICENSE) for details. Free of any re
 
 ## 🙏 Acknowledgments
 
-Created by **Gerhard Quell** with **Claude Sonnet 4.6** as co-author.
+Created by **Gerhard Quell** with **Claude Sonnet 4.6** as co-author,
+continued with **Claude Opus 5.5** among others — all contributors in [AUTHORS.md](AUTHORS.md).
 *August 2026 — A submarine project surfacing.*

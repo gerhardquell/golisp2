@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 mkdir -p build
 
 echo "→ go vet"
-go vet ./src/lib/ ./src/lib/swank/ 2>/dev/null || true
+go vet ./src/lib/ ./src/lib/swank/ || echo "⚠ go vet meldet Befunde (siehe oben) – Build läuft weiter" >&2
 
 echo "→ build golisp2"
 go build -o build/golisp2 ./src/

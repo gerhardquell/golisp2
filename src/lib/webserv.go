@@ -5,8 +5,7 @@
 //  Copyright: 2026 Gerhard Quell - SKEQuell
 //  Erstellt : 20260808
 //**********************************************************************
-// webserv: Ein-Aufruf-Bootstrap fuer die Web-Bridge (Spec
-// docs/superpowers/specs/2026-08-08-webserv-design.md). Fasst
+// webserv: Ein-Aufruf-Bootstrap fuer die Web-Bridge (Design 20260808). Fasst
 // http-serve + Content-Serving + boot.js-Injektion + browser-open zu
 // einem Primitiv zusammen. ws-export/-emit/-call u.a. bleiben unveraendert
 // nutzbar auf dem zurueckgegebenen Server-Objekt — kein zweiter

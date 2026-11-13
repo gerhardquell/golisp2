@@ -634,7 +634,7 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 
 - [`README_en.md`](README_en.md) — This file (English)
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — Complete language reference (German)
-- [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — Development journey and insights
+- [`RETROSPECTIVE.md.d/`](RETROSPECTIVE.md.d/) — Development journey and insights
 - [`CLAUDE.md`](CLAUDE.md) — Project conventions and architecture
 - [`docs/sigo.md`](docs/sigo.md) — sigoREST integration: preamble, `sigo-request`, costs (German)
 - [`docs/referenz-generiert.md`](docs/referenz-generiert.md) — function reference, generated from `(env-symbols)`
@@ -661,6 +661,9 @@ GoLisp is built on the **Centaur** concept: humans as meta-deciders, AIs as spec
 ## 📜 License
 
 Unlicense (public domain) — see [LICENSE](LICENSE) for details. Free of any restrictions: use, modify, sell, distribute, no attribution required.
+
+Contributions are released into the public domain as well (Unlicense) — by
+opening a pull request you agree to that.
 
 ---
 

@@ -543,7 +543,7 @@
             (list)))))
 
 ;; === Inspector ======================================================
-;; Spec: docs/superpowers/specs/2026-10-29-swank-inspector-design.md
+;; Design 20261029: slime-inspect (C-c I) klappt Objekte auf, jeder Wert klickbar.
 ;; Zustand global im Env (--swank: ein Env pro Verbindung). Teil 0 ist
 ;; immer das Objekt selbst (= :id des Titels).
 

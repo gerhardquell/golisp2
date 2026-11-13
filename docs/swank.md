@@ -115,7 +115,8 @@ Der REPL `*slime-repl USER*` öffnet sich. Definitionen halten, Rekursion klappt
 
 ### Inspector
 
-Spec: `docs/superpowers/specs/2026-10-29-swank-inspector-design.md`.
+Ziel: `C-c I` (`slime-inspect`) klappt `defclass`-Objekte, Hashtabellen,
+Structs, Listen und Vektoren auf; jeder Wert ist klickbar, mit History.
 Reines Lisp am Ende von `src/embed/swank.lisp`, Tests in
 `src/lib/swank/inspector_test.go`.
 

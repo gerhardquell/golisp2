@@ -6,7 +6,8 @@
 //  Erstellt : 20261001
 //**********************************************************************
 // Skript-Ausführung: RunScript (Datei als Hauptprogramm) und Spezialform
-// defmain. Spec: docs/superpowers/specs/2026-10-01-defmain-design.md
+// defmain: Einstiegspunkt, der nur beim Start als Hauptprogramm läuft,
+// nicht bei (load …) (Design 20261001).
 //**********************************************************************
 
 package lib

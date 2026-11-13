@@ -5,8 +5,8 @@
 ;; Copyright: 2026 Gerhard Quell - SKEQuell
 ;; Erstellt : 20260929
 ;; ********************************************************************
-;; Einzige Quelle der Typhierarchie (Spec:
-;; docs/superpowers/specs/2026-09-29-typep-design.md).
+;; Einzige Quelle der Typhierarchie für type-of/typep (Design 20260929:
+;; Typnamen, Hierarchie, Kombinatoren, Zahlbereiche).
 ;; Kernfakten liefert %cell-type (Go, celltype.go), Structs kommen aus
 ;; *struct-types* (stdlib.lisp), Klassen aus *class-types* (stdlib.lisp,
 ;; defclass; Repräsentation hash-table), Conditions aus *condition-types*

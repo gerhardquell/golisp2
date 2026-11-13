@@ -1,0 +1,30 @@
+# .github/workflows/test.yml – Build und Tests bei jedem Push/PR
+# Autor    : Gerhard Quell - gquell@skequell.de
+# CoAutor  : claude-opus-5.5
+# Copyright: 2026 Gerhard Quell - SKEQuell
+# Erstellt : 20261113
+# Ohne sigoREST und PostgreSQL: die Tests kommen ohne beide aus.
+
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: ./build.sh
+      - name: Go-Tests
+        run: go test ./... -count=1
+      - name: Lisp-Testsuite
+        run: ./build/golisp2 -t

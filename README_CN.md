@@ -625,7 +625,7 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 - [`README.md`](README.md) — 德文项目说明
 - [`README_en.md`](README_en.md) — 英文项目说明
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — 完整语言参考（德文）
-- [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — 开发历程与见解
+- [`RETROSPECTIVE.md.d/`](RETROSPECTIVE.md.d/) — 开发历程与见解
 - [`CLAUDE.md`](CLAUDE.md) — 项目规范与架构
 - [`docs/sigo.md`](docs/sigo.md) — sigoREST 集成：前导说明、`sigo-request`、费用（德文）
 - [`docs/referenz-generiert.md`](docs/referenz-generiert.md) — 函数参考，由 `(env-symbols)` 生成
@@ -643,6 +643,8 @@ GoLisp 基于半人马概念构建：人类作为元决策者，AI 作为专家�
 ## 📜 许可证
 
 Unlicense（公共领域）— 详见 [LICENSE](LICENSE) 文件。不受任何限制：使用、修改、销售、分发均可，无需署名。
+
+贡献的代码同样进入公共领域（Unlicense）——提交 Pull Request 即表示你同意这一点。
 
 ---
 

@@ -6,7 +6,7 @@
 //  Erstellt : 20260929
 //**********************************************************************
 // type-of / typep (src/embed/types.lisp), Struct-Registry (stdlib.lisp)
-// und Kollisionswarnungen. Spec: docs/superpowers/specs/2026-09-29-typep-design.md
+// und Kollisionswarnungen (Design 20260929).
 //**********************************************************************
 
 package lib

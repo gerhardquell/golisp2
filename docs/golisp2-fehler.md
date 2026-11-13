@@ -169,8 +169,9 @@ Diese 8 sind in CLAUDE.md dokumentiert und gültig — hier nur Index:
 
 ## F. Runde golisp2dfs: Mehrfachwerte, Channels, Gotchas (20261018, 0.5.1)
 
-Fund-Quelle: golisp2dfs (DataFlowSystem, `exp/dfs`). Plan:
-`docs/superpowers/plans/2026-10-18-channels-mv.md`.
+Fund-Quelle: golisp2dfs (DataFlowSystem, `exp/dfs`). Umgesetzt (Plan
+20261018): Mehrfachwerte in Spezialformen, Channels mit Timeout/Schließen,
+`spawn` mit Ergebnis-Channel, `chan-select`.
 
 ### F1. Mehrfachwerte in Spezialformen (`lock`, `case`, 21 Formen)  [FIXED 0.2.1]
 **Symptom:** Spezialformen, die das Ergebnis eines Teilausdrucks inspizieren,

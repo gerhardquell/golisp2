@@ -6,7 +6,7 @@
 ;; Erstellt : 20260725
 ;; ********************************************************************
 ;; defsystem-lite: ASDF-orientiert, keine ASDF-Kompatibilität.
-;; Design: docs/superpowers/specs/2026-07-25-defsystem-lite-design.md
+;; Design (20260725): deklarative Systeme, abhängigkeitsgeordnet und idempotent geladen.
 ;; Fundament: DefLoc-Registry (defined-in), makunbound, Redef-Log.
 ;; ********************************************************************
 

@@ -648,7 +648,7 @@ KIs als Spezialisten. Die Sprache soll sein:
 
 - [`README.md`](README.md) — Diese Datei (Deutsch)
 - [`BESCHREIBUNG.md`](BESCHREIBUNG.md) — Vollständige Sprachreferenz
-- [`RETROSPECTIVE.md`](docs/retrospectives/RETROSPECTIVE.md) — Entwicklungsreise und Erkenntnisse
+- [`RETROSPECTIVE.md.d/`](RETROSPECTIVE.md.d/) — Entwicklungsreise und Erkenntnisse
 - [`CLAUDE.md`](CLAUDE.md) — Projektkonventionen und Architektur
 - [`docs/sigo.md`](docs/sigo.md) — sigoREST-Anbindung: Vorspann, `sigo-request`, Kosten
 - [`docs/referenz-generiert.md`](docs/referenz-generiert.md) — Funktionsreferenz, generiert aus `(env-symbols)`
@@ -676,6 +676,9 @@ KIs als Spezialisten. Die Sprache soll sein:
 
 Unlicense (Public Domain) — siehe [LICENSE](LICENSE). Frei von jeglichen
 Einschränkungen: benutzen, ändern, verkaufen, weitergeben, keine Namensnennung nötig.
+
+Wer Code beisteuert, gibt ihn ebenfalls in die Gemeinfreiheit (Unlicense) —
+mit einem Pull Request erklärst du dich damit einverstanden.
 
 ---
 

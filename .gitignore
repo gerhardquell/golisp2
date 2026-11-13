@@ -60,3 +60,10 @@ docs/gespraeche/
 
 # Norvig-GPS-Port (PAIP): lokal behalten, nicht im öffentlichen Repo (Lizenz ungeklärt)
 pn-gps1/
+
+# Arbeitsspuren: lokal behalten, nicht im öffentlichen Repo
+zeitstempel.txt
+TODO.md.d/
+docs/TODO-20260928-1.md
+docs/superpowers/
+MITSCHRIFT.md.d/

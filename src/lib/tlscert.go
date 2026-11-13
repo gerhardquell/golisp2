@@ -6,8 +6,8 @@
 //  Erstellt : 20260821
 //**********************************************************************
 // Ephemere, selbstsignierte TLS-Zertifikate fuer :tls an http-serve/
-// webserv (docs/superpowers/specs/2026-08-08-webserv-design.md, Nachtrag
-// TLS). Nichts landet auf Platte, kein Zertifikat ueberlebt den Prozess.
+// webserv (Design 20260808, Nachtrag TLS). Nichts landet auf Platte,
+// kein Zertifikat ueberlebt den Prozess.
 // Vertrauensentscheidung liegt beim Client (golisp2web akzeptiert
 // selbstsignierte Zertifikate nur fuer Hosts aus seiner eigenen
 // LAN-Whitelist) -- golisp2 selbst faellt hier keine Trust-Entscheidung.

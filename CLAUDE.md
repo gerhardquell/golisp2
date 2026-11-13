@@ -24,10 +24,11 @@ Im Zweifel: `rg` statt raten.
 
 ## Konventionen
 
-- **Codierung:**
+- **Codierung:** nur auf Gerhards Rechner, falls vorhanden lesen — die
+  projektrelevanten Regeln stehen ohnehin in dieser Datei:
 ```
   ~/.claude/zutaten/sprachen/lisp.md
-  ~/.claude/zutaten/sprachen/golisp2.md 
+  ~/.claude/zutaten/sprachen/golisp2.md
 ```
 
 - **Sprache:** Go für den Kern, Lisp für Erweiterungen
@@ -244,8 +245,8 @@ Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 
 ## Philosophie
 
-GoLisp2 ist ein **U-Boot-Projekt** — es reift in Ruhe, bevor es der Welt
-gezeigt wird.
+GoLisp2 reifte als **U-Boot-Projekt** in Ruhe, bevor es der Welt gezeigt
+wurde — seit November 2026 ist das Repository öffentlich.
 
 - **Nexialistisch:** Go-Effizienz + Lisp-Eleganz + KI-Power
 - **Selbsterweiternd:** GoLisp2 vervollständigt sich durch KI-Calls selbst

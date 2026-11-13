@@ -1,8 +1,7 @@
 # TODO golisp2 – Aufgaben und Fragen
 
-Zusammengeführt am 19.10.2026 aus `TODO.md` (Stand 18.10.) und den drei Dateien in `TODO.md.d/`
-(`TODO-20260928.md`, `TODO-20261003-luecken.md`, `TODO-20261011.md`). Die alten Dateien bleiben
-als Verlauf dort. Ihre offenen Punkte sind mit `- [>]` als „übertragen“ markiert.
+Zusammengeführt am 19.10.2026 aus `TODO.md` (Stand 18.10.) und drei älteren TODO-Dateien
+vom 28.09., 03.10. und 11.10. (Verlauf, nicht im öffentlichen Repo). Ihre offenen Punkte sind mit `- [>]` als „übertragen“ markiert.
 Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpreter ausprobiert.
 
 ## 1. Entscheidungen (Gerhard)
@@ -74,7 +73,7 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       (pro Aufruf geht es schon über `sigo-request`). Erledigt 20.10.: Default-temperature
       0.2 (`GOLISP_SIGO_TEMPERATURE`), `0` ist Fehler; `max_tokens` bleibt beim
       Modell-Maximum von sigoREST (bewusst, `docs/sigo.md`).
-- [x] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: `TODO.md.d/TODO-20260928.md` Abschnitt 4).
+- [x] Schritt 4: Nach Schritt 2–3 neu messen (Vorgehen: TODO vom 28.09., Abschnitt 4).
       Greift `cached_tokens` mit dem Vorspann? Thinking-Anteil? Antworten golisp2-korrekt?
       Erledigt 20.10. (`docs/sigo.md`, „Messung 20261020"): Cache 99,5 % ab 2. Call, beide
       Modelle denken (~90 % der Completion), `zai-glm53-f` 11/12 korrekt bei 1/14 der Kosten.

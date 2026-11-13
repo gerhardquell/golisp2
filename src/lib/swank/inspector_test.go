@@ -7,7 +7,8 @@
 //**********************************************************************
 // SWANK-Inspector (swank.lisp): Antworten werden strukturell geprüft —
 // Plist-Felder und (:value "text" n)-ispecs, keine Substrings.
-// Spec: docs/superpowers/specs/2026-10-29-swank-inspector-design.md
+// Design 20261029: slime-inspect klappt defclass-Objekte, Hashtabellen,
+// Structs, Listen und Vektoren auf.
 //**********************************************************************
 
 package swank

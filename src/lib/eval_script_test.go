@@ -6,7 +6,7 @@
 //  Erstellt : 20261001
 //**********************************************************************
 // Tests für RunScript und die Spezialform defmain.
-// Spec: docs/superpowers/specs/2026-10-01-defmain-design.md
+// defmain läuft nur als Hauptprogramm, nie per (load …) (Design 20261001).
 //**********************************************************************
 
 package lib

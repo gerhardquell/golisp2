@@ -290,3 +290,25 @@ func TestInspectorHashSortiert(t *testing.T) {
     t.Errorf("Reihenfolge = %q, want \"a b c d\"", got)
   }
 }
+
+// Fehler im REPL: vor dem :abort kommt der Fehlerort als :write-string —
+// nur die Formen des Nutzers, ohne die inneren Aufrufe von swank.lisp.
+// Der :abort-Text selbst bleibt die reine Meldung.
+func TestListenerEvalFehlerZeigtOrt(t *testing.T) {
+  env := inspEnv(t, `(defun innen (x) (car x))`)
+  msg, err := lib.Read(`(:emacs-rex (swank-repl:listener-eval "(+ 1 (innen 5))") "USER" t 1)`)
+  if err != nil { t.Fatal(err) }
+  res, err := HandleMessage(env, msg)
+  if err != nil { t.Fatal(err) }
+  events := lib.CellToSlice(res)
+  if len(events) != 2 {
+    t.Fatalf("Events = %s, want :write-string und :return", res)
+  }
+  ws := lib.CellToSlice(events[0])
+  want := "  in Zeile 1: (car x)\n  aufgerufen von Zeile 1: (innen 5)\n"
+  if len(ws) != 2 || ws[0].Val != ":write-string" || ws[1].Val != want {
+    t.Errorf("erstes Event = %s, want (:write-string %q)", events[0], want)
+  }
+  ret := lib.CellToSlice(events[1])
+  abortText(t, lib.CellToSlice(ret[1])[1])
+}

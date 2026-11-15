@@ -94,6 +94,24 @@ func srcPosString(c *Cell) string {
   return form // zur Laufzeit gebaute Form (Makro, eval) — kein Ort
 }
 
+// wantsErrorTrace: ein trap-Handler bekommt den Fehlerort nur, wenn er als
+// Lambda genau zwei einfache Parameter hat. Alles andere (ein Parameter,
+// &optional/&rest, eingebaute Funktion) bleibt beim bisherigen Aufruf mit
+// der Meldung allein.
+func wantsErrorTrace(h *Cell) bool {
+  if h == nil || h.Type != LAMBDA {
+    return false
+  }
+  n := 0
+  for p := h.Car; p != nil && p.Type != NIL; p = p.Cdr {
+    if p.Type != LIST || p.Car == nil || p.Car.Type != ATOM || strings.HasPrefix(p.Car.Val, "&") {
+      return false
+    }
+    n++
+  }
+  return n == 2
+}
+
 // ErrorTrace liefert Fehlerort und Aufrufkette als Zeilen für die
 // Ausgabe unter der Meldung, oder "" wenn err keinen Ort trägt.
 func ErrorTrace(err error) string {

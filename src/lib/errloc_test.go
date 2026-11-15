@@ -106,3 +106,24 @@ func TestErrLocTailCallKeepsEntry(t *testing.T) {
     t.Fatalf("Aufrufkette = %v, want %s", got, want)
   }
 }
+
+// trap reicht den Fehlerort an einen Handler mit genau zwei Parametern
+// weiter (Meldung, Ort als Text wie in der CLI). Handler mit einem
+// Parameter und eingebaute Funktionen bekommen wie bisher nur die Meldung.
+func TestErrLocTrapHandlerGetsTrace(t *testing.T) {
+  env := errlocEnv(t)
+  for _, c := range []struct{ src, want string }{
+    {`(trap (car 5) (lambda (e ort) (list e ort)))`,
+      `("car: Liste erwartet" "  in Zeile 1: (car 5)\n")`},
+    {`(defun innen (x) (car x)) (trap (+ 1 (innen 5)) (lambda (e ort) ort))`,
+      `"  in Zeile 1: (car x)\n  aufgerufen von Zeile 1: (innen 5)\n"`},
+    {`(trap (car 5) (lambda (e) e))`, `"car: Liste erwartet"`},
+    {`(trap (car 5) (lambda (e &optional x) (list e x)))`, `("car: Liste erwartet" ())`},
+    {`(trap (car 5) (lambda args (length args)))`, `1`},
+    {`(trap (car 5) list)`, `("car: Liste erwartet")`},
+  } {
+    res, err := LoadString(c.src, env)
+    if err != nil { t.Errorf("%s: %v", c.src, err); continue }
+    if res.String() != c.want { t.Errorf("%s\n   = %s\nwant %s", c.src, res, c.want) }
+  }
+}

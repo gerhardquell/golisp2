@@ -48,6 +48,8 @@ Shebang — beides ist für golisp2 dasselbe).
   eingebettete Stdlib) nur `Zeile N`, bezogen auf die jeweilige Eingabe; zur Laufzeit gebaute Formen
   (Makro-Expansion) erscheinen ohne Ort. Tail-Calls hinterlassen keinen Eintrag außer dem ersten und
   letzten Aufruf eines Frames. Die Meldung selbst und die Exit-Codes sind unverändert.
+  Aus Lisp: `(trap body (lambda (e ort) ...))` — ein Handler mit genau zwei Parametern bekommt
+  denselben Text als `ort`. SLIME zeigt ihn im REPL vor dem Abbruch (`docs/swank.md`).
 - Zweites `defmain` in der Hauptdatei → `ERR: load <pfad>: defmain: bereits definiert in <pfad>:<zeile>`, Exit 1.
 - Wirkungslos (liefert `nil`, prüft nichts): in per `(load …)`
   nachgeladenen Dateien, REPL, SWANK, `-e`, stdin, `(eval …)`, Goroutinen.

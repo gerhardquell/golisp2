@@ -176,7 +176,10 @@ Zwei getrennte Mechanismen, leicht zu verwechseln:
   Laufzeitfehler.
 - **`trap`** (`(trap body handler)`) — projekteigene Fehlerbehandlung, kein
   CL-Konstrukt. Wertet `body` aus; bei `LispError` oder Go-Primitive-Fehler
-  wird `handler` mit der Fehlermeldung (String-Cell) aufgerufen. Kontrollfluss-
+  wird `handler` mit der Fehlermeldung (String-Cell) aufgerufen. Hat der Handler
+  genau zwei Parameter — `(lambda (e ort) ...)` —, bekommt er als zweiten den Fehlerort
+  samt Aufrufkette als Text, so wie die CLI ihn unter `ERR:` druckt (`docs/cli.md`).
+  `handler-case` gibt den Ort nicht weiter. Kontrollfluss-
   Sentinels (`throw`, `return-from`, `parfunc`-Signale) reicht `trap`
   unverändert durch — es fängt nur echte Fehler.
 

@@ -205,6 +205,17 @@
 ;; err aus trap ist meist schon Text; value-string würde ihn erneut quoten.
 (defun swank--fehler-text (err) (if (string? err) err (swank--value-string err)))
 
+;; swank--abort-mit-ort: Events für einen Fehler in Nutzercode. Vor dem
+;; :abort steht der Fehlerort (zweites trap-Argument) als :write-string.
+;; Die Aufrufkette endet an swank--eval1 — alles dahinter
+;; sind Aufrufe aus dieser Datei, kein Code des Nutzers.
+(defun swank--abort-mit-ort (err ort id)
+  (let ((text (regex-replace "(?s)  aufgerufen von [^\n]*[(]swank--eval1 .*" ort ""))
+        (ret  (list :return (list :abort (swank--fehler-text err)) id)))
+    (if (equal? text "")
+        (list ret)
+        (list (list :write-string text) ret))))
+
 (defun swank:describe-symbol (name id)
   (trap
     (let ((content (swank--describe-symbol name)))
@@ -414,16 +425,14 @@
   (trap
     (let ((result (eval (list (quote load) filename))))
       (list (list :return (list :ok (swank--value-string result)) id)))
-    (lambda (err)
-      (list (list :return (list :abort (swank--fehler-text err)) id)))))
+    (lambda (err ort) (swank--abort-mit-ort err ort id))))
 
 (defun swank:listener-eval (string id)
   (trap
     (let ((forms (swank--read-all string)))
       (let ((events (swank--eval-forms forms (list))))
         (append events (list (list :return (list :ok (list)) id)))))
-    (lambda (err)
-      (list (list :return (list :abort (swank--fehler-text err)) id)))))
+    (lambda (err ort) (swank--abort-mit-ort err ort id))))
 
 ;; Wertet alle Formen, sammelt (:write-string "<wert>\n" :repl-result)
 ;; Events. eval ist Spezialform, daher Wrapper als echte FUNC.
@@ -479,8 +488,7 @@
     (let ((result (eval (list (quote load) filename))))
       (list (list :return (list :ok (list :filename filename
                                           :result (swank--value-string result))) id)))
-    (lambda (err)
-      (list (list :return (list :abort (swank--fehler-text err)) id)))))
+    (lambda (err ort) (swank--abort-mit-ort err ort id))))
 
 ;; swank:compile-string-for-emacs (string) -> (:ok t).
 ;; Wertet alle Formen im String still aus.
@@ -489,8 +497,7 @@
     (let ((forms (swank--read-all string)))
       (swank--eval-forms-silently forms)
       (list (list :return (list :ok t) id)))
-    (lambda (err)
-      (list (list :return (list :abort (swank--fehler-text err)) id)))))
+    (lambda (err ort) (swank--abort-mit-ort err ort id))))
 
 ;; swank:find-definitions-for-emacs (name) -> (:ok ((name location))) | (:ok (:error "...")).
 ;; M-. in SLIME. Map-Lookup zuerst; sonst REPL-Snippet-Fallback oder :error.

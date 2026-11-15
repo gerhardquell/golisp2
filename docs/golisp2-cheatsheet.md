@@ -255,6 +255,7 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 ```lisp
 (error "Nachricht")               ; wirft Fehler (nur String)
 (trap expr (lambda (e) ...))      ; fängt, e = Message-String
+(trap expr (lambda (e ort) ...))  ; zwei Parameter: ort = Fehlerort + Aufrufkette als Text
 ; Condition-lite: strukturierte Fehler mit Typ + Slots
 (define-condition file-error (io-error) (path))
 (signal 'file-error :path "x.lisp")        ; unwindet immer (CL-Abweichung!)

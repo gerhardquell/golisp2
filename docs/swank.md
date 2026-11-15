@@ -97,6 +97,11 @@ Der REPL `*slime-repl USER*` öffnet sich. Definitionen halten, Rekursion klappt
 - **`listener-eval`-Return:** `:write-string` mit `:repl-result`-Tag senden,
   dann `(:ok nil)`. **Nicht** `(:ok "<string>")` — SLIME destrukturiert `:ok`
   als Liste.
+- **Fehlerort:** `listener-eval`, `load-file`, `compile-file-for-emacs` und
+  `compile-string-for-emacs` schicken bei einem Fehler vor dem `:abort` den Fehlerort samt
+  Aufrufkette als `:write-string` (`swank--abort-mit-ort`). Die Kette endet am Code des
+  Nutzers; die inneren Aufrufe aus `swank.lisp` werden abgeschnitten. Der `:abort`-Text
+  bleibt die reine Meldung.
 - **Mehrere Formen:** `listener-eval` liest alle Formen via `swank--read-all`
   (`lib.ReadAll`), evaluiert jede, sendet pro Ergebnis ein `:write-string`.
 - **`completions`-Format:** Liste von 1-Element-Listen `((name) …)` — der Client

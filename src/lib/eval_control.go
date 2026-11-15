@@ -443,6 +443,8 @@ func evalUnwindProtect(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 
 // trap: (trap body handler) → projekteigene Fehlerbehandlung (kein CL).
 // Wertet body aus. Bei LispError → handler mit Fehler-Cell aufrufen.
+// Hat der Handler genau zwei Parameter, bekommt er als zweiten den
+// Fehlerort samt Aufrufkette als Text (ErrorTrace, wie in der CLI).
 // Echte Go-Fehler (interne Fehler) werden durchgereicht.
 func evalTrap(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST ||
@@ -476,7 +478,12 @@ func evalTrap(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if herr != nil {
     return nil, herr
   }
-  return applyWithCtx(Primary(handler), []*Cell{lispErr.Msg}, ectx)
+  handler = Primary(handler)
+  hargs := []*Cell{lispErr.Msg}
+  if wantsErrorTrace(handler) {
+    hargs = append(hargs, MakeStr(ErrorTrace(err)))
+  }
+  return applyWithCtx(handler, hargs, ectx)
 }
 
 // parfunc: (parfunc ergebnis [:timeout N] expr1 expr2 ...)

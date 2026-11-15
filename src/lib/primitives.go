@@ -101,7 +101,6 @@ func BaseEnv() *Env {
 	RegisterGoroutines(env)
 
 	// Shared Memory
-	RegisterShm(env)
 
 	// Datei-I/O
 	RegisterFileIO(env)

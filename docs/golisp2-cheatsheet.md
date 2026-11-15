@@ -304,16 +304,6 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 ```
 `:timeout` ist in **Sekunden** (Bruchteile ok), `(sleep ms)` in Millisekunden.
 
-### Shared Memory
-```lisp
-(shm-alloc 1024)                  ; Allokieren
-(shm-write handle "data")         ; Schreiben
-(shm-read handle)                 ; Lesen
-(shm-status handle)               ; Status
-(shm-free handle)                 ; Freigeben
-(shm-cleanup)                     ; Alles aufräumen
-```
-
 ### File I/O
 ```lisp
 (file-write "f.txt" "inhalt")     ; Schreiben
@@ -795,7 +785,7 @@ kein CL-Port).
 
 - Alle Symbole in einem globalen Namespace.
 - Kein `defpackage`, `in-package`, `export`, `import`.
-- Kollisionen nur durch Namenskonvention vermeiden (Präfixe: `ga-`, `shm-`, `pg-`).
+- Kollisionen nur durch Namenskonvention vermeiden (Präfixe: `ga-`, `pg-`).
 
 **Auswirkung:** Bei großen Projekten mit mehreren Entwicklern/Modulen
 können Namenskonflikte entstehen. Workaround: Prefix-Konvention.

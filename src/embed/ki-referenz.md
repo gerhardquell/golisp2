@@ -129,7 +129,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
-sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.24.1"`
+sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.25.0"`
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler; ohne `temperature` schickt golisp2 0.2, `0` ist Fehler; ohne `max_tokens` gilt das Modell-Maximum), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
@@ -139,7 +139,6 @@ sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)`
   - `(chan-select chans [:timeout sek])` → `(values x t i)` (`i` = Index in `chans`, ab 0); Timeout oder alle geschlossen+leer → `(values nil nil nil)`
   - `(spawn fn)` → sofort Ergebnis-Channel mit genau einer Nachricht `(:ok wert)` bzw. `(:error "text")`; Fehler gehen zusätzlich auf stderr. Gegenstück zu `parfunc` (wartet)
   - `(pool-map n fn liste)` → wie `mapcar`, aber höchstens `n` Aufrufe gleichzeitig (Arbeiterpool, z. B. für viele `sigo`-Aufrufe); Ergebnisse in Eingabe-Reihenfolge, ein gescheitertes Element wird `(:error "text")`, die anderen laufen durch
-- **Shared Memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → nur Exit-Code; `(shell-output "cmd")` → stdout als String (wie `$(…)`), Exit ≠ 0 → Fehler; `shell-assoc` ist nur `assoc`, kein Shell-Aufruf
 - **Zeit:** `now format-time get-universal-time sleep` — `(now)` → Unix-Sekunden als Float; `(format-time "%F %T" [zeit] [:utc])` strftime-artig (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, Namen englisch); `get-universal-time` zählt ab 1900
@@ -309,7 +308,7 @@ kennen, um nicht zu raten:
 ### 10.1 Kein Package-System
 - Alle Symbole in einem globalen Namespace.
 - Kein `defpackage`, `in-package`, `export`, `import`.
-- Kollisionen nur durch Namenskonvention vermeiden (Präfixe wie `ga-`, `shm-`).
+- Kollisionen nur durch Namenskonvention vermeiden (Präfixe wie `ga-`, `pg-`).
 
 ### 10.2 Kein volles CLOS
 - `defstruct` (Constructor, Accessoren, Prädikat).
@@ -383,7 +382,7 @@ src/
     eval_core.go       Eval-Trampolin + Spezialformen-Dispatch
     eval_*.go          Spezialformen, Lambda, Control, Quasiquote
     primitives.go      BaseEnv() — alle Go-Primitiven
-    *.go               goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
+    *.go               goroutine, fileio, shellcmd, postgres, genalg, sigorest
     stdlib.go          //go:embed stdlib.lisp
     format*.go         CL-HyperSpec 22.3
     trace.go           trace/untrace

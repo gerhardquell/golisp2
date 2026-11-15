@@ -99,7 +99,6 @@ golisp2/
                          Maxima-Prozess, Sentinel-Sync statt Prompt-Parsing
       genalg.go          Genetischer Algorithmus (Core)
       genalg_prims.go    GA-Lisp-Primitiven
-      shm_lisp.go        Shared-Memory-Primitiven (High-Level Pool-API)
       sigorest.go        sigo, sigo-models, sigo-host — HTTP zu sigoREST
                          (Chokepoint: einziger HTTP-Client gegen :9080)
 

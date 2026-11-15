@@ -357,4 +357,4 @@ golisp2-only (Projekt-Erweiterungen, kein CL): 147 Symbole — siehe Anhang C.
 - `lib/sysinfo.go:argv`
 - `lib/sysinfo.go:environ`
 - `lib/sysinfo.go:getenv`
-- … (97 weitere: goroutine/channel/sigo/postgres/shm/genalg-Domänen)
+- … (91 weitere: goroutine/channel/sigo/postgres/genalg-Domänen)

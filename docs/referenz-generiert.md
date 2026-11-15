@@ -328,12 +328,6 @@
 | `setf` | generalisierte Zuweisung: Variablen, (car lst), (gethash key tbl), struct-Slots |
 | `shell-assoc` | passendes Paar aus Assoziationsliste suchen (Shell-Output-Parsing) |
 | `shell-output` | stdout von /bin/sh -c cmd als String; Exit != 0 -> Fehler |
-| `shm-alloc` | Block im Shared-Memory-Pool belegen |
-| `shm-cleanup` | Shared-Memory-Pool aufraeumen |
-| `shm-free` | Shared-Memory-Block freigeben |
-| `shm-read` | Block (maximal n Zeichen) als String lesen |
-| `shm-status` | Pool-Statistik als Assoziationsliste (total, used, free) |
-| `shm-write` | String in Shared-Memory-Block schreiben |
 | `shuffle` | neue Liste mit den Elementen in zufaelliger Reihenfolge (Fisher-Yates) |
 | `signal` | Condition des definierten Typs signalisieren (:msg ...) |
 | `sigo` | Prompt an sigoREST senden, Antwort als String |

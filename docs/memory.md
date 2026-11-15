@@ -46,7 +46,7 @@ Gibt die aktuellen Go-Runtime-Stats als Assoc-Liste zurück:
 1. **Keine Angst vor Allokationen.** Go's GC ist für kurzlebige Objekte
    optimiert. Nicht spekulativ optimieren — erst messen (`perfTodo.md`).
 2. **Externe Ressourcen explizit schließen:** PostgreSQL-Verbindungen mit
-   `pg-close`, Shared-Memory mit `shm-detach` / `shm-remove`.
+   `pg-close`, Maxima-Sessions mit `maxima-close`.
 3. **Das globale Environment wächst permanent** — es gibt kein `undefine`.
    Bei langlaufenden Prozessen relevant.
 4. **Monitoring:** bei Langzeit-Prozessen regelmäßig `(memstats)` loggen.

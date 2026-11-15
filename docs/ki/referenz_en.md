@@ -129,7 +129,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.24.1"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.25.0"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)
@@ -139,7 +139,6 @@ sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` �
   - `(chan-select chans [:timeout sec])` → `(values x t i)` (`i` = index in `chans`, from 0); timeout or all closed+empty → `(values nil nil nil)`
   - `(spawn fn)` → immediately a result channel with exactly one message `(:ok value)` or `(:error "text")`; errors also go to stderr. Counterpart to `parfunc` (which waits)
   - `(pool-map n fn list)` → like `mapcar`, but at most `n` calls at the same time (worker pool, e.g. for many `sigo` calls); results in input order, a failed element becomes `(:error "text")`, the others keep running
-- **Shared memory:** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **File I/O:** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell:** `system shell-output file-stat shell-assoc` — `(system "cmd")` → exit code only; `(shell-output "cmd")` → stdout as string (like `$(…)`), exit ≠ 0 → error; `shell-assoc` is just `assoc`, no shell call
 - **Time:** `now format-time get-universal-time sleep` — `(now)` → Unix seconds as float; `(format-time "%F %T" [time] [:utc])` strftime-like (`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`, English names); `get-universal-time` counts from 1900
@@ -309,7 +308,7 @@ so it does not guess:
 ### 10.1 No package system
 - All symbols live in one global namespace.
 - No `defpackage`, `in-package`, `export`, `import`.
-- Avoid collisions only by naming convention (prefixes like `ga-`, `shm-`).
+- Avoid collisions only by naming convention (prefixes like `ga-`, `pg-`).
 
 ### 10.2 No full CLOS
 - `defstruct` (constructor, accessors, predicate).
@@ -383,7 +382,7 @@ src/
     eval_core.go       eval trampoline + special form dispatch
     eval_*.go          special forms, lambda, control, quasiquote
     primitives.go      BaseEnv() — all Go primitives
-    *.go               goroutine, fileio, shellcmd, postgres, genalg, shm, sigorest
+    *.go               goroutine, fileio, shellcmd, postgres, genalg, sigorest
     stdlib.go          //go:embed stdlib.lisp
     format*.go         CL HyperSpec 22.3
     trace.go           trace/untrace

@@ -126,7 +126,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 环境/内省
 `memstats sleep env-symbols lisp-implementation-version` —— `(sleep ms)` 单位为毫秒；`(env-symbols)` 返回根环境中所有名字
-（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.24.1"`
+（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.25.0"`
 
 ### 领域模块（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` —— `(sigo "prompt" [model] [session-id] [host])` → 文本；`sigo*` → 哈希表（`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`）；`(sigo-request h [host])`：哈希表的键必须恰好来自 `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`（其他键 → 报错；未给 `temperature` 时 golisp2 发送 0.2，`0` 会报错；未给 `max_tokens` 时使用模型最大值），结果 = 完整响应的哈希表外加 `elapsed`（秒）；`(sigo-usage)` 累计值，含 `calls`/`elapsed`；`(sigo-costs [since [until]])`（Unix 秒，同 `(now)`），`(sigo-budget)`，`(sigo-model-info [model])`（价格为美元/百万 token，**0 = 未知，不是免费**）；`(sigo-system-prompt "")` → 模型只看到提示词（若有 session-id 则加上会话历史）
@@ -136,7 +136,6 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
   - `(chan-select chans [:timeout sec])` → `(values x t i)`（`i` = 在 `chans` 中的下标，从 0 开始）；超时或全部已关闭且为空 → `(values nil nil nil)`
   - `(spawn fn)` → 立即返回一个结果通道，其中恰好有一条消息 `(:ok value)` 或 `(:error "text")`；错误同时输出到 stderr。是 `parfunc`（会等待）的对应物
   - `(pool-map n fn list)` → 同 `mapcar`，但同时最多 `n` 个调用（工作池，例如用于大量 `sigo` 调用）；结果按输入顺序，失败的元素变为 `(:error "text")`，其他元素继续运行
-- **共享内存：** `shm-alloc shm-free shm-write shm-read shm-status shm-cleanup`
 - **文件 I/O：** `file-write file-append file-read file-exists? file-delete set-working-directory get-working-directory get-file-path directory-files gets slurp err-write printf sprintf fprintf sscanf argv getenv environ`
 - **Shell：** `system shell-output file-stat shell-assoc` —— `(system "cmd")` → 只返回退出码；`(shell-output "cmd")` → stdout 字符串（同 `$(…)`），退出码 ≠ 0 → 报错；`shell-assoc` 只是 `assoc`，不调用 shell
 - **时间：** `now format-time get-universal-time sleep` —— `(now)` → Unix 秒（浮点数）；`(format-time "%F %T" [time] [:utc])` 类似 strftime（`%Y %y %m %d %H %M %S %j %F %T %a %A %b %B %z %Z %s %N %3N %%`，名称为英文）；`get-universal-time` 从 1900 年起计
@@ -304,7 +303,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 10.1 没有包系统
 - 所有符号位于同一个全局命名空间。
 - 没有 `defpackage`、`in-package`、`export`、`import`。
-- 只能靠命名约定避免冲突（前缀如 `ga-`、`shm-`）。
+- 只能靠命名约定避免冲突（前缀如 `ga-`、`pg-`）。
 
 ### 10.2 没有完整的 CLOS
 - `defstruct`（构造函数、访问器、谓词）。
@@ -378,7 +377,7 @@ src/
     eval_core.go       求值蹦床 + 特殊形式分派
     eval_*.go          特殊形式、lambda、控制流、准引用
     primitives.go      BaseEnv() —— 所有 Go 原语
-    *.go               goroutine、fileio、shellcmd、postgres、genalg、shm、sigorest
+    *.go               goroutine、fileio、shellcmd、postgres、genalg、sigorest
     stdlib.go          //go:embed stdlib.lisp
     format*.go         CL HyperSpec 22.3
     trace.go           trace/untrace

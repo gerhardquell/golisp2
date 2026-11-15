@@ -10,7 +10,7 @@
 
 Dieses Dokument beschreibt die öffentlichen Funktionen, Spezialformen und Makros von GoLisp mit kurzen, lauffähigen Beispielen. Dateioperationen nutzen immer das Projekt-temp-Verzeichnis `./tmp`. Funktionen, die externe Dienste benötigen (sigo, PostgreSQL), enthalten beschreibende Beispiele.
 
-Stand: 20261111 — inklusive Hash-Tables, Vektoren, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Typen (typep, typecase, deftype, subtypep), Regex, Arbeiterpool, Shared Memory, Trace.
+Stand: 20261111 — inklusive Hash-Tables, Vektoren, defstruct, defgeneric/defmethod, Conditions, setf, defsystem, FORMAT, Typen (typep, typecase, deftype, subtypep), Regex, Arbeiterpool, Trace.
 
 ## Spezialformen
 
@@ -3006,70 +3006,6 @@ Session starten, Ausdruck auswerten (Ergebnis als String), Session beenden.
 (maxima-eval m "integrate(x^2, x)")  ; => "x^3/3"
 (maxima-eval m "factor(x^2-1)")      ; => "(x-1)*(x+1)"
 (maxima-close m)
-```
-
-## Shared Memory
-
-### shm-alloc
-
-**Syntax:** `(shm-alloc [worker-id])`
-
-Belegt einen Block im Shared-Memory-Pool; liefert ein Handle.
-
-```lisp
-(define z (shm-alloc))
-```
-
-### shm-write
-
-**Syntax:** `(shm-write handle string)`
-
-Schreibt einen String in den Block; liefert den String zurück.
-
-```lisp
-(shm-write z "daten")
-```
-
-### shm-read
-
-**Syntax:** `(shm-read handle [n])`
-
-Liest den Block (maximal n Zeichen) als String.
-
-```lisp
-(shm-read z 5)
-; => "daten"
-```
-
-### shm-free
-
-**Syntax:** `(shm-free handle)`
-
-Gibt den Block frei.
-
-```lisp
-(shm-free z)
-```
-
-### shm-status
-
-**Syntax:** `(shm-status)`
-
-Pool-Statistik als Aliste (`total`, `used`, `free`).
-
-```lisp
-(shm-status)
-; => ((total . 150) (used . 1) (free . 149))
-```
-
-### shm-cleanup
-
-**Syntax:** `(shm-cleanup)`
-
-Räumt den Shared-Memory-Pool auf.
-
-```lisp
-(shm-cleanup)
 ```
 
 ## Trace & Debug

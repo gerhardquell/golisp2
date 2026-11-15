@@ -36,11 +36,14 @@ func TestParfuncOrder(t *testing.T) {
   evalEq(t, src, "(10 20 30)")
 }
 
-// TestParfuncErrorBecomesNil: ein Expr wirft Fehler → nil an der Stelle.
-func TestParfuncErrorBecomesNil(t *testing.T) {
-  // (/ 1 0) wirft Fehler → Goroutine liefert nil.
-  src := `(parfunc r (+ 1 1) (/ 1 0) (* 2 2)) r`
-  evalEq(t, src, "(2 () 4)")
+// TestParfuncErrorBecomesErrorEntry: ein Zweig scheitert → (:error text) an
+// der Stelle, wie bei pool-map und spawn. Die anderen Zweige laufen durch;
+// ein Zweig, der () liefert, bleibt davon unterscheidbar.
+func TestParfuncErrorBecomesErrorEntry(t *testing.T) {
+  evalEq(t, `(parfunc r (+ 1 1) (car 5) () (* 2 2)) r`,
+    `(2 (:error "car: Liste erwartet") () 4)`)
+  // auch ein Sprung aus dem Zweig heraus ist ein Fehler des Zweigs
+  evalEq(t, `(car (car (block b (parfunc r (return-from b 1)))))`, ":error")
 }
 
 func TestParfuncEmpty(t *testing.T) {

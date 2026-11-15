@@ -369,6 +369,7 @@ Fängt Fehler im Body ab und ruft handler mit der Fehler-Cell auf.
 **Syntax:** `(parfunc ergebnis [:timeout n] ausdruck ...)`
 
 Wertet alle Ausdrücke parallel aus, speichert die Ergebnisliste in ergebnis und gibt sie zurück.
+Scheitert ein Ausdruck, steht an seiner Stelle `(:error "text")`; läuft die Zeit ab, `()`.
 
 ```lisp
 (parfunc ergebnis (+ 1 2) (* 3 4) (- 10 5))

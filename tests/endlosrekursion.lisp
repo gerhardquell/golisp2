@@ -16,7 +16,9 @@
 
 (parfunc endlos-ergebnis :timeout 1 (endlos-tief 0))
 
-(assert= () (car endlos-ergebnis))
+;; Der Zweig scheitert am Tiefenlimit; parfunc meldet das an seiner Stelle
+;; als (:error text) statt still ().
+(assert= '(:error "eval: maximum recursion depth exceeded") (car endlos-ergebnis))
 
 (println "endlosrekursion: alle PASS")
 nil

@@ -167,6 +167,7 @@ Wichtige:
 (function fn)                     ; Function-Literal (#' reader-sugar)
 (exec "shell-cmd")                ; Shell-Kommando ausführen
 (parfunc name [:timeout N] e1 ...) ; bindet name an Ergebnisliste; :timeout in s
+                                  ; Zweig scheitert → (:error "text") an der Stelle, Zeit um → ()
 (documentation 'f 'function)      ; Docstring (nur Lisp-Definitionen)
 ```
 

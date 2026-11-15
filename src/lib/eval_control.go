@@ -481,6 +481,7 @@ func evalTrap(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 
 // parfunc: (parfunc ergebnis [:timeout N] expr1 expr2 ...)
 // Wertet alle Ausdrücke parallel aus, sammelt Ergebnisse als Liste.
+// Scheitert ein Ausdruck, steht an seiner Stelle (:error text).
 // Optionaler :timeout N (Sekunden): bei Ablauf liefert die Goroutine nil.
 func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Car == nil || args.Car.Type != ATOM {
@@ -531,7 +532,8 @@ func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   for i, expr := range exprList {
     go func(idx int, e *Cell) {
       val, err := evalWithCtx(e, env, evalCtx{depth: 0, ctx: workerCtx})
-      if err != nil { val = MakeNil() }
+      // Fehler nicht verschlucken: (:error text) an der Stelle, wie pool-map
+      if err != nil { val = List(MakeAtom(":error"), MakeStr(err.Error())) }
       ch <- parfuncResult{idx, Primary(val)}
     }(i, expr)
   }

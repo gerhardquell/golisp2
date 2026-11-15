@@ -330,9 +330,10 @@ Einschränkungen:
 ## Rekursionstiefe und `parfunc`
 
 - `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.
-- `parfunc` kennt **keine** Keywords: `(parfunc erg e1 e2 ...)` wertet *alle*
-  weiteren Formen als parallele Zweige aus — ein `:timeout` wird als Zweig
-  evaluiert, nicht als Option. Absicherung gegen Endlos-Zweige: `MaxEvalDepth`.
+- `(parfunc erg [:timeout N] e1 e2 ...)` wertet die Formen als parallele Zweige aus.
+  `:timeout N` (Sekunden, Zahl-Literal direkt nach dem Namen) bricht wartende Zweige ab,
+  an ihrer Stelle steht `()`. Scheitert ein Zweig, steht dort `(:error "text")` (seit 0.25.1,
+  vorher still `()`); die anderen laufen durch.
 
 ---
 

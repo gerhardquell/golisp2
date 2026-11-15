@@ -546,3 +546,26 @@ func TestLambdaDefaultSeesEarlierParams(t *testing.T) {
     evalEq(t, c.src, c.want)
   }
 }
+
+// defun, defmacro und defstruct definieren immer global (CL), auch aus
+// einem let oder Funktionsrumpf heraus. Die Closure bleibt lexikalisch:
+// der Rumpf sieht die Variablen des umgebenden Scopes. define bleibt lokal.
+func TestDefunIsAlwaysGlobal(t *testing.T) {
+  for _, c := range []struct{ src, want string }{
+    {`(let ((c 0)) (defun nxt () (setq c (+ c 1)))) (nxt) (nxt)`, "2"},
+    {`(defun outer () (defun inner () 42) 1) (outer) (inner)`, "42"},
+    {"(let ((n 3)) (defmacro mal-n (x) `(* ,n ,x))) (mal-n 5)", "15"},
+    {`(defun mach-typ () (defstruct punkt x y)) (mach-typ) (punkt-x (make-punkt :x 7 :y 8))`, "7"},
+    {`(defun mach-typ2 () (defstruct kreis r)) (mach-typ2) (kreis? (make-kreis :r 1))`, "t"},
+    // define bleibt lokal (Scheme-Semantik), auch in der Funktionsform
+    {`(defun o2 () (define lokal-var 1) (define (lokal-fn) 2) (+ lokal-var (lokal-fn)))
+      (list (o2) (trap lokal-var (lambda (e) 'weg)) (trap (lokal-fn) (lambda (e) 'weg)))`, "(3 weg weg)"},
+    // die Stdlib lässt ihre Hilfsfunktionen nicht im globalen Env liegen
+    {`(length '(1 2)) (reverse '(1 2)) (iota 3)
+      (list (trap len-acc (lambda (e) 'weg)) (trap rev-acc (lambda (e) 'weg)) (trap iota-acc (lambda (e) 'weg)))`, "(weg weg weg)"},
+  } {
+    res, err := LoadString(c.src, errlocEnv(t))
+    if err != nil { t.Errorf("%s: %v", c.src, err); continue }
+    if res.String() != c.want { t.Errorf("%s\n   = %s, want %s", c.src, res, c.want) }
+  }
+}

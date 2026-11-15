@@ -273,8 +273,11 @@ func evalDefun(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   name := args.Car.Val
   doc, hasDoc, body := extractDocstring(args.Cdr.Cdr)
   lam  := makeLambda(args.Cdr.Car, wrapBegin(body), env)
-  if err := checkRootRedefine(env, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
-  if err := env.Set(name, lam); err != nil { return nil, err }
+  // CL: immer global, auch aus let oder Funktionsrumpf. Die Closure (env)
+  // bleibt lexikalisch — nur der Name landet im Root-Env.
+  root := env.Root()
+  if err := checkRootRedefine(root, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
+  if err := root.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile(), form.SrcLine)
   if hasDoc {
     RegisterDocstring(name, doc)
@@ -382,8 +385,11 @@ func evalDefmacro(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   doc, hasDoc, body := extractDocstring(args.Cdr.Cdr)
   lam  := makeLambda(args.Cdr.Car, wrapBegin(body), env)
   lam.Type = MACRO   // ← einziger Unterschied zu defun!
-  if err := checkRootRedefine(env, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
-  if err := env.Set(name, lam); err != nil { return nil, err }
+  // CL: immer global, auch aus let oder Funktionsrumpf. Die Closure (env)
+  // bleibt lexikalisch — nur der Name landet im Root-Env.
+  root := env.Root()
+  if err := checkRootRedefine(root, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
+  if err := root.Set(name, lam); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile(), form.SrcLine)
   if hasDoc {
     RegisterDocstring(name, doc)

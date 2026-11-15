@@ -45,12 +45,12 @@
 ;; === Listen =====================================================
 
 (defun reverse (lst)
-  (defun rev-acc (l acc)
+  (define (rev-acc l acc)
     (if (null l) acc (rev-acc (cdr l) (cons (car l) acc))))
   (rev-acc lst ()))
 
 (defun length (lst)
-  (defun len-acc (l n)
+  (define (len-acc l n)
     (if (null l) n (len-acc (cdr l) (+ n 1))))
   (if (eq (%cell-type lst) 'vector) (%vector-length lst) (len-acc lst 0)))
 
@@ -146,7 +146,7 @@
   (if (= n 0) lst (list-tail (cdr lst) (- n 1))))
 
 (defun iota (n)
-  (defun iota-acc (i acc)
+  (define (iota-acc i acc)
     (if (< i 0) acc (iota-acc (- i 1) (cons i acc))))
   (iota-acc (- n 1) ()))
 
@@ -575,7 +575,7 @@
 
 ;; remove-duplicates: erstes Vorkommen je Wert bleibt, Reihenfolge erhalten.
 (defun remove-duplicates (lst)
-  (defun rd-acc (l acc)
+  (define (rd-acc l acc)
     (cond ((null l)             (reverse acc))
           ((member (car l) acc) (rd-acc (cdr l) acc))
           (t                    (rd-acc (cdr l) (cons (car l) acc)))))
@@ -670,7 +670,7 @@
 
 ;; string-find: Index der ersten Fundstelle von needle in haystack, sonst ().
 (defun string-find (needle haystack)
-  (defun sf-acc (i max-i)
+  (define (sf-acc i max-i)
     (cond ((> i max-i) ())
           ((equal? (substring haystack i (+ i (string-length needle))) needle) i)
           (t (sf-acc (+ i 1) max-i))))

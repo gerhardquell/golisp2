@@ -41,8 +41,8 @@ Counted directly from the `switch expr.Car.Val` in `eval_core.go` (as of
 | `(let (bind) . body)` | parallel binding | tail-capable |
 | `(let* (bind) . body)` | sequential binding | tail-capable; **native special form** (not stdlib — each binding sees the previous ones) |
 | `(lambda (p) . body)` | closure | `&optional`, `&key`, `&rest` |
-| `(defun f (p) . body)` | global function | multi-body via `wrapBegin` |
-| `(defmacro m (p) . body)` | global macro | |
+| `(defun f (p) . body)` | global function | always global (CL), even from inside `let`/a function body — the closure stays lexical; local helpers: `labels`/`flet` or `(define (f p) ...)`; multi-body via `wrapBegin` |
+| `(defmacro m (p) . body)` | global macro | always global, like `defun`; so is `defstruct` |
 | `(defmain (args) . body)` | script entry point | only if the file is the main program (shebang/`golisp2 f.lisp`); runs after loading; return value = exit code 0–255; otherwise `nil`. `args` without binary/file name; only works at top level/inside special forms of the main file, not via `funcall`/`apply`/`mapcar` |
 | `(define sym val)` | variable definition | global or local; `(define (f p) body)` = shorthand for `(define f (lambda (p) body))` |
 | `(set! sym val)` | update one pair | only `env.Update` — **error if unbound**, creates nothing |
@@ -64,7 +64,7 @@ Counted directly from the `switch expr.Car.Val` in `eval_core.go` (as of
 | `(unwind-protect protected cleanup)` | cleanup always | |
 | `(lock mutex . body)` | critical section | `mutex` from `lock-make`; body like `begin` |
 | `(eval form)` | global eval | always `Env.Root()` |
-| `(load "file")` | load file | **caution:** inside `defun` → bound locally! |
+| `(load "file")` | load file | **caution:** inside `defun` → the file's `define`/`defvar` are bound locally (`defun`/`defmacro`/`defstruct` are global)! |
 | `(prog1 first . rest)` | return first value | |
 | `(prog2 a b . rest)` | return b | |
 | `(cond (test result) ...)` | conditional | `else`/`t` = default |
@@ -129,7 +129,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.26.0"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.27.0"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)
@@ -267,7 +267,7 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 ## 8. Eval Environment
 
 - `(eval form)` → **always `Env.Root()`**, never the lambda scope
-- `load` → **EXCEPTION:** inside a `defun` body → binding local, not global
+- `load` → **EXCEPTION:** inside a `defun` body → the file's `define`/`defvar` are local, not global (`defun`/`defmacro`/`defstruct` are always global)
   - workaround: `(eval '(load "file"))` for global loading
 - `redefine-policy` → `'allow` / `'warn` / `'error` (default `warn`)
 
@@ -278,7 +278,7 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 | Case | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` — `eq` on numbers always `()` (design) | often `t` (small int) |
-| `load` in `defun` | bound locally | global |
+| `load` in `defun` | `define`/`defvar` bound locally | global |
 | `progv` | no lexical/dynamic separation | dynamic |
 | `declare` | no-op | type checks |
 | `the` | type ignored | type checks |
@@ -347,7 +347,7 @@ so it does not guess:
 - `catch`/`throw` available (section 2), but without restart semantics.
 - No CLOS meta-object protocol.
 
-### 10.9 `load` in `defun` binds locally
+### 10.9 `load` in `defun` binds `define`/`defvar` locally
 - Workaround: `(eval '(load "file"))` for global loading.
 - Reason: `eval` runs in `Env.Root()`.
 

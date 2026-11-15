@@ -41,8 +41,8 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(let (bind) . body)` | Parallel-Bindung | Tail-fähig |
 | `(let* (bind) . body)` | Sequentielle Bindung | Tail-fähig; **native Spezialform** (nicht Stdlib — jede Bindung sieht die vorherigen) |
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest` |
-| `(defun f (p) . body)` | Globale Funktion | Multi-Body via `wrapBegin` |
-| `(defmacro m (p) . body)` | Globales Makro | |
+| `(defun f (p) . body)` | Globale Funktion | immer global (CL), auch aus `let`/Funktionsrumpf — Closure bleibt lexikalisch; lokale Helfer: `labels`/`flet` oder `(define (f p) ...)`; Multi-Body via `wrapBegin` |
+| `(defmacro m (p) . body)` | Globales Makro | immer global, wie `defun`; ebenso `defstruct` |
 | `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname; wirkt nur auf oberster Ebene/in Spezialformen der Hauptdatei, nicht über `funcall`/`apply`/`mapcar` |
 | `(define sym val)` | Var-Def | Global oder lokal; `(define (f p) body)` = Kurzform für `(define f (lambda (p) body))` |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
@@ -64,7 +64,7 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(unwind-protect protected cleanup)` | Cleanup immer | |
 | `(lock mutex . body)` | Kritischer Abschnitt | `mutex` aus `lock-make`; Body wie `begin` |
 | `(eval form)` | Globales Eval | Immer `Env.Root()` |
-| `(load "file")` | Datei laden | **Achtung:** in `defun` → lokal gebunden! |
+| `(load "file")` | Datei laden | **Achtung:** in `defun` → `define`/`defvar` der Datei lokal gebunden (`defun`/`defmacro`/`defstruct` global)! |
 | `(prog1 first . rest)` | Ersten Wert returnen | |
 | `(prog2 a b . rest)` | b returnen | |
 | `(cond (test result) ...)` | Conditional | `else`/`t` = Default |
@@ -129,7 +129,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
-sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.26.0"`
+sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.27.0"`
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler; ohne `temperature` schickt golisp2 0.2, `0` ist Fehler; ohne `max_tokens` gilt das Modell-Maximum), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
@@ -267,7 +267,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 ## 8. Eval-Umgebung
 
 - `(eval form)` → **immer `Env.Root()`**, nie Lambda-Scope
-- `load` → **AUSNAHME:** in `defun`-Body → Bindung lokal, nicht global
+- `load` → **AUSNAHME:** in `defun`-Body → `define`/`defvar` der Datei lokal, nicht global (`defun`/`defmacro`/`defstruct` sind immer global)
   - Workaround: `(eval '(load "file"))` für globales Laden
 - `redefine-policy` → `'allow` / `'warn` / `'error` (Default `warn`)
 
@@ -278,7 +278,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | Fall | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | oft `t` (Small-Int) |
-| `load` in `defun` | Lokal gebunden | Global |
+| `load` in `defun` | `define`/`defvar` lokal gebunden | Global |
 | `progv` | Lex/dyn-Trennung fehlt | Dynamisch |
 | `declare` | No-op | Type-Checks |
 | `the` | Typ ignoriert | Type-Checks |
@@ -347,7 +347,7 @@ kennen, um nicht zu raten:
 - `catch`/`throw` vorhanden (Abschnitt 2), aber ohne Restart-Semantik.
 - Kein CLOS Meta-Object-Protocol.
 
-### 10.9 `load` in `defun` bindet lokal
+### 10.9 `load` in `defun` bindet `define`/`defvar` lokal
 - Workaround: `(eval '(load "file"))` für globales Laden.
 - Begründung: `eval` läuft in `Env.Root()`.
 

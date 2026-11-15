@@ -201,3 +201,15 @@ func TestRunVersionFlag(t *testing.T) {
     }
   }
 }
+
+// Der Selbsttest (-t) zählt Fehler einzelner Zeilen mit: ein scheiterndes
+// assert= in einer geladenen Testdatei blieb sonst unbemerkt (Exit 0).
+func TestSelftestZaehltFehler(t *testing.T) {
+  env := lib.BaseEnv()
+  if got := test(env, "(+ 1 2)"); got != 0 {
+    t.Errorf("fehlerfreie Form zählt %d, want 0", got)
+  }
+  if got := test(env, "(car 5)"); got != 1 {
+    t.Errorf("scheiternde Form zählt %d, want 1", got)
+  }
+}

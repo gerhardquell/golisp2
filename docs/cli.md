@@ -10,7 +10,7 @@ Fehler nach stderr, Exit-Code sagt die Wahrheit.
 | *(default)* | Liest von stdin, gibt nur das Ergebnis aus | `echo "(+ 1 2)" \| ./build/golisp2` |
 | `-i` | Interaktiver REPL (go-prompt, braucht TTY) | `./build/golisp2 -i` |
 | `-e EXPR` | Expression(en) direkt ausführen | `./build/golisp2 -e "(* 6 7)"` |
-| `-t` | Lisp-Testsuite ausführen (Exit-Code = Anzahl FAILs) | `./build/golisp2 -t` |
+| `-t` | Lisp-Testsuite ausführen (Exit-Code = Anzahl Fehler, höchstens 255) | `./build/golisp2 -t` |
 | `--swank HOST:PORT` | SWANK-Server starten (Emacs/SLIME) | `./build/golisp2 --swank 127.0.0.1:4242` |
 | `--version` | Version ausgeben (`golisp2 <version> (<commit>, <datum>[, dirty])`, Beispiel: `golisp2 0.6.1 (f7dca7a, 2026-10-18)`) und beenden | `./build/golisp2 --version` |
 | `DATEI` | Lisp-Datei laden und ausführen | `./build/golisp2 script.lisp` |
@@ -70,7 +70,9 @@ seiteneffektbehaftete Skripte saubere Ausgabe erzeugen.
 - **0** – Erfolg
 - **1** – Fehler (Parser, Eval, unbekanntes Symbol, …)
 - **Datei mit `defmain`:** Rückgabewert des Körpers (0–255), siehe oben
-- **-t:** Anzahl fehlgeschlagener Framework-Tests (`run-tests`), 0 = grün
+- **-t:** fehlgeschlagene Framework-Tests (`run-tests`) plus Fehler der Rauchtest-Zeilen und
+  geladenen Testdateien (ein scheiterndes `assert=` bricht seine Datei ab und zählt als ein Fehler),
+  bei 255 gedeckelt; 0 = grün
 - Lisp-seitig: `(exit n)` beendet den Prozess sofort mit Code `n`
 
 ```bash

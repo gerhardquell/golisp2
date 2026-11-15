@@ -83,8 +83,7 @@ func run(args []string, out, errOut io.Writer, ext ...Extension) int {
   }
 
   if *testFlag {
-    runTests(env)
-    return 0
+    return runTests(env)
   }
 
   if *exprFlag != "" {

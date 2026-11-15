@@ -42,6 +42,12 @@ Shebang — beides ist für golisp2 dasselbe).
   (`./greet.lisp Anna` → `("Anna")`). Environment: `(getenv)`/`(environ)`.
 - Rückgabewert = Exit-Code: ganze Zahl 0–255 → dieser Code; `nil`/Nicht-
   Zahl → 0; andere Zahl → `ERR`, Exit 1. Kein Ergebnis-Echo auf stdout.
+- Fehlerort (seit 20261115): unter der `ERR:`-Zeile stehen auf stderr die fehlerhafte Form
+  (`  in <datei>:<zeile>: <form>`) und die Aufrufkette von innen nach außen
+  (`  aufgerufen von …`, höchstens 20, danach `… N weitere Aufrufe`). Ohne Datei (`-e`, REPL, stdin,
+  eingebettete Stdlib) nur `Zeile N`, bezogen auf die jeweilige Eingabe; zur Laufzeit gebaute Formen
+  (Makro-Expansion) erscheinen ohne Ort. Tail-Calls hinterlassen keinen Eintrag außer dem ersten und
+  letzten Aufruf eines Frames. Die Meldung selbst und die Exit-Codes sind unverändert.
 - Zweites `defmain` in der Hauptdatei → `ERR: load <pfad>: defmain: bereits definiert in <pfad>:<zeile>`, Exit 1.
 - Wirkungslos (liefert `nil`, prüft nichts): in per `(load …)`
   nachgeladenen Dateien, REPL, SWANK, `-e`, stdin, `(eval …)`, Goroutinen.

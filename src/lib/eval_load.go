@@ -48,7 +48,7 @@ func loadFile(filename string, env *Env, ectx evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("load: '%s' nicht lesbar: %w", resolvedPath, err)
   }
 
-  src := strings.TrimSpace(string(data))
+  src := string(data) // nicht trimmen: führende Leerzeilen zählen für SrcLine
   var result *Cell
 
   // Ein Pointer für die ganze Datei: alle Formen teilen denselben String,
@@ -57,6 +57,7 @@ func loadFile(filename string, env *Env, ectx evalCtx) (*Cell, error) {
 
   // Mehrere Ausdrücke in der Datei nacheinander auswerten
   r := NewReader(src)
+  r.file = srcPath
   for {
     r.skipWS()
     if r.pos >= len(r.src) { break }

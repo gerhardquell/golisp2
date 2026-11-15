@@ -22,6 +22,7 @@ type Reader struct {
   src  []rune
   pos  int
   line int
+  file *string // Quelldatei für die Stempelung, nil = keine (REPL, -e)
 }
 
 func NewReader(s string) *Reader {
@@ -128,6 +129,7 @@ func (r *Reader) readList() (*Cell, error) {
 
   cell := Cons(car, cdr)
   cell.SrcLine = startLine
+  cell.srcFile = r.file
   return cell, nil
 }
 

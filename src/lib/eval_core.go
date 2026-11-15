@@ -77,10 +77,18 @@ func Eval(expr *Cell, env *Env) (res *Cell, err error) {
 // evalWithCtx wertet einen Ausdruck in env aus. Trampolin: Tail-Positionen
 // setzen expr/env und continue'n, statt zu rekursieren – O(1) Stack.
 func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
+  // call: die Lambda-Anwendung, in deren Rumpf dieser Frame gerade steckt;
+  // first: die erste dieses Frames — Tail-Calls überschreiben call, der
+  // Einstieg bliebe sonst unsichtbar. Nur für die Aufrufkette im
+  // Fehlerfall (errloc.go).
+  var call, first *Cell
   defer func() {
     if r := recover(); r != nil {
       res = nil
       err = fmt.Errorf("eval: panic recovered: %v", r)
+    }
+    if err != nil {
+      err = locate(err, expr, call, first)
     }
   }()
 
@@ -329,6 +337,8 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
       if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv, ectx); err != nil {
         return nil, err
       }
+      if call == nil { first = expr }
+      call = expr
       expr = fn.Cdr   // body
       env = localEnv
       continue

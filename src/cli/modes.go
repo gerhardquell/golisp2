@@ -22,6 +22,18 @@ import (
   "golisp2/src/lib"
 )
 
+// printErr ist die eine Fehlerausgabe der CLI: Meldung, darunter Fehlerort
+// und Aufrufkette (lib.ErrorTrace), soweit bekannt.
+func printErr(w io.Writer, err error) {
+  var le *lib.LispError
+  if errors.As(err, &le) {
+    fmt.Fprintln(w, "ERR:", le.Msg)
+  } else {
+    fmt.Fprintln(w, "ERR:", err)
+  }
+  fmt.Fprint(w, lib.ErrorTrace(err))
+}
+
 // runExpression parses and executes expressions from -e. A single form's
 // result is printed unless the form wrote to stdout itself; for multiple
 // forms only side effects are emitted so
@@ -56,12 +68,7 @@ func runExpression(expr string, env *lib.Env, out io.Writer, errOut io.Writer) i
     }
     result, err = lib.Eval(form, env)
     if err != nil {
-      var le *lib.LispError
-      if errors.As(err, &le) {
-        fmt.Fprintf(errOut, "ERR: %s\n", le.Msg)
-      } else {
-        fmt.Fprintf(errOut, "ERR: %v\n", err)
-      }
+      printErr(errOut, err)
       return 1
     }
     cur = cur.Cdr
@@ -141,12 +148,7 @@ func runStdin(env *lib.Env) int {
           }
           result, err := lib.Eval(form, env)
           if err != nil {
-            var le *lib.LispError
-            if errors.As(err, &le) {
-              fmt.Fprintf(os.Stderr, "ERR: %s\n", le.Msg)
-            } else {
-              fmt.Fprintf(os.Stderr, "ERR: %v\n", err)
-            }
+            printErr(os.Stderr, err)
             hasError = true
             continue
           }
@@ -209,12 +211,7 @@ func runREPL(env *lib.Env) int {
     }
     result, err := lib.Eval(cell, env)
     if err != nil {
-      var le *lib.LispError
-      if errors.As(err, &le) {
-        fmt.Fprintln(os.Stderr, "ERR:", le.Msg)
-      } else {
-        fmt.Fprintln(os.Stderr, "ERR:", err)
-      }
+      printErr(os.Stderr, err)
       continue
     }
     fmt.Println("=>", result)

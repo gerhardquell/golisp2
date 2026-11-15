@@ -466,8 +466,8 @@ func evalTrap(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
 
   // Alle Fehler abfangen (LispError + Go-Primitive-Fehler)
-  lispErr, ok := err.(*LispError)
-  if !ok {
+  var lispErr *LispError
+  if !errors.As(err, &lispErr) {
     lispErr = &LispError{Msg: MakeStr(err.Error())}
   }
 

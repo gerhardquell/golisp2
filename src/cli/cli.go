@@ -98,12 +98,7 @@ func run(args []string, out, errOut io.Writer, ext ...Extension) int {
   if fs.NArg() > 0 {
     exitCode, result, hasMain, err := lib.RunScript(fs.Arg(0), fs.Args()[1:], env)
     if err != nil {
-      var le *lib.LispError
-      if errors.As(err, &le) {
-        fmt.Fprintln(errOut, "ERR:", le.Msg)
-      } else {
-        fmt.Fprintln(errOut, "ERR:", err)
-      }
+      printErr(errOut, err)
       return 1
     }
     if !hasMain {

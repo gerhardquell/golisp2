@@ -334,7 +334,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
         return nil, fmt.Errorf("eval: Lambda hat keinen Closure-Env")
       }
       localEnv := NewEnv(closureEnv)
-      if err := bindEvalArgs(fn.Car, expr.Cdr, env, closureEnv, localEnv, ectx); err != nil {
+      if err := bindEvalArgs(fn.Car, expr.Cdr, env, localEnv, ectx); err != nil {
         return nil, err
       }
       if call == nil { first = expr }

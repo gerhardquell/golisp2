@@ -29,7 +29,7 @@ func applyLambda(lambda *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
   }
   localEnv   := NewEnv(closureEnv)
-  if err := bindArgs(lambda.Car, args, closureEnv, localEnv, ectx); err != nil {
+  if err := bindArgs(lambda.Car, args, localEnv, ectx); err != nil {
     return nil, err
   }
   return evalWithCtx(lambda.Cdr, localEnv, ectx.child())
@@ -74,8 +74,10 @@ func bindSupplied(localEnv *Env, supplied string, delivered bool) {
 }
 
 // bindArgs: Lambda-Parameter binden – unterstützt regulär, dotted-rest,
-// &optional, &key, &rest (CL-Stil Lambda-Listen).
-func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx evalCtx) error {
+// &optional, &key, &rest (CL-Stil Lambda-Listen). Default-Ausdrücke laufen
+// in localEnv: sie sehen die schon gebundenen früheren Parameter (CL) und
+// über die Env-Kette die Closure.
+func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   argIdx  := 0
   hasKey  := false  // &key verwendet → kein excess check
@@ -122,7 +124,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
         _ = localEnv.Set(name, args[argIdx]); argIdx++
         bindSupplied(localEnv, supplied, true)
       } else if def != nil {
-        val, err := evalWithCtx(def, closureEnv, ectx.child())
+        val, err := evalWithCtx(def, localEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, Primary(val))
         bindSupplied(localEnv, supplied, false)
@@ -142,7 +144,7 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
       }
       if !found {
         if def != nil {
-          val, err := evalWithCtx(def, closureEnv, ectx.child())
+          val, err := evalWithCtx(def, localEnv, ectx.child())
           if err != nil { return err }
           _ = localEnv.Set(name, Primary(val))
         } else {
@@ -160,9 +162,9 @@ func bindArgs(params *Cell, args []*Cell, closureEnv *Env, localEnv *Env, ectx e
 
 // bindEvalArgs bindet Lambda-Parameter direkt aus den unevaluierten
 // Argument-Ausdrücken. Jeder Argument-Wert wird in callerEnv ausgewertet,
-// Default-Ausdrücke für &optional/&key in closureEnv. Damit entfällt der
+// Default-Ausdrücke für &optional/&key in localEnv (wie bindArgs). Damit entfällt der
 // Zwischen-Slice []*Cell, den bindArgs sonst benötigt.
-func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv *Env, ectx evalCtx) error {
+func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, localEnv *Env, ectx evalCtx) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   hasKey := false
 
@@ -217,7 +219,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
         argExprs = argExprs.Cdr
         bindSupplied(localEnv, supplied, true)
       } else if def != nil {
-        val, err := evalWithCtx(def, closureEnv, ectx.child())
+        val, err := evalWithCtx(def, localEnv, ectx.child())
         if err != nil { return err }
         _ = localEnv.Set(name, Primary(val))
         bindSupplied(localEnv, supplied, false)
@@ -244,7 +246,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, closureEnv, localEnv 
       }
       if !found {
         if def != nil {
-          val, err := evalWithCtx(def, closureEnv, ectx.child())
+          val, err := evalWithCtx(def, localEnv, ectx.child())
           if err != nil { return err }
           _ = localEnv.Set(name, Primary(val))
         } else {

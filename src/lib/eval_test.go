@@ -525,3 +525,24 @@ func TestLambdaSuppliedP(t *testing.T) {
   evalEq(t, "(begin (defmacro m (x &optional (y nil y-p)) `(if ,y-p 'geliefert 'default)) (m 1))", "default")
   evalEq(t, "(begin (defmacro m (x &optional (y nil y-p)) `(if ,y-p 'geliefert 'default)) (m 1 2))", "geliefert")
 }
+
+// Default-Ausdrücke von &optional/&key sehen die früheren Parameter (CL:
+// die Lambda-Liste wird von links nach rechts gebunden) — auf beiden
+// Bindungswegen, direkter Aufruf und apply.
+func TestLambdaDefaultSeesEarlierParams(t *testing.T) {
+  for _, c := range []struct{ src, want string }{
+    {`((lambda (a &optional (b a)) (list a b)) 1)`, "(1 1)"},
+    {`(apply (lambda (a &optional (b a)) (list a b)) '(1))`, "(1 1)"},
+    {`((lambda (a &optional (b (* a 2)) (c (+ a b))) (list a b c)) 1)`, "(1 2 3)"},
+    {`((lambda (a &key (k (+ a 1))) (list a k)) 1)`, "(1 2)"},
+    {`(apply (lambda (a &key (k (+ a 1))) (list a k)) '(1))`, "(1 2)"},
+    {`((lambda (&key (x 1) (y (* x 10))) (list x y)) :x 5)`, "(5 50)"},
+    // supplied-p des Vorgängers ist ebenfalls sichtbar
+    {`((lambda (&optional (a 1 a-p) (b (if a-p 'ja 'nein))) b))`, "nein"},
+    // Variablen der Closure bleiben sichtbar, Parameter verdecken sie
+    {`(let ((z 7)) ((lambda (a &optional (b (+ a z))) b) 1))`, "8"},
+    {`(let ((a 100)) ((lambda (a &optional (b a)) b) 1))`, "1"},
+  } {
+    evalEq(t, c.src, c.want)
+  }
+}

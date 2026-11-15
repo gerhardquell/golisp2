@@ -97,6 +97,11 @@ Der REPL `*slime-repl USER*` öffnet sich. Definitionen halten, Rekursion klappt
 - **`listener-eval`-Return:** `:write-string` mit `:repl-result`-Tag senden,
   dann `(:ok nil)`. **Nicht** `(:ok "<string>")` — SLIME destrukturiert `:ok`
   als Liste.
+- **Mehrere Verbindungen:** `--swank` gibt jeder Verbindung ein eigenes Env. Der Ausgabekanal
+  (`format t`, `printf`, Warnungen) gilt aber prozessweit; er zeigt auf die Verbindung, die zuletzt
+  eine Nachricht geschickt hat, und fällt nach dem Trennen auf stdout zurück (`swankSender`).
+  `print`/`println` sind je Env umgeleitet und davon unabhängig. Grenze: werten zwei Verbindungen
+  gleichzeitig aus, landet die Ausgabe beider bei der späteren.
 - **Fehlerort:** `listener-eval`, `load-file`, `compile-file-for-emacs` und
   `compile-string-for-emacs` schicken bei einem Fehler vor dem `:abort` den Fehlerort samt
   Aufrufkette als `:write-string` (`swank--abort-mit-ort`). Die Kette endet am Code des

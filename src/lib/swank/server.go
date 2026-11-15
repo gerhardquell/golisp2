@@ -30,13 +30,25 @@ func RunServer(addr string) error {
   }
   fmt.Fprintf(os.Stderr, "%s – SWANK server on %s\n", lib.VersionText("golisp2"), listener.Addr())
 
+  serveListener(listener)
+  return nil
+}
+
+// serveListener nimmt Verbindungen an, bis der Listener schließt. Jede
+// bekommt ein eigenes Env (handleConn); den Ausgabekanal teilen sie über
+// einen swankSender, weil lib.SetOutputWriter prozessweit gilt.
+func serveListener(listener net.Listener) {
+  sender := &swankSender{}
   for {
     conn, err := listener.Accept()
     if err != nil {
+      if errors.Is(err, net.ErrClosed) {
+        return
+      }
       fmt.Fprintf(os.Stderr, "swank accept error: %v\n", err)
       continue
     }
-    go handleConn(conn)
+    go handleConn(conn, sender)
   }
 }
 
@@ -150,20 +162,20 @@ func writeStringFallback(event *lib.Cell) error {
   return err
 }
 
-func handleConn(conn net.Conn) {
+func handleConn(conn net.Conn, sender *swankSender) {
   env := lib.BaseEnv()
   if err := lib.LoadStdlib(env); err != nil {
     fmt.Fprintf(os.Stderr, "swank stdlib error: %v\n", err)
     conn.Close()
     return
   }
-  serveConn(conn, env, func(f func()) { f() })
+  serveConn(conn, env, func(f func()) { f() }, sender)
 }
 
 // serveConn registers the swank primitives and loads swank.lisp into env,
 // then runs the message loop. Used by handleConn, where env is fresh per
 // connection, so re-registering is correct (no prior bindings to redefine).
-func serveConn(conn net.Conn, env *lib.Env, exec func(func())) {
+func serveConn(conn net.Conn, env *lib.Env, exec func(func()), sender *swankSender) {
   defer func() {
     if r := recover(); r != nil {
       fmt.Fprintf(os.Stderr, "swank conn panic: %v\n", r)
@@ -174,9 +186,7 @@ func serveConn(conn net.Conn, env *lib.Env, exec func(func())) {
 
   var setupErr error
   exec(func() {
-    RegisterSwankEnv(env, func(event *lib.Cell) error {
-      return writeFrame(conn, event)
-    })
+    RegisterSwankEnv(env, sender.send)
     setupErr = LoadSwankLisp(env)
   })
   if setupErr != nil {
@@ -184,7 +194,7 @@ func serveConn(conn net.Conn, env *lib.Env, exec func(func())) {
     return
   }
 
-  runMessageLoop(conn, env, exec)
+  runMessageLoop(conn, env, exec, sender)
 }
 
 // serveSharedConn runs one shared-env connection: no setup (ServeEnv did
@@ -202,18 +212,23 @@ func serveSharedConn(conn net.Conn, env *lib.Env, exec func(func()), sender *swa
   }()
   fmt.Fprintf(os.Stderr, "swank conn from %s\n", conn.RemoteAddr())
 
-  gen := sender.setCurrent(func(event *lib.Cell) error {
-    return writeFrame(conn, event)
-  })
-  defer sender.clear(gen)
-
-  runMessageLoop(conn, env, exec)
+  runMessageLoop(conn, env, exec, sender)
 }
 
 // runMessageLoop reads SWANK frames from conn and dispatches them through
 // HandleMessage, writing back every resulting event. Shared by serveConn
 // and serveSharedConn.
-func runMessageLoop(conn net.Conn, env *lib.Env, exec func(func())) {
+// runMessageLoop liest Nachrichten, bis die Verbindung endet. Ausgaben
+// (print, format t, Warnungen) gehen an die Verbindung, die zuletzt eine
+// Nachricht geschickt hat — gesetzt beim Verbinden und vor jeder Auswertung,
+// zurückgenommen beim Trennen (dann Fallback stdout).
+// shortcut: werten zwei Verbindungen GLEICHZEITIG aus, gewinnt die spätere
+// für beide; sauber wird das erst mit einem Ausgabekanal pro Auswertung.
+func runMessageLoop(conn net.Conn, env *lib.Env, exec func(func()), sender *swankSender) {
+  toConn := func(event *lib.Cell) error { return writeFrame(conn, event) }
+  gen := sender.setCurrent(toConn)
+  defer func() { sender.clear(gen) }()
+
   br := bufio.NewReader(conn)
   for {
     msg, err := readFrame(br)
@@ -222,6 +237,7 @@ func runMessageLoop(conn net.Conn, env *lib.Env, exec func(func())) {
       return
     }
     var events *lib.Cell
+    gen = sender.setCurrent(toConn)
     exec(func() { events, err = HandleMessage(env, msg) })
     if err != nil {
       fmt.Fprintf(os.Stderr, "swank handle error: %v\n", err)

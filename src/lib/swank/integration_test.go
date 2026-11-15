@@ -29,15 +29,7 @@ func TestSwankServerConnectionInfo(t *testing.T) {
   }
   defer listener.Close()
 
-  go func() {
-    for {
-      conn, err := listener.Accept()
-      if err != nil {
-        return
-      }
-      go handleConn(conn)
-    }
-  }()
+  go serveListener(listener)
 
   conn, err := net.Dial("tcp", listener.Addr().String())
   if err != nil {
@@ -108,5 +100,82 @@ func TestIntegrationFindDefinitionsLoadFile(t *testing.T) {
   }
   if !strings.Contains(s, ":line") {
     t.Fatalf("expected :line in result, got: %s", s)
+  }
+}
+
+// swankClient: eine offene Verbindung zum Test-Server.
+type swankClient struct {
+  conn net.Conn
+  br   *bufio.Reader
+}
+
+func dialSwank(t *testing.T, addr string) *swankClient {
+  t.Helper()
+  conn, err := net.Dial("tcp", addr)
+  if err != nil {
+    t.Fatalf("dial: %v", err)
+  }
+  t.Cleanup(func() { conn.Close() })
+  return &swankClient{conn: conn, br: bufio.NewReader(conn)}
+}
+
+// eval schickt src als listener-eval und liefert alle Frames bis :return.
+func (c *swankClient) eval(t *testing.T, src string, id int) []string {
+  t.Helper()
+  if err := writeFrame(c.conn, rexEval(src, id)); err != nil {
+    t.Fatalf("writeFrame: %v", err)
+  }
+  c.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+  var frames []string
+  for {
+    resp, err := readFrame(c.br)
+    if err != nil {
+      t.Fatalf("readFrame nach %q (bisher %v): %v", src, frames, err)
+    }
+    frames = append(frames, resp.String())
+    if strings.HasPrefix(resp.String(), "(:return") {
+      return frames
+    }
+  }
+}
+
+// Zwei Verbindungen an einem --swank-Server (RunServer: eigenes Env je
+// Verbindung): die Ausgabe einer Auswertung geht an die Verbindung, die
+// sie ausgelöst hat — nicht an die zuletzt verbundene, und auch dann
+// noch, wenn die andere inzwischen getrennt ist.
+func TestSwankOutputGoesToEvaluatingConnection(t *testing.T) {
+  listener, err := net.Listen("tcp", "127.0.0.1:0")
+  if err != nil {
+    t.Fatalf("listen: %v", err)
+  }
+  defer listener.Close()
+  defer lib.ResetOutputWriter()
+  defer lib.ResetErrorWriter()
+  go serveListener(listener)
+
+  a := dialSwank(t, listener.Addr().String())
+  a.eval(t, "(+ 1 1)", 1) // Verbindung A ist fertig eingerichtet
+  b := dialSwank(t, listener.Addr().String())
+  b.eval(t, "(+ 2 2)", 2) // B verbindet später
+
+  hat := func(frames []string, text string) bool {
+    for _, f := range frames {
+      if strings.HasPrefix(f, "(:write-string") && strings.Contains(f, text) {
+        return true
+      }
+    }
+    return false
+  }
+  if frames := a.eval(t, `(format t "von-a~%")`, 3); !hat(frames, "von-a") {
+    t.Errorf("A sieht die eigene Ausgabe nicht: %v", frames)
+  }
+  if frames := b.eval(t, `(format t "von-b~%")`, 4); !hat(frames, "von-b") {
+    t.Errorf("B sieht die eigene Ausgabe nicht: %v", frames)
+  }
+
+  b.conn.Close()
+  time.Sleep(50 * time.Millisecond)
+  if frames := a.eval(t, `(format t "a-nach-b~%")`, 5); !hat(frames, "a-nach-b") {
+    t.Errorf("A verliert die Ausgabe, nachdem B getrennt hat: %v", frames)
   }
 }

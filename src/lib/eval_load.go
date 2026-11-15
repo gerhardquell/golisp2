@@ -29,7 +29,8 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   // wirkungslos (eval_script.go).
   inner := ectx
   inner.script = nil
-  return loadFile(filenameCell.Val, env, inner)
+  // CL: die Datei läuft im globalen Env, nicht im Scope des Aufrufers
+  return loadFile(filenameCell.Val, env.Root(), inner)
 }
 
 // loadFile ist der einzige Dateilade-Pfad: genutzt von evalLoad und

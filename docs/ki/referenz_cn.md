@@ -62,7 +62,7 @@
 | `(unwind-protect protected cleanup)` | 总是执行清理 | |
 | `(lock mutex . body)` | 临界区 | `mutex` 来自 `lock-make`；body 同 `begin` |
 | `(eval form)` | 全局求值 | 总是在 `Env.Root()` 中 |
-| `(load "file")` | 加载文件 | **注意：** 在 `defun` 中 → 文件里的 `define`/`defvar` 为局部绑定（`defun`/`defmacro`/`defstruct` 为全局）！ |
+| `(load "file")` | 加载文件 | 总是在全局环境中运行（同 CL），即使在函数内调用；看不到调用者的局部变量 |
 | `(prog1 first . rest)` | 返回第一个值 | |
 | `(prog2 a b . rest)` | 返回 b | |
 | `(cond (test result) ...)` | 条件 | `else`/`t` = 默认分支 |
@@ -126,7 +126,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 环境/内省
 `memstats sleep env-symbols lisp-implementation-version` —— `(sleep ms)` 单位为毫秒；`(env-symbols)` 返回根环境中所有名字
-（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.27.0"`
+（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.28.0"`
 
 ### 领域模块（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` —— `(sigo "prompt" [model] [session-id] [host])` → 文本；`sigo*` → 哈希表（`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`）；`(sigo-request h [host])`：哈希表的键必须恰好来自 `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`（其他键 → 报错；未给 `temperature` 时 golisp2 发送 0.2，`0` 会报错；未给 `max_tokens` 时使用模型最大值），结果 = 完整响应的哈希表外加 `elapsed`（秒）；`(sigo-usage)` 累计值，含 `calls`/`elapsed`；`(sigo-costs [since [until]])`（Unix 秒，同 `(now)`），`(sigo-budget)`，`(sigo-model-info [model])`（价格为美元/百万 token，**0 = 未知，不是免费**）；`(sigo-system-prompt "")` → 模型只看到提示词（若有 session-id 则加上会话历史）
@@ -263,8 +263,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ## 8. 求值环境
 
 - `(eval form)` → **总是 `Env.Root()`**，从不在 lambda 作用域中
-- `load` → **例外：** 在 `defun` 体内 → 文件里的 `define`/`defvar` 为局部绑定，不是全局（`defun`/`defmacro`/`defstruct` 总是全局）
-  - 变通方法：用 `(eval '(load "file"))` 全局加载
+- `load` → **总是 `Env.Root()`**，同 `eval`；`defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` 也总是全局绑定。只有 `define` 是局部绑定
 - `redefine-policy` → `'allow` / `'warn` / `'error`（默认 `warn`）
 
 ---
@@ -274,7 +273,6 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | 情况 | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` —— `eq` 对数字总是 `()`（设计如此） | 常为 `t`（小整数） |
-| `defun` 中的 `load` | `define`/`defvar` 为局部绑定 | 全局 |
 | `progv` | 没有词法/动态区分 | 动态 |
 | `declare` | 空操作 | 类型检查 |
 | `the` | 忽略类型 | 类型检查 |
@@ -342,9 +340,9 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 - 有 `catch`/`throw`（第 2 节），但没有 restart 语义。
 - 没有 CLOS 元对象协议。
 
-### 10.9 `defun` 中的 `load` 对 `define`/`defvar` 是局部绑定
-- 变通方法：用 `(eval '(load "file"))` 全局加载。
-- 原因：`eval` 在 `Env.Root()` 中运行。
+### 10.9 函数内的 `define` 是局部绑定
+- Scheme 语义，不同于 `defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` 和 `load`（自 0.28.0 起全部总是全局）。
+- 用于局部辅助函数：`(define (f p) ...)`；也可用 `labels`/`flet`。
 
 ### 10.10 没有细粒度的 GC 控制
 - `memstats` 返回 Go 运行时统计。

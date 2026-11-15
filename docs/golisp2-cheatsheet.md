@@ -734,7 +734,8 @@ wenn Pointer-Identität *explizit* gemeint ist.
 - Lexikalische Scopes über `Env`-Kette (parent-Verweis)
 - `define` im Root → global
 - `define` in `let`/`lambda` → lokal (Frame-Env)
-- `defun`/`defmacro`/`defstruct` → immer global (CL), auch aus `let`/Funktionsrumpf; die Closure
+- `defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` → immer global (CL), auch aus `let`/Funktionsrumpf;
+  `load` wertet die Datei immer im globalen Env aus. Die Closure
   bleibt lexikalisch. Lokale Helfer: `labels`/`flet` oder `(define (f p) ...)`
 - `(eval form)` → **immer in `Env.Root()`**, nie im Lambda-Scope
 
@@ -757,25 +758,11 @@ wenn Pointer-Identität *explizit* gemeint ist.
 | Fall | GoLisp2-Verhalten | CL-Verhalten |
 |------|-------------------|--------------|
 | `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | Oft `t` (Small-Int-Cache) |
-| `load` in `defun` | `define`/`defvar` lokal gebunden | Global |
 | `progv` | Lex/dyn-Trennung fehlt | Dynamisch, lexikalische Bindungen schützen |
 | `declare` | No-op | Type-Checks, Optimierungen |
 | `the` | Typ ignoriert | Type-Checks zur Laufzeit |
 | `(macrolet ...)` | Nicht-rekursiv | Rekursiv |
 | `(eval form)` | Global (ok) | Global — identisch |
-
-### Wichtigster Gotcha: load in defun
-```lisp
-; FALSCH: foo wird nur lokal gebunden
-(defun use-foo ()
-  (load "foo.lisp")
-  (foo))
-
-; RICHTIG: eval erzwingt globales Env
-(defun use-foo ()
-  (eval '(load "foo.lisp"))
-  (foo))
-```
 
 ---
 
@@ -871,12 +858,10 @@ gegenseitig rekursiv aufrufen.
 **Auswirkung:** Fortgeschrittene Kontrollfluss-Muster (Backtracking, Coroutinen)
 nur über Goroutinen emulierbar.
 
-### 10.9 load in defun bindet define/defvar lokal
+### 10.9 define in Funktionen bindet lokal
 
-- Workaround: `(eval '(load "file"))` für globales Laden.
-
-**Auswirkung:** Unerwartetes Verhalten, wenn man `load` in einer Funktion nutzen
-will, um globale Definitionen zu laden.
+- Scheme-Semantik, anders als `defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` und `load`
+  (alle immer global, seit 0.28.0). Für lokale Helfer: `(define (f p) ...)`, `labels`, `flet`.
 
 ### 10.10 Kein GC-Feinsteuerung
 

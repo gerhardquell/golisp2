@@ -144,6 +144,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
       case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env, ectx)
       case "exec":         return evalExec(expr.Cdr, env, ectx)
       case "define":       return evalDefine(expr, env, ectx)
+      case "%defglobal":   return defineIn(env.Root(), expr, env, ectx)
       case "setq":         return evalSetq(expr.Cdr, env, ectx)
       case "psetq":        return evalPsetq(expr.Cdr, env, ectx)
       case "defun":        return evalDefun(expr, env, ectx)

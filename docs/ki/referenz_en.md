@@ -64,7 +64,7 @@ Counted directly from the `switch expr.Car.Val` in `eval_core.go` (as of
 | `(unwind-protect protected cleanup)` | cleanup always | |
 | `(lock mutex . body)` | critical section | `mutex` from `lock-make`; body like `begin` |
 | `(eval form)` | global eval | always `Env.Root()` |
-| `(load "file")` | load file | **caution:** inside `defun` → the file's `define`/`defvar` are bound locally (`defun`/`defmacro`/`defstruct` are global)! |
+| `(load "file")` | load file | always runs in the global env (CL), even from inside a function; does not see the caller's local variables |
 | `(prog1 first . rest)` | return first value | |
 | `(prog2 a b . rest)` | return b | |
 | `(cond (test result) ...)` | conditional | `else`/`t` = default |
@@ -129,7 +129,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.27.0"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.28.0"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)
@@ -267,8 +267,7 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 ## 8. Eval Environment
 
 - `(eval form)` → **always `Env.Root()`**, never the lambda scope
-- `load` → **EXCEPTION:** inside a `defun` body → the file's `define`/`defvar` are local, not global (`defun`/`defmacro`/`defstruct` are always global)
-  - workaround: `(eval '(load "file"))` for global loading
+- `load` → **always `Env.Root()`**, like `eval`; `defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` likewise always bind globally. Only `define` binds locally
 - `redefine-policy` → `'allow` / `'warn` / `'error` (default `warn`)
 
 ---
@@ -278,7 +277,6 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 | Case | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` — `eq` on numbers always `()` (design) | often `t` (small int) |
-| `load` in `defun` | `define`/`defvar` bound locally | global |
 | `progv` | no lexical/dynamic separation | dynamic |
 | `declare` | no-op | type checks |
 | `the` | type ignored | type checks |
@@ -347,9 +345,9 @@ so it does not guess:
 - `catch`/`throw` available (section 2), but without restart semantics.
 - No CLOS meta-object protocol.
 
-### 10.9 `load` in `defun` binds `define`/`defvar` locally
-- Workaround: `(eval '(load "file"))` for global loading.
-- Reason: `eval` runs in `Env.Root()`.
+### 10.9 `define` inside functions binds locally
+- Scheme semantics, unlike `defun`/`defmacro`/`defstruct`/`defvar`/`defparameter` and `load` (all always global since 0.28.0).
+- Meant for local helpers: `(define (f p) ...)`; alternatively `labels`/`flet`.
 
 ### 10.10 No fine-grained GC control
 - `memstats` returns Go runtime stats.

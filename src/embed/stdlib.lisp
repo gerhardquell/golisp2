@@ -277,21 +277,22 @@
 
 ;; === CL-Compat: Variablen / Zuweisung ===========================
 
-;; defvar: deklariert eine globale Variable (CL-Compat). Docstring
+;; defvar: deklariert eine globale Variable (CL-Compat) — immer im
+;; Root-Env, auch aus let/Funktionsrumpf (%defglobal). Docstring
 ;; (optionales 3. Argument) wird ignoriert. Zweites defvar für dasselbe
 ;; Symbol ist no-op, wenn es bereits gebunden ist.
 (defmacro defvar (name &rest rest)
   (let ((val (if (null rest) () (car rest))))
     `(if (bound? ',name)
          ',name
-         (define ,name ,val))))
+         (%defglobal ,name ,val))))
 
 ;; defparameter: bindet eine globale Variable und überschreibt einen
 ;; bestehenden Wert immer (CL-Compat). Docstring wird ignoriert.
 ;; Still beim Rebind: der Redefine-Guard greift nur bei FUNC/LAMBDA/
 ;; MACRO-Bindungen, Wert-Rebinds landen nur im redef-log.
 (defmacro defparameter (name val &optional doc)
-  `(define ,name ,val))
+  `(%defglobal ,name ,val))
 
 ;; Registry für setf-Places: Assoc-Liste (accessor . setter).
 (define *setf-expanders* '())

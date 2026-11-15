@@ -17,6 +17,14 @@ import (
 )
 
 func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  return defineIn(env, form, env, ectx)
+}
+
+// defineIn: (define name value) bzw. (define (name params...) body...) —
+// bindet in target, wertet aber in env aus. define bindet lokal
+// (target == env), %defglobal im Root-Env (defvar/defparameter, CL: immer
+// global, Anfangswert lexikalisch).
+func defineIn(target *Env, form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   args := form.Cdr
   if args == nil || args.Type != LIST || args.Car == nil {
     return nil, fmt.Errorf("define: Syntax: (define name value) oder (define (name params...) body...)")
@@ -33,8 +41,8 @@ func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     }
     name := sig.Car.Val
     lam  := makeLambda(sig.Cdr, wrapBegin(args.Cdr), env)
-    if err := checkRootRedefine(env, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
-    if err := env.Set(name, lam); err != nil { return nil, err }
+    if err := checkRootRedefine(target, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
+    if err := target.Set(name, lam); err != nil { return nil, err }
     RegisterDefinition(name, form.SrcFile(), form.SrcLine)
     return MakeAtom(name), nil
   }
@@ -46,8 +54,8 @@ func evalDefine(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
   val = Primary(val)
-  if err := checkRootRedefine(env, name, val, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
-  if err := env.Set(name, val); err != nil { return nil, err }
+  if err := checkRootRedefine(target, name, val, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
+  if err := target.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile(), form.SrcLine)
   return MakeAtom(name), nil
 }

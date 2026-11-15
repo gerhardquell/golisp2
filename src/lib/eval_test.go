@@ -13,6 +13,8 @@
 package lib
 
 import (
+  "os"
+  "path/filepath"
   "runtime"
   "strings"
   "testing"
@@ -567,5 +569,41 @@ func TestDefunIsAlwaysGlobal(t *testing.T) {
     res, err := LoadString(c.src, errlocEnv(t))
     if err != nil { t.Errorf("%s: %v", c.src, err); continue }
     if res.String() != c.want { t.Errorf("%s\n   = %s, want %s", c.src, res, c.want) }
+  }
+}
+
+// defvar/defparameter definieren immer global (CL); der Anfangswert wird
+// dort ausgewertet, wo die Form steht.
+func TestDefvarIsAlwaysGlobal(t *testing.T) {
+  for _, c := range []struct{ src, want string }{
+    {`(defun setze () (defvar *a* 1) (defparameter *b* 2)) (setze) (list *a* *b*)`, "(1 2)"},
+    {`(let ((x 5)) (defvar *v* x) (defparameter *p* (* x 2))) (list *v* *p*)`, "(5 10)"},
+    {`(defvar *w* 1) (defun nochmal () (defvar *w* 2) (defparameter *q* 3) (defparameter *q* 4)) (nochmal) (list *w* *q*)`, "(1 4)"},
+    {`(defvar *leer*) *leer*`, "()"},
+  } {
+    res, err := LoadString(c.src, errlocEnv(t))
+    if err != nil { t.Errorf("%s: %v", c.src, err); continue }
+    if res.String() != c.want { t.Errorf("%s\n   = %s, want %s", c.src, res, c.want) }
+  }
+}
+
+// load wertet die Datei immer im globalen Env aus (CL), auch wenn der
+// Aufruf in einer Funktion steht: alle Definitionen der Datei sind danach
+// global, und die Datei sieht die lokalen Variablen des Aufrufers nicht.
+func TestLoadIsAlwaysGlobal(t *testing.T) {
+  dir := t.TempDir()
+  def := filepath.Join(dir, "def.lisp")
+  sieht := filepath.Join(dir, "sieht.lisp")
+  os.WriteFile(def, []byte("(define aus-define 1)\n(defvar *aus-defvar* 2)\n(defun aus-defun () 3)\n"), 0o600)
+  os.WriteFile(sieht, []byte("geheim\n"), 0o600)
+
+  env := errlocEnv(t)
+  res, err := LoadString(`(defun lade (p) (let ((geheim 99)) (load p))) (lade "`+def+`")
+    (list aus-define *aus-defvar* (aus-defun))`, env)
+  if err != nil { t.Fatal(err) }
+  if res.String() != "(1 2 3)" { t.Errorf("nach load in Funktion: %s, want (1 2 3)", res) }
+
+  if _, err := LoadString(`(lade "`+sieht+`")`, env); err == nil {
+    t.Error("geladene Datei sieht die lokale Variable des Aufrufers — darf sie nicht")
   }
 }

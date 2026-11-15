@@ -19,6 +19,7 @@ import (
   "encoding/json"
   _ "embed" // //go:embed boot.js
   "fmt"
+  "net"
   "net/http"
   "net/url"
   "os"
@@ -142,8 +143,13 @@ func (ws *WebServer) handleWS(w http.ResponseWriter, r *http.Request) {
   }
 }
 
-// originOK: erlaubt sind http(s)://127.0.0.1:<port> und localhost:<port>;
-// fehlender Origin-Header (Nicht-Browser) → erlaubt (Spec §9).
+// originOK: erlaubt ist nur der eigene Ursprung — Origin muss dem
+// Host-Header gleichen, und der Host muss eine IP oder localhost sein.
+// Die IP-Bedingung haelt DNS-Rebinding draussen: ein fremder Name, der auf
+// diesen Rechner zeigt, haette sonst ebenfalls "denselben Ursprung".
+// Fehlender Origin-Header (Nicht-Browser) → erlaubt (Spec §9); das ist
+// keine Anmeldung, bei LAN-Bind (:host) kann jedes Programm im Netz
+// verbinden.
 func (ws *WebServer) originOK(r *http.Request) bool {
   origin := r.Header.Get("Origin")
   if origin == "" {
@@ -157,11 +163,7 @@ func (ws *WebServer) originOK(r *http.Request) bool {
     return false
   }
   host := u.Hostname()
-  port := u.Port()
-  if port == "" {
-    port = "80"
-  }
-  return (host == "127.0.0.1" || host == "localhost") && port == fmt.Sprintf("%d", ws.port)
+  return u.Host == r.Host && (host == "localhost" || net.ParseIP(host) != nil)
 }
 
 // writer ist die einzige schreibende Goroutine pro Client.

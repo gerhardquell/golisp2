@@ -375,3 +375,36 @@ func mustCell(t *testing.T, c *Cell, err error) *Cell {
   }
   return c
 }
+
+// Origin-Regel: gleicher Ursprung (Origin == Host-Header), und der Host
+// muss eine IP oder localhost sein. So funktioniert die Bridge auch bei
+// LAN-Bind (:host), ohne DNS-Rebinding zu öffnen — ein fremder DNS-Name,
+// der auf diesen Rechner zeigt, hätte sonst denselben Ursprung.
+func TestWSOriginSameHost(t *testing.T) {
+  ws, _ := wsTestServer(t)
+  url := fmt.Sprintf("ws://127.0.0.1:%d/_golisp/ws", ws.port)
+  lan := fmt.Sprintf("192.168.100.107:%d", ws.port)
+  name := fmt.Sprintf("rebind.example.com:%d", ws.port)
+
+  cases := []struct {
+    what, host, origin string
+    ok                 bool
+  }{
+    {"LAN-IP, gleicher Ursprung", lan, "http://" + lan, true},
+    {"LAN-IP über https", lan, "https://" + lan, true},
+    {"IPv6-Loopback", fmt.Sprintf("[::1]:%d", ws.port), fmt.Sprintf("http://[::1]:%d", ws.port), true},
+    {"localhost", fmt.Sprintf("localhost:%d", ws.port), fmt.Sprintf("http://localhost:%d", ws.port), true},
+    {"fremde IP als Origin", lan, fmt.Sprintf("http://10.0.0.9:%d", ws.port), false},
+    {"gleicher Host, anderer Port", lan, "http://192.168.100.107:1", false},
+    {"DNS-Name (Rebinding)", name, "http://" + name, false},
+    {"anderes Schema", lan, "file://" + lan, false},
+  }
+  for _, c := range cases {
+    header := http.Header{"Host": []string{c.host}, "Origin": []string{c.origin}}
+    conn, _, err := websocket.DefaultDialer.Dial(url, header)
+    if conn != nil { conn.Close() }
+    if (err == nil) != c.ok {
+      t.Errorf("%s: Host=%s Origin=%s → angenommen=%v, erwartet %v", c.what, c.host, c.origin, err == nil, c.ok)
+    }
+  }
+}

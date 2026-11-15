@@ -504,6 +504,12 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 ; browser-open, ws-call (Server ruft JS im Browser, blockierend)
 ```
 
+**Achtung bei `:host` (LAN-Bind):** Es gibt keine Anmeldung. Wer den Rechner im Netz erreicht,
+darf alles aufrufen, was per `ws-export` exportiert ist, Dateien an `http-upload` schicken und
+`http-static` lesen. Die Origin-Prüfung der WebSocket-Bridge schützt nur vor fremden Webseiten im
+Browser (erlaubt ist der eigene Ursprung, Host als IP oder `localhost`), nicht vor Programmen im
+Netz. Ohne `:host` bindet der Server an `127.0.0.1`.
+
 ---
 
 ## 4. Stdlib (src/embed/)

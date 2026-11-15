@@ -330,6 +330,21 @@ Einschränkungen:
 
 ---
 
+## Lambda-Listen
+
+Ein Bindungsweg für alle Aufrufe (`bindArgs` in `src/lib/eval_lambda.go`; der direkte Aufruf
+wertet nur die führenden regulären Parameter ohne Zwischen-Slice aus und übergibt den Rest):
+
+- Reihenfolge wie CL: regulär, `&optional`, `&rest`/`&body`, `&key`, `&allow-other-keys`;
+  Dotted-Rest `(a b . rest)` geht ebenfalls.
+- Default-Ausdrücke sehen die früheren Parameter: `(a &optional (b a))`.
+- `&key` liest die Argumente paarweise aus den **Werten** (`(f k 1)` mit `k` = `:a` bindet `a`),
+  das erste Vorkommen gewinnt. Fehler (seit 0.29.0, vorher still ignoriert): unbekanntes
+  Schlüsselwort ohne `&allow-other-keys`, Schlüssel ohne Wert, Nicht-Schlüsselwort an
+  Schlüsselposition. `&rest` vor `&key` sieht dieselben Argumente.
+- `:allow-other-keys t` im Aufruf wird nicht unterstützt — dafür `&allow-other-keys` in der
+  Definition.
+
 ## Rekursionstiefe und `parfunc`
 
 - `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.

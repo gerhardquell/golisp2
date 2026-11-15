@@ -40,7 +40,7 @@ Counted directly from the `switch expr.Car.Val` in `eval_core.go` (as of
 | `(begin . body)` | sequence | tail; aliases: `progn`, `locally`; multi-body via `wrapBegin` |
 | `(let (bind) . body)` | parallel binding | tail-capable |
 | `(let* (bind) . body)` | sequential binding | tail-capable; **native special form** (not stdlib — each binding sees the previous ones) |
-| `(lambda (p) . body)` | closure | `&optional`, `&key`, `&rest` |
+| `(lambda (p) . body)` | closure | `&optional`, `&key`, `&rest`/`&body`, `&allow-other-keys`; `&key` as in CL: pairwise from the values, first occurrence wins; unknown key, key without value, or a non-keyword in key position → error |
 | `(defun f (p) . body)` | global function | always global (CL), even from inside `let`/a function body — the closure stays lexical; local helpers: `labels`/`flet` or `(define (f p) ...)`; multi-body via `wrapBegin` |
 | `(defmacro m (p) . body)` | global macro | always global, like `defun`; so is `defstruct` |
 | `(defmain (args) . body)` | script entry point | only if the file is the main program (shebang/`golisp2 f.lisp`); runs after loading; return value = exit code 0–255; otherwise `nil`. `args` without binary/file name; only works at top level/inside special forms of the main file, not via `funcall`/`apply`/`mapcar` |
@@ -129,7 +129,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.28.0"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.29.0"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)

@@ -607,3 +607,51 @@ func TestLoadIsAlwaysGlobal(t *testing.T) {
     t.Error("geladene Datei sieht die lokale Variable des Aufrufers — darf sie nicht")
   }
 }
+
+// &key hat genau einen Bindungsweg: direkter Aufruf und apply liefern
+// dasselbe, Schlüssel werden paarweise aus den WERTEN gelesen (CL).
+func TestKeyArgsOneBindingPath(t *testing.T) {
+  const f = `(defun f (&key a b) (list a b)) (defun g (x &key a) (list x a)) `
+  for _, c := range []struct{ call, want string }{
+    {`(f :a 1 :b 2)`, "(1 2)"},
+    {`(f :b 2 :a 1)`, "(1 2)"},
+    {`(f)`, "(() ())"},
+    {`(f (car '(:a)) 1)`, "(1 ())"},           // Schlüssel als berechneter Wert
+    {`(f :a :b)`, "(:b ())"},                  // Schlüsselwort als WERT
+    {`(f :a 1 :a 2)`, "(1 ())"},               // erstes Vorkommen gewinnt
+    {`(g 7 :a 5)`, "(7 5)"},
+    {`((lambda (&rest r &key a) (list r a)) :a 1)`, "((:a 1) 1)"},
+    {`((lambda (&key a &allow-other-keys) a) :zzz 9 :a 1)`, "1"},
+    {`((lambda (a &optional b &key c) (list a b c)) 1 2 :c 3)`, "(1 2 3)"},
+  } {
+    for _, src := range []string{c.call, toApply(c.call)} {
+      res, err := LoadString(f+src, errlocEnv(t))
+      if err != nil { t.Errorf("%s: %v", src, err); continue }
+      if res.String() != c.want { t.Errorf("%s = %s, want %s", src, res, c.want) }
+    }
+  }
+  // Fehlerfälle sind auf beiden Wegen Fehler, nicht stilles Ignorieren
+  for _, call := range []string{
+    `(f :zzz 1 :a 2)`, // unbekanntes Schlüsselwort
+    `(f :a)`,          // Schlüssel ohne Wert
+    `(f 1 2)`,         // kein Schlüsselwort an Schlüsselposition
+    `(g :a 5)`,        // x = :a, danach ungerade Anzahl
+  } {
+    for _, src := range []string{call, toApply(call)} {
+      if res, err := LoadString(f+src, errlocEnv(t)); err == nil {
+        t.Errorf("%s = %s, want Fehler", src, res)
+      }
+    }
+  }
+  // Argumente werden genau einmal und von links nach rechts ausgewertet
+  res, err := LoadString(f+`(define spur ()) (defun merk (x) (setq spur (cons x spur)) x)
+    (f :b (merk 2) :a (merk 1)) (reverse spur)`, errlocEnv(t))
+  if err != nil || res.String() != "(2 1)" { t.Errorf("Auswertungsreihenfolge = %v %v, want (2 1)", res, err) }
+}
+
+// toApply macht aus (fn a b) den Aufruf (apply fn (list a b)) — der zweite
+// Weg zu denselben Parametern.
+func toApply(call string) string {
+  form, _ := Read(call)
+  return "(apply " + form.Car.String() + " (list" + strings.TrimPrefix(form.String(), "("+form.Car.String()) + ")"
+}

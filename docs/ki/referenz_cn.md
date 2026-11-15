@@ -38,7 +38,7 @@
 | `(begin . body)` | 顺序执行 | 尾调用；别名：`progn`、`locally`；多表达式体通过 `wrapBegin` |
 | `(let (bind) . body)` | 并行绑定 | 支持尾调用 |
 | `(let* (bind) . body)` | 顺序绑定 | 支持尾调用；**原生特殊形式**（不在 stdlib 中——每个绑定都能看到前面的绑定） |
-| `(lambda (p) . body)` | 闭包 | `&optional`、`&key`、`&rest` |
+| `(lambda (p) . body)` | 闭包 | `&optional`、`&key`、`&rest`/`&body`、`&allow-other-keys`；`&key` 同 CL：从实参的值中成对读取，首次出现者生效；未知关键字、关键字缺少值、关键字位置上不是关键字 → 报错 |
 | `(defun f (p) . body)` | 全局函数 | 总是全局（同 CL），即使写在 `let` 或函数体内——闭包仍是词法的；局部辅助函数用 `labels`/`flet` 或 `(define (f p) ...)`；多表达式体通过 `wrapBegin` |
 | `(defmacro m (p) . body)` | 全局宏 | 总是全局，同 `defun`；`defstruct` 亦然 |
 | `(defmain (args) . body)` | 脚本入口 | 仅当文件为主程序时（shebang/`golisp2 f.lisp`）；加载后运行；返回值 = 退出码 0–255；否则为 `nil`。`args` 不含程序名/文件名；只在主文件顶层/特殊形式中生效，经由 `funcall`/`apply`/`mapcar` 不生效 |
@@ -126,7 +126,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 环境/内省
 `memstats sleep env-symbols lisp-implementation-version` —— `(sleep ms)` 单位为毫秒；`(env-symbols)` 返回根环境中所有名字
-（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.28.0"`
+（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.29.0"`
 
 ### 领域模块（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` —— `(sigo "prompt" [model] [session-id] [host])` → 文本；`sigo*` → 哈希表（`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`）；`(sigo-request h [host])`：哈希表的键必须恰好来自 `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`（其他键 → 报错；未给 `temperature` 时 golisp2 发送 0.2，`0` 会报错；未给 `max_tokens` 时使用模型最大值），结果 = 完整响应的哈希表外加 `elapsed`（秒）；`(sigo-usage)` 累计值，含 `calls`/`elapsed`；`(sigo-costs [since [until]])`（Unix 秒，同 `(now)`），`(sigo-budget)`，`(sigo-model-info [model])`（价格为美元/百万 token，**0 = 未知，不是免费**）；`(sigo-system-prompt "")` → 模型只看到提示词（若有 session-id 则加上会话历史）

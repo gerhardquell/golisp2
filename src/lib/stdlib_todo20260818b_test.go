@@ -45,7 +45,7 @@ func TestBuchluecken20260818Zahlen(t *testing.T) {
 
 func TestBuchluecken20260818Eql(t *testing.T) {
   evalStdlibEq(t, `(eql 5 5)`, "t")
-  evalStdlibEq(t, `(eql 5 5.0)`, "t")
+  evalStdlibEq(t, `(eql 5 5.0)`, "()")
   evalStdlibEq(t, `(eql 'a 'a)`, "t")
   // eql ist bei Conses Pointer-Identität (wie eq), nicht strukturell —
   // zwei gleich aussehende, aber verschiedene Listen sind NICHT eql.

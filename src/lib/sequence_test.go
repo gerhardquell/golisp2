@@ -103,10 +103,9 @@ func TestSeqCount(t *testing.T) {
   evalStdlibErr(t, `(count-if evenp "ab")`)
 }
 
-// Charakterisierung: Verhalten des bisherigen Lisp-eql (stdlib.lisp) bleibt.
 func TestEqlPrimitive(t *testing.T) {
   evalStdlibEq(t, `(eql 1 1)`, "t")
-  evalStdlibEq(t, `(eql 1.0 1)`, "t") // golisp2 kennt nur float64
+  evalStdlibEq(t, `(eql 1.0 1)`, "()") // gleicher Typ UND Wert
   evalStdlibEq(t, `(eql "a" "a")`, "()")
   evalStdlibEq(t, `(eql 'a 'a)`, "t")
   evalStdlibEq(t, `(eql (list 1) (list 1))`, "()")

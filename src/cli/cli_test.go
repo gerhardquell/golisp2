@@ -144,7 +144,7 @@ func TestRunExpressionEvalError(t *testing.T) {
 func TestRunExtensionIsCalled(t *testing.T) {
   var out, errOut bytes.Buffer
   ext := func(env *lib.Env) error {
-    return env.Set("ext-wert", lib.MakeNum(42))
+    return env.Set("ext-wert", lib.MakeInt(42))
   }
   code := run([]string{"-e", "ext-wert"}, &out, &errOut, ext)
   if code != 0 {

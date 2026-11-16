@@ -259,7 +259,7 @@ func fnChanSelect(args []*Cell) (*Cell, error) {
       continue
     }
     x, _ := v.Interface().(*Cell)
-    return MakeValues([]*Cell{x, MakeAtom("t"), MakeNum(float64(index[chosen]))}), nil
+    return MakeValues([]*Cell{x, MakeAtom("t"), MakeInt(int64(index[chosen]))}), nil
   }
   return none, nil
 }

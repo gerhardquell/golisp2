@@ -33,11 +33,22 @@ const (
 	VECTOR                 // CL-Vektor (mutable, Pointer-Identität), Env = *Vector
 )
 
+// NumKind sagt bei NUMBER-Cells, welches Feld maßgeblich ist. NumFloat
+// ist der Nullwert: jede &Cell{Type: NUMBER, Num: x} ist ein Float.
+type NumKind uint8
+
+const (
+	NumFloat NumKind = iota // maßgeblich: Num
+	NumInt                  // maßgeblich: Int; Num hält float64(Int) als Näherung
+)
+
 type Cell struct {
 	Type LispType
+	NumKind NumKind
 	// Atom/String/Number
 	Val string
 	Num float64
+	Int int64
 	// Liste
 	Car *Cell
 	Cdr *Cell
@@ -47,9 +58,9 @@ type Cell struct {
 	Env interface{} // *Env – interface{} um Zirkelimport zu vermeiden
 	// HASHTABLE: Zeiger auf die mutable Tabelle (hashtable.go)
 	Ht *HashTable
-	// Quellposition. srcFile ist ein *string statt string: 8 statt 16 Byte,
-	// und das bringt Cell von 104 auf 96 Byte — genau die Size-Class-Grenze
-	// des Allocators, der sonst 112 Byte pro Cell vergibt (PerfTODO §4.5e).
+	// Quellposition. srcFile ist ein *string statt string: 8 statt 16 Byte.
+	// Mit NumKind und Int liegt Cell bei 112 Byte, genau einer Size-Class
+	// des Allocators (TestCellSize) — jedes weitere Feld kostet 128.
 	// Nur LIST-Cells werden gestempelt, und alle Formen einer Datei teilen
 	// denselben Pointer (siehe eval_load.go). Zugriff über SrcFile().
 	srcFile *string
@@ -114,8 +125,8 @@ var smallIntCache [smallIntCount]*Cell
 
 func init() {
   for i := 0; i < smallIntCount; i++ {
-    n := float64(i + smallIntMin)
-    smallIntCache[i] = &Cell{Type: NUMBER, Num: n}
+    n := int64(i + smallIntMin)
+    smallIntCache[i] = &Cell{Type: NUMBER, NumKind: NumInt, Int: n, Num: float64(n)}
   }
 }
 
@@ -129,14 +140,16 @@ func MakeAtom(name string) *Cell {
   c, _ := internTable.LoadOrStore(name, &Cell{Type: ATOM, Val: name})
   return c.(*Cell)
 }
-func MakeNum(n float64) *Cell {
-  if n == float64(int64(n)) {
-    i := int(n)
-    if i >= smallIntMin && i <= smallIntMax {
-      return smallIntCache[i-smallIntMin]
-    }
+// MakeNum erzeugt immer einen Float — keine automatische Wahl, sonst
+// würde (* 1.5 2) zur Ganzzahl. Ganzzahlen kommen aus MakeInt.
+func MakeNum(n float64) *Cell { return &Cell{Type: NUMBER, Num: n} }
+
+// MakeInt erzeugt eine Ganzzahl; kleine Werte kommen aus dem Cache.
+func MakeInt(i int64) *Cell {
+  if i >= smallIntMin && i <= smallIntMax {
+    return smallIntCache[i-smallIntMin]
   }
-  return &Cell{Type: NUMBER, Num: n}
+  return &Cell{Type: NUMBER, NumKind: NumInt, Int: i, Num: float64(i)}
 }
 func MakeStr(s string) *Cell     { return &Cell{Type: STRING, Val: s} }
 
@@ -206,18 +219,28 @@ func Primary(c *Cell) *Cell {
   return c
 }
 
-// FormatNumber ist die eine Druckform für Zahlen (Printer, ~a,
-// number->string). Ganzzahlig im int64-Bereich → ohne Punkt; sonst
-// kürzeste Ziffern, Festkomma für 1e-4 ≤ |x| < 1e16 wie Python-repr —
-// darüber täuschte Festkomma Stellen vor, die float64 nicht hat.
+// FormatNumber ist die eine Druckform für Floats (Printer, ~a,
+// number->string). Immer als Float erkennbar, damit (read (print x))
+// typtreu bleibt: ganzzahlig im int64-Bereich mit ".0"; sonst kürzeste Ziffern,
+// Festkomma für 1e-4 ≤ |x| < 1e16 wie Python-repr — darüber täuschte
+// Festkomma Stellen vor, die float64 nicht hat. Ganzzahlen druckt
+// numberStr.
 func FormatNumber(n float64) string {
 	if n == float64(int64(n)) && math.Abs(n) < 9.2e18 {
-		return strconv.FormatInt(int64(n), 10)
+		return strconv.FormatInt(int64(n), 10) + ".0"
 	}
 	if a := math.Abs(n); a >= 1e-4 && a < 1e16 {
 		return strconv.FormatFloat(n, 'f', -1, 64)
 	}
 	return strconv.FormatFloat(n, 'g', -1, 64)
+}
+
+// numberStr druckt eine NUMBER-Cell nach ihrer Zahlart.
+func numberStr(c *Cell) string {
+	if c.NumKind == NumInt {
+		return strconv.FormatInt(c.Int, 10)
+	}
+	return FormatNumber(c.Num)
 }
 
 // String-Darstellung für Print
@@ -231,7 +254,7 @@ func (c *Cell) String() string {
 	case ATOM:
 		return c.Val
 	case NUMBER:
-		return FormatNumber(c.Num)
+		return numberStr(c)
 	case STRING:
 		return fmt.Sprintf("%q", c.Val)
 	case FUNC:

@@ -57,14 +57,8 @@
 
 ;; === type-of =========================================================
 
-;; %infinite?: +Inf/-Inf verdoppeln sich zu sich selbst (x≠0 ausgenommen,
-;; sonst verdoppelt sich auch 0 zu sich selbst). NaN fällt schon vorher aus
-;; (= x (floor x)) raus, weil NaN nie sich selbst gleich ist.
-(defun %infinite? (x)
-  (and (not (= x 0)) (= x (* 2 x))))
-
 (defun %number-type (x)
-  (if (and (= x (floor x)) (not (%infinite? x))) 'integer 'float))
+  (if (%integerp x) 'integer 'float))
 
 (defun %symbol-type (x)
   (cond ((eq x t)                                                     'boolean)

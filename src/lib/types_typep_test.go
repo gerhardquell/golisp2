@@ -74,7 +74,7 @@ func TestStructRegistry(t *testing.T) {
 func TestTypeOfKern(t *testing.T) {
   cases := []struct{ src, want string }{
     {`(type-of 3)`, "integer"},
-    {`(type-of 3.0)`, "integer"}, // Abweichung: Kern kennt nur float64
+    {`(type-of 3.0)`, "float"},
     {`(type-of -7)`, "integer"},
     {`(type-of 3.5)`, "float"},
     {`(type-of "a")`, "string"},

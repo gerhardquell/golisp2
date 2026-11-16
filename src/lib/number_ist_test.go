@@ -18,35 +18,35 @@ import "testing"
 func TestNumberIst(t *testing.T) {
   cases := []struct{ src, want string }{
     // Spec §1
-    {`(+ 9007199254740992 1)`, "9007199254740992"},
-    {`(* 99999999999 99999999999)`, "9.9999999998e+21"},
+    {`(+ 9007199254740992 1)`, "9007199254740993"}, // §1: war 9007199254740992 (gerundet)
+    // §5 Überlauf ist Fehler: (* 99999999999 99999999999) war 9.9999999998e+21,
+    // (random 1.0) war 0 — beide jetzt in number_int_test.go.
     {`(nth 1.7 (list 1 2 3))`, "()"},
-    {`(random 1.0)`, "0"},
     {`(type-of 3)`, "integer"},
     // Druckform
     {`3`, "3"},
     {`-7`, "-7"},
     {`+3`, "3"},
-    {`3.0`, "3"},
-    {`1e3`, "1000"},
+    {`3.0`, "3.0"},               // §5: war 3
+    {`1e3`, "1000.0"},            // §5: war 1000
     {`3.14`, "3.14"},
-    {`(sqrt 16)`, "4"},
-    {`(/ 7.0 7)`, "1"},
-    {`(* 1.5 2)`, "3"},
-    {`(number->string 3.0)`, `"3"`},
-    {`(format nil "~a" 3.0)`, `"3"`},
+    {`(sqrt 16)`, "4.0"},         // §5: war 4
+    {`(/ 7.0 7)`, "1.0"},         // §5: war 1
+    {`(* 1.5 2)`, "3.0"},         // §5: war 3
+    {`(number->string 3.0)`, `"3.0"`},  // §5: war "3"
+    {`(format nil "~a" 3.0)`, `"3.0"`}, // §5: war "3"
     {`(format nil "~d" 3.0)`, `"3"`},
     // Gleichheit
-    {`(eql 1 1.0)`, "t"},
-    {`(equal? 1 1.0)`, "t"},
-    {`(equal? (list 1 2) (list 1.0 2.0))`, "t"},
+    {`(eql 1 1.0)`, "()"},                        // §5: war t
+    {`(equal? 1 1.0)`, "()"},                     // §5: war t
+    {`(equal? (list 1 2) (list 1.0 2.0))`, "()"}, // §5: war t
     {`(= 1 1.0)`, "t"},
     {`(eq 5 5)`, "()"},
-    {`(member 1.0 (list 1 2))`, "(1 2)"},
+    {`(member 1.0 (list 1 2))`, "()"},            // §5 (folgt eql): war (1 2)
     // Typen
-    {`(type-of 3.0)`, "integer"},
+    {`(type-of 3.0)`, "float"},      // §5: war integer
     {`(type-of 3.5)`, "float"},
-    {`(typep 3.0 'integer)`, "t"},
+    {`(typep 3.0 'integer)`, "()"}, // §5: war t
     {`(typep 3 'integer)`, "t"},
     // Rechnen
     {`(+ 1 2)`, "3"},
@@ -73,10 +73,10 @@ func TestNumberIst(t *testing.T) {
     {`(< (random 10) 10)`, "t"},
     {`(length (list 1 2 3))`, "3"},
     // Hash-Schlüssel
-    {`(let ((h (make-hash-table))) (setf (gethash 1 h) 'a) (gethash 1.0 h))`, "a"},
+    {`(let ((h (make-hash-table))) (setf (gethash 1 h) 'a) (gethash 1.0 h))`, "()"}, // §5: war a
     // JSON-Rundlauf
     {`(json-encode (json-parse "[1, 2.5, 3.0]"))`, `"[1,2.5,3]"`},
-    {`(json-parse "9007199254740993")`, "9007199254740992"},
+    {`(json-parse "9007199254740993")`, "9007199254740993"}, // §3.6: war 9007199254740992 (gerundet)
   }
   env := BaseEnv()
   if err := LoadStdlib(env); err != nil {

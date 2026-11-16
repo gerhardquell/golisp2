@@ -52,12 +52,12 @@ func TestForeignTypeOf(t *testing.T) {
   }
 }
 
-// TestCellSize belegt die Size-Class-Optimierung aus types.go:49-52: Cell
-// darf nicht über 96 Byte wachsen (sonst vergibt der Allocator 112 Byte
-// pro Cell). FOREIGN darf dafür kein eigenes Feld bekommen (siehe
+// TestCellSize hält die Size-Class fest: seit dem Ganzzahl-Typ (NumKind +
+// Int, Spec 2026-11-16 §7) 112 Byte statt 96. Darüber liegt die nächste
+// Klasse (128) — FOREIGN bekommt deshalb weiter kein eigenes Feld (siehe
 // MakeForeign/ForeignObj, die das bestehende Env-Feld mitbenutzen).
 func TestCellSize(t *testing.T) {
-  if got := unsafe.Sizeof(Cell{}); got != 96 {
-    t.Fatalf("unsafe.Sizeof(Cell{}) = %d, want 96", got)
+  if got := unsafe.Sizeof(Cell{}); got != 112 {
+    t.Fatalf("unsafe.Sizeof(Cell{}) = %d, want 112", got)
   }
 }

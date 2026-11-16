@@ -286,12 +286,12 @@ func seqSearchFn(env *Env, name string, isIf bool) func([]*Cell) (*Cell, error) 
       case "find", "find-if":
         return x, nil
       case "position", "position-if":
-        return MakeNum(float64(i)), nil
+        return MakeInt(int64(i)), nil
       }
       count++
     }
     if name == "count" || name == "count-if" {
-      return MakeNum(float64(count)), nil
+      return MakeInt(int64(count)), nil
     }
     return MakeNil(), nil
   }

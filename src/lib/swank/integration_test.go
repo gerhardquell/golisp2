@@ -42,7 +42,7 @@ func TestSwankServerConnectionInfo(t *testing.T) {
     lib.Cons(lib.Cons(lib.MakeAtom("swank:connection-info"), lib.MakeNil()),
       lib.Cons(lib.MakeNil(),
         lib.Cons(lib.MakeAtom("t"),
-          lib.Cons(lib.MakeNum(1), lib.MakeNil())))))
+          lib.Cons(lib.MakeInt(1), lib.MakeNil())))))
   if err := writeFrame(conn, msg); err != nil {
     t.Fatalf("writeFrame: %v", err)
   }

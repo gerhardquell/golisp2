@@ -200,5 +200,5 @@ func TestFormatFunPrimary(t *testing.T) {
 
 func TestGaFitnessPrimary(t *testing.T) {
   evalEq(t, `(define ga (ga-create 'bit1 5 4 (lambda (g) (values 7 0))))
-    (ga-init ga) (ga-calc ga) (ga-result ga)`, "(7 7 7 7)")
+    (ga-init ga) (ga-calc ga) (ga-result ga)`, "(7.0 7.0 7.0 7.0)")
 }

@@ -252,7 +252,14 @@ func (r *Reader) readAtomOrNum() (*Cell, error) {
   token := sb.String()
   if token == "" { return nil, fmt.Errorf("reader: leeres Token") }
 
-  // Zahl?
+  // Zahl? Vorzeichen + Ziffern ist eine Ganzzahl, alles andere ein Float.
+  if isIntToken(token) {
+    i, err := strconv.ParseInt(token, 10, 64)
+    if err != nil {
+      return nil, fmt.Errorf("reader: Ganzzahl %s außerhalb des int64-Bereichs", token)
+    }
+    return MakeInt(i), nil
+  }
   if n, err := strconv.ParseFloat(token, 64); err == nil {
     return MakeNum(n), nil
   }
@@ -260,4 +267,18 @@ func (r *Reader) readAtomOrNum() (*Cell, error) {
   if token == "nil" || token == "NIL" { return MakeNil(), nil }
 
   return MakeAtom(token), nil
+}
+
+// isIntToken: optionales Vorzeichen, dann nur Ziffern (mindestens eine).
+func isIntToken(token string) bool {
+  digits := strings.TrimLeft(token[:1], "+-") + token[1:]
+  if digits == "" {
+    return false
+  }
+  for _, ch := range digits {
+    if ch < '0' || ch > '9' {
+      return false
+    }
+  }
+  return true
 }

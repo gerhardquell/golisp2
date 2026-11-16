@@ -78,6 +78,9 @@ func eqlKey(c *Cell) string {
   }
   switch c.Type {
   case NUMBER:
+    if c.NumKind == NumInt {
+      return "i:" + strconv.FormatInt(c.Int, 10)
+    }
     return "n:" + strconv.FormatFloat(c.Num, 'g', -1, 64)
   case ATOM:
     return "a:" + strconv.Quote(c.Val)
@@ -224,7 +227,7 @@ func fnHashTableCount(args []*Cell) (*Cell, error) {
   ht.mu.RLock()
   n := len(ht.m)
   ht.mu.RUnlock()
-  return MakeNum(float64(n)), nil
+  return MakeInt(int64(n)), nil
 }
 
 // hash-table-p: (x) → t wenn x eine Hashtabelle ist.

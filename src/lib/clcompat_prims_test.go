@@ -24,17 +24,17 @@ func TestSort(t *testing.T) {
 }
 
 func TestSqrt(t *testing.T) {
-  evalStdlibEq(t, `(sqrt 4)`, "2")
+  evalStdlibEq(t, `(sqrt 4)`, "2.0")
   evalStdlibEq(t, `(sqrt 2)`, "1.4142135623730951")
-  evalStdlibEq(t, `(sqrt 0)`, "0")
+  evalStdlibEq(t, `(sqrt 0)`, "0.0")
   evalStdlibErr(t, `(sqrt -1)`)
 }
 
 func TestExpLog(t *testing.T) {
-  evalStdlibEq(t, `(exp 0)`, "1")
+  evalStdlibEq(t, `(exp 0)`, "1.0")
   evalStdlibEq(t, `(exp 1)`, "2.718281828459045")
-  evalStdlibEq(t, `(log 1)`, "0")
-  evalStdlibEq(t, `(log (exp 2))`, "2")
+  evalStdlibEq(t, `(log 1)`, "0.0")
+  evalStdlibEq(t, `(log (exp 2))`, "2.0")
   evalStdlibErr(t, `(log 0)`)
   evalStdlibErr(t, `(log -1)`)
   evalStdlibErr(t, `(exp "a")`)
@@ -44,7 +44,7 @@ func TestExpt(t *testing.T) {
   evalStdlibEq(t, `(expt 2 10)`, "1024")
   evalStdlibEq(t, `(expt 3 0)`, "1")
   evalStdlibEq(t, `(expt 2 -1)`, "0.5")
-  evalStdlibEq(t, `(expt 4 0.5)`, "2")
+  evalStdlibEq(t, `(expt 4 0.5)`, "2.0")
   evalStdlibEq(t, `(expt 0.9 -2)`, "1.2345679012345678")
   evalStdlibErr(t, `(expt -8 0.5)`)
   evalStdlibErr(t, `(expt 0 -1)`)

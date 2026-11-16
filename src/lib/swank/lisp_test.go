@@ -376,7 +376,7 @@ func TestSwankListenerEvalMultipleValues(t *testing.T) {
   for _, c := range cases {
     msg := lib.SliceToCell([]*lib.Cell{lib.MakeAtom(":emacs-rex"),
       lib.SliceToCell([]*lib.Cell{lib.MakeAtom("swank-repl:listener-eval"), lib.MakeStr(c.code)}),
-      lib.MakeStr("USER"), lib.MakeAtom("t"), lib.MakeNum(1)})
+      lib.MakeStr("USER"), lib.MakeAtom("t"), lib.MakeInt(1)})
     result, err := HandleMessage(env, msg)
     if err != nil {
       t.Fatalf("%s: HandleMessage: %v", c.code, err)

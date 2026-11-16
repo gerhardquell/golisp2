@@ -319,8 +319,11 @@ func fnSscanf(args []*Cell) (*Cell, error) {
         return nil, fmt.Errorf("sscanf: %%d — keine Zahl an Position %d", ip)
       }
       ip += n
-      v, _ := strconv.ParseFloat(tok, 64)
-      vals = append(vals, MakeNum(v))
+      v, err := strconv.ParseInt(tok, 10, 64)
+      if err != nil {
+        return nil, fmt.Errorf("sscanf: %%d — %s liegt außerhalb des int64-Bereichs", tok)
+      }
+      vals = append(vals, MakeInt(v))
     case 'f':
       skipWS()
       tok, n := scanNumber(in[ip:], true)

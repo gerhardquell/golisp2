@@ -99,7 +99,7 @@ func genomeToCell(ga *GA, genome []byte) (*Cell, error) {
       if err != nil {
         return nil, err
       }
-      values[gp] = MakeNum(float64(v))
+      values[gp] = MakeInt(int64(v))
     }
   case BITI:
     if len(genome) < ga.genLen*8 {
@@ -107,7 +107,7 @@ func genomeToCell(ga *GA, genome []byte) (*Cell, error) {
     }
     for gp := 0; gp < ga.genLen; gp++ {
       u := binary.LittleEndian.Uint64(genome[gp*8:])
-      values[gp] = MakeNum(float64(int64(u)))
+      values[gp] = MakeInt(int64(u))
     }
   case BITF:
     if len(genome) < ga.genLen*8 {

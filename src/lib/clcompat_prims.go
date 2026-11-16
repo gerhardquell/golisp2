@@ -148,10 +148,18 @@ func fnLog(args []*Cell) (*Cell, error) {
 }
 
 // expt: (expt basis exp) → basis hoch exp, auch negativ und gebrochen.
+// Ganzzahl-Basis mit Ganzzahl-Exponent ≥ 0 bleibt Ganzzahl, sonst Float.
 // NaN (negative Basis, gebrochener Exponent) und ±Inf (0 hoch negativ) sind Fehler.
 func fnExpt(args []*Cell) (*Cell, error) {
   if len(args) != 2 || args[0].Type != NUMBER || args[1].Type != NUMBER {
     return nil, fmt.Errorf("expt: 2 Zahlen erwartet (basis exp)")
+  }
+  if b, e := args[0], args[1]; b.NumKind == NumInt && e.NumKind == NumInt && e.Int >= 0 {
+    i, ok := powInt(b.Int, e.Int)
+    if !ok {
+      return nil, errOverflow("expt")
+    }
+    return MakeInt(i), nil
   }
   r := math.Pow(args[0].Num, args[1].Num)
   if math.IsNaN(r) || math.IsInf(r, 0) {
@@ -167,5 +175,5 @@ func fnGetUniversalTime(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("get-universal-time: keine Argumente erwartet")
   }
   secs := time.Now().UTC().Sub(clEpoch).Seconds()
-  return MakeNum(math.Floor(secs)), nil
+  return MakeInt(int64(secs)), nil
 }

@@ -21,7 +21,7 @@ import (
 
 func TestWriteFrame(t *testing.T) {
   var buf bytes.Buffer
-  cell := lib.Cons(lib.MakeAtom("foo"), lib.Cons(lib.MakeNum(42), lib.MakeNil()))
+  cell := lib.Cons(lib.MakeAtom("foo"), lib.Cons(lib.MakeInt(42), lib.MakeNil()))
   if err := writeFrame(&buf, cell); err != nil {
     t.Fatalf("writeFrame failed: %v", err)
   }

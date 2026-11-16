@@ -43,7 +43,7 @@ func TestFrameInlineToSliceTransition(t *testing.T) {
   f := NewEnv(root)
 
   // erster Eintrag: inline
-  if err := f.Set("a", MakeNum(1)); err != nil {
+  if err := f.Set("a", MakeInt(1)); err != nil {
     t.Fatal(err)
   }
   if got := mustGet(t, f, "a"); got != "1" {
@@ -52,7 +52,7 @@ func TestFrameInlineToSliceTransition(t *testing.T) {
 
   // weitere Eintraege: Slice-Pfad
   for i, name := range []string{"b", "c", "d", "e"} {
-    if err := f.Set(name, MakeNum(float64(i+2))); err != nil {
+    if err := f.Set(name, MakeInt(int64(i+2))); err != nil {
       t.Fatal(err)
     }
   }
@@ -68,11 +68,11 @@ func TestFrameInlineToSliceTransition(t *testing.T) {
 // weil das zwei verschiedene Codepfade sind.
 func TestFrameSetOverwritesInPlace(t *testing.T) {
   f := NewEnv(NewEnv(nil))
-  _ = f.Set("inline", MakeNum(1))
-  _ = f.Set("slot", MakeNum(2))
+  _ = f.Set("inline", MakeInt(1))
+  _ = f.Set("slot", MakeInt(2))
 
-  _ = f.Set("inline", MakeNum(10)) // inline-Pfad
-  _ = f.Set("slot", MakeNum(20))   // Slice-Pfad
+  _ = f.Set("inline", MakeInt(10)) // inline-Pfad
+  _ = f.Set("slot", MakeInt(20))   // Slice-Pfad
 
   if got := mustGet(t, f, "inline"); got != "10" {
     t.Fatalf("inline = %s, want 10", got)
@@ -96,18 +96,18 @@ func TestFrameSetOverwritesInPlace(t *testing.T) {
 // treffen, und bei Nichtfinden zum Parent aufsteigen.
 func TestFrameUpdateHitsBothPaths(t *testing.T) {
   root := NewEnv(nil)
-  _ = root.Set("global", MakeNum(100))
+  _ = root.Set("global", MakeInt(100))
   f := NewEnv(root)
-  _ = f.Set("inline", MakeNum(1))
-  _ = f.Set("slot", MakeNum(2))
+  _ = f.Set("inline", MakeInt(1))
+  _ = f.Set("slot", MakeInt(2))
 
-  if err := f.Update("inline", MakeNum(11)); err != nil {
+  if err := f.Update("inline", MakeInt(11)); err != nil {
     t.Fatal(err)
   }
-  if err := f.Update("slot", MakeNum(22)); err != nil {
+  if err := f.Update("slot", MakeInt(22)); err != nil {
     t.Fatal(err)
   }
-  if err := f.Update("global", MakeNum(200)); err != nil {
+  if err := f.Update("global", MakeInt(200)); err != nil {
     t.Fatal(err)
   }
   if got := mustGet(t, f, "inline"); got != "11" {
@@ -119,7 +119,7 @@ func TestFrameUpdateHitsBothPaths(t *testing.T) {
   if got := mustGet(t, root, "global"); got != "200" {
     t.Fatalf("global = %s, want 200", got)
   }
-  if err := f.Update("gibtsnicht", MakeNum(1)); err == nil {
+  if err := f.Update("gibtsnicht", MakeInt(1)); err == nil {
     t.Fatal("Update auf ungebundenen Namen sollte fehlschlagen")
   }
 }
@@ -129,13 +129,13 @@ func TestFrameUpdateHitsBothPaths(t *testing.T) {
 // NICHT anfassen.
 func TestFrameShadowsParent(t *testing.T) {
   root := NewEnv(nil)
-  _ = root.Set("x", MakeNum(1))
-  _ = root.Set("y", MakeNum(2))
+  _ = root.Set("x", MakeInt(1))
+  _ = root.Set("y", MakeInt(2))
 
   f := NewEnv(root)
-  _ = f.Set("x", MakeNum(10)) // inline
-  _ = f.Set("z", MakeNum(30)) // Slice
-  _ = f.Set("y", MakeNum(20)) // Slice, verdeckt root.y
+  _ = f.Set("x", MakeInt(10)) // inline
+  _ = f.Set("z", MakeInt(30)) // Slice
+  _ = f.Set("y", MakeInt(20)) // Slice, verdeckt root.y
 
   if got := mustGet(t, f, "x"); got != "10" {
     t.Fatalf("f.x = %s, want 10", got)
@@ -143,7 +143,7 @@ func TestFrameShadowsParent(t *testing.T) {
   if got := mustGet(t, f, "y"); got != "20" {
     t.Fatalf("f.y = %s, want 20", got)
   }
-  _ = f.Update("y", MakeNum(99))
+  _ = f.Update("y", MakeInt(99))
   if got := mustGet(t, root, "y"); got != "2" {
     t.Fatalf("root.y wurde durchgeschrieben: %s, want 2", got)
   }
@@ -153,14 +153,14 @@ func TestFrameShadowsParent(t *testing.T) {
 // ohne Duplikate. Verdeckte Parent-Namen erscheinen genau einmal.
 func TestFrameSymbolsAcrossChain(t *testing.T) {
   root := NewEnv(nil)
-  _ = root.Set("shared", MakeNum(1))
-  _ = root.Set("onlyroot", MakeNum(2))
+  _ = root.Set("shared", MakeInt(1))
+  _ = root.Set("onlyroot", MakeInt(2))
 
   f := NewEnv(root)
-  _ = f.Set("inline", MakeNum(3))
-  _ = f.Set("slot1", MakeNum(4))
-  _ = f.Set("slot2", MakeNum(5))
-  _ = f.Set("shared", MakeNum(6)) // verdeckt root
+  _ = f.Set("inline", MakeInt(3))
+  _ = f.Set("slot1", MakeInt(4))
+  _ = f.Set("slot2", MakeInt(5))
+  _ = f.Set("shared", MakeInt(6)) // verdeckt root
 
   got := f.Symbols()
   sort.Strings(got)
@@ -185,7 +185,7 @@ func TestFrameSymAPIInteropWithStringAPI(t *testing.T) {
   sym := MakeAtom("mixed")
 
   // per String schreiben, per Symbol lesen
-  if err := f.Set("mixed", MakeNum(1)); err != nil {
+  if err := f.Set("mixed", MakeInt(1)); err != nil {
     t.Fatal(err)
   }
   v, err := f.GetSym(sym)
@@ -197,7 +197,7 @@ func TestFrameSymAPIInteropWithStringAPI(t *testing.T) {
   }
 
   // per Symbol schreiben, per String lesen
-  if err := f.SetSym(sym, MakeNum(2)); err != nil {
+  if err := f.SetSym(sym, MakeInt(2)); err != nil {
     t.Fatal(err)
   }
   if got := mustGet(t, f, "mixed"); got != "2" {
@@ -206,7 +206,7 @@ func TestFrameSymAPIInteropWithStringAPI(t *testing.T) {
 
   // dasselbe fuer den Slice-Pfad (zweiter Eintrag)
   sym2 := MakeAtom("second")
-  if err := f.SetSym(sym2, MakeNum(3)); err != nil {
+  if err := f.SetSym(sym2, MakeInt(3)); err != nil {
     t.Fatal(err)
   }
   if got := mustGet(t, f, "second"); got != "3" {
@@ -222,9 +222,9 @@ func TestFrameSymAPIInteropWithStringAPI(t *testing.T) {
 // Root-Env (Map, per String indiziert) landen.
 func TestFrameGetSymFallsThroughToRoot(t *testing.T) {
   root := NewEnv(nil)
-  _ = root.Set("global", MakeNum(7))
+  _ = root.Set("global", MakeInt(7))
   f := NewEnv(root)
-  _ = f.SetSym(MakeAtom("local"), MakeNum(8))
+  _ = f.SetSym(MakeAtom("local"), MakeInt(8))
 
   v, err := f.GetSym(MakeAtom("global"))
   if err != nil {

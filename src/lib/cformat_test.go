@@ -185,7 +185,7 @@ func TestSscanf(t *testing.T) {
   // negative + Float-Exponent
   got, err = LoadString(`(sscanf "-3 1.5e2" "%d %f")`, env)
   if err != nil { t.Fatalf("sscanf neg/exp: %v", err) }
-  if got.String() != `(-3 150)` {
-    t.Errorf("sscanf neg/exp = %s, erwartet (-3 150)", got)
+  if got.String() != `(-3 150.0)` {
+    t.Errorf("sscanf neg/exp = %s, erwartet (-3 150.0)", got)
   }
 }

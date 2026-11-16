@@ -27,6 +27,8 @@ import (
   "bytes"
   "encoding/json"
   "fmt"
+  "io"
+  "strconv"
 )
 
 const jsonMaxDepth = 64
@@ -88,6 +90,9 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
   case NIL:
     return []interface{}{}, nil
   case NUMBER:
+    if c.NumKind == NumInt {
+      return c.Int, nil
+    }
     return c.Num, nil
   case STRING:
     return c.Val, nil
@@ -160,9 +165,15 @@ func hashToJSONObject(ht *HashTable, depth int) (interface{}, error) {
 
 // JSONToCell parst genau einen JSON-Wert (Abbildung siehe Dateikopf).
 func JSONToCell(data []byte) (*Cell, error) {
+  // UseNumber: Ganzzahlen jenseits 2^53 kämen über float64 gerundet an.
   var v interface{}
-  if err := json.Unmarshal(data, &v); err != nil {
+  dec := json.NewDecoder(bytes.NewReader(data))
+  dec.UseNumber()
+  if err := dec.Decode(&v); err != nil {
     return nil, fmt.Errorf("JSONToCell: %v", err)
+  }
+  if _, err := dec.Token(); err != io.EOF {
+    return nil, fmt.Errorf("JSONToCell: Daten nach dem JSON-Wert")
   }
   return jsonValueToCell(v, 0)
 }
@@ -179,8 +190,16 @@ func jsonValueToCell(v interface{}, depth int) (*Cell, error) {
       return cellT, nil
     }
     return MakeNil(), nil
-  case float64:
-    return MakeNum(x), nil
+  case json.Number:
+    // Ohne Punkt und Exponent im int64-Bereich → Ganzzahl, sonst Float.
+    if i, err := strconv.ParseInt(x.String(), 10, 64); err == nil {
+      return MakeInt(i), nil
+    }
+    f, err := x.Float64()
+    if err != nil {
+      return nil, fmt.Errorf("JSONToCell: Zahl %s nicht darstellbar", x)
+    }
+    return MakeNum(f), nil
   case string:
     return MakeStr(x), nil
   case []interface{}:

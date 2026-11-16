@@ -16,6 +16,18 @@ import "fmt"
 
 func RegisterCellType(env *Env) {
   _ = env.Set("%cell-type", makeFn(fnCellType))
+  _ = env.Set("%integerp", makeFn(fnIntegerP))
+}
+
+// %integerp: Zahlart für %number-type (types.lisp) — t nur für Ganzzahlen.
+func fnIntegerP(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("%%integerp: 1 Argument nötig")
+  }
+  if args[0].Type == NUMBER && args[0].NumKind == NumInt {
+    return cellT, nil
+  }
+  return MakeNil(), nil
 }
 
 func fnCellType(args []*Cell) (*Cell, error) {

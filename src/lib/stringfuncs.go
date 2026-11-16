@@ -72,7 +72,7 @@ func stringCompareFn(name string, ok func(int) bool) func([]*Cell) (*Cell, error
     if name == "string=" {
       return MakeAtom("t"), nil
     }
-    return MakeNum(float64(i)), nil
+    return MakeInt(int64(i)), nil
   }
 }
 
@@ -177,7 +177,7 @@ func fnStringLength(args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != STRING {
     return nil, fmt.Errorf("string-length: String erwartet")
   }
-  return MakeNum(float64(len([]rune(args[0].Val)))), nil
+  return MakeInt(int64(len([]rune(args[0].Val)))), nil
 }
 
 func fnStringAppend(args []*Cell) (*Cell, error) {
@@ -228,6 +228,14 @@ func fnStringToNumber(args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != STRING {
     return nil, fmt.Errorf("string->number: String erwartet")
   }
+  // Reader-Regel: Vorzeichen + Ziffern ist eine Ganzzahl, sonst Float.
+  if isIntToken(args[0].Val) {
+    i, err := strconv.ParseInt(args[0].Val, 10, 64)
+    if err != nil {
+      return nil, fmt.Errorf("string->number: '%s' liegt außerhalb des int64-Bereichs", args[0].Val)
+    }
+    return MakeInt(i), nil
+  }
   n, err := strconv.ParseFloat(args[0].Val, 64)
   if err != nil {
     return nil, fmt.Errorf("string->number: '%s' ist keine Zahl", args[0].Val)
@@ -243,7 +251,7 @@ func fnParseInt(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("parse-int: '%s' ist keine Ganzzahl", args[0].Val)
   }
-  return MakeNum(float64(n)), nil
+  return MakeInt(n), nil
 }
 
 func fnParseFloat(args []*Cell) (*Cell, error) {
@@ -261,7 +269,7 @@ func fnNumberToString(args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != NUMBER {
     return nil, fmt.Errorf("number->string: Zahl erwartet")
   }
-  return MakeStr(FormatNumber(args[0].Num)), nil
+  return MakeStr(numberStr(args[0])), nil
 }
 
 // string->list: Wandelt String in Liste von Single-Character-Strings um

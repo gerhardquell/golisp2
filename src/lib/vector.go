@@ -148,7 +148,7 @@ func fnVectorPushExtend(args []*Cell) (*Cell, error) {
   v.mu.Lock()
   defer v.mu.Unlock()
   v.items = append(v.items, args[0])
-  return MakeNum(float64(len(v.items) - 1)), nil
+  return MakeInt(int64(len(v.items) - 1)), nil
 }
 
 // vector-pop: (vector-pop v) → letztes Element, entfernt es.
@@ -188,7 +188,7 @@ func fnVectorLength(args []*Cell) (*Cell, error) {
   if err != nil { return nil, err }
   v.mu.RLock()
   defer v.mu.RUnlock()
-  return MakeNum(float64(len(v.items))), nil
+  return MakeInt(int64(len(v.items))), nil
 }
 
 func fnVectorToList(args []*Cell) (*Cell, error) {

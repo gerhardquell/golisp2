@@ -126,7 +126,7 @@ func RegisterSwankEnv(env *lib.Env, send func(*lib.Cell) error) {
     if !ok || loc.File == "" {
       return lib.MakeNil(), nil
     }
-    return lib.Cons(lib.MakeStr(loc.File), lib.MakeNum(float64(loc.Line))), nil
+    return lib.Cons(lib.MakeStr(loc.File), lib.MakeInt(int64(loc.Line))), nil
   }))
 
   // swank--definition-kind: (name) -> "lambda" | "macro" | "builtin" | "unbound".

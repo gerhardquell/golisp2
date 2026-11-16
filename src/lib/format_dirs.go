@@ -66,8 +66,8 @@ func freshLine(out *strings.Builder, n int) {
   writeN(out, '\n', n)
 }
 
-// emitPadded: ~A/~S mit mincol,colinc,minpad,padchar. colon=rechtsbündig.
-func emitPadded(st *fmtState, s string, params []pval, colon bool) {
+// emitPadded: ~A/~S mit mincol,colinc,minpad,padchar. at=rechtsbündig (CL: ~@A füllt links).
+func emitPadded(st *fmtState, s string, params []pval, at bool) {
   mincol := resolveInt(st, paramGet(params, 0), 0)
   colinc := resolveInt(st, paramGet(params, 1), 1)
   minpad := resolveInt(st, paramGet(params, 2), 0)
@@ -75,7 +75,7 @@ func emitPadded(st *fmtState, s string, params []pval, colon bool) {
   if colinc < 1 {
     colinc = 1
   }
-  st.out.WriteString(padField(s, mincol, colinc, minpad, padchar, colon))
+  st.out.WriteString(padField(s, mincol, colinc, minpad, padchar, at))
 }
 
 func padField(s string, mincol, colinc, minpad int, padchar rune, rightAlign bool) string {
@@ -109,9 +109,14 @@ func padField(s string, mincol, colinc, minpad int, padchar rune, rightAlign boo
 
 func emitRadix(st *fmtState, params []pval, colon, at bool, base int) {
   c := st.consume()
-  n := toInt(c)
   mincol := resolveInt(st, paramGet(params, 0), 0)
   padchar := resolveRune(st, paramGet(params, 1), ' ')
+  // CL 22.3.2.2: Nicht-Ganzzahl wird wie ~A gedruckt, statt still abgeschnitten
+  if c == nil || c.Type != NUMBER || c.Num != math.Trunc(c.Num) {
+    st.out.WriteString(padField(aesthetic(c), mincol, 1, 0, padchar, true))
+    return
+  }
+  n := toInt(c)
   commachar := resolveRune(st, paramGet(params, 2), ',')
   commainterval := resolveInt(st, paramGet(params, 3), 3)
   if commainterval < 1 {
@@ -122,7 +127,7 @@ func emitRadix(st *fmtState, params []pval, colon, at bool, base int) {
   if neg {
     abs = -n
   }
-  digits := strconv.FormatInt(int64(abs), base)
+  digits := strings.ToUpper(strconv.FormatInt(int64(abs), base))
   if colon {
     digits = insertCommas(digits, commachar, commainterval)
   }
@@ -344,20 +349,14 @@ func oldRoman(n int) string {
 // ---- ~P ----
 
 func emitP(st *fmtState, colon, at bool) {
+  // CL 22.3.8.3: ~:P nimmt das vorige Argument noch einmal, ~@P schreibt y/ies
+  if colon && st.idx > 0 {
+    st.idx--
+  }
   c := st.consume()
   n := toInt(c)
   one := n == 1
-  if colon {
-    if one {
-      st.out.WriteString("y")
-    } else {
-      st.out.WriteString("ies")
-    }
-    return
-  }
-  // at: Argument nicht verbrauchen → zurückstellen
   if at {
-    st.idx--
     if one {
       st.out.WriteString("y")
     } else {

@@ -113,8 +113,11 @@ func cformatToCL(cfmt string) (string, error) {
     switch verb {
     case 'd', 'i':
       out.WriteString(clInt(width, zero, left, plus, 'D'))
-    case 'x', 'X':
+    case 'X':
       out.WriteString(clInt(width, zero, left, plus, 'X'))
+    case 'x':
+      // ~X druckt wie CL groß; C-%x ist klein
+      out.WriteString("~(" + clInt(width, zero, left, plus, 'X') + "~)")
     case 'o':
       out.WriteString(clInt(width, zero, left, plus, 'O'))
     case 's':
@@ -157,11 +160,11 @@ func clInt(width int, zero, left, plus bool, verb rune) string {
   return b.String()
 }
 
-// clStr: String-Direktive. C-Default rechtsbündig (~:A), '-' linksbündig (~A).
+// clStr: String-Direktive. C-Default rechtsbündig (~@A), '-' linksbündig (~A).
 func clStr(width int, left bool) string {
   if width == 0 { return "~A" }
   if left { return fmt.Sprintf("~%dA", width) }
-  return fmt.Sprintf("~%d:A", width)
+  return fmt.Sprintf("~%d@A", width)
 }
 
 // clFloat: Float-Direktive ~w,d,...,padchar F/E/G.

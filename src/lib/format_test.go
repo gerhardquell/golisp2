@@ -26,7 +26,11 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~a" nil)`, `"()"`},
     {`(format nil "~d" 255)`, `"255"`},
     {`(format nil "~b" 10)`, `"1010"`},
-    {`(format nil "~x" 255)`, `"ff"`},
+    {`(format nil "~x" 255)`, `"FF"`},           // CL: Großbuchstaben
+    {`(format nil "~(~x~)" 255)`, `"ff"`},
+    {`(format nil "~d" 3.7)`, `"3.7"`},          // CL: Nicht-Ganzzahl wie ~A
+    {`(format nil "~5d|" 3.7)`, `"  3.7|"`},
+    {`(format nil "~d" "abc")`, `"abc"`},
     {`(format nil "~o" 8)`, `"10"`},
     {`(format nil "~r" 4)`, `"four"`},
     {`(format nil "~:r" 3)`, `"third"`},        // ordinal
@@ -34,8 +38,11 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~@r" 1999)`, `"MCMXCIX"`},
     {`(format nil "~p" 1)`, `""`},
     {`(format nil "~p" 2)`, `"s"`},
-    {`(format nil "~:p" 1)`, `"y"`},
-    {`(format nil "~:p" 2)`, `"ies"`},
+    {`(format nil "~@p" 1)`, `"y"`},
+    {`(format nil "~@p" 2)`, `"ies"`},
+    {`(format nil "~d cat~:p" 2)`, `"2 cats"`},  // ~:P nimmt das vorige Argument
+    {`(format nil "~d cat~:p" 1)`, `"1 cat"`},
+    {`(format nil "~d fl~:@p" 2)`, `"2 flies"`},
     {`(format nil "~$" 3.14159)`, `"3.14"`},
     {`(format nil "~f" 3.14)`, `"3.14"`},
     {`(format nil "~,0f" 1.5)`, `"2."`},         // CL: ~F hat immer einen Punkt
@@ -66,7 +73,8 @@ func TestFormatBasic(t *testing.T) {
     {`(format nil "~,2f" 3.14159)`, `"3.14"`},
     {`(format nil "~5d" 42)`, `"   42"`},        // padding int
     {`(format nil "~5a" 42)`, `"42   "`},        // ~A = left-justified (pad rechts)
-    {`(format nil "~5:a" 42)`, `"   42"`},       // ~:A = right-justified
+    {`(format nil "~5@a" 42)`, `"   42"`},       // ~@A = rechtsbündig (pad links)
+    {`(format nil "~5:a" 42)`, `"42   "`},       // ~:A ändert die Bündigkeit nicht
     {`(format nil "~,,2,'.a" 5)`, `"5.."`},      // padchar + minpad
     {`(format nil "~[zero~;one~;two~]" 1)`, `"one"`},
     {`(format nil "~[zero~;one~;two~]" 0)`, `"zero"`},

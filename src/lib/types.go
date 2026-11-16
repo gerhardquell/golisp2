@@ -221,16 +221,18 @@ func Primary(c *Cell) *Cell {
 
 // FormatNumber ist die eine Druckform für Floats (Printer, ~a,
 // number->string). Immer als Float erkennbar, damit (read (print x))
-// typtreu bleibt: ganzzahlig im int64-Bereich mit ".0"; sonst kürzeste Ziffern,
-// Festkomma für 1e-4 ≤ |x| < 1e16 wie Python-repr — darüber täuschte
-// Festkomma Stellen vor, die float64 nicht hat. Ganzzahlen druckt
-// numberStr.
+// typtreu bleibt. Unter 1e16: ganzzahlig mit ".0", sonst kürzeste Ziffern
+// in Festkomma ab 1e-4 (wie Python-repr). Ab 1e16 und unter 1e-4 Exponent
+// — Festkomma täuschte dort Stellen vor, die float64 nicht hat. Ganzzahlen
+// druckt numberStr.
 func FormatNumber(n float64) string {
-	if n == float64(int64(n)) && math.Abs(n) < 9.2e18 {
-		return strconv.FormatInt(int64(n), 10) + ".0"
-	}
-	if a := math.Abs(n); a >= 1e-4 && a < 1e16 {
-		return strconv.FormatFloat(n, 'f', -1, 64)
+	if a := math.Abs(n); a < 1e16 {
+		if n == math.Trunc(n) {
+			return strconv.FormatInt(int64(n), 10) + ".0"
+		}
+		if a >= 1e-4 {
+			return strconv.FormatFloat(n, 'f', -1, 64)
+		}
 	}
 	return strconv.FormatFloat(n, 'g', -1, 64)
 }

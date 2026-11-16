@@ -785,6 +785,33 @@ Gibt t zurück, wenn x eine Zahl ist.
 (number? "42")
 ```
 
+### integerp / floatp
+
+**Syntax:** `(integerp x)` · `(floatp x)`
+
+Gibt t zurück, wenn x eine Ganzzahl bzw. ein Float ist. `3` und `3.0` sind
+verschiedene Zahlarten; `number?` gilt für beide.
+
+```lisp
+(integerp 3)
+(integerp 3.0)
+(floatp 3.0)
+(floatp (/ 7 2))
+```
+
+### float
+
+**Syntax:** `(float x)`
+
+Wandelt eine Zahl in einen Float. Der umgekehrte Weg geht über
+`floor`, `ceiling`, `truncate` oder `round`.
+
+```lisp
+(float 3)
+(float 3.5)
+(round (float 7))
+```
+
 ### list?
 
 **Syntax:** `(list? x)`

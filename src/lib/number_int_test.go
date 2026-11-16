@@ -63,7 +63,7 @@ func TestIntLesenDrucken(t *testing.T) {
     {`1e3`, "1000.0"},
     {`3.14`, "3.14"},
     {`-0.5`, "-0.5"},
-    {`1e17`, "100000000000000000.0"},
+    {`1e17`, "1e+17"},
     {`1e19`, "1e+19"},
     {`1e-5`, "1e-05"},
     {`'(1 2.0 -3)`, "(1 2.0 -3)"},
@@ -263,7 +263,7 @@ func TestIntVergleichen(t *testing.T) {
   })
 }
 
-// Zahlart ohne Umweg über den Printer (integerp/floatp kommen später).
+// Zahlart ohne Umweg über den Printer.
 func TestIntZahlart(t *testing.T) {
   env := BaseEnv()
   if err := LoadStdlib(env); err != nil {

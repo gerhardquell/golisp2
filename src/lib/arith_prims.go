@@ -253,7 +253,8 @@ func fnMul(args []*Cell) (*Cell, error) {
 	return MakeNum(n), nil
 }
 
-// /: zwei Ganzzahlen, die aufgehen → Ganzzahl, sonst Float.
+// /: n-är, linksassoziativ. Solange Ganzzahlen aufgehen, bleibt es eine
+// Ganzzahl; ab dem ersten Float oder Rest ist es ein Float.
 func fnDiv(args []*Cell) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("/: min. 2 Argumente")
@@ -261,17 +262,25 @@ func fnDiv(args []*Cell) (*Cell, error) {
 	if err := checkNumbers("/", args); err != nil {
 		return nil, err
 	}
-	a, b := args[0], args[1]
-	if b.Num == 0 {
-		return nil, fmt.Errorf("/: Division durch 0")
-	}
-	if a.NumKind == NumInt && b.NumKind == NumInt && a.Int%b.Int == 0 {
-		if a.Int == math.MinInt64 && b.Int == -1 {
-			return nil, errOverflow("/")
+	isInt, i, f := args[0].NumKind == NumInt, args[0].Int, args[0].Num
+	for _, b := range args[1:] {
+		if b.Num == 0 {
+			return nil, fmt.Errorf("/: Division durch 0")
 		}
-		return MakeInt(a.Int / b.Int), nil
+		if isInt && b.NumKind == NumInt && i%b.Int == 0 {
+			if i == math.MinInt64 && b.Int == -1 {
+				return nil, errOverflow("/")
+			}
+			i /= b.Int
+			f = float64(i)
+			continue
+		}
+		isInt, f = false, f/b.Num
 	}
-	return MakeNum(a.Num / b.Num), nil
+	if isInt {
+		return MakeInt(i), nil
+	}
+	return MakeNum(f), nil
 }
 
 // ---- Vergleiche (numerisch, strict) ----

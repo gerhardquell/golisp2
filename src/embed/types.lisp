@@ -58,7 +58,7 @@
 ;; === type-of =========================================================
 
 (defun %number-type (x)
-  (if (%integerp x) 'integer 'float))
+  (if (integerp x) 'integer 'float))
 
 (defun %symbol-type (x)
   (cond ((eq x t)                                                     'boolean)

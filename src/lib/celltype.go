@@ -16,18 +16,37 @@ import "fmt"
 
 func RegisterCellType(env *Env) {
   _ = env.Set("%cell-type", makeFn(fnCellType))
-  _ = env.Set("%integerp", makeFn(fnIntegerP))
+  _ = env.Set("integerp", makeFn(numKindP("integerp", NumInt)))
+  _ = env.Set("floatp", makeFn(numKindP("floatp", NumFloat)))
+  _ = env.Set("float", makeFn(fnFloat))
 }
 
-// %integerp: Zahlart für %number-type (types.lisp) — t nur für Ganzzahlen.
-func fnIntegerP(args []*Cell) (*Cell, error) {
+// integerp/floatp: t nur für eine Zahl dieser Zahlart (auch für
+// %number-type in types.lisp).
+func numKindP(name string, kind NumKind) func([]*Cell) (*Cell, error) {
+  return func(args []*Cell) (*Cell, error) {
+    if len(args) != 1 {
+      return nil, fmt.Errorf("%s: 1 Argument nötig", name)
+    }
+    if args[0].Type == NUMBER && args[0].NumKind == kind {
+      return cellT, nil
+    }
+    return MakeNil(), nil
+  }
+}
+
+// float: (float x) → x als Float (Ganzzahl über 2^53 wird gerundet).
+func fnFloat(args []*Cell) (*Cell, error) {
   if len(args) != 1 {
-    return nil, fmt.Errorf("%%integerp: 1 Argument nötig")
+    return nil, fmt.Errorf("float: 1 Argument nötig")
   }
-  if args[0].Type == NUMBER && args[0].NumKind == NumInt {
-    return cellT, nil
+  if err := checkNumbers("float", args); err != nil {
+    return nil, err
   }
-  return MakeNil(), nil
+  if args[0].NumKind == NumFloat {
+    return args[0], nil
+  }
+  return MakeNum(args[0].Num), nil
 }
 
 func fnCellType(args []*Cell) (*Cell, error) {

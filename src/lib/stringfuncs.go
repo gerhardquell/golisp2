@@ -202,8 +202,14 @@ func fnSubstring(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("substring: erstes Argument muss String sein")
   }
   runes := []rune(args[0].Val)
-  start := int(args[1].Num)
-  end   := int(args[2].Num)
+  start, err := intArg("substring", args[1])
+  if err != nil {
+    return nil, err
+  }
+  end, err := intArg("substring", args[2])
+  if err != nil {
+    return nil, err
+  }
   if start < 0 || end > len(runes) || start > end {
     return nil, fmt.Errorf("substring: Index außerhalb des Bereichs")
   }

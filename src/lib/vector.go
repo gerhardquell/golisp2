@@ -56,12 +56,12 @@ func asVector(name string, c *Cell) (*Vector, error) {
   return nil, fmt.Errorf("%s: Vektor erwartet, got %s", name, c)
 }
 
-// vectorIndex prüft i als ganze Zahl in 0..n-1.
+// vectorIndex prüft i als Ganzzahl in 0..n-1.
 func vectorIndex(name string, c *Cell, n int) (int, error) {
-  if c.Type != NUMBER || c.Num != float64(int(c.Num)) {
-    return 0, fmt.Errorf("%s: Index muss ganze Zahl sein, got %s", name, c)
+  i, err := intArg(name, c)
+  if err != nil {
+    return 0, err
   }
-  i := int(c.Num)
   if i < 0 || i >= n {
     return 0, fmt.Errorf("%s: Index %d außerhalb 0..%d", name, i, n-1)
   }
@@ -84,9 +84,12 @@ func fnMakeArray(args []*Cell) (*Cell, error) {
   if len(args) < 1 {
     return nil, fmt.Errorf("make-array: Größe fehlt")
   }
-  n := args[0]
-  if n.Type != NUMBER || n.Num != float64(int(n.Num)) || n.Num < 0 {
-    return nil, fmt.Errorf("make-array: Größe muss ganze Zahl >= 0 sein (nur eindimensional), got %s", n)
+  n, err := intArg("make-array", args[0])
+  if err != nil {
+    return nil, err
+  }
+  if n < 0 {
+    return nil, fmt.Errorf("make-array: Größe muss >= 0 sein, got %d", n)
   }
   init := MakeNil()
   rest := args[1:]
@@ -99,7 +102,7 @@ func fnMakeArray(args []*Cell) (*Cell, error) {
     }
     init = rest[i+1]
   }
-  items := make([]*Cell, int(n.Num))
+  items := make([]*Cell, n)
   for i := range items {
     items[i] = init
   }

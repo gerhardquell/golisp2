@@ -56,8 +56,7 @@ func parseGenType(c *Cell) (GenType, error) {
   case ATOM, STRING:
     name = strings.ToLower(c.Val)
   case NUMBER:
-    n := int(c.Num)
-    if float64(n) == c.Num && n >= 0 && n <= 5 {
+    if n, err := intArg("ga-create", c); err == nil && n >= 0 && n <= 5 {
       return GenType(n), nil
     }
     return -1, fmt.Errorf("ga-create: GenType-Code muss 0-5 sein")
@@ -153,14 +152,14 @@ func fnGaCreate(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1] == nil || args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ga-create: gen-len muss Zahl sein")
+  genLen, err := intArg("ga-create", args[1])
+  if err != nil {
+    return nil, err
   }
-  if args[2] == nil || args[2].Type != NUMBER {
-    return nil, fmt.Errorf("ga-create: gen-par muss Zahl sein")
+  genPar, err := intArg("ga-create", args[2])
+  if err != nil {
+    return nil, err
   }
-  genLen := int(args[1].Num)
-  genPar := int(args[2].Num)
   fn := args[3]
   if !isCallable(fn) {
     return nil, fmt.Errorf("ga-create: fitness-fn muss aufrufbar sein")
@@ -198,10 +197,11 @@ func fnGaCross(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1] == nil || args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ga-cross: codist muss Zahl sein")
+  codist, err := intArg("ga-cross", args[1])
+  if err != nil {
+    return nil, err
   }
-  if err := GaCross(ga, int(args[1].Num)); err != nil {
+  if err := GaCross(ga, codist); err != nil {
     return nil, fmt.Errorf("ga-cross: %v", err)
   }
   return MakeAtom("t"), nil
@@ -231,10 +231,11 @@ func fnGaSelect(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1] == nil || args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ga-select: keep muss Zahl sein")
+  keep, err := intArg("ga-select", args[1])
+  if err != nil {
+    return nil, err
   }
-  if err := GaSelect(ga, int(args[1].Num)); err != nil {
+  if err := GaSelect(ga, keep); err != nil {
     return nil, fmt.Errorf("ga-select: %v", err)
   }
   return MakeAtom("t"), nil
@@ -284,10 +285,11 @@ func fnGaPrint(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1] == nil || args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ga-print: lines muss Zahl sein")
+  lines, err := intArg("ga-print", args[1])
+  if err != nil {
+    return nil, err
   }
-  if err := GaPrint(ga, int(args[1].Num)); err != nil {
+  if err := GaPrint(ga, lines); err != nil {
     return nil, fmt.Errorf("ga-print: %v", err)
   }
   return MakeAtom("t"), nil

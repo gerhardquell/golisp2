@@ -187,10 +187,10 @@ func sigoFirstChoice(resp *Cell) (text, finish string) {
 // sigoUsageHash: Token-/Kosten-/Zeit-Keys mit Bindestrich (sigo*, sigo-usage).
 func sigoUsageHash(u sigoUsage) *Cell {
   h := newStringHash()
-  h.Ht.putStr("prompt-tokens", MakeNum(float64(u.PromptTokens)))
-  h.Ht.putStr("completion-tokens", MakeNum(float64(u.CompletionTokens)))
-  h.Ht.putStr("cached-tokens", MakeNum(float64(u.CachedTokens)))
-  h.Ht.putStr("reasoning-tokens", MakeNum(float64(u.ReasoningTokens)))
+  h.Ht.putStr("prompt-tokens", MakeInt(int64(u.PromptTokens)))
+  h.Ht.putStr("completion-tokens", MakeInt(int64(u.CompletionTokens)))
+  h.Ht.putStr("cached-tokens", MakeInt(int64(u.CachedTokens)))
+  h.Ht.putStr("reasoning-tokens", MakeInt(int64(u.ReasoningTokens)))
   h.Ht.putStr("cost-usd", MakeNum(u.CostUSD))
   h.Ht.putStr("elapsed", MakeNum(u.Elapsed))
   return h
@@ -229,7 +229,7 @@ func fnSigoUsage(args []*Cell) (*Cell, error) {
   u, n := sigoUsageSum, sigoCalls
   sigoStateMu.Unlock()
   h := sigoUsageHash(u)
-  h.Ht.putStr("calls", MakeNum(float64(n)))
+  h.Ht.putStr("calls", MakeInt(int64(n)))
   return h, nil
 }
 
@@ -425,7 +425,7 @@ func sigoBuildRequest(fname string, h *Cell, systemPrompt string) (*Cell, time.D
     }
     timeout = time.Duration(v.Num * float64(time.Second))
   }
-  req.Ht.putStr("timeout", MakeNum(math.Ceil(timeout.Seconds())))
+  req.Ht.putStr("timeout", MakeInt(int64(math.Ceil(timeout.Seconds()))))
   return req, timeout, nil
 }
 

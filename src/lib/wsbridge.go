@@ -300,7 +300,7 @@ func (ws *WebServer) handleOp(client *wsClient, id *int, op string, rawArgs json
   }
 
   // Client-ID immer als erstes Argument (Spec §3.2), Aufruf wie funcall.
-  result, err := apply(handler, append([]*Cell{MakeNum(float64(client.id))}, argCells...))
+  result, err := apply(handler, append([]*Cell{MakeInt(int64(client.id))}, argCells...))
   if err != nil {
     reply(wsOutMsg{Err: err.Error()})
     return
@@ -420,7 +420,7 @@ func fnWSEmit(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("ws-emit: %v", err)
   }
-  return MakeNum(float64(ws.broadcast(msg))), nil
+  return MakeInt(int64(ws.broadcast(msg))), nil
 }
 
 // ws-emit-to: (ws-emit-to srv client event data) → t, nil bei unbekanntem Client.
@@ -432,14 +432,15 @@ func fnWSEmitTo(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ws-emit-to: Client-ID muss NUMBER sein")
+  clientID, err := intArg("ws-emit-to", args[1])
+  if err != nil {
+    return nil, err
   }
   name, err := eventName("ws-emit-to", args[2])
   if err != nil {
     return nil, err
   }
-  client := ws.findClient(int(args[1].Num))
+  client := ws.findClient(clientID)
   if client == nil {
     return MakeNil(), nil
   }
@@ -468,7 +469,7 @@ func fnWSEval(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("ws-eval: %v", err)
   }
-  return MakeNum(float64(ws.broadcast(msg))), nil
+  return MakeInt(int64(ws.broadcast(msg))), nil
 }
 
 // ws-call: (ws-call srv client js &key timeout) → Wert oder Lisp-Error.
@@ -482,8 +483,9 @@ func fnWSCall(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if args[1].Type != NUMBER {
-    return nil, fmt.Errorf("ws-call: Client-ID muss NUMBER sein")
+  clientID, err := intArg("ws-call", args[1])
+  if err != nil {
+    return nil, err
   }
   if args[2].Type != STRING {
     return nil, fmt.Errorf("ws-call: js muss String sein")
@@ -498,7 +500,6 @@ func fnWSCall(args []*Cell) (*Cell, error) {
     }
     timeout = time.Duration(args[i+1].Num) * time.Millisecond
   }
-  clientID := int(args[1].Num)
   client := ws.findClient(clientID)
   if client == nil {
     return nil, fmt.Errorf("ws-call: unbekannter Client %d", clientID)
@@ -553,7 +554,7 @@ func fnWSClients(args []*Cell) (*Cell, error) {
   ws.mu.RLock()
   ids := make([]*Cell, 0, len(ws.clients))
   for id := range ws.clients {
-    ids = append(ids, MakeNum(float64(id)))
+    ids = append(ids, MakeInt(int64(id)))
   }
   ws.mu.RUnlock()
   return SliceToCell(ids), nil

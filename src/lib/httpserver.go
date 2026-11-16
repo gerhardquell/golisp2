@@ -113,7 +113,11 @@ func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
       return nil, fmt.Errorf("http-serve: unbekanntes Keyword %s", args[i])
     }
   }
-  ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, int(args[0].Num)))
+  port, err := intArg("http-serve", args[0])
+  if err != nil {
+    return nil, err
+  }
+  ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
   if err != nil {
     return nil, fmt.Errorf("http-serve: %v", err)
   }
@@ -302,7 +306,7 @@ func fnHTTPPort(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  return MakeNum(float64(ws.port)), nil
+  return MakeInt(int64(ws.port)), nil
 }
 
 // http-wait: (http-wait srv &key idle-exit) → nil. Blockiert bis http-stop

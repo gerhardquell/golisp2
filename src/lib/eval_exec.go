@@ -160,7 +160,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 
   if ctx.Err() != nil {
     if exitcdVar != "" {
-      if err := env.Set(exitcdVar, MakeNum(-1)); err != nil { return nil, err }
+      if err := env.Set(exitcdVar, MakeInt(-1)); err != nil { return nil, err }
     }
     return MakeNil(), nil
   }
@@ -170,7 +170,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       exitCode = exitErr.ExitCode()
     } else {
       if exitcdVar != "" {
-        if err := env.Set(exitcdVar, MakeNum(-1)); err != nil { return nil, err }
+        if err := env.Set(exitcdVar, MakeInt(-1)); err != nil { return nil, err }
       }
       return MakeNil(), nil
     }
@@ -183,7 +183,7 @@ func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if err := env.Set(stderrVar, MakeStr(stderrBuf.String())); err != nil { return nil, err }
   }
   if exitcdVar != "" {
-    if err := env.Set(exitcdVar, MakeNum(float64(exitCode))); err != nil { return nil, err }
+    if err := env.Set(exitcdVar, MakeInt(int64(exitCode))); err != nil { return nil, err }
   }
 
   return cellT, nil

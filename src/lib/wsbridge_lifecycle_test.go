@@ -122,7 +122,7 @@ func TestWSCallDisconnectCleansPending(t *testing.T) {
   done := make(chan error, 1)
   go func() {
     _, err := fnWSCall([]*Cell{
-      {Type: LIST, Env: ws}, MakeNum(float64(client.id)), MakeStr("1"),
+      {Type: LIST, Env: ws}, MakeInt(int64(client.id)), MakeStr("1"),
       MakeAtom(":timeout"), MakeNum(10000),
     })
     done <- err
@@ -159,7 +159,7 @@ func TestWSCallRejectedSendCleansPending(t *testing.T) {
     pending: make(map[int]chan wsCallResult),
   }
   _, err := fnWSCall([]*Cell{
-    {Type: LIST, Env: ws}, MakeNum(1), MakeStr("1"),
+    {Type: LIST, Env: ws}, MakeInt(1), MakeStr("1"),
   })
   if err == nil {
     t.Fatal("Voller Sendepuffer muss Fehler liefern")

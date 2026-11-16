@@ -70,13 +70,6 @@ func seqResultType(name string, c *Cell, allowNil bool) (isVec, isNil bool, err 
   return false, false, fmt.Errorf("%s: Ergebnistyp list oder vector erwartet, got %s", name, c)
 }
 
-func seqInt(name string, c *Cell) (int, error) {
-  if c == nil || c.Type != NUMBER || c.Num != float64(int(c.Num)) {
-    return 0, fmt.Errorf("%s: ganze Zahl erwartet, got %s", name, c)
-  }
-  return int(c.Num), nil
-}
-
 func fnElt(args []*Cell) (*Cell, error) {
   if len(args) != 2 {
     return nil, fmt.Errorf("elt: 2 Argumente erwartet (sequenz index)")
@@ -100,13 +93,13 @@ func fnSubseq(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  start, err := seqInt("subseq", args[1])
+  start, err := intArg("subseq", args[1])
   if err != nil {
     return nil, err
   }
   end := len(items)
   if len(args) == 3 {
-    if end, err = seqInt("subseq", args[2]); err != nil {
+    if end, err = intArg("subseq", args[2]); err != nil {
       return nil, err
     }
   }

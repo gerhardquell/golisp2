@@ -41,7 +41,7 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("webserv: gerade Anzahl Argumente (Keyword-Paare) erwartet")
   }
 
-  port := 0.0
+  port := MakeInt(0)
   host := "127.0.0.1"
   useTLS := false
   var html, htmlpath string
@@ -54,10 +54,10 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
     }
     switch args[i].Val {
     case ":port":
-      if args[i+1].Type != NUMBER {
-        return nil, fmt.Errorf("webserv: :port muss NUMBER sein")
+      if _, err := intArg("webserv :port", args[i+1]); err != nil {
+        return nil, err
       }
-      port = args[i+1].Num
+      port = args[i+1]
     case ":host":
       if args[i+1].Type != STRING {
         return nil, fmt.Errorf("webserv: :host muss STRING sein")
@@ -91,7 +91,7 @@ func fnWebServ(env *Env, args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("webserv: :html oder :htmlpath erforderlich")
   }
 
-  httpArgs := []*Cell{MakeNum(port), MakeAtom(":host"), MakeStr(host)}
+  httpArgs := []*Cell{port, MakeAtom(":host"), MakeStr(host)}
   if useTLS {
     httpArgs = append(httpArgs, MakeAtom(":tls"), MakeAtom("t"))
   }

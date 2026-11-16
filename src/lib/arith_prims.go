@@ -33,6 +33,8 @@ func RegisterArith(env *Env) {
 	_ = env.Set("truncate", makeFn(roundTruncate.fn))
 	_ = env.Set("round", makeFn(roundNearest.fn))
 	_ = env.Set("random", makeFn(fnRandom))
+	_ = env.Set("ash", makeFn(fnAsh))
+	_ = env.Set("%ganzzahl-pruefen", makeFn(fnGanzzahlPruefen))
 
 	// Vergleiche
 	_ = env.Set("=", makeFn(fnEq))
@@ -117,6 +119,55 @@ func floatToInt(name string, f float64) (int64, error) {
 		return 0, errOverflow(name)
 	}
 	return int64(f), nil
+}
+
+// intArg ist die EINZIGE Quelle für Index- und Anzahl-Argumente (Spec
+// §3.5): nur eine Ganzzahl gilt, ein Float ist ein Fehler — auch 2.0.
+func intArg(name string, c *Cell) (int, error) {
+	if c == nil || c.Type != NUMBER || c.NumKind != NumInt {
+		return 0, fmt.Errorf("%s: ganze Zahl erwartet, got %s", name, c)
+	}
+	return int(c.Int), nil
+}
+
+// %ganzzahl-pruefen: (%ganzzahl-pruefen name n) → n; intArg für Lisp-Code
+// (nth, iota, dotimes, evenp …).
+func fnGanzzahlPruefen(args []*Cell) (*Cell, error) {
+	if len(args) != 2 || args[0].Type != STRING {
+		return nil, fmt.Errorf("%%ganzzahl-pruefen: (name n) erwartet")
+	}
+	if _, err := intArg(args[0].Val, args[1]); err != nil {
+		return nil, err
+	}
+	return args[1], nil
+}
+
+// ash: arithmetischer Shift, exakt auf int64 (Rechtsshift rundet wie CL
+// Richtung -unendlich).
+func fnAsh(args []*Cell) (*Cell, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("ash: 2 Argumente nötig")
+	}
+	x, err := intArg("ash", args[0])
+	if err != nil {
+		return nil, err
+	}
+	n, err := intArg("ash", args[1])
+	if err != nil {
+		return nil, err
+	}
+	i := int64(x)
+	switch {
+	case n <= -63:
+		return MakeInt(i >> 63), nil
+	case n < 0:
+		return MakeInt(i >> uint(-n)), nil
+	case i == 0:
+		return MakeInt(0), nil
+	case n >= 64 || (i<<uint(n))>>uint(n) != i:
+		return nil, errOverflow("ash")
+	}
+	return MakeInt(i << uint(n)), nil
 }
 
 // allInts: sind alle (bereits als NUMBER geprüften) Argumente Ganzzahlen?

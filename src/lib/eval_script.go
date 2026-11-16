@@ -14,7 +14,6 @@ package lib
 
 import (
   "fmt"
-  "math"
   "path/filepath"
   "strings"
 )
@@ -123,8 +122,9 @@ func mainExitCode(v *Cell) (int, error) {
   if v == nil || v.Type != NUMBER {
     return 0, nil
   }
-  if v.Num != math.Trunc(v.Num) || v.Num < 0 || v.Num > 255 {
+  code, err := intArg("defmain", v)
+  if err != nil || code < 0 || code > 255 {
     return 1, fmt.Errorf("defmain: Exit-Code muss ganze Zahl 0–255 sein, got %s", v)
   }
-  return int(v.Num), nil
+  return code, nil
 }

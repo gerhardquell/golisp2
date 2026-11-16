@@ -119,7 +119,12 @@ func RegisterGoroutines(env *Env) {
 // chan-make: (chan-make) oder (chan-make 10) für gebufferten Channel
 func fnChanMake(args []*Cell) (*Cell, error) {
   size := 0
-  if len(args) > 0 { size = int(args[0].Num) }
+  if len(args) > 0 {
+    var err error
+    if size, err = intArg("chan-make", args[0]); err != nil {
+      return nil, err
+    }
+  }
   return makeChannelCell(size), nil
 }
 

@@ -91,9 +91,9 @@ func fnRedefLog(args []*Cell) (*Cell, error) {
       MakeAtom(e.OldKind),
       MakeAtom(e.NewKind),
       MakeString(e.OldFile),
-      MakeNumber(float64(e.OldLine)),
+      MakeInt(int64(e.OldLine)),
       MakeString(e.NewFile),
-      MakeNumber(float64(e.NewLine)),
+      MakeInt(int64(e.NewLine)),
       MakeAtom(e.Action),
     ))
   }

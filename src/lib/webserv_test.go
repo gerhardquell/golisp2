@@ -349,7 +349,7 @@ func TestWebServOpenWithoutBrowser(t *testing.T) {
   defer SetErrorWriter(defaultErrorWriter)
   env := webservTestEnv(t)
   srv, err := fnWebServ(env, []*Cell{
-    MakeAtom(":port"), MakeNum(0),
+    MakeAtom(":port"), MakeInt(0),
     MakeAtom(":html"), MakeStr("x"),
     MakeAtom(":open"), MakeAtom("t"),
   })

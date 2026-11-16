@@ -54,10 +54,13 @@
     (if (null l) n (len-acc (cdr l) (+ n 1))))
   (if (eq (%cell-type lst) 'vector) (%vector-length lst) (len-acc lst 0)))
 
-(defun nth (n lst)
+;; Index-/Anzahl-Argumente prüft %ganzzahl-pruefen (Go: intArg) einmal am
+;; Eingang; die Rekursion läuft in den %-Helfern ohne erneute Prüfung.
+(defun %nth (n lst)
   (cond ((null lst) ())
         ((= n 0) (car lst))
-        (t (nth (- n 1) (cdr lst)))))
+        (t (%nth (- n 1) (cdr lst)))))
+(defun nth (n lst) (%nth (%ganzzahl-pruefen "nth" n) lst))
 
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))
@@ -81,15 +84,17 @@
     (t                   (filter pred (cdr lst)))))
 
 ;; drop/take: Listen-Präfix-Helfer (für reduce :start/:end).
-(defun drop (n lst)
+(defun %drop (n lst)
   (if (or (null lst) (<= n 0))
       lst
-      (drop (- n 1) (cdr lst))))
+      (%drop (- n 1) (cdr lst))))
+(defun drop (n lst) (%drop (%ganzzahl-pruefen "drop" n) lst))
 
-(defun take (n lst)
+(defun %take (n lst)
   (if (or (null lst) (<= n 0))
       ()
-      (cons (car lst) (take (- n 1) (cdr lst)))))
+      (cons (car lst) (%take (- n 1) (cdr lst)))))
+(defun take (n lst) (%take (%ganzzahl-pruefen "take" n) lst))
 
 ;; %reduce-fold: eigentliche Faltung (tail-rekursiv, TCO). from-end:
 ;; f erhält (elem acc), sonst (acc elem). key wird nur auf kombinierte
@@ -142,10 +147,12 @@
       (cons (list (car lst1) (car lst2))
             (zip (cdr lst1) (cdr lst2)))))
 
-(defun list-tail (lst n)
-  (if (= n 0) lst (list-tail (cdr lst) (- n 1))))
+(defun %list-tail (lst n)
+  (if (= n 0) lst (%list-tail (cdr lst) (- n 1))))
+(defun list-tail (lst n) (%list-tail lst (%ganzzahl-pruefen "list-tail" n)))
 
 (defun iota (n)
+  (%ganzzahl-pruefen "iota" n)
   (define (iota-acc i acc)
     (if (< i 0) acc (iota-acc (- i 1) (cons i acc))))
   (iota-acc (- n 1) ()))
@@ -184,6 +191,8 @@
 (defun gcd (a b)
   (if (= b 0) (abs a) (gcd b (mod a b))))
 
+;; ash ist Go-Primitiv (arith_prims.go, exakt auf int64); ash-left/-right
+;; bleiben als eigenständige Funktionen.
 ;; floor statt / : CL-ash rundet beim Rechtsshift Richtung -unendlich
 (defun ash-right (x n)
   (if (<= n 0)
@@ -195,11 +204,6 @@
     x
     (ash-left (* x 2) (- n 1))))
 
-(defun ash (x n)
-  (if (>= n 0)
-    (ash-left x n)
-    (ash-right x (* n -1))))
-
 ;; === Iteratoren =================================================
 
 (defmacro dotimes (var-n . body)
@@ -207,7 +211,7 @@
         (n   (cadr var-n))
         (res (caddr var-n))
         (tmp (gensym)))
-    `(let ((,tmp ,n)
+    `(let ((,tmp (%ganzzahl-pruefen "dotimes" ,n))
            (,var 0))
        (while (< ,var ,tmp)
          ,@body
@@ -596,10 +600,10 @@
       (cons (copy-tree (car x)) (copy-tree (cdr x)))
       x))
 
+(defun %make-list (n x acc)
+  (if (<= n 0) acc (%make-list (- n 1) x (cons x acc))))
 (defun make-list (n &key (initial-element ()))
-  (if (<= n 0)
-      ()
-      (cons initial-element (make-list (- n 1) :initial-element initial-element))))
+  (%make-list (%ganzzahl-pruefen "make-list" n) initial-element ()))
 
 ;; --- Plists ---
 
@@ -616,10 +620,7 @@
 (defun 1+ (n) (+ n 1))
 (defun 1- (n) (- n 1))
 
-;; evenp/oddp: CL definiert sie nur für ganze Zahlen — sonst laut.
-(defun %ganzzahl-pruefen (name n)
-  (if (not (and (number? n) (= n (floor n))))
-      (error (format nil "~a: ganze Zahl erwartet, got ~s" name n))))
+;; evenp/oddp: CL definiert sie nur für Ganzzahlen — sonst laut.
 (defun evenp (n) (%ganzzahl-pruefen "evenp" n) (= (mod n 2) 0))
 (defun oddp (n) (%ganzzahl-pruefen "oddp" n) (not (= (mod n 2) 0)))
 
@@ -723,8 +724,8 @@
 ;; Element, steht dort (:error text); die anderen laufen durch. Beide
 ;; Channels sind gepuffert, damit Einstellen und Abholen nicht verklemmen.
 (defun pool-map (n fn lst)
-  (cond ((not (and (number? n) (= n (floor n)) (> n 0)))
-         (error (format nil "pool-map: Arbeiterzahl muss ganze Zahl > 0 sein, got ~s" n)))
+  (cond ((<= (%ganzzahl-pruefen "pool-map" n) 0)
+         (error (format nil "pool-map: Arbeiterzahl muss > 0 sein, got ~s" n)))
         ((not (list? lst))
          (error (format nil "pool-map: Liste erwartet, got ~s" lst)))
         ((null lst) ())

@@ -112,15 +112,18 @@ func evalNthValue(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     return nil, err
   }
   n = Primary(n)
-  if n.Type != NUMBER || n.Num < 0 {
-    return nil, fmt.Errorf("nth-value: Index muss nicht-negative Zahl sein, got %s", n)
+  i, err := intArg("nth-value", n)
+  if err != nil {
+    return nil, err
+  }
+  if i < 0 {
+    return nil, fmt.Errorf("nth-value: Index darf nicht negativ sein, got %d", i)
   }
   v, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil {
     return nil, err
   }
   vals := ValuesToSlice(v)
-  i := int(n.Num)
   if i >= len(vals) {
     return MakeNil(), nil
   }

@@ -21,7 +21,8 @@ func TestNumberIst(t *testing.T) {
     {`(+ 9007199254740992 1)`, "9007199254740993"}, // §1: war 9007199254740992 (gerundet)
     // §5 Überlauf ist Fehler: (* 99999999999 99999999999) war 9.9999999998e+21,
     // (random 1.0) war 0 — beide jetzt in number_int_test.go.
-    {`(nth 1.7 (list 1 2 3))`, "()"},
+    // §5 Float als Index ist Fehler: (nth 1.7 (list 1 2 3)) war () — jetzt
+    // in number_index_test.go.
     {`(type-of 3)`, "integer"},
     // Druckform
     {`3`, "3"},

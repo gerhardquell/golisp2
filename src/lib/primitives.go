@@ -384,10 +384,10 @@ func fnFuncall(env *Env, args []*Cell) (*Cell, error) {
 func fnExit(args []*Cell) (*Cell, error) {
 	code := 0
 	if len(args) > 0 {
-		if args[0] == nil || args[0].Type != NUMBER {
-			return nil, fmt.Errorf("exit: Code muss Zahl sein")
+		var err error
+		if code, err = intArg("exit", args[0]); err != nil {
+			return nil, err
 		}
-		code = int(args[0].Num)
 	}
 	os.Exit(code)
 	return nil, nil // unreachable
@@ -439,10 +439,11 @@ func fnGensym(args []*Cell) (*Cell, error) {
 		case STRING:
 			prefix = args[0].Val
 		case NUMBER:
-			if args[0].Num != float64(int64(args[0].Num)) {
-				return nil, fmt.Errorf("gensym: Zahl muss ganzzahlig sein, nicht %v", args[0].Num)
+			i, err := intArg("gensym", args[0])
+			if err != nil {
+				return nil, err
 			}
-			return MakeAtom(fmt.Sprintf("G%d", int64(args[0].Num))), nil
+			return MakeAtom(fmt.Sprintf("G%d", i)), nil
 		default:
 			return nil, fmt.Errorf("gensym: Argument muss String oder Int sein, nicht %v", args[0].Type)
 		}
@@ -499,19 +500,19 @@ func fnMemstats(args []*Cell) (*Cell, error) {
 	// Erstelle Property-Liste: ((heapalloc . 123) (heapsys . 456) ...)
 	stats := []struct {
 		name string
-		val  float64
+		val  uint64
 	}{
-		{"heapalloc", float64(m.HeapAlloc)},
-		{"heapsys", float64(m.HeapSys)},
-		{"heapobjects", float64(m.HeapObjects)},
-		{"numgc", float64(m.NumGC)},
-		{"pausetotalns", float64(m.PauseTotalNs)},
-		{"totalalloc", float64(m.TotalAlloc)},
+		{"heapalloc", m.HeapAlloc},
+		{"heapsys", m.HeapSys},
+		{"heapobjects", m.HeapObjects},
+		{"numgc", uint64(m.NumGC)},
+		{"pausetotalns", m.PauseTotalNs},
+		{"totalalloc", m.TotalAlloc},
 	}
 
 	result := MakeNil()
 	for i := len(stats) - 1; i >= 0; i-- {
-		pair := Cons(MakeAtom(stats[i].name), MakeNum(stats[i].val))
+		pair := Cons(MakeAtom(stats[i].name), MakeInt(int64(stats[i].val)))
 		result = Cons(pair, result)
 	}
 	return result, nil

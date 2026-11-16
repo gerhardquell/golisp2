@@ -165,7 +165,7 @@ func fnPgExec(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("pg-exec: %w", err)
 	}
 
-	return MakeNum(float64(affected)), nil
+	return MakeInt(affected), nil
 }
 
 // pg-close: (pg-close conn)
@@ -219,11 +219,11 @@ func interfaceToCell(v interface{}) *Cell {
 
 	switch val := v.(type) {
 	case int64:
-		return MakeNum(float64(val))
+		return MakeInt(val)
 	case int32:
-		return MakeNum(float64(val))
+		return MakeInt(int64(val))
 	case int:
-		return MakeNum(float64(val))
+		return MakeInt(int64(val))
 	case float64:
 		return MakeNum(val)
 	case float32:

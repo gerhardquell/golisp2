@@ -63,11 +63,11 @@ func fnSystem(args []*Cell) (*Cell, error) {
   err := cmd.Run()
   if err != nil {
     if exitErr, ok := err.(*exec.ExitError); ok {
-      return MakeNum(float64(exitErr.ExitCode())), nil
+      return MakeInt(int64(exitErr.ExitCode())), nil
     }
-    return MakeNum(1), nil
+    return MakeInt(1), nil
   }
-  return MakeNum(0), nil
+  return MakeInt(0), nil
 }
 
 // file-stat: (file-stat "path") → ((size . N) (mtime . N)) oder nil
@@ -80,7 +80,7 @@ func fnFileStat(args []*Cell) (*Cell, error) {
     return MakeNil(), nil
   }
   // Baue Assoziationsliste: ((size . N) (mtime . N))
-  sizePair  := Cons(MakeAtom("size"),  MakeNum(float64(info.Size())))
-  mtimePair := Cons(MakeAtom("mtime"), MakeNum(float64(info.ModTime().Unix())))
+  sizePair  := Cons(MakeAtom("size"),  MakeInt(info.Size()))
+  mtimePair := Cons(MakeAtom("mtime"), MakeInt(info.ModTime().Unix()))
   return SliceToCell([]*Cell{sizePair, mtimePair}), nil
 }

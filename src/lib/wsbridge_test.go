@@ -26,7 +26,7 @@ import (
 func wsTestServer(t *testing.T) (*WebServer, *Env) {
   t.Helper()
   env := BaseEnv()
-  cell, err := fnHTTPServe(env, []*Cell{MakeNum(0)})
+  cell, err := fnHTTPServe(env, []*Cell{MakeInt(0)})
   if err != nil {
     t.Fatalf("http-serve: %v", err)
   }
@@ -242,7 +242,7 @@ func TestWSCallRoundtripAndUnknownClient(t *testing.T) {
   }
   done := make(chan callRes, 1)
   go func() {
-    val, err := fnWSCall([]*Cell{srv, MakeNum(cid), MakeStr("return window.innerWidth")})
+    val, err := fnWSCall([]*Cell{srv, MakeInt(int64(cid)), MakeStr("return window.innerWidth")})
     done <- callRes{val, err}
   }()
 
@@ -270,7 +270,7 @@ func TestWSCallRoundtripAndUnknownClient(t *testing.T) {
   }
 
   // unbekannter Client → Fehler, kein Hänger (Spec §8.3)
-  if _, err := fnWSCall([]*Cell{srv, MakeNum(999), MakeStr("1")}); err == nil ||
+  if _, err := fnWSCall([]*Cell{srv, MakeInt(999), MakeStr("1")}); err == nil ||
     !strings.Contains(err.Error(), "unbekannter Client") {
     t.Fatalf("ws-call 999: err = %v, erwartet 'unbekannter Client'", err)
   }

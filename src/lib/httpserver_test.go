@@ -21,7 +21,7 @@ import (
 
 func TestHTTPServeDefaultHost(t *testing.T) {
   env := BaseEnv()
-  srvCell, err := fnHTTPServe(env, []*Cell{MakeNum(0)})
+  srvCell, err := fnHTTPServe(env, []*Cell{MakeInt(0)})
   if err != nil {
     t.Fatalf("http-serve: %v", err)
   }
@@ -42,7 +42,7 @@ func TestHTTPServeDefaultHost(t *testing.T) {
 
 func TestHTTPServeCustomHost(t *testing.T) {
   env := BaseEnv()
-  args := []*Cell{MakeNum(0), MakeAtom(":host"), MakeStr("127.0.0.1")}
+  args := []*Cell{MakeInt(0), MakeAtom(":host"), MakeStr("127.0.0.1")}
   srvCell, err := fnHTTPServe(env, args)
   if err != nil {
     t.Fatalf("http-serve: %v", err)
@@ -64,7 +64,7 @@ func TestHTTPServeCustomHost(t *testing.T) {
 
 func TestHTTPServeTLS(t *testing.T) {
   env := BaseEnv()
-  args := []*Cell{MakeNum(0), MakeAtom(":host"), MakeStr("127.0.0.1"),
+  args := []*Cell{MakeInt(0), MakeAtom(":host"), MakeStr("127.0.0.1"),
     MakeAtom(":tls"), MakeAtom("t")}
   srvCell, err := fnHTTPServe(env, args)
   if err != nil {
@@ -115,8 +115,8 @@ func TestHTTPServeErrors(t *testing.T) {
   }{
     {"kein Argument", []*Cell{}},
     {"Port falscher Typ", []*Cell{MakeStr("8083")}},
-    {"unbekanntes Keyword", []*Cell{MakeNum(0), MakeAtom(":quatsch"), MakeStr("x")}},
-    {":host falscher Typ", []*Cell{MakeNum(0), MakeAtom(":host"), MakeNum(1)}},
+    {"unbekanntes Keyword", []*Cell{MakeInt(0), MakeAtom(":quatsch"), MakeStr("x")}},
+    {":host falscher Typ", []*Cell{MakeInt(0), MakeAtom(":host"), MakeNum(1)}},
   }
   for _, tc := range cases {
     t.Run(tc.name, func(t *testing.T) {

@@ -388,10 +388,7 @@ func intAt(c *Cell, key string) int {
   if v == nil || v.Type != NUMBER {
     return 0
   }
-  if v.NumKind == NumInt {
-    return int(v.Int)
-  }
-  return int(v.Num)
+  return int(toInt(v))
 }
 
 // sigoBuildRequest prüft h gegen die Whitelist und liefert eine Kopie mit

@@ -24,6 +24,7 @@
 package lib
 
 import (
+  "math"
   "bytes"
   "encoding/json"
   "fmt"
@@ -92,6 +93,10 @@ func cellToJSONValue(c *Cell, depth int) (interface{}, error) {
   case NUMBER:
     if c.NumKind == NumInt {
       return c.Int, nil
+    }
+    // Ganzzahliger Float als "3.0", damit er beim Lesen ein Float bleibt
+    if c.Num == math.Trunc(c.Num) && !math.IsInf(c.Num, 0) {
+      return json.Number(FormatNumber(c.Num)), nil
     }
     return c.Num, nil
   case STRING:

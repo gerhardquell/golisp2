@@ -11,7 +11,10 @@
 
 package lib
 
-import "testing"
+import (
+  "strings"
+  "testing"
+)
 
 func TestIntFormatExakt(t *testing.T) {
   runNumCases(t, []struct{ src, want string }{
@@ -106,7 +109,48 @@ func TestIntDruckformUndJSON(t *testing.T) {
     {`(number->string 3.0)`, `"3.0"`},
     {`(format nil "~a" 3.0)`, `"3.0"`},
     // JSON-Grenze (§3.6): der Float 3.0 wird als 3 geschrieben
-    {`(json-encode (json-parse "[1, 2.5, 3.0]"))`, `"[1,2.5,3]"`},
+    {`(json-encode (json-parse "[1, 2.5, 3.0]"))`, `"[1,2.5,3.0]"`},
     {`(json-parse "9007199254740993")`, "9007199254740993"},
   })
+}
+
+// Befunde des Code-Reviews über den Zweig (20261116).
+func TestGanzzahlReviewBefunde(t *testing.T) {
+  env := BaseEnv()
+  if err := LoadStdlib(env); err != nil {
+    t.Fatal(err)
+  }
+  ok := []struct{ src, want string }{
+    {`(json-encode (list 1 2.0 2.5))`, `"[1,2.0,2.5]"`},
+    {`(floatp (car (json-parse (json-encode (list 2.0)))))`, `t`},
+    {`(- 0.0)`, `-0.0`},
+    {`(format nil "~d item~:p" 1.0)`, `"1.0 items"`},
+    {`(format nil "~d item~:p" 1)`, `"1 item"`},
+    {`(string->number "-7")`, `-7`},
+  }
+  for _, c := range ok {
+    cell, err := Read(c.src)
+    if err != nil {
+      t.Fatalf("read %s: %v", c.src, err)
+    }
+    got, err := Eval(cell, env)
+    if err != nil {
+      t.Errorf("%s: Fehler %v", c.src, err)
+      continue
+    }
+    if got.String() != c.want {
+      t.Errorf("%s = %s, erwartet %s", c.src, got, c.want)
+    }
+  }
+  fehler := []struct{ src, teil string }{
+    {`(string->number "")`, "ist keine Zahl"},
+    {`(nth 1.5 (list 1 2))`, "floor/round/truncate"},
+  }
+  for _, c := range fehler {
+    cell, _ := Read(c.src)
+    _, err := Eval(cell, env)
+    if err == nil || !strings.Contains(err.Error(), c.teil) {
+      t.Errorf("%s: Fehler mit %q erwartet, got %v", c.src, c.teil, err)
+    }
+  }
 }

@@ -18,7 +18,7 @@ func TestEvenpOddp(t *testing.T) {
   // CL: nur für ganze Zahlen definiert
   evalStdlibErr(t, `(evenp 1.5)`)
   evalStdlibErr(t, `(oddp "3")`)
-  evalStdlibEq(t, `(trap (evenp 1.5) (lambda (e) e))`, `"evenp: ganze Zahl erwartet, got 1.5"`)
+  evalStdlibEq(t, `(trap (evenp 1.5) (lambda (e) e))`, `"evenp: ganze Zahl erwartet, got 1.5 (floor/round/truncate liefern Ganzzahlen)"`)
 }
 
 func TestPluspMinusp(t *testing.T) {

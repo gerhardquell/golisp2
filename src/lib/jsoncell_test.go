@@ -109,8 +109,8 @@ func TestCellToJSONLispSeite(t *testing.T) {
     {"t und Symbol", List(MakeAtom("t"), MakeAtom("foo")), `[true,"foo"]`},
     {":false/:null", List(MakeAtom(":false"), MakeAtom(":null")), `[false,null]`},
     {"nil", MakeNil(), `[]`},
-    {"Symbol-Key", ht(MakeAtom("rot"), MakeNum(1)), `{"rot":1}`},
-    {"Hash mit Array", ht(MakeStr("m"), List(MakeNum(1))), `{"m":[1]}`},
+    {"Symbol-Key", ht(MakeAtom("rot"), MakeInt(1)), `{"rot":1}`},
+    {"Hash mit Array", ht(MakeStr("m"), List(MakeInt(1))), `{"m":[1]}`},
   }
   for _, tc := range ok {
     out, err := CellToJSON(tc.c)

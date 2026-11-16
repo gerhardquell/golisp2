@@ -305,8 +305,8 @@ Ganzzahlen.
 
 **JSON:** Eine Zahl ohne Punkt und Exponent wird eine Ganzzahl, sonst ein
 Float; liegt sie außerhalb von `int64`, wird sie ein Float. Ganzzahlen werden
-exakt geschrieben. Bekannte Grenze: der Float `3.0` wird als `3` geschrieben
-und kommt als Ganzzahl zurück.
+exakt geschrieben. Ein Float mit ganzzahligem Wert wird als `3.0` geschrieben
+und kommt als Float zurück.
 
 **Sonst:** `(now)` ist ein Float. Postgres liefert `int2/int4/int8` als
 Ganzzahl und nimmt Ganzzahl-Parameter als `int64`.

@@ -125,7 +125,11 @@ func floatToInt(name string, f float64) (int64, error) {
 // §3.5): nur eine Ganzzahl gilt, ein Float ist ein Fehler — auch 2.0.
 func intArg(name string, c *Cell) (int, error) {
 	if c == nil || c.Type != NUMBER || c.NumKind != NumInt {
-		return 0, fmt.Errorf("%s: ganze Zahl erwartet, got %s", name, c)
+		hinweis := ""
+		if c != nil && c.Type == NUMBER {
+			hinweis = " (floor/round/truncate liefern Ganzzahlen)"
+		}
+		return 0, fmt.Errorf("%s: ganze Zahl erwartet, got %s%s", name, c, hinweis)
 	}
 	return int(c.Int), nil
 }

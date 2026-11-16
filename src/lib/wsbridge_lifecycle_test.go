@@ -180,7 +180,7 @@ func TestWSHandlerPanicIsContained(t *testing.T) {
     panic("test handler panic")
   })
   ws.handlers["ok"] = makeFn(func(_ []*Cell) (*Cell, error) {
-    return MakeNum(7), nil
+    return MakeInt(7), nil
   })
   ws.mu.Unlock()
 

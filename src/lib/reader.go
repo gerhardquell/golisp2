@@ -252,16 +252,12 @@ func (r *Reader) readAtomOrNum() (*Cell, error) {
   token := sb.String()
   if token == "" { return nil, fmt.Errorf("reader: leeres Token") }
 
-  // Zahl? Vorzeichen + Ziffern ist eine Ganzzahl, alles andere ein Float.
-  if isIntToken(token) {
-    i, err := strconv.ParseInt(token, 10, 64)
-    if err != nil {
-      return nil, fmt.Errorf("reader: Ganzzahl %s außerhalb des int64-Bereichs", token)
-    }
-    return MakeInt(i), nil
+  n, zuGross := parseNumberToken(token)
+  if zuGross {
+    return nil, fmt.Errorf("reader: Ganzzahl %s außerhalb des int64-Bereichs", token)
   }
-  if n, err := strconv.ParseFloat(token, 64); err == nil {
-    return MakeNum(n), nil
+  if n != nil {
+    return n, nil
   }
   // Sonderfälle
   if token == "nil" || token == "NIL" { return MakeNil(), nil }
@@ -269,8 +265,28 @@ func (r *Reader) readAtomOrNum() (*Cell, error) {
   return MakeAtom(token), nil
 }
 
+// parseNumberToken ist die eine Zahlenregel für Reader und string->number:
+// Vorzeichen + Ziffern ist eine Ganzzahl (außerhalb int64 → zuGross),
+// alles andere, was ParseFloat annimmt, ein Float. Keine Zahl → nil.
+func parseNumberToken(token string) (c *Cell, zuGross bool) {
+  if isIntToken(token) {
+    i, err := strconv.ParseInt(token, 10, 64)
+    if err != nil {
+      return nil, true
+    }
+    return MakeInt(i), false
+  }
+  if n, err := strconv.ParseFloat(token, 64); err == nil {
+    return MakeNum(n), false
+  }
+  return nil, false
+}
+
 // isIntToken: optionales Vorzeichen, dann nur Ziffern (mindestens eine).
 func isIntToken(token string) bool {
+  if token == "" {
+    return false
+  }
   digits := strings.TrimLeft(token[:1], "+-") + token[1:]
   if digits == "" {
     return false

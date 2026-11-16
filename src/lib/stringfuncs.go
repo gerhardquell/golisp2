@@ -234,19 +234,14 @@ func fnStringToNumber(args []*Cell) (*Cell, error) {
   if len(args) < 1 || args[0].Type != STRING {
     return nil, fmt.Errorf("string->number: String erwartet")
   }
-  // Reader-Regel: Vorzeichen + Ziffern ist eine Ganzzahl, sonst Float.
-  if isIntToken(args[0].Val) {
-    i, err := strconv.ParseInt(args[0].Val, 10, 64)
-    if err != nil {
-      return nil, fmt.Errorf("string->number: '%s' liegt außerhalb des int64-Bereichs", args[0].Val)
-    }
-    return MakeInt(i), nil
+  n, zuGross := parseNumberToken(args[0].Val)
+  if zuGross {
+    return nil, fmt.Errorf("string->number: '%s' liegt außerhalb des int64-Bereichs", args[0].Val)
   }
-  n, err := strconv.ParseFloat(args[0].Val, 64)
-  if err != nil {
+  if n == nil {
     return nil, fmt.Errorf("string->number: '%s' ist keine Zahl", args[0].Val)
   }
-  return MakeNum(n), nil
+  return n, nil
 }
 
 func fnParseInt(args []*Cell) (*Cell, error) {

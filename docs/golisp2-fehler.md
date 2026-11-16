@@ -263,9 +263,9 @@ gerade ist — `(/ 7 2)` → `3.5`. Abhilfe: `(nth (floor n 2) l)`.
 ### G6. `(random 1.0)` liefert einen Float  [FIXED 0.31.0]
 `(random 1.0)` → Float in [0, 1) (vorher immer `0`). `(random 10)` → Ganzzahl.
 
-### G7. JSON: der Float `3.0` kommt als Ganzzahl zurück  [KNOWN]
-`(json-encode 3.0)` → `"3"`, und `(json-parse "3")` → `3` (Ganzzahl).
-`(json-parse "3.0")` → `3.0`. Ganzzahlen bis `int64` bleiben exakt:
+### G7. JSON behält die Zahlart  [KNOWN]
+`(json-encode 3.0)` → `"3.0"`, `(json-parse "3.0")` → `3.0`,
+`(json-parse "3")` → `3` (Ganzzahl). Ganzzahlen bis `int64` bleiben exakt:
 `(json-parse "9007199254740993")` → `9007199254740993`.
 
 ### G8. Ganzzahl gegen Float über 2^53 ist ungenau  [LIMITATION]

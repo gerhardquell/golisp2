@@ -346,8 +346,8 @@ func emitP(st *fmtState, colon, at bool) {
     st.idx--
   }
   c := st.consume()
-  n := toInt(c)
-  one := n == 1
+  // CL: Einzahl nur bei (eql arg 1) — 1.0 ist Mehrzahl
+  one := toInt(c) == 1 && !(c != nil && c.Type == NUMBER && c.NumKind != NumInt)
   if at {
     if one {
       st.out.WriteString("y")

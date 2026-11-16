@@ -228,7 +228,7 @@ func Primary(c *Cell) *Cell {
 func FormatNumber(n float64) string {
 	if a := math.Abs(n); a < 1e16 {
 		if n == math.Trunc(n) {
-			return strconv.FormatInt(int64(n), 10) + ".0"
+			return strconv.FormatFloat(n, 'f', 1, 64) // behält -0.0
 		}
 		if a >= 1e-4 {
 			return strconv.FormatFloat(n, 'f', -1, 64)

@@ -401,25 +401,14 @@ func (t *throwValue) Error() string {
   return "throw: kein passendes catch für Tag " + t.tag.String()
 }
 
-// sameTag: Tag-Vergleich für catch/throw. CL verlangt eq; da Symbole bei
-// uns nicht interniert sind, zählt Namensgleichheit (ATOM) bzw. Wert-
-// gleichheit (NUMBER, NIL) — das praktische eq-Äquivalent.
+// sameTag: Tag-Vergleich für catch/throw. CL verlangt eq; bei uns zählt
+// eql (Zahlen nach Zahlart und Wert, Symbole/NIL per Identität), dazu
+// Strings nach Inhalt.
 func sameTag(a, b *Cell) bool {
-  if a == nil || b == nil {
-    return a == b
-  }
-  if a.Type != b.Type {
-    return false
-  }
-  switch a.Type {
-  case ATOM, STRING:
+  if a != nil && b != nil && a.Type == STRING && b.Type == STRING {
     return a.Val == b.Val
-  case NUMBER:
-    return a.Num == b.Num
-  case NIL:
-    return true
   }
-  return a == b
+  return eql(a, b)
 }
 
 // unwind-protect: (unwind-protect geschützt cleanup...) → CL: cleanup

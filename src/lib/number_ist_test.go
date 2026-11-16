@@ -36,7 +36,7 @@ func TestNumberIst(t *testing.T) {
     {`(* 1.5 2)`, "3.0"},         // §5: war 3
     {`(number->string 3.0)`, `"3.0"`},  // §5: war "3"
     {`(format nil "~a" 3.0)`, `"3.0"`}, // §5: war "3"
-    {`(format nil "~d" 3.0)`, `"3"`},
+    {`(format nil "~d" 3.0)`, `"3.0"`}, // §3.6: war "3"
     // Gleichheit
     {`(eql 1 1.0)`, "()"},                        // §5: war t
     {`(equal? 1 1.0)`, "()"},                     // §5: war t

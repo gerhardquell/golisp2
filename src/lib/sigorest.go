@@ -381,6 +381,19 @@ func numAt(c *Cell, key string) float64 {
   return v.Num
 }
 
+// intAt: Ganzzahl unter key exakt (Token-Zahlen), sonst 0. Liefert JSON
+// einen Float (7.0), wird er gekürzt.
+func intAt(c *Cell, key string) int {
+  v := hashAt(c, key)
+  if v == nil || v.Type != NUMBER {
+    return 0
+  }
+  if v.NumKind == NumInt {
+    return int(v.Int)
+  }
+  return int(v.Num)
+}
+
 // sigoBuildRequest prüft h gegen die Whitelist und liefert eine Kopie mit
 // Defaults (bare, system_prompt, timeout) plus den HTTP-Timeout.
 func sigoBuildRequest(fname string, h *Cell, systemPrompt string) (*Cell, time.Duration, error) {
@@ -467,10 +480,10 @@ func sigoDo(fname, method, url string, body []byte, timeout time.Duration) ([]by
 func sigoUsageFromResponse(resp *Cell) sigoUsage {
   usage := hashAt(resp, "usage")
   return sigoUsage{
-    PromptTokens:     int(numAt(usage, "prompt_tokens")),
-    CompletionTokens: int(numAt(usage, "completion_tokens")),
-    CachedTokens:     int(numAt(hashAt(usage, "prompt_tokens_details"), "cached_tokens")),
-    ReasoningTokens:  int(numAt(hashAt(usage, "completion_tokens_details"), "reasoning_tokens")),
+    PromptTokens:     intAt(usage, "prompt_tokens"),
+    CompletionTokens: intAt(usage, "completion_tokens"),
+    CachedTokens:     intAt(hashAt(usage, "prompt_tokens_details"), "cached_tokens"),
+    ReasoningTokens:  intAt(hashAt(usage, "completion_tokens_details"), "reasoning_tokens"),
     CostUSD:          numAt(usage, "cost_usd"),
   }
 }

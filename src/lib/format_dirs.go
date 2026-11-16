@@ -108,26 +108,24 @@ func padField(s string, mincol, colinc, minpad int, padchar rune, rightAlign boo
 // ---- Radix-Direktiven ~D ~B ~O ~X ----
 
 func emitRadix(st *fmtState, params []pval, colon, at bool, base int) {
-  c := st.consume()
+  // CL 22.3: v-Parameter verbrauchen ihre Argumente vor dem Wert
   mincol := resolveInt(st, paramGet(params, 0), 0)
   padchar := resolveRune(st, paramGet(params, 1), ' ')
-  // CL 22.3.2.2: Nicht-Ganzzahl wird wie ~A gedruckt, statt still abgeschnitten
-  if c == nil || c.Type != NUMBER || c.Num != math.Trunc(c.Num) {
+  commachar := resolveRune(st, paramGet(params, 2), ',')
+  commainterval := resolveInt(st, paramGet(params, 3), 3)
+  c := st.consume()
+  // CL 22.3.2.2: Nicht-Ganzzahl (auch der Float 3.0) wird wie ~A gedruckt
+  if c == nil || c.Type != NUMBER || c.NumKind != NumInt {
     st.out.WriteString(padField(aesthetic(c), mincol, 1, 0, padchar, true))
     return
   }
-  n := toInt(c)
-  commachar := resolveRune(st, paramGet(params, 2), ',')
-  commainterval := resolveInt(st, paramGet(params, 3), 3)
+  n := c.Int
   if commainterval < 1 {
     commainterval = 3
   }
   neg := n < 0
-  abs := n
-  if neg {
-    abs = -n
-  }
-  digits := strings.ToUpper(strconv.FormatInt(int64(abs), base))
+  // Betrag als Ziffern ohne -n: MinInt64 hat kein positives Gegenstück
+  digits := strings.ToUpper(strings.TrimPrefix(strconv.FormatInt(n, base), "-"))
   if colon {
     digits = insertCommas(digits, commachar, commainterval)
   }
@@ -166,7 +164,10 @@ func toInt(c *Cell) int64 {
     return 0
   }
   if c.Type == NUMBER {
-    return int64(c.Num)
+    if c.NumKind == NumInt {
+      return c.Int
+    }
+    return int64(c.Num) // Float: bewusst gekürzt
   }
   if c.Type == STRING {
     n, _ := strconv.ParseInt(c.Val, 10, 64)
@@ -178,27 +179,18 @@ func toInt(c *Cell) int64 {
 // ---- ~R ----
 
 func emitR(st *fmtState, params []pval, colon, at bool) {
-  c := st.consume()
-  n := toInt(c)
   baseParam := paramGet(params, 0)
   if baseParam.kind != pMissing {
     base := resolveInt(st, baseParam, 10)
+    n := toInt(st.consume())
     if base < 2 || base > 36 {
       st.err = fmt.Errorf("format: ~R base %d außerhalb 2..36", base)
       return
     }
-    neg := n < 0
-    abs := n
-    if neg {
-      abs = -n
-    }
-    s := strconv.FormatInt(int64(abs), base)
-    if neg {
-      s = "-" + s
-    }
-    st.out.WriteString(s)
+    st.out.WriteString(strconv.FormatInt(n, base))
     return
   }
+  n := toInt(st.consume())
   if colon && at {
     // old roman
     st.out.WriteString(oldRoman(int(n)))
@@ -378,7 +370,7 @@ func emitC(st *fmtState, params []pval, colon, at bool) {
   case c.Type == STRING && utf8.RuneCountInString(c.Val) >= 1:
     r, _ = utf8.DecodeRuneInString(c.Val)
   case c.Type == NUMBER:
-    r = rune(int(c.Num))
+    r = rune(toInt(c))
   default:
     st.err = fmt.Errorf("format: ~C braucht Zeichen (String oder Zahl)")
     return

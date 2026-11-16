@@ -318,7 +318,7 @@ func resolveInt(st *fmtState, p pval, def int) int {
   case pV:
     c := st.consume()
     if c.Type == NUMBER {
-      return int(c.Num)
+      return int(toInt(c))
     }
     return def
   case pHash:
@@ -342,7 +342,7 @@ func resolveRune(st *fmtState, p pval, def rune) rune {
       return r
     }
     if c.Type == NUMBER {
-      return rune(int(c.Num))
+      return rune(toInt(c))
     }
     return def
   case pHash:

@@ -179,7 +179,7 @@
           ((eq kw 'repeat)
            (let ((n (gensym)))
              (%loop-parse (cddr cs)
-                          (cons (list n (cadr cs)) inits)
+                          (cons (list n `(%ganzzahl-pruefen "loop" ,(cadr cs))) inits)
                           (cons `(> ,n 0) guards)
                           pres acts
                           (cons `(set! ,n (- ,n 1)) posts)

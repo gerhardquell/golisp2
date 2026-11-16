@@ -199,6 +199,9 @@ func cellToInterface(c *Cell) interface{} {
 	}
 	switch c.Type {
 	case NUMBER:
+		if c.NumKind == NumInt {
+			return c.Int
+		}
 		return c.Num
 	case STRING:
 		return c.Val

@@ -312,3 +312,17 @@ func TestListenerEvalFehlerZeigtOrt(t *testing.T) {
   ret := lib.CellToSlice(events[1])
   abortText(t, lib.CellToSlice(ret[1])[1])
 }
+
+// Zahlart kommt aus type-of (types.lisp), kein eigener Zwilling.
+func TestInspectorZahlart(t *testing.T) {
+  env := inspEnv(t, "")
+  for src, want := range map[string]string{"3": "integer", "3.0": "float", "9007199254740993": "integer"} {
+    v := openOK(t, env, `(swank:init-inspector "`+src+`")`)
+    if typ, _ := valueAfter(t, v, "Typ: "); typ != want {
+      t.Errorf("Typ von %s = %q, want %q", src, typ, want)
+    }
+    if title := plist(v, ":title"); title.Val != src {
+      t.Errorf("Titel von %s = %q", src, title.Val)
+    }
+  }
+}

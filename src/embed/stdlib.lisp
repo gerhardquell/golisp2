@@ -54,14 +54,6 @@
     (if (null l) n (len-acc (cdr l) (+ n 1))))
   (if (eq (%cell-type lst) 'vector) (%vector-length lst) (len-acc lst 0)))
 
-;; Index-/Anzahl-Argumente prüft %ganzzahl-pruefen (Go: intArg) einmal am
-;; Eingang; die Rekursion läuft in den %-Helfern ohne erneute Prüfung.
-(defun %nth (n lst)
-  (cond ((null lst) ())
-        ((= n 0) (car lst))
-        (t (%nth (- n 1) (cdr lst)))))
-(defun nth (n lst) (%nth (%ganzzahl-pruefen "nth" n) lst))
-
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))
 
@@ -82,19 +74,6 @@
     ((null lst)          ())
     ((pred (car lst))    (cons (car lst) (filter pred (cdr lst))))
     (t                   (filter pred (cdr lst)))))
-
-;; drop/take: Listen-Präfix-Helfer (für reduce :start/:end).
-(defun %drop (n lst)
-  (if (or (null lst) (<= n 0))
-      lst
-      (%drop (- n 1) (cdr lst))))
-(defun drop (n lst) (%drop (%ganzzahl-pruefen "drop" n) lst))
-
-(defun %take (n lst)
-  (if (or (null lst) (<= n 0))
-      ()
-      (cons (car lst) (%take (- n 1) (cdr lst)))))
-(defun take (n lst) (%take (%ganzzahl-pruefen "take" n) lst))
 
 ;; %reduce-fold: eigentliche Faltung (tail-rekursiv, TCO). from-end:
 ;; f erhält (elem acc), sonst (acc elem). key wird nur auf kombinierte
@@ -146,10 +125,6 @@
       ()
       (cons (list (car lst1) (car lst2))
             (zip (cdr lst1) (cdr lst2)))))
-
-(defun %list-tail (lst n)
-  (if (= n 0) lst (%list-tail (cdr lst) (- n 1))))
-(defun list-tail (lst n) (%list-tail lst (%ganzzahl-pruefen "list-tail" n)))
 
 (defun iota (n)
   (%ganzzahl-pruefen "iota" n)

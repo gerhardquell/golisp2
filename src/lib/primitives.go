@@ -30,6 +30,10 @@ func BaseEnv() *Env {
 	_ = env.Set("car", makeFn(fnCar))
 	_ = env.Set("cdr", makeFn(fnCdr))
 	_ = env.Set("cons", makeFn(fnCons))
+	_ = env.Set("nth", makeFn(fnNth))
+	_ = env.Set("take", makeFn(fnTake))
+	_ = env.Set("drop", makeFn(fnDrop))
+	_ = env.Set("list-tail", makeFn(fnListTail))
 	_ = env.Set("atom", makeFn(fnAtom))
 	_ = env.Set("null", makeFn(fnNull))
 	_ = env.Set("list", makeFn(fnList))
@@ -205,6 +209,82 @@ func fnCdr(args []*Cell) (*Cell, error) {
 		return MakeNil(), nil
 	}
 	return args[0].Cdr, nil
+}
+
+// dropCells geht n-mal cdr (über fnCdr, damit Fehler und NIL-Regel gleich
+// bleiben) und hält am Listenende. Kern von nth/take/drop/list-tail.
+func dropCells(lst *Cell, n int) (*Cell, error) {
+	var err error
+	for ; n > 0 && lst.Type != NIL; n-- {
+		if lst, err = fnCdr([]*Cell{lst}); err != nil {
+			return nil, err
+		}
+	}
+	return lst, nil
+}
+
+// listIndexArgs prüft (name zahl liste) bzw. (name liste zahl) über intArg.
+func listIndexArgs(name string, args []*Cell, nPos int) (int, *Cell, error) {
+	if len(args) != 2 {
+		return 0, nil, fmt.Errorf("%s: 2 Argumente nötig", name)
+	}
+	n, err := intArg(name, args[nPos])
+	if err != nil {
+		return 0, nil, err
+	}
+	return n, args[1-nPos], nil
+}
+
+func fnNth(args []*Cell) (*Cell, error) {
+	n, lst, err := listIndexArgs("nth", args, 0)
+	if err != nil {
+		return nil, err
+	}
+	if n < 0 {
+		return MakeNil(), nil
+	}
+	if lst, err = dropCells(lst, n); err != nil {
+		return nil, err
+	}
+	return fnCar([]*Cell{lst})
+}
+
+func fnDrop(args []*Cell) (*Cell, error) {
+	n, lst, err := listIndexArgs("drop", args, 0)
+	if err != nil {
+		return nil, err
+	}
+	return dropCells(lst, n)
+}
+
+func fnTake(args []*Cell) (*Cell, error) {
+	n, lst, err := listIndexArgs("take", args, 0)
+	if err != nil {
+		return nil, err
+	}
+	var out []*Cell
+	for ; n > 0 && lst.Type != NIL; n-- {
+		car, err := fnCar([]*Cell{lst})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, car)
+		if lst, err = fnCdr([]*Cell{lst}); err != nil {
+			return nil, err
+		}
+	}
+	return SliceToCell(out), nil
+}
+
+func fnListTail(args []*Cell) (*Cell, error) {
+	n, lst, err := listIndexArgs("list-tail", args, 1)
+	if err != nil {
+		return nil, err
+	}
+	if n < 0 {
+		return nil, fmt.Errorf("list-tail: negativer Index %d", n)
+	}
+	return dropCells(lst, n)
 }
 
 func fnCons(args []*Cell) (*Cell, error) {

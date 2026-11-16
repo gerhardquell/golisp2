@@ -21,14 +21,12 @@
 | `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
-| `%drop` | Intern: Kern von drop ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
 | `%ganzzahl-pruefen` | Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
 | `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
-| `%list-tail` | Intern: Kern von list-tail ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
@@ -41,7 +39,6 @@
 | `%lower-ok?` | Intern: Untergrenze einer typep-Range pruefen (types.lisp) |
 | `%make-list` | Intern: Kern von make-list ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
-| `%nth` | Intern: Kern von nth ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%number-type` | Intern: type-of fuer Zahlen: integer oder float nach Zahlart, fragt integerp (types.lisp) |
 | `%one-arg?` | Intern: Pruefung auf genau ein Argument (types.lisp) |
 | `%pool-arbeiter` | Intern: Arbeiter-Schleife von pool-map (stdlib.lisp) |
@@ -74,7 +71,6 @@
 | `%sys-get` | Intern: Key aus System-Property-Liste lesen |
 | `%sys-loaded?` | Intern: System bereits geladen? |
 | `%table-type` | |
-| `%take` | Intern: Kern von take ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%topo` | Intern: topologische Sortierung mit Zyklenerkennung (defsystem) |
 | `%type-name-warnings` | Intern: WARN-Formen bei Typnamen-Kollisionen (defstruct/define-condition) (types.lisp) |
 | `%type-start` | Intern: Einstiegstyp in *type-parents* fuer x (types.lisp) |

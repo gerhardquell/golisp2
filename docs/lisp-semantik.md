@@ -330,7 +330,9 @@ Mit Parametern und den Modifiern `:` und `@`.
 
 **Besonderheiten:**
 - `~D ~B ~O ~X` drucken Ganzzahlen exakt. Ein Float geht den `~A`-Weg, auch
-  `3.0`: `(format nil "~d" 3.0)` → `"3.0"`. `printf "%d"` folgt dem.
+  `3.0`: `(format nil "~d" 3.0)` → `"3.0"`. `printf` bleibt C-treu: `%d`, `%x`
+  und `%o` drucken einen Float mit ganzzahligem Wert als Ganzzahl
+  (`(sprintf "%d" 3.0)` → `"3"`), einen echten Bruch wie `~A` (`3.7`).
 - `~/name/` ruft eine benannte Funktion via `globalFormatEnv`
 - `~:;` markiert die Default-Klausel
 - `~,0:F` (golisp-Erweiterung): wie `~,0F`, aber ohne Punkt am Ende —

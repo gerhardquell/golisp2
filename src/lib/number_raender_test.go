@@ -39,7 +39,7 @@ func TestIntFormatExakt(t *testing.T) {
     {`(format nil "~v,vd|" 5 48 3)`, `"00003|"`},
     // printf/sprintf laufen über FORMAT
     {`(sprintf "%d %x" 9007199254740993 9007199254740993)`, `"9007199254740993 20000000000001"`},
-    {`(sprintf "%d" 3.0)`, `"3.0"`},
+    {`(sprintf "%d" 3.0)`, `"3"`},
   })
 }
 

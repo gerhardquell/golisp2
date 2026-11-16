@@ -41,7 +41,7 @@ func TestCformatToCL(t *testing.T) {
     {"~nix", "~~nix"}, // literal ~ escaped
   }
   for _, tc := range cases {
-    got, err := cformatToCL(tc.c)
+    got, _, err := cformatToCL(tc.c)
     if err != nil { t.Fatalf("cformatToCL(%q): %v", tc.c, err) }
     if got != tc.cl {
       t.Errorf("cformatToCL(%q) = %q, erwartet %q", tc.c, got, tc.cl)
@@ -51,7 +51,7 @@ func TestCformatToCL(t *testing.T) {
 
 func TestCformatToCLErrors(t *testing.T) {
   for _, bad := range []string{"%", "%q", "%.3s", "%-8.2f", "%5c", "%g"} {
-    if _, err := cformatToCL(bad); err == nil {
+    if _, _, err := cformatToCL(bad); err == nil {
       t.Errorf("cformatToCL(%q): Fehler erwartet, keiner gekommen", bad)
     }
   }
@@ -60,6 +60,9 @@ func TestCformatToCLErrors(t *testing.T) {
 func TestSprintf(t *testing.T) {
   env := BaseEnv()
   cases := []struct{ in, want string }{
+    {`(sprintf "%d" (sqrt 16))`, "4"},            // C-treu: ganzzahliger Float als Ganzzahl
+    {`(sprintf "%x %5d|" 255.0 2.0)`, "ff     2|"},
+    {`(sprintf "%d %s" 3.7 2.0)`, "3.7 2.0"},      // echter Bruch bleibt, %s unberührt
     {`(sprintf "%d" 42)`, "42"},
     {`(sprintf "%5d" 42)`, "   42"},
     {`(sprintf "%05d" 42)`, "00042"},

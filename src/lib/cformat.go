@@ -34,6 +34,7 @@ package lib
 
 import (
   "fmt"
+  "math"
   "os"
   "strconv"
   "strings"
@@ -51,10 +52,13 @@ func RegisterCFormat(env *Env) {
 // ---- Übersetzer C-Format → CL-Format ----
 
 // cformatToCL übersetzt einen C-printf-Formatstring in einen CL-format-
-// Control-String. Rune-basiert.
-func cformatToCL(cfmt string) (string, error) {
+// Control-String. Rune-basiert. ganz[i] sagt, ob die i-te Direktive eine
+// Ganzzahl-Direktive ist (%d %i %x %X %o) — jede Direktive verbraucht genau
+// ein Argument.
+func cformatToCL(cfmt string) (string, []bool, error) {
   src := []rune(cfmt)
   var out strings.Builder
+  var ganz []bool
   for i := 0; i < len(src); i++ {
     r := src[i]
     if r == '~' {
@@ -67,7 +71,7 @@ func cformatToCL(cfmt string) (string, error) {
     }
     i++
     if i >= len(src) {
-      return "", fmt.Errorf("cformat: %% am String-Ende unvollständig")
+      return "", nil, fmt.Errorf("cformat: %% am String-Ende unvollständig")
     }
     if src[i] == '%' {
       out.WriteRune('%')
@@ -106,9 +110,10 @@ func cformatToCL(cfmt string) (string, error) {
     }
 
     if i >= len(src) {
-      return "", fmt.Errorf("cformat: Direktive ohne Verb am String-Ende")
+      return "", nil, fmt.Errorf("cformat: Direktive ohne Verb am String-Ende")
     }
     verb := src[i]
+    ganz = append(ganz, strings.ContainsRune("dixXo", verb))
 
     switch verb {
     case 'd', 'i':
@@ -122,26 +127,26 @@ func cformatToCL(cfmt string) (string, error) {
       out.WriteString(clInt(width, zero, left, plus, 'O'))
     case 's':
       if prec >= 0 {
-        return "", fmt.Errorf("cformat: %%.%ds (String-Truncation) nicht unterstützt", prec)
+        return "", nil, fmt.Errorf("cformat: %%.%ds (String-Truncation) nicht unterstützt", prec)
       }
       out.WriteString(clStr(width, left))
     case 'g':
       // C-%g (Precision 6, Nullen kürzen) hat kein FORMAT-Gegenstück; ~G ist CL-Semantik
-      return "", fmt.Errorf("cformat: %%g nicht unterstützt — %%f oder %%e verwenden")
+      return "", nil, fmt.Errorf("cformat: %%g nicht unterstützt — %%f oder %%e verwenden")
     case 'f', 'e':
       s, err := clFloat(width, prec, zero, left, plus, rune(verb-32)) // → F/E
-      if err != nil { return "", err }
+      if err != nil { return "", nil, err }
       out.WriteString(s)
     case 'c':
       if width > 0 || prec >= 0 {
-        return "", fmt.Errorf("cformat: %%c mit width/precision nicht unterstützt")
+        return "", nil, fmt.Errorf("cformat: %%c mit width/precision nicht unterstützt")
       }
       out.WriteString("~C")
     default:
-      return "", fmt.Errorf("cformat: unbekannte Direktive %%%c", verb)
+      return "", nil, fmt.Errorf("cformat: unbekannte Direktive %%%c", verb)
     }
   }
-  return out.String(), nil
+  return out.String(), ganz, nil
 }
 
 // clInt: Integer-Direktive. Rechtsbündig über ~D/~X/~O (pad links),
@@ -201,9 +206,18 @@ func clFloat(width, prec int, zero, left, plus bool, verb rune) (string, error) 
 
 // cformatString übersetzt fmt und rendert mit der FORMAT-Engine.
 func cformatString(cfmt string, args []*Cell) (string, error) {
-  cl, err := cformatToCL(cfmt)
+  cl, ganz, err := cformatToCL(cfmt)
   if err != nil {
     return "", err
+  }
+  // C-treu: %d/%x/%o drucken einen Float mit ganzzahligem Wert als Ganzzahl
+  // (4.0 → 4); ~D selbst druckt Floats wie ~A.
+  args = append([]*Cell(nil), args...)
+  for i, c := range args {
+    if i < len(ganz) && ganz[i] && c != nil && c.Type == NUMBER && c.NumKind != NumInt &&
+      c.Num == math.Trunc(c.Num) && math.Abs(c.Num) < 9.2e18 {
+      args[i] = MakeInt(int64(c.Num))
+    }
   }
   res, err := fnFormat(append([]*Cell{MakeNil(), MakeStr(cl)}, args...))
   if err != nil {

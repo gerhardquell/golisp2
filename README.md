@@ -680,7 +680,7 @@ Einschränkungen: benutzen, ändern, verkaufen, weitergeben, keine Namensnennung
 Die Kopfzeile „Copyright: 2026 Gerhard Quell“ in den Quelldateien nennt nur den
 Urheber; die Nutzung bleibt nach der Unlicense frei. Das gebaute Binary enthält
 Fremdbibliotheken unter MIT- und BSD-Lizenz — ihre Lizenztexte stehen in
-[THIRD_PARTY.md](THIRD_PARTY.md) und gehören zu jedem weitergegebenen Build.
+[THIRD_PARTY.md](docs/THIRD_PARTY.md) und gehören zu jedem weitergegebenen Build.
 
 Wer Code beisteuert, gibt ihn ebenfalls in die Gemeinfreiheit (Unlicense) —
 mit einem Pull Request erklärst du dich damit einverstanden.

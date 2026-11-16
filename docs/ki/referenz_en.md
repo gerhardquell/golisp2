@@ -109,8 +109,9 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 ### Arithmetic/Comparison
 `+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` — `(log x)` natural only, x > 0; `expt` also negative/fractional (`(expt 0.9 -2)`), NaN/Inf → error; `mod` floored like CL (`(mod -3 2)` → 1), `rem`/`remainder` toward zero (→ -1)
 `(floor x [d])` `ceiling` `truncate` `round` like CL: two values (quotient, remainder) — `(truncate 7 2)` → `3 1`; `round` to even (`(round 2.5)` → 2, `(round 3.5)` → 4); `(ash x n)` bit shift, n < 0 shifts right
-`(parse-int "42")` `(parse-float "4.5")` — decimal only, no radix; invalid → error (not `nil`)
-`= /= < > >= <= equal? eql eq eq?` — numeric comparisons as a CL chain: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (all pairwise different); `eq`=pointer, `eql` like CL (numbers by value, strings never), `equal?`=structural (hash tables, vectors, channels by identity only, like CL `equal`)
+**Two kinds of numbers:** integer (`int64`: `42`, `-7`) and float (`float64`: `3.14`, `1e3`, `1.`). A float always prints with a point: `3.0`. `+ - *`: all integers → integer, one float → float (`(* 1.5 2)` → `3.0`). `(/ 6 2)` → `3`, `(/ 7 2)` → `3.5`. `floor ceiling truncate round` → always integer; `sqrt exp log` → always float (`(sqrt 16)` → `4.0`). **Overflow = error** (`*: Ganzzahl-Überlauf`), no bignum. An index/count (`nth aref substring iota dotimes loop repeat` …) must be an integer — `(nth 2.0 l)` → error; use `(floor x)`. `(random 10)` → integer, `(random 1.0)` → float. `integerp` `floatp` test the kind, `(float 3)` → `3.0`.
+`(parse-int "42")` → integer, `(parse-float "4.5")` → float — decimal only, no radix; invalid → error (not `nil`)
+`= /= < > >= <= equal? eql eq eq?` — numeric comparisons as a CL chain: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (all pairwise different); `eq`=pointer, `=` by value (`(= 1 1.0)` → `t`); `eql` like CL (numbers by kind and value: `(eql 1 1.0)` → `()`, strings never), `equal?`=structural, numbers like `eql` (hash tables, vectors, channels by identity only, like CL `equal`)
 
 ### Lists (classic 7)
 `car cdr cons atom null list append`
@@ -129,7 +130,7 @@ branches return immediately or delegate to an `eval*` helper (e.g.
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in milliseconds; `(env-symbols)` returns all root env names
-sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.30.0"`
+sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.31.0"`
 
 ### Domains (own Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → text; `sigo*` → hash table (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: hash with exactly `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anything else → error; without `temperature` golisp2 sends 0.2, `0` is an error; without `max_tokens` the model maximum applies), result = full answer as hash plus `elapsed` (s); `(sigo-usage)` totals incl. `calls`/`elapsed`; `(sigo-costs [since [until]])` (Unix seconds like `(now)`), `(sigo-budget)`, `(sigo-model-info [model])` (prices USD/1M tokens, **0 = unknown, not free**); `(sigo-system-prompt "")` → model sees only the prompt (plus session history, if session-id)
@@ -198,7 +199,7 @@ implementation is the native special form from section 2
 `(setf place val)` — generic, `(defstruct ...)` registers accessors automatically
 
 ### Types
-- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector`, struct, class (defclass) or condition name; classes are a subtype of `hash-table`. `(typep x spec)` with type names, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exclusive, `*` = open). `3.0` is `integer`.
+- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector`, struct, class (defclass) or condition name; classes are a subtype of `hash-table`. `(typep x spec)` with type names, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exclusive, `*` = open).
   Also valid as type names (not returned by `type-of`, but `typep` supertypes): `rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`. Not available → `typep: unbekannter Typ '…'` (unknown type): `fixnum` `character` `double-float` `single-float`. Type names are case-sensitive — `'INTEGER` is unknown, only `'integer`. `(typecase x (integer …) ((or string symbol) …) (otherwise …))` branches by type, `etypecase` raises an error without a match. `(check-type x (integer 0 *) ["description"])` → `()` or error. Both raise a plain `error`, no `type-error`. `(deftype digit () '(integer 0 9))` defines type names, with parameters `(deftype upto (&optional (n '*)) (list 'integer 0 n))` → `(typep x '(upto 5))`; names of built-in types, structs, classes, conditions → error. `(subtypep 'integer 'number)` → two values `t t`; undecidable (`not`, `satisfies`, subranges) → `() ()`.
 
 ---
@@ -208,7 +209,7 @@ implementation is the native special form from section 2
 - `()` / `nil` / `NIL` → singleton nil (pointer identity!)
 - `t` → true, but *not* the only true value — everything except nil is true
 - `(eq '() '())` → `t` (singleton)
-- `(eq 5 5)` → `()` — **design:** `eq` on numbers always returns `()` (see 10.6). When in doubt, `equal?`
+- `(eq 5 5)` → `()` — **design:** `eq` on numbers always returns `()` (see 10.6). Compare numbers with `=`, otherwise when in doubt `equal?`
 
 ---
 
@@ -284,7 +285,8 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 | `macrolet` | non-recursive | recursive |
 | `(define (f p) ...)` | shorthand for `(define f (lambda (p) ...))` (Scheme style) | not available — `defun` |
 | structs are lists | `(typep p 'cons)` → `t` | own type, not `cons` |
-| integral floats are integers | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 is a float) |
+| numbers | only `int64` and `float64`; `(/ 7 2)` → `3.5`; overflow = error; `(type-of 3.0)` → `float` | bignum, ratios (`7/2`), `single-float`/`double-float` |
+| `(format nil "~d" 3.0)` | `"3.0"` (a float takes the `~a` path) | `"3.0"` |
 | string keys in `(make-hash-table)` (default `eql`) | by content: `"rot"` twice = one key | `eql` → identity, two `"rot"` literals = two keys; use `:test 'equal` for that |
 | `(puthash k h v)` | table in 2nd position; prefer `(setf (gethash k h) v)` | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | missing → error „unbekanntes Symbol“ (unknown symbol); use `string?`, `(typep x 'cons)`, `equal?` | available |
@@ -331,10 +333,10 @@ so it does not guess:
 
 ### 10.6 `eq` on numbers always returns `()`
 - `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Even with identical value.
-- Internally there is a small-int cache (-32768..32767, `MakeNum` in `types.go`)
+- Internally there is a small-int cache (-32768..32767, `MakeInt` in `types.go`)
   to avoid allocations — `eq` still deliberately treats numbers as never
-  identical (`fnEqPtr` in `primitives.go`).
-- Always use `equal?` or `=` to compare numbers, never `eq`.
+  identical (`fnEqPtr` in `arith_prims.go`).
+- Compare numbers with `=` (by value), never with `eq`. `equal?`/`eql` tell `1` and `1.0` apart.
 
 ### 10.7 Macros non-recursive (macrolet)
 - `macrolet` bodies do not see the other macros of the same level.
@@ -395,7 +397,7 @@ src/
 | I need... | Use |
 |-----------|-----|
 | arithmetic | `+ - * / mod` |
-| comparison | `equal?` (numbers!), `eq` (pointer) |
+| comparison | `=` (numbers), `equal?` (structure), `eq` (pointer) |
 | build a list | `cons list append` |
 | iteration | `dolist dotimes loop mapcar reduce` |
 | parallel | `parfunc` |

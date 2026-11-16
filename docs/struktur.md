@@ -135,7 +135,9 @@ type Cell struct {
   Type LispType        // ATOM, NUMBER, STRING, LIST, LAMBDA, FUNC, MACRO, NIL,
                        // MVALUES, HASHTABLE, SYMMACRO, FOREIGN, VECTOR
   Val  string          // für ATOM und STRING
-  Num  float64         // für NUMBER
+  NumKind NumKind      // für NUMBER: NumFloat (Nullwert) oder NumInt
+  Num  float64         // Float-Wert; bei NumInt die Näherung float64(Int)
+  Int  int64           // Ganzzahl-Wert bei NumInt
   Car  *Cell           // Kopf einer Liste
   Cdr  *Cell           // Rest einer Liste
   Fn   func([]*Cell) (*Cell, error)  // für FUNC

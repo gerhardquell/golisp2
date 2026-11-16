@@ -42,7 +42,7 @@ der Go-Runtime und mehreren LLM-Anbietern.
 ## ✨ Features
 
 ### Sprachkern
-- **Vollständige Lisp-Implementierung**: Atome, Zahlen, Strings, Listen, Lambdas, Makros
+- **Vollständige Lisp-Implementierung**: Atome, Zahlen (Ganzzahl `int64` und Float `float64`), Strings, Listen, Lambdas, Makros
 - **Tail-Call-Optimierung**: Unbegrenzte Rekursionstiefe
 - **Makros**: `defmacro` mit `gensym` gegen Namenskollisionen
 - **Quasiquote**: `` ` `` `,` `,@` für Template-Programmierung

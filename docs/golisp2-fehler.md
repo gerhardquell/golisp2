@@ -229,5 +229,50 @@ neu `chan-try-recv`, `chan-try-send`, `chan-close`, `chan-closed?`
 
 ---
 
+## G. Ganzzahl-Typ: zwei Zahlarten (20261116, 0.31.0)
+
+Seit 0.31.0 gibt es Ganzzahl (`int64`) und Float (`float64`). Vorher war jede
+Zahl ein `float64`. Regeln: `docs/lisp-semantik.md`, Abschnitt „Zahlen“.
+
+### G1. Ganzzahlen über 2^53 wurden still gerundet  [FIXED 0.31.0]
+**Symptom:** `(+ 9007199254740992 1)` → `9007199254740992`.
+**Fix:** Ganzzahlen rechnen exakt auf `int64`: → `9007199254740993`.
+
+### G2. Überlauf ist ein Fehler  [KNOWN]
+`(* 99999999999 99999999999)` → Fehler `*: Ganzzahl-Überlauf` (vorher
+`9.9999999998e+21`). Es gibt kein Bignum. Wer den Näherungswert will, rechnet
+mit Floats: `(* 99999999999.0 99999999999)` → `9.9999999998e+21`.
+
+### G3. Floats drucken mit Punkt  [KNOWN]
+`(sqrt 16)` → `4.0`, `(* 1.5 2)` → `3.0`, `1e3` → `1000.0` (vorher `4`, `3`,
+`1000`). Auch `(format nil "~d" 3.0)` → `"3.0"`. Für eine Ganzzahl:
+`(round x)`, `(floor x)` oder `(format nil "~,0:f" x)`.
+
+### G4. `1` und `1.0` sind bei `eql`/`equal?` verschieden  [KNOWN]
+`(eql 1 1.0)` und `(equal? 1 1.0)` → `()` (vorher `t`). `(= 1 1.0)` → `t`.
+Folgen: `(member 1.0 (list 1 2))` → `()`, `(case 1.0 (1 …))` trifft nicht,
+`1` und `1.0` sind zwei Hash-Schlüssel, `(catch 1 (throw 1.0 …))` passt nicht.
+`(typep 3.0 'integer)` → `()`.
+
+### G5. Float als Index oder Anzahl ist ein Fehler  [KNOWN]
+`(nth 1.7 l)` → Fehler `nth: ganze Zahl erwartet, got 1.7` (vorher `()`).
+Das gilt auch für `2.0` und für `aref`, `substring`, `iota`, `dotimes`,
+`loop repeat`, `evenp`. Typische Falle: `(nth (/ n 2) l)` geht nur, wenn `n`
+gerade ist — `(/ 7 2)` → `3.5`. Abhilfe: `(nth (floor n 2) l)`.
+
+### G6. `(random 1.0)` liefert einen Float  [FIXED 0.31.0]
+`(random 1.0)` → Float in [0, 1) (vorher immer `0`). `(random 10)` → Ganzzahl.
+
+### G7. JSON: der Float `3.0` kommt als Ganzzahl zurück  [KNOWN]
+`(json-encode 3.0)` → `"3"`, und `(json-parse "3")` → `3` (Ganzzahl).
+`(json-parse "3.0")` → `3.0`. Ganzzahlen bis `int64` bleiben exakt:
+`(json-parse "9007199254740993")` → `9007199254740993`.
+
+### G8. Ganzzahl gegen Float über 2^53 ist ungenau  [LIMITATION]
+`(= 9007199254740993 9007199254740992.0)` → `t`. Beim gemischten Vergleich
+wird die Ganzzahl nach Float gewandelt. Ganzzahl gegen Ganzzahl ist exakt.
+
+---
+
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).
 Quelle der Wahrheit für die 8 Kern-Fallstricke bleibt CLAUDE.md.

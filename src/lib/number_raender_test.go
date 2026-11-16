@@ -94,3 +94,19 @@ func TestIntSigoUsage(t *testing.T) {
     }
   }
 }
+
+// Übernommen aus dem Charakterisierungstest (Schritt 0), soweit nicht
+// schon in number_int_test.go/number_type_test.go abgedeckt.
+func TestIntDruckformUndJSON(t *testing.T) {
+  runNumCases(t, []struct{ src, want string }{
+    {`3`, "3"},
+    {`(+ 1 2.5)`, "3.5"},
+    {`(expt 2 0.5)`, "1.4142135623730951"},
+    {`(< (random 10) 10)`, "t"},
+    {`(number->string 3.0)`, `"3.0"`},
+    {`(format nil "~a" 3.0)`, `"3.0"`},
+    // JSON-Grenze (§3.6): der Float 3.0 wird als 3 geschrieben
+    {`(json-encode (json-parse "[1, 2.5, 3.0]"))`, `"[1,2.5,3]"`},
+    {`(json-parse "9007199254740993")`, "9007199254740993"},
+  })
+}

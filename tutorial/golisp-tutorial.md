@@ -556,7 +556,7 @@ Quadratwurzel.
 
 ```lisp
 (sqrt 16)
-; => 4
+; => 4.0
 ```
 
 ### exp
@@ -578,7 +578,7 @@ Natürlicher Logarithmus, nur für x > 0.
 
 ```lisp
 (log (exp 2))
-; => 2
+; => 2.0
 ```
 
 ### floor
@@ -752,7 +752,7 @@ Alias für eq.
 
 **Syntax:** `(eql a b)`
 
-Wie eq, aber Zahlen mit gleichem Wert gelten als eql (CL-Semantik).
+Wie eq, aber Zahlen mit gleicher Zahlart und gleichem Wert gelten als eql (CL-Semantik): `(eql 1 1.0)` → `()`.
 
 ```lisp
 (eql 1 1)
@@ -3794,7 +3794,7 @@ Berechnet base hoch exp, auch negativ und gebrochen. Negative Basis mit gebroche
 (expt 2 -1)
 ; => 0.5
 (expt 4 0.5)
-; => 2
+; => 2.0
 ```
 
 ### gcd

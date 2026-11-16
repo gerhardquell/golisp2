@@ -21,13 +21,14 @@
 | `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
+| `%drop` | Intern: Kern von drop ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
-| `%ganzzahl-pruefen` | Intern: Fehler, wenn n keine ganze Zahl ist (evenp/oddp) |
+| `%ganzzahl-pruefen` | Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
 | `%generic-registry` | Hash-Table der generischen Funktionen |
-| `%infinite?` | Intern: Pruefung auf +/-Inf (types.lisp) |
 | `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
+| `%list-tail` | Intern: Kern von list-tail ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
@@ -38,8 +39,10 @@
 | `%loop-take-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort sammeln |
 | `%loop-when` | Intern: loop-Parser: when/unless-Klausel (loop.lisp) |
 | `%lower-ok?` | Intern: Untergrenze einer typep-Range pruefen (types.lisp) |
+| `%make-list` | Intern: Kern von make-list ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%make-struct` | Intern: Konstruktor der defstruct-Instanzen |
-| `%number-type` | Intern: type-of fuer Zahlen: integer oder float (types.lisp) |
+| `%nth` | Intern: Kern von nth ohne Ganzzahl-Pruefung (stdlib.lisp) |
+| `%number-type` | Intern: type-of fuer Zahlen: integer oder float nach Zahlart, fragt integerp (types.lisp) |
 | `%one-arg?` | Intern: Pruefung auf genau ein Argument (types.lisp) |
 | `%pool-arbeiter` | Intern: Arbeiter-Schleife von pool-map (stdlib.lisp) |
 | `%proper-length` | Intern: Laenge einer echten Liste, -1 bei Dotted Pair (types.lisp) |
@@ -71,6 +74,7 @@
 | `%sys-get` | Intern: Key aus System-Property-Liste lesen |
 | `%sys-loaded?` | Intern: System bereits geladen? |
 | `%table-type` | |
+| `%take` | Intern: Kern von take ohne Ganzzahl-Pruefung (stdlib.lisp) |
 | `%topo` | Intern: topologische Sortierung mit Zyklenerkennung (defsystem) |
 | `%type-name-warnings` | Intern: WARN-Formen bei Typnamen-Kollisionen (defstruct/define-condition) (types.lisp) |
 | `%type-start` | Intern: Einstiegstyp in *type-parents* fuer x (types.lisp) |
@@ -83,7 +87,7 @@
 | `%valid-bound?` | Intern: Pruefung ob eine typep-Range-Grenze gueltig ist (types.lisp) |
 | `%vector->list` | Intern: Vektor als frische Liste (fuer coerce) |
 | `%vector-length` | Intern: Laenge eines Vektors (fuer length) |
-| `*` | Multiplikation aller Argumente |
+| `*` | Multiplikation aller Argumente; Ganzzahl-Ueberlauf ist ein Fehler |
 | `*class-types*` | Registry (name (slot-namen)) der defclass-Klassen, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
 | `*condition-types*` | Registry der definierten Condition-Typen |
 | `*deftypes*` | Registry (name expander) der deftype-Definitionen (types.lisp) |
@@ -94,15 +98,15 @@
 | `*struct-types*` | Registry (name (slot-namen)) der definierten Structs, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
 | `*systems*` | Registry der definierten Systeme (defsystem) |
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
-| `+` | Addition aller Argumente |
+| `+` | Addition aller Argumente; alle Ganzzahl → Ganzzahl, ein Float dabei → Float |
 | `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0 |
-| `/` | Division; Fehler bei Division durch 0 |
+| `/` | Division: alle Ganzzahl und teilbar → Ganzzahl, sonst Float ((/ 7 2) → 3.5); Fehler bei Division durch 0 |
 | `/=` | numerisch paarweise verschieden (CL) |
 | `1+` | n + 1 (CL) |
 | `1-` | n - 1 (CL) |
 | `<` | numerisch kleiner |
 | `<=` | numerisch kleiner oder gleich |
-| `=` | numerische Gleichheit |
+| `=` | numerische Gleichheit nach Wert: (= 1 1.0) → t |
 | `>` | numerisch größer |
 | `>=` | numerisch größer oder gleich |
 | `abs` | Absolutbetrag |
@@ -177,8 +181,8 @@
 | `environ` | Umgebungsvariablen als Assoziationsliste |
 | `eq` | Pointer-Identitaet; Symbole sind interniert, Zahlen/Strings nicht |
 | `eq?` | Alias fuer eq |
-| `eql` | wie eq, aber Zahlen mit gleichem Wert gelten als eql |
-| `equal?` | strukturelle Gleichheit (rekursiv) |
+| `eql` | wie eq, aber Zahlen mit gleicher Zahlart und gleichem Wert gelten als eql: (eql 1 1.0) → () |
+| `equal?` | strukturelle Gleichheit (rekursiv); Zahlen wie eql: (equal? 1 1.0) → () |
 | `err-write` | String auf stderr schreiben |
 | `error` | Laufzeitfehler signalisieren (faengbar mit catch) |
 | `etypecase` | wie typecase, ohne Treffer ein Fehler |
@@ -186,7 +190,7 @@
 | `every` | t, wenn alle Elemente das Praedikat erfuellen |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
 | `exp` | e hoch x |
-| `expt` | basis hoch exp, auch negativ und gebrochen |
+| `expt` | basis hoch exp, auch negativ und gebrochen; Ganzzahl hoch Ganzzahl ≥ 0 → Ganzzahl, sonst Float |
 | `file-append` | Inhalte an Datei anhaengen |
 | `file-delete` | Datei loeschen |
 | `file-exists?` | t, wenn Datei existiert |
@@ -199,7 +203,9 @@
 | `find-if` | erstes Element mit Praedikat (:key) |
 | `first` | Alias fuer car |
 | `flatten` | rekursiv flache Liste |
-| `floor` | zur naechsten ganzen Zahl abrunden |
+| `float` | Zahl als Float: (float 3) → 3.0 |
+| `floatp` | t, wenn Float (float64); (floatp 3) → () |
+| `floor` | zur naechsten ganzen Zahl abrunden; Ergebnis ist eine Ganzzahl |
 | `for-each` | Funktion auf jedes Element anwenden, Ergebnis nil |
 | `format` | CL-FORMAT-Engine (HyperSpec 22.3); Ziel nil=String, t=stdout |
 | `format-time` | Zeit als String, strftime-Direktiven (%F %T …); Ortszeit oder :utc |
@@ -236,6 +242,7 @@
 | `identity` | Argument unverändert zurueckgeben |
 | `ignore-errors` | Makro: bei Fehler nil statt Fehler liefern |
 | `incf` | Makro: place um d (Default 1) erhoehen |
+| `integerp` | t, wenn Ganzzahl (int64); (integerp 3.0) → () |
 | `intern` | interniertes Symbol zum String liefern |
 | `iota` | Liste (0 1 ... n-1) |
 | `json-encode` | Wert als JSON-String: Hash-Tabelle->Objekt, Liste->Array, ()->[], :null/:false |
@@ -272,14 +279,14 @@
 | `negative?` | t, wenn kleiner 0 |
 | `nil` | NIL-Konstante (Singleton, MakeNil) |
 | `now` | Unix-Sekunden (seit 1970) als Float |
-| `nth` | n-tes Element (0-basiert) |
+| `nth` | n-tes Element (0-basiert); n muss eine Ganzzahl sein |
 | `null` | t, wenn nil |
 | `null?` | Alias fuer null |
 | `number->string` | Zahl in String umwandeln |
 | `number?` | t, wenn Zahl |
 | `oddp` | t wenn ganze Zahl n ungerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
 | `pair?` | t, wenn Cons |
-| `parse-float` | String strikt als Fliesskommazahl parsen, Fehler bei ungueltigem Format |
+| `parse-float` | String strikt als Float parsen ((parse-float "42") → 42.0), Fehler bei ungueltigem Format |
 | `parse-int` | String strikt als Ganzzahl parsen, Fehler bei ungueltigem Format |
 | `pg-close` | PostgreSQL-Verbindung schliessen |
 | `pg-connect` | PostgreSQL-Verbindung oeffnen (Connection-String) |
@@ -296,7 +303,7 @@
 | `println` | Werte mit Newline auf stdout, letztes Argument zurueck |
 | `push` | Makro: wert vor Liste in var einfuegen |
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
-| `random` | Zufallszahl; mit n aus [0, n) |
+| `random` | Zufallszahl; mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
 | `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |
 | `read` | String in Lisp-Datenstruktur parsen |
 | `read-line` | eine Zeile von stdin lesen |
@@ -348,11 +355,11 @@
 | `sort` | Liste oder Vektor nach Vergleich sortieren (neue Sequenz) |
 | `spawn` | fn ohne Argumente in neuer Goroutine starten, sofort Ergebnis-Channel mit (:ok wert) oder (:error text) |
 | `sprintf` | C-Format in String umwandeln |
-| `sqrt` | Quadratwurzel |
+| `sqrt` | Quadratwurzel, immer Float: (sqrt 16) → 4.0 |
 | `square` | x quadrieren |
 | `sscanf` | String nach C-scanf-Muster parsen, Liste der Werte |
 | `string->list` | String in Liste von Einzelzeichen-Strings |
-| `string->number` | String als Zahl parsen |
+| `string->number` | String als Zahl parsen: "42" → Ganzzahl, "42.0" → Float |
 | `string-append` | Strings verketten |
 | `string-contains` | t, wenn Teilstring enthalten |
 | `string-downcase` | in Kleinbuchstaben umwandeln |

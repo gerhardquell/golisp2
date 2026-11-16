@@ -109,8 +109,9 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 ### Arithmetik/Vergleich
 `+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` — `(log x)` nur natürlich, x > 0; `expt` auch negativ/gebrochen (`(expt 0.9 -2)`), NaN/Inf → Fehler; `mod` wie CL abgerundet (`(mod -3 2)` → 1), `rem`/`remainder` Richtung Null (→ -1)
 `(floor x [d])` `ceiling` `truncate` `round` wie CL: zwei Werte (Quotient, Rest) — `(truncate 7 2)` → `3 1`; `round` auf gerade (`(round 2.5)` → 2, `(round 3.5)` → 4); `(ash x n)` Bit-Shift, n < 0 nach rechts
-`(parse-int "42")` `(parse-float "4.5")` — nur dezimal, kein Radix; ungültig → Fehler (nicht `nil`)
-`= /= < > >= <= equal? eql eq eq?` — numerische Vergleiche als CL-Kette: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (alle paarweise verschieden); `eq`=Pointer, `eql` wie CL (Zahlen nach Wert, Strings nie), `equal?`=strukturell (Hash-Tabellen, Vektoren, Channels nur nach Identität, wie CL `equal`)
+**Zwei Zahlarten:** Ganzzahl (`int64`: `42`, `-7`) und Float (`float64`: `3.14`, `1e3`, `1.`). Float druckt immer mit Punkt: `3.0`. `+ - *`: alle Ganzzahl → Ganzzahl, ein Float dabei → Float (`(* 1.5 2)` → `3.0`). `(/ 6 2)` → `3`, `(/ 7 2)` → `3.5`. `floor ceiling truncate round` → immer Ganzzahl; `sqrt exp log` → immer Float (`(sqrt 16)` → `4.0`). **Überlauf = Fehler** (`*: Ganzzahl-Überlauf`), kein Bignum. Index/Anzahl (`nth aref substring iota dotimes loop repeat` …) muss Ganzzahl sein — `(nth 2.0 l)` → Fehler; nutze `(floor x)`. `(random 10)` → Ganzzahl, `(random 1.0)` → Float. `integerp` `floatp` prüfen die Zahlart, `(float 3)` → `3.0`.
+`(parse-int "42")` → Ganzzahl, `(parse-float "4.5")` → Float — nur dezimal, kein Radix; ungültig → Fehler (nicht `nil`)
+`= /= < > >= <= equal? eql eq eq?` — numerische Vergleiche als CL-Kette: `(< 1 2 3)` → `t`, `(/= 1 2 3)` → `t` (alle paarweise verschieden); `eq`=Pointer, `=` nach Wert (`(= 1 1.0)` → `t`); `eql` wie CL (Zahlen nach Zahlart und Wert: `(eql 1 1.0)` → `()`, Strings nie), `equal?`=strukturell, Zahlen wie `eql` (Hash-Tabellen, Vektoren, Channels nur nach Identität, wie CL `equal`)
 
 ### Listen (klassische 7)
 `car cdr cons atom null list append`
@@ -129,7 +130,7 @@ Case-Zweige geben sofort zurück oder delegieren an einen `eval*`-Helfer
 
 ### Environment/Introspection
 `memstats sleep env-symbols lisp-implementation-version` — `(sleep ms)` in Millisekunden; `(env-symbols)` liefert alle Root-Env-Namen
-sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.30.0"`
+sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)` → `"0.31.0"`
 
 ### Domänen (eigene Register-Xxx)
 - **sigoREST:** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` — `(sigo "prompt" [model] [session-id] [host])` → Text; `sigo*` → Hash-Tabelle (`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`); `(sigo-request h [host])`: Hash mit genau `model messages temperature max_tokens session_id timeout retries system_prompt bare channel` (anderes → Fehler; ohne `temperature` schickt golisp2 0.2, `0` ist Fehler; ohne `max_tokens` gilt das Modell-Maximum), Ergebnis = volle Antwort als Hash plus `elapsed` (s); `(sigo-usage)` Summen inkl. `calls`/`elapsed`; `(sigo-costs [seit [bis]])` (Unix-Sekunden wie `(now)`), `(sigo-budget)`, `(sigo-model-info [modell])` (Preise USD/1 Mio. Tokens, **0 = unbekannt, nicht gratis**); `(sigo-system-prompt "")` → Modell sieht nur den Prompt (plus Session-Verlauf, falls session-id)
@@ -208,7 +209,7 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 - `()` / `nil` / `NIL` → Singleton-Nil (Pointer-Identität!)
 - `t` → Wahr, aber *nicht* der einzige wahre Wert — alles außer Nil ist wahr
 - `(eq '() '())` → `t` (Singleton)
-- `(eq 5 5)` → `()` — **Design:** `eq` auf Zahlen liefert immer `()` (siehe 10.6). Im Zweifel `equal?`
+- `(eq 5 5)` → `()` — **Design:** `eq` auf Zahlen liefert immer `()` (siehe 10.6). Zahlen mit `=` vergleichen, sonst im Zweifel `equal?`
 
 ---
 
@@ -284,7 +285,8 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `macrolet` | Nicht-rekursiv | Rekursiv |
 | `(define (f p) ...)` | Kurzform für `(define f (lambda (p) ...))` (Scheme-Stil) | Nicht vorhanden — `defun` |
 | Structs sind Listen | `(typep p 'cons)` → `t` | eigener Typ, nicht `cons` |
-| Ganzzahlige Floats sind integer | `(type-of 3.0)` → `integer` | `single-float`/`double-float` (3.0 ist ein Float) |
+| Zahlen | nur `int64` und `float64`; `(/ 7 2)` → `3.5`; Überlauf = Fehler; `(type-of 3.0)` → `float` | Bignum, Brüche (`7/2`), `single-float`/`double-float` |
+| `(format nil "~d" 3.0)` | `"3.0"` (Float geht den `~a`-Weg) | `"3.0"` |
 | String-Schlüssel in `(make-hash-table)` (Default `eql`) | nach Inhalt: zweimal `"rot"` = ein Schlüssel | `eql` → Identität, zwei `"rot"`-Literale = zwei Schlüssel; dafür `:test 'equal` |
 | `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` | vorhanden |
@@ -331,10 +333,10 @@ kennen, um nicht zu raten:
 
 ### 10.6 `eq` auf Zahlen liefert immer `()`
 - `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
-- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in `types.go`)
+- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeInt` in `types.go`)
   zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem bewusst als nie
-  identisch (`fnEqPtr` in `primitives.go`).
-- Immer `equal?` oder `=` für Zahlenvergleich, nie `eq`.
+  identisch (`fnEqPtr` in `arith_prims.go`).
+- Zahlen mit `=` vergleichen (nach Wert), nie mit `eq`. `equal?`/`eql` unterscheiden `1` und `1.0`.
 
 ### 10.7 Makros nicht-rekursiv (macrolet)
 - `macrolet`-Bodies sehen nicht die anderen Makros derselben Ebene.
@@ -395,7 +397,7 @@ src/
 | Brauche ich... | Nutze |
 |----------------|-------|
 | Arithmetik | `+ - * / mod` |
-| Vergleich | `equal?` (Zahlen!), `eq` (Pointer) |
+| Vergleich | `=` (Zahlen), `equal?` (Struktur), `eq` (Pointer) |
 | Liste bauen | `cons list append` |
 | Iteration | `dolist dotimes loop mapcar reduce` |
 | Parallel | `parfunc` |

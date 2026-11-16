@@ -106,8 +106,9 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 算术/比较
 `+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` —— `(log x)` 仅自然对数，x > 0；`expt` 也支持负数/分数指数（`(expt 0.9 -2)`），NaN/Inf → 报错；`mod` 同 CL 向下取整（`(mod -3 2)` → 1），`rem`/`remainder` 向零取整（→ -1）
 `(floor x [d])` `ceiling` `truncate` `round` 同 CL：返回两个值（商、余数）—— `(truncate 7 2)` → `3 1`；`round` 取偶（`(round 2.5)` → 2，`(round 3.5)` → 4）；`(ash x n)` 位移，n < 0 时右移
-`(parse-int "42")` `(parse-float "4.5")` —— 仅十进制，无进制参数；无效输入 → 报错（不是 `nil`）
-`= /= < > >= <= equal? eql eq eq?` —— 数值比较为 CL 链式：`(< 1 2 3)` → `t`，`(/= 1 2 3)` → `t`（两两不同）；`eq`=指针，`eql` 同 CL（数字按值，字符串从不相等），`equal?`=结构比较（哈希表、向量、通道只按同一性比较，同 CL `equal`）
+**两种数字：** 整数（`int64`：`42`、`-7`）和浮点数（`float64`：`3.14`、`1e3`、`1.`）。浮点数打印时总带小数点：`3.0`。`+ - *`：全是整数 → 整数，有一个浮点数 → 浮点数（`(* 1.5 2)` → `3.0`）。`(/ 6 2)` → `3`，`(/ 7 2)` → `3.5`。`floor ceiling truncate round` → 总是整数；`sqrt exp log` → 总是浮点数（`(sqrt 16)` → `4.0`）。**溢出 = 报错**（`*: Ganzzahl-Überlauf`），没有大整数。索引/个数（`nth aref substring iota dotimes loop repeat` 等）必须是整数 —— `(nth 2.0 l)` → 报错；请用 `(floor x)`。`(random 10)` → 整数，`(random 1.0)` → 浮点数。`integerp` `floatp` 判断数字种类，`(float 3)` → `3.0`。
+`(parse-int "42")` → 整数，`(parse-float "4.5")` → 浮点数 —— 仅十进制，无进制参数；无效输入 → 报错（不是 `nil`）
+`= /= < > >= <= equal? eql eq eq?` —— 数值比较为 CL 链式：`(< 1 2 3)` → `t`，`(/= 1 2 3)` → `t`（两两不同）；`eq`=指针，`=` 按值比较（`(= 1 1.0)` → `t`）；`eql` 同 CL（数字按种类和值：`(eql 1 1.0)` → `()`，字符串从不相等），`equal?`=结构比较，数字同 `eql`（哈希表、向量、通道只按同一性比较，同 CL `equal`）
 
 ### 列表（经典 7 个）
 `car cdr cons atom null list append`
@@ -126,7 +127,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 环境/内省
 `memstats sleep env-symbols lisp-implementation-version` —— `(sleep ms)` 单位为毫秒；`(env-symbols)` 返回根环境中所有名字
-（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.30.0"`
+（已排序，`tools/gen-reference.lisp` 以此为基础）；`(lisp-implementation-version)` → `"0.31.0"`
 
 ### 领域模块（各自的 Register-Xxx）
 - **sigoREST：** `sigo sigo* sigo-request sigo-models sigo-model-info sigo-costs sigo-budget sigo-host sigo-system-prompt sigo-reference sigo-usage sigo-usage-reset` —— `(sigo "prompt" [model] [session-id] [host])` → 文本；`sigo*` → 哈希表（`text model finish-reason prompt-tokens completion-tokens cached-tokens reasoning-tokens cost-usd elapsed`）；`(sigo-request h [host])`：哈希表的键必须恰好来自 `model messages temperature max_tokens session_id timeout retries system_prompt bare channel`（其他键 → 报错；未给 `temperature` 时 golisp2 发送 0.2，`0` 会报错；未给 `max_tokens` 时使用模型最大值），结果 = 完整响应的哈希表外加 `elapsed`（秒）；`(sigo-usage)` 累计值，含 `calls`/`elapsed`；`(sigo-costs [since [until]])`（Unix 秒，同 `(now)`），`(sigo-budget)`，`(sigo-model-info [model])`（价格为美元/百万 token，**0 = 未知，不是免费**）；`(sigo-system-prompt "")` → 模型只看到提示词（若有 session-id 则加上会话历史）
@@ -204,7 +205,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 - `()` / `nil` / `NIL` → 单例 nil（指针同一性！）
 - `t` → 真，但*不是*唯一的真值 —— 除 nil 外一切皆为真
 - `(eq '() '())` → `t`（单例）
-- `(eq 5 5)` → `()` —— **设计如此：** `eq` 对数字总是返回 `()`（见 10.6）。有疑问时用 `equal?`
+- `(eq 5 5)` → `()` —— **设计如此：** `eq` 对数字总是返回 `()`（见 10.6）。数字用 `=` 比较，其他情况有疑问时用 `equal?`
 
 ---
 
@@ -280,7 +281,8 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | `macrolet` | 非递归 | 递归 |
 | `(define (f p) ...)` | `(define f (lambda (p) ...))` 的简写（Scheme 风格） | 不存在 —— 用 `defun` |
 | 结构体是列表 | `(typep p 'cons)` → `t` | 独立类型，不是 `cons` |
-| 整数值的浮点数是 integer | `(type-of 3.0)` → `integer` | `single-float`/`double-float`（3.0 是浮点数） |
+| 数字 | 只有 `int64` 和 `float64`；`(/ 7 2)` → `3.5`；溢出 = 报错；`(type-of 3.0)` → `float` | 大整数、分数（`7/2`）、`single-float`/`double-float` |
+| `(format nil "~d" 3.0)` | `"3.0"`（浮点数走 `~a` 的路径） | `"3.0"` |
 | `(make-hash-table)`（默认 `eql`）中的字符串键 | 按内容：两次 `"rot"` = 同一个键 | `eql` → 同一性，两个 `"rot"` 字面量 = 两个键；需要时用 `:test 'equal` |
 | `(puthash k h v)` | 表在第 2 个位置；优先用 `(setf (gethash k h) v)` | Emacs Lisp：`(puthash k v h)` |
 | `stringp` `consp` `equal` | 不存在 → 报错 „unbekanntes Symbol“（未知符号）；改用 `string?`、`(typep x 'cons)`、`equal?` | 存在 |
@@ -326,10 +328,10 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 10.6 `eq` 对数字总是返回 `()`
 - `(eq 5 5)` → `()`。`(eq 1000 1000)` → `()`。即使值相同也是如此。
-- 内部有小整数缓存（-32768..32767，`types.go` 中的 `MakeNum`）
+- 内部有小整数缓存（-32768..32767，`types.go` 中的 `MakeInt`）
   用于避免分配 —— 但 `eq` 仍有意把数字视为从不同一
-  （`primitives.go` 中的 `fnEqPtr`）。
-- 比较数字总是用 `equal?` 或 `=`，不要用 `eq`。
+  （`arith_prims.go` 中的 `fnEqPtr`）。
+- 比较数字用 `=`（按值），不要用 `eq`。`equal?`/`eql` 区分 `1` 和 `1.0`。
 
 ### 10.7 宏非递归（macrolet）
 - `macrolet` 的定义体看不到同一层的其他宏。
@@ -390,7 +392,7 @@ src/
 | 我需要… | 使用 |
 |---------|------|
 | 算术 | `+ - * / mod` |
-| 比较 | `equal?`（数字！），`eq`（指针） |
+| 比较 | `=`（数字），`equal?`（结构），`eq`（指针） |
 | 构建列表 | `cons list append` |
 | 迭代 | `dolist dotimes loop mapcar reduce` |
 | 并行 | `parfunc` |

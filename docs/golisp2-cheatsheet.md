@@ -187,27 +187,40 @@ GoLisp2 hat **~150 eingebaute Funktionen** (Type `FUNC`), registriert in
 `BaseEnv()` (`src/lib/primitives.go`). Vollständige Liste: `(env-symbols)`.
 
 ### Arithmetik
+Zwei Zahlarten: Ganzzahl (`int64`) und Float (`float64`). `42` ist eine
+Ganzzahl, `42.0` ein Float. Details: `docs/lisp-semantik.md`, Abschnitt „Zahlen“.
 ```lisp
 (+ 1 2 3)                         ; → 6
+(+ 1 2.5)                         ; → 3.5   ein Float dabei → Float
+(* 1.5 2)                         ; → 3.0   Float druckt immer mit Punkt
 (- 10 3 2)                        ; → 5
 (* 2 3 4)                         ; → 24
-(/ 10 3)                          ; → 3.333...
+(/ 6 2)                           ; → 3     teilbar → Ganzzahl
+(/ 7 2)                           ; → 3.5   sonst Float (kein Bruch-Typ)
+(* 99999999999 99999999999)       ; Fehler "*: Ganzzahl-Überlauf" (kein Bignum)
 (mod 10 3)                        ; → 1
-(remainder 10 3)                  ; = mod
+(remainder 10 3)                  ; → 1 (wie rem: Richtung Null)
 (abs -5)                          ; → 5
-(floor 3.7)                       ; → 3
-(sqrt 16)                         ; → 4 (math.Sqrt, exakt)
-(random)                          ; → Zufallszahl [0,1)
+(floor 3.7)                       ; → 3     floor/ceiling/truncate/round → Ganzzahl
+(sqrt 16)                         ; → 4.0   sqrt/exp/log → immer Float
+(expt 2 10)                       ; → 1024; (expt 2 0.5) → 1.4142135623730951
+(float 3)                         ; → 3.0   Ganzzahl → Float
+(integerp 3) (floatp 3.0)         ; → t t   Zahlart prüfen
+(random 10)                       ; → Ganzzahl in [0,10)
+(random 1.0)                      ; → Float in [0,1)
 (values 1 2 3)                    ; Multi-Values
 ```
+Index und Anzahl müssen Ganzzahlen sein: `(nth 2.0 l)` ist ein Fehler,
+`(nth (floor x) l)` geht.
 
 ### Vergleiche
 ```lisp
-(= 5 5)                           ; Zahlen-Vergleich
+(= 5 5)                           ; Zahlen-Vergleich nach Wert: (= 1 1.0) → t
+(eql 1 1.0)                       ; → () eql/equal? verlangen gleiche Zahlart
 (/= 1 2 3)                        ; ungleich: t, wenn paarweise verschieden
 (< 3 5) (> 5 3) (>= 5 5) (<= 3 5)
-(equal? "a" "a")                  ; Strukturell (für Zahlen, Listen, Strings)
-(eq 'foo 'foo)                    ; Pointer-Identität (⚠️ für Zahlen oft nil)
+(equal? "a" "a")                  ; Strukturell (für Listen, Strings, Zahlen gleicher Zahlart)
+(eq 'foo 'foo)                    ; Pointer-Identität (⚠️ für Zahlen immer ())
 (eq? (list) (list))               ; t (Singleton-Nil)
 ```
 
@@ -373,7 +386,7 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (substring "abc" 0 2)             ; → "ab"
 (string-upcase "abc")             ; → "ABC"
 (string-downcase "ABC")           ; → "abc"
-(string->number "42")             ; → 42
+(string->number "42")             ; → 42 (Ganzzahl); "42.0" → 42.0 (Float)
 (number->string 42)               ; → "42"
 (number->string 1792441863.5)     ; → "1792441863.5" (Festkomma 1e-4 ≤ |x| < 1e16, sonst 1e-05)
 (string->list "abc")              ; → ("a" "b" "c")
@@ -437,6 +450,7 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (format nil "~A ~D" "x" 42)      ; → "x 42"
 (format t "Hallo ~A" "Welt")      ; → stdout
 (format nil "~{~A~^, ~}" '(1 2 3)); → "1, 2, 3"
+(format nil "~D" 3.0)             ; → "3.0" (~D ~B ~O ~X: Float geht den ~A-Weg)
 (format nil "~,2F" 3.14159)       ; → "3.14"
 (format nil "~,0F" 1.5)           ; → "2."  (~F immer mit Punkt, nie Exponent)
 (format nil "~E" 1.5)             ; → "1.5e+0"
@@ -637,10 +651,11 @@ t                                  ; Wahr
 (equal? 'foo 'foo)                 ; → t
 (equal? (list 1 2) (list 1 2))     ; → t
 (equal? 5 5)                       ; → t
+(equal? 1 1.0)                     ; → () verschiedene Zahlart; (= 1 1.0) → t
 (equal? "a" "a")                   ; → t
 ```
 
-**Empfehlung:** Im Zweifel `equal?`. `eq` nur für Singleton-Objekte (nil) oder
+**Empfehlung:** Zahlen mit `=` vergleichen, sonst im Zweifel `equal?`. `eq` nur für Singleton-Objekte (nil) oder
 wenn Pointer-Identität *explizit* gemeint ist.
 
 ---
@@ -758,6 +773,7 @@ wenn Pointer-Identität *explizit* gemeint ist.
 | Fall | GoLisp2-Verhalten | CL-Verhalten |
 |------|-------------------|--------------|
 | `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | Oft `t` (Small-Int-Cache) |
+| Zahlen | nur `int64` und `float64`; `(/ 7 2)` → `3.5`; Überlauf = Fehler | Bignum, Brüche (`7/2`) |
 | `progv` | Lex/dyn-Trennung fehlt | Dynamisch, lexikalische Bindungen schützen |
 | `declare` | No-op | Type-Checks, Optimierungen |
 | `the` | Typ ignoriert | Type-Checks zur Laufzeit |
@@ -835,11 +851,12 @@ interpretiert.
 ### 10.6 eq auf Zahlen liefert immer ()
 
 - `(eq 5 5)` → `()`. `(eq 1000 1000)` → `()`. Auch bei identischem Wert.
-- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeNum` in
+- Intern existiert ein Small-Int-Cache (-32768..32767, `MakeInt` in
   `src/lib/types.go`) zur Allokations-Vermeidung — `eq` behandelt Zahlen trotzdem
-  bewusst als nie identisch (`fnEqPtr` in `src/lib/primitives.go`).
+  bewusst als nie identisch (`fnEqPtr` in `src/lib/arith_prims.go`).
 
-**Auswirkung:** Immer `equal?` oder `=` für Zahlenvergleich verwenden, nie `eq`.
+**Auswirkung:** Zahlen mit `=` vergleichen (nach Wert), nie mit `eq`.
+`equal?` und `eql` unterscheiden `1` und `1.0`.
 
 ### 10.7 Makros nicht-rekursiv (macrolet)
 

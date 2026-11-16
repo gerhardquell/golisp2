@@ -10,7 +10,7 @@ hat. Kompass bei Unklarheiten ist die Common-Lisp-Semantik.
 | Funktion | Vergleicht | Verwendung |
 |----------|------------|------------|
 | `eq` / `eq?` | Pointer-Identität (dasselbe Objekt im Speicher) | Symbole, Singleton-Objekte, schnelle Identitätsprüfung |
-| `equal?` | Strukturelle Gleichheit (rekursiver Inhaltsvergleich) | Listen, Strings, Zahlen, verschiedene Atom-Instanzen |
+| `equal?` | Strukturelle Gleichheit (rekursiver Inhaltsvergleich) | Listen, Strings, Zahlen gleicher Zahlart (`(equal? 1 1.0)` → `()`) |
 
 ```lisp
 ;; eq prüft, ob es DASSELBE Objekt ist
@@ -248,13 +248,68 @@ stdout.
 
 ---
 
-## Zahlen drucken
+## Zahlen
 
-Eine Druckform für Printer, `~a` und `number->string` (`FormatNumber`,
-`src/lib/types.go`): ganzzahlige Werte ohne Punkt (`3.0` → `3`), sonst die
-kürzesten Ziffern — Festkomma für 1e-4 ≤ |x| < 1e16, darüber und darunter
-Exponent (Regel wie Python-`repr`). `(now)` → `1792441863.9679012`,
-`0.00001` → `1e-05`. Eigene Darstellung: `(format nil "~,3f" x)`.
+Es gibt zwei Zahlarten: **Ganzzahl** (`int64`) und **Float** (`float64`).
+`1` und `1.0` sind verschiedene Werte. Keine Bignums, keine Brüche.
+
+**Lesen:** Nur Vorzeichen und Ziffern ergeben eine Ganzzahl (`42`, `-7`, `+3`).
+Alles andere ist ein Float (`3.14`, `1e3`, `1.`). Eine Ganzzahl außerhalb von
+`int64` ist ein Lesefehler.
+
+**Drucken:** Ganzzahl ohne Punkt (`3`). Ein Float ist immer als Float
+erkennbar: `3.0`, `1000.0`. Sonst die kürzesten Ziffern — Festkomma für
+1e-4 ≤ |x| < 1e16, darüber und darunter Exponent (`1e+16`, `1e-05`).
+Das gilt für Printer, `~a` und `number->string` (`numberStr`/`FormatNumber`,
+`src/lib/types.go`). Eigene Darstellung: `(format nil "~,3f" x)`.
+
+**Rechnen:**
+
+| Operation | Regel | Beispiel |
+|---|---|---|
+| `+ - *`, `1+ 1-` | alle Ganzzahl → Ganzzahl; ein Float dabei → Float | `(+ 1 2)` → `3`, `(* 1.5 2)` → `3.0` |
+| `/` | alle Ganzzahl und teilbar → Ganzzahl, sonst Float | `(/ 6 2)` → `3`, `(/ 7 2)` → `3.5` |
+| `mod rem remainder` | beide Ganzzahl → Ganzzahl, sonst Float | `(mod 7.5 2)` → `1.5` |
+| `abs max min` | die Zahlart bleibt erhalten | `(max 1 2.5)` → `2.5`, `(min 1 2.5)` → `1` |
+| `floor ceiling truncate round` | Ergebnis immer Ganzzahl | `(floor 3.7)` → `3` |
+| `sqrt exp log` | immer Float | `(sqrt 16)` → `4.0` |
+| `expt` | Ganzzahl hoch Ganzzahl ≥ 0 → Ganzzahl, sonst Float | `(expt 2 10)` → `1024`, `(expt 2 -1)` → `0.5` |
+| `random` | `(random 10)` → Ganzzahl, `(random 1.0)` → Float in [0, 1) | |
+| `ash` | nur Ganzzahlen | `(ash 1 10)` → `1024` |
+
+**Überlauf ist ein Fehler**, kein stiller Wechsel zu Float:
+`(* 99999999999 99999999999)` → `*: Ganzzahl-Überlauf`. Ebenso
+`(+ 9223372036854775807 1)`, `(expt 2 64)`, `(floor 1e30)`.
+
+**Vergleichen:**
+
+- `= /= < > <= >=` vergleichen nach Wert: `(= 1 1.0)` → `t`.
+- `eql` und `equal?` verlangen gleiche Zahlart **und** gleichen Wert:
+  `(eql 1 1.0)` → `()`. Dem folgen `member`, `position`, `assoc`, `case`
+  und die Tags von `catch`/`throw`.
+- Hash-Tabellen: `1` und `1.0` sind zwei Schlüssel.
+- Ganzzahl gegen Ganzzahl ist exakt. Bei Ganzzahl gegen Float wird die
+  Ganzzahl nach Float gewandelt. Über 2^53 ist das ungenau:
+  `(= 9007199254740993 9007199254740992.0)` → `t`.
+
+**Umwandeln und prüfen:** `(float 3)` → `3.0`. `floor`/`round`/`truncate`/
+`ceiling` machen aus einem Float eine Ganzzahl. `integerp` und `floatp`
+prüfen die Zahlart. `parse-int` liefert eine Ganzzahl, `parse-float` einen
+Float, `string->number` folgt der Leseregel (`"42"` → `42`, `"42.0"` → `42.0`).
+
+**Indizes und Anzahlen** müssen Ganzzahlen sein (`nth`, `aref`, `substring`,
+`iota`, `dotimes`, `loop repeat` …). Ein Float ist ein Fehler, auch `2.0`:
+`(nth 2.0 lst)` → `nth: ganze Zahl erwartet, got 2.0`. Abhilfe:
+`(nth (floor x) lst)`. Zählende Funktionen (`length`, `position` …) liefern
+Ganzzahlen.
+
+**JSON:** Eine Zahl ohne Punkt und Exponent wird eine Ganzzahl, sonst ein
+Float; liegt sie außerhalb von `int64`, wird sie ein Float. Ganzzahlen werden
+exakt geschrieben. Bekannte Grenze: der Float `3.0` wird als `3` geschrieben
+und kommt als Ganzzahl zurück.
+
+**Sonst:** `(now)` ist ein Float. Postgres liefert `int2/int4/int8` als
+Ganzzahl und nimmt Ganzzahl-Parameter als `int64`.
 
 ---
 
@@ -274,6 +329,8 @@ Mit Parametern und den Modifiern `:` und `@`.
 - String → anhängen
 
 **Besonderheiten:**
+- `~D ~B ~O ~X` drucken Ganzzahlen exakt. Ein Float geht den `~A`-Weg, auch
+  `3.0`: `(format nil "~d" 3.0)` → `"3.0"`. `printf "%d"` folgt dem.
 - `~/name/` ruft eine benannte Funktion via `globalFormatEnv`
 - `~:;` markiert die Default-Klausel
 - `~,0:F` (golisp-Erweiterung): wie `~,0F`, aber ohne Punkt am Ende —
@@ -466,7 +523,8 @@ in `src/embed/types.lisp`. Structs (`defstruct`) und Conditions
 Condition.
 
 **Bewusste Abweichungen von CL:**
-- `3.0` ist `integer` — der Kern kennt nur `float64`.
+- `(typep 3.0 'integer)` → `()`: `integer` und `float` folgen der Zahlart,
+  nicht dem Wert (siehe „Zahlen“).
 - `type-of` liefert `integer`/`float`, nicht `fixnum`/`double-float`.
 - Structs sind Listen: `(typep p 'cons)` → `t`. Ein Literal `'(punkt 1 2)`
   gilt als `punkt`, wenn `punkt` registriert ist und die Länge passt.
@@ -485,7 +543,7 @@ Condition.
 - Sequenzfunktionen (`elt subseq copy-seq concatenate map some find
   find-if position position-if count count-if`) nehmen Listen und Vektoren,
   **keine Strings** (keine Characters). Nur `:test`/`:key`, kein
-  `:start`/`:end`/`:from-end`. Default-Test `eql` (Go-Primitive; Zahlen nach
+  `:start`/`:end`/`:from-end`. Default-Test `eql` (Go-Primitive; Zahlen nach Zahlart und
   Wert, sonst Identität) — Strings mit `:test 'equal?` suchen.
 - `deftype`: `&optional` ohne Default ist `()`, nicht `*` — `(&optional (n '*))`
   schreiben. Namen eingebauter Typen, Structs und Conditions sind ein Fehler

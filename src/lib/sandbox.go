@@ -52,9 +52,6 @@ var sandboxEinzeln = []string{
   // Goroutinen
   "spawn", "chan-make", "chan-send", "chan-recv", "chan-try-recv",
   "chan-try-send", "chan-select", "chan-close", "chan-closed?", "lock-make",
-  // sigo
-  "sigo", "sigo*", "sigo-request", "sigo-models", "sigo-model-info",
-  "sigo-reference", "sigo-usage", "sigo-costs", "sigo-budget",
   // Datei lesen
   "file-read", "file-exists?", "file-stat", "directory-files",
   "get-working-directory", "get-file-path",

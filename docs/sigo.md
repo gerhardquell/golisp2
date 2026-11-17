@@ -185,8 +185,9 @@ Dienste; seine Definitionen bleiben in der Sandbox. Details:
   der Reihe nach aus (Wert der letzten) — anders als `read`, das still nur
   die erste nimmt. Liefert die KI mehrere `defun`, sind danach alle da.
 - Das Zeitlimit (Standard 10 s) gilt nur für den Code in der Sandbox. Das
-  äußere `sigo` oben läuft vorher beim Aufrufer. Ruft der KI-Code selbst
-  `sigo`, reichen 10 s oft nicht — dann `:zeitlimit` höher setzen.
+  äußere `sigo` oben läuft vorher beim Aufrufer. Der KI-Code selbst darf
+  `sigo` nur mit `(make-sandbox :erlaube '(sigo))`; dann reichen 10 s oft
+  nicht — `:zeitlimit` höher setzen.
   `sigo` hat zusätzlich seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`); das
   Zeitlimit unterbricht einen laufenden HTTP-Aufruf nicht.
 

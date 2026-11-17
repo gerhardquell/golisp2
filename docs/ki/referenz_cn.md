@@ -153,7 +153,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 - **遗传算法：** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **重定义：** `redefine-policy redef-log redef-log-clear defined-in`
 - **跟踪：** `trace untrace trace?`
-- **沙箱（AI 代码）：** `(make-sandbox [:zeitlimit 秒] [:erlaube '(name …)])` → `#<foreign sandbox>`；`(sandbox-eval sb form-或-string)` → 最后一个表达式的值；字符串：读取**全部**表达式（与 `read` 不同）。独立的根环境：定义留在沙箱内。允许：算术、列表、字符串、stdlib、输出、`parfunc`/`spawn`/`chan-*`、`sigo`、读文件；禁止：`system exec load`、写文件、`getenv exit argv`、`redefine-policy trace`、服务（`pg-* http-* ws-* webserv maxima-* ga-*`）→ 错误 `sandbox: system nicht erlaubt (freigeben mit :erlaube)`。时间限制默认 10 秒，回调和 goroutine 中同样有效 → `sandbox: Zeitlimit 10 s überschritten`
+- **沙箱（AI 代码）：** `(make-sandbox [:zeitlimit 秒] [:erlaube '(name …)])` → `#<foreign sandbox>`；`(sandbox-eval sb form-或-string)` → 最后一个表达式的值；字符串：读取**全部**表达式（与 `read` 不同）。独立的根环境：定义留在沙箱内。允许：算术、列表、字符串、stdlib、输出、`parfunc`/`spawn`/`chan-*`、读文件；`sigo` 仅通过 `:erlaube '(sigo)`；禁止：`system exec load`、写文件、`getenv exit argv`、`redefine-policy trace`、服务（`pg-* http-* ws-* webserv maxima-* ga-*`）→ 错误 `sandbox: system nicht erlaubt (freigeben mit :erlaube)`。时间限制默认 10 秒，回调和 goroutine 中同样有效 → `sandbox: Zeitlimit 10 s überschritten`
 - **defsystem-lite：** `defsystem load-system unload-system loaded-systems system-symbols`
 - **Web 桥（golisp2web）：** `http-serve http-static http-stop http-port http-upload http-wait webserv ws-call ws-clients ws-emit ws-emit-to ws-eval ws-export ws-unexport browser-open`
 - **Condition-lite：** `define-condition signal handler-case documentation`（见第 7 节）

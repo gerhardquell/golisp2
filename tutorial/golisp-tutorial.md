@@ -2715,7 +2715,7 @@ Abfragen bei sigoREST, kostenlos: Kosten im Zeitfenster (Unix-Sekunden wie `now`
 
 **Syntax:** `(make-sandbox &key zeitlimit erlaube)`, `(sandbox-eval sb form-oder-string)`
 
-Eigene Root-Umgebung für KI-Code: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen, `sigo` und Datei lesen sind erlaubt; `system`, `exec`, `load`, Datei schreiben, `getenv`, `exit`, Dienste u. a. sind gesperrt und lassen sich per `:erlaube` einzeln freigeben. Ein String wird ganz gelesen (alle Formen, Wert der letzten). Definitionen bleiben in der Sandbox. `:zeitlimit` in Sekunden (Standard 10) gilt pro `sandbox-eval`, auch in Callbacks und Goroutinen; ruft der KI-Code selbst `sigo`, höher setzen. Details: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
+Eigene Root-Umgebung für KI-Code: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen und Datei lesen sind erlaubt, `sigo` nur per `:erlaube`; `system`, `exec`, `load`, Datei schreiben, `getenv`, `exit`, Dienste u. a. sind gesperrt und lassen sich per `:erlaube` einzeln freigeben. Ein String wird ganz gelesen (alle Formen, Wert der letzten). Definitionen bleiben in der Sandbox. `:zeitlimit` in Sekunden (Standard 10) gilt pro `sandbox-eval`, auch in Callbacks und Goroutinen; ruft der KI-Code selbst `sigo`, höher setzen. Details: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
 
 ```lisp
 (define sb (make-sandbox))

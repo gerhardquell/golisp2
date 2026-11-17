@@ -625,7 +625,6 @@ Standard-Freigaben:
 |---|---|
 | Ausgabe | `print`, `println`, `printf`, `format t`, `warn`, `err-write` |
 | Goroutinen | `parfunc`, `spawn`, `chan-*`, `lock-make`, `lock` |
-| sigo | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-model-info`, `sigo-reference`, `sigo-usage`, `sigo-costs`, `sigo-budget` |
 | Datei lesen | `file-read`, `file-exists?`, `file-stat`, `directory-files`, `get-working-directory`, `get-file-path` |
 
 **Gesperrt** (Stand 0.34.0, Wahrheit ist `TestSandboxSperrliste`):
@@ -633,6 +632,7 @@ Standard-Freigaben:
 | Gruppe | Namen |
 |---|---|
 | Spezialformen | `exec`, `load`, `defmain` |
+| sigo (KI-Aufrufe) | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-model-info`, `sigo-reference`, `sigo-usage`, `sigo-costs`, `sigo-budget` — mit Datei lesen zusammen wäre das ein Weg nach außen; freigeben mit `:erlaube` |
 | Shell | `system` |
 | Datei schreiben | `file-write`, `file-append`, `file-delete`, `fprintf`, `set-working-directory` |
 | Prozess | `exit`, `argv`, `getenv`, `environ`, `lisp-implementation-version` |

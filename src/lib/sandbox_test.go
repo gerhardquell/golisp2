@@ -175,7 +175,9 @@ func TestSandboxStandardFreigaben(t *testing.T) {
   sbWant(t, env, `(sandbox-eval sb '(parfunc r (* 1 10) (* 2 10)))`, "(10 20)")
   sbWant(t, env, `(sandbox-eval sb '(chan-recv (spawn (lambda () 7))))`, "(:ok 7)")
   sbWant(t, env, `(sandbox-eval sb '(file-read "`+pfad+`"))`, `"inhalt"`)
-  sbWant(t, env, `(sandbox-eval sb '(list (bound? 'sigo) (bound? 'sigo-host) (bound? 'reduce)))`, "(t () t)")
+  // sigo nur mit :erlaube (Gerhard 17.11.: Datei lesen + sigo wäre ein Weg nach außen)
+  sbWant(t, env, `(sandbox-eval sb '(list (bound? 'sigo) (bound? 'sigo-host) (bound? 'reduce)))`, "(() () t)")
+  sbWant(t, env, `(sandbox-eval (make-sandbox :erlaube '(sigo)) '(list (bound? 'sigo) (bound? 'sigo*)))`, "(t ())")
   sbWant(t, env, `(sandbox-eval sb '(sort (list 3 1 2) '<))`, "(1 2 3)")
 }
 
@@ -227,8 +229,9 @@ func TestSandboxSperrliste(t *testing.T) {
     "maxima-close", "maxima-eval", "maxima-open",
     "pg-close", "pg-connect", "pg-exec", "pg-query", "read-line",
     "redef-log", "redef-log-clear", "redefine-policy", "sandbox-eval",
-    "set-working-directory", "sigo-host", "sigo-system-prompt",
-    "sigo-usage-reset", "slurp", "system", "trace", "trace?", "untrace",
+    "set-working-directory", "sigo", "sigo*", "sigo-budget", "sigo-costs",
+    "sigo-host", "sigo-model-info", "sigo-models", "sigo-reference", "sigo-request",
+    "sigo-system-prompt", "sigo-usage", "sigo-usage-reset", "slurp", "system", "trace", "trace?", "untrace",
     "webserv", "ws-call", "ws-clients", "ws-emit", "ws-emit-to", "ws-eval",
     "ws-export", "ws-unexport",
   }
@@ -265,9 +268,9 @@ func TestSandboxErlaubtListe(t *testing.T) {
     "now", "nth", "null", "null?", "number->string", "number?", "parse-float", "parse-int",
     "position", "position-if", "print", "printf", "println", "puthash", "random", "read",
     "regex-find", "regex-find-all", "regex-match", "regex-replace", "regex-split", "rem",
-    "remainder", "remhash", "round", "shell-assoc", "sigo", "sigo*", "sigo-budget",
-    "sigo-costs", "sigo-model-info", "sigo-models", "sigo-reference", "sigo-request",
-    "sigo-usage", "sleep", "some", "sort", "spawn", "sprintf", "sqrt", "sscanf",
+    "remainder", "remhash", "round", "shell-assoc",
+   
+    "sleep", "some", "sort", "spawn", "sprintf", "sqrt", "sscanf",
     "string->list", "string->number", "string-append", "string-contains",
     "string-downcase", "string-join", "string-length", "string-replace", "string-split",
     "string-trim", "string-upcase", "string/=", "string<", "string<=", "string=",

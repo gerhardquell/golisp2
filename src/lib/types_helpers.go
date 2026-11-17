@@ -51,11 +51,6 @@ func appendCopy(list, tail *Cell) *Cell {
   return Cons(list.Car, appendCopy(list.Cdr, tail))
 }
 
-// MakeNumber erstellt eine NUMBER-Cell (Alias für MakeNum für Konsistenz)
-func MakeNumber(n float64) *Cell {
-  return MakeNum(n)
-}
-
 // MakeString erstellt eine STRING-Cell (Alias für MakeStr für Konsistenz)
 func MakeString(s string) *Cell {
   return MakeStr(s)

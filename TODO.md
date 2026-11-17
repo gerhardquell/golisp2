@@ -102,11 +102,11 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 
 ### Entscheidungen (Gerhard)
 
-- [ ] `ash-left`/`ash-right` (`stdlib.lisp`) und `MakeNumber` (`types_helpers.go`)
-      haben keine Aufrufer mehr — löschen? (`ash-*` wäre Breaking.)
+- [ ] `ash-left`/`ash-right` (`stdlib.lisp`) haben keine Aufrufer mehr — löschen?
+      (wäre Breaking). `MakeNumber` (`types_helpers.go`) am 17.11. gelöscht.
 - [ ] Zellgröße 112 → 96 Byte: `LispType` als `uint8`, `SrcLine` als `int32`.
       Eigener Schritt, vorher und nachher messen.
-- [ ] Worktree `.worktrees/ganzzahl-typ` und Zweig `ganzzahl-typ` entfernen?
+- [x] Worktree `.worktrees/ganzzahl-typ` und Zweig `ganzzahl-typ` entfernen? Erledigt 17.11.
 
 ### Fehler (geprüft 16.11., nicht angefasst)
 
@@ -123,7 +123,8 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 ### Noch zu prüfen
 
 - [ ] Postgres gegen echte Datenbank: `int2/int4/int8` exakt, Ganzzahl-Parameter als `int64`.
-- [ ] sigo gegen sigoREST: Token-Zahlen als Ganzzahl.
+- [x] sigo gegen sigoREST: Token-Zahlen als Ganzzahl. Geprüft 17.11.: `sigo*` liefert
+      `prompt-/completion-/cached-/reasoning-tokens` als `integer`, `cost-usd`/`elapsed` als `float`.
 - [ ] SLIME/Emacs: Inspector und REPL mit den neuen Druckformen (`3.0`).
 - [ ] Code außerhalb des Repos auf die Breaking Changes durchsehen (golisp2web,
       Space Beagle, `/u/ki-projekte`): `~N:a`, kleines `~x`, `(eql 1 1.0)`, Druckform

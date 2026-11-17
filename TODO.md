@@ -120,6 +120,10 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 - [x] `~r` kürzt einen Float still (`~d` druckt ihn seit 0.31.0 wie `~a`). Erledigt 17.11.:
       `~r` ohne Basis → Fehler (CL), `~nr` wie `~d`. `~p` war kein Fehler (1.5 ≠ 1 → Plural, CL).
 
+- [ ] `reduce` ohne `:initial-value` wendet `:key` nicht auf das erste Element an:
+      `(reduce #'+ '(1 2 3) :key (lambda (e) (* e 2)))` → `11`, CL → `12`
+      (`stdlib.lisp:101`, `(car s)` geht ohne key in die Faltung). Gefunden 17.11.
+
 ### Noch zu prüfen
 
 - [ ] Postgres gegen echte Datenbank: `int2/int4/int8` exakt, Ganzzahl-Parameter als `int64`.
@@ -147,7 +151,9 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 
 ### Danach (aus der Analyse vom 15.11.)
 
-- [ ] Dynamische Variablen (`defvar` mit echter Bindung über `let`) — braucht Spec.
+- [x] Dynamische Variablen (`defvar` mit echter Bindung über `let`) — braucht Spec.
+      Erledigt 17.11. (0.33.0, bis 2ca165f, gepusht, installiert). Regeln: `docs/lisp-semantik.md`,
+      `docs/golisp2-fehler.md` Abschnitt H.
 - [ ] Eingeschränktes Env für KI-Code (`(eval (read (sigo …)))`) — braucht Spec.
 - [ ] `destructuring-bind` vollständig; `setf` auf Listen ändert statt neu zu binden.
 

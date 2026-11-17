@@ -25,7 +25,7 @@
 | `%ganzzahl-pruefen` | Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
-| `%generic-registry` | Hash-Table der generischen Funktionen |
+| `*generic-registry*` | Hash-Table der generischen Funktionen |
 | `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |

@@ -41,7 +41,7 @@
 (defvar *tf-test-had-fail* '())  ; t wenn aktueller Test einen Fehlschlag hatte
 
 ;; Eindeutiges Fehler-Tag (gensym → keine Kollision mit Testwerten möglich)
-(defvar %tf-err-tag (gensym "TF-ERR"))
+(defvar *tf-err-tag* (gensym "TF-ERR"))
 
 ;; === Interne Helfer ==================================================
 
@@ -53,7 +53,7 @@
 
 ;; %tf-error-result?: ist r ein getaggtes Fehler-Ergebnis?
 (defun %tf-error-result? (r)
-  (and (pair? r) (equal? (car r) %tf-err-tag)))
+  (and (pair? r) (equal? (car r) *tf-err-tag*)))
 
 ;; %tf-register: Test eintragen; gleicher Name ersetzt still
 ;; (Reload-Semantik, wie defsystem)
@@ -118,7 +118,7 @@
 ;; is: (is expr) — ein Check. Wahr = PASS, () oder Fehler = FAIL
 ;; (bzw. xfail im :expected-failure-Kontext). Bricht niemals ab.
 (defmacro is (expr)
-  `(let ((r (trap ,expr (lambda (e) (list %tf-err-tag (format nil "~a" e))))))
+  `(let ((r (trap ,expr (lambda (e) (list *tf-err-tag* (format nil "~a" e))))))
      (%tf-record ',expr r)))
 
 ;; run-tests: (run-tests ['suite]) → läuft Tests (gefiltert), druckt
@@ -143,7 +143,7 @@
         (set! *tf-test-had-fail* '())
         (println (format nil "~a:" name))
         (let ((r (trap (funcall thunk)
-                       (lambda (e) (list %tf-err-tag (format nil "~a" e))))))
+                       (lambda (e) (list *tf-err-tag* (format nil "~a" e))))))
           ;; Fehler im Rumpf außerhalb eines is (Setup o. ä.)
           (when (%tf-error-result? r)
             (set! *tf-test-had-fail* t)

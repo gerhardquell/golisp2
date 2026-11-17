@@ -33,7 +33,7 @@
     (%file-shared? . "Intern: Datei bereits durch anderes System geladen (defsystem)")
     (%generic-dispatch . "Intern: Methodendispatch der generischen Funktionen")
     (%generic-methods . "Intern: Methodenliste einer generischen Funktion")
-    (%generic-registry . "Hash-Table der generischen Funktionen")
+    (*generic-registry* . "Hash-Table der generischen Funktionen")
     (%make-struct . "Intern: Konstruktor der defstruct-Instanzen")
     (%loop-acc . "Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp)")
     (%loop-acc-kw? . "Intern: loop-Akkumulations-Schluesselwort? (loop.lisp)")

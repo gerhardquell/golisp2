@@ -262,19 +262,24 @@
 ;; defvar: deklariert eine globale Variable (CL-Compat) — immer im
 ;; Root-Env, auch aus let/Funktionsrumpf (%defglobal). Docstring
 ;; (optionales 3. Argument) wird ignoriert. Zweites defvar für dasselbe
-;; Symbol ist no-op, wenn es bereits gebunden ist.
+;; Symbol lässt den Wert stehen, wenn es bereits gebunden ist — special
+;; wird der Name in beiden Fällen.
 (defmacro defvar (name &rest rest)
   (let ((val (if (null rest) () (car rest))))
-    `(if (bound? ',name)
-         ',name
-         (%defglobal ,name ,val))))
+    `(begin
+       (%declare-special ',name)
+       (if (bound? ',name)
+           ',name
+           (%defglobal ,name ,val)))))
 
 ;; defparameter: bindet eine globale Variable und überschreibt einen
 ;; bestehenden Wert immer (CL-Compat). Docstring wird ignoriert.
 ;; Still beim Rebind: der Redefine-Guard greift nur bei FUNC/LAMBDA/
 ;; MACRO-Bindungen, Wert-Rebinds landen nur im redef-log.
 (defmacro defparameter (name val &optional doc)
-  `(%defglobal ,name ,val))
+  `(begin
+     (%declare-special ',name)
+     (%defglobal ,name ,val)))
 
 ;; Registry für setf-Places: Assoc-Liste (accessor . setter).
 (define *setf-expanders* '())
@@ -457,16 +462,16 @@
 ;; Explizit NICHT dabei: Vererbung, call-next-method, :before/:after,
 ;; Multi-Dispatch. Registry-Format lässt Raum für spätere Erweiterung.
 
-;; %generic-registry: generic-name → Hashtabelle(tag → lambda)
-(defvar %generic-registry (make-hash-table))
+;; *generic-registry*: generic-name → Hashtabelle(tag → lambda)
+(defvar *generic-registry* (make-hash-table))
 
 ;; %generic-methods: liefert (legt ggf. an) die Methoden-Tabelle für name.
 (defun %generic-methods (name)
-  (let ((tbl (gethash name %generic-registry)))
+  (let ((tbl (gethash name *generic-registry*)))
     (if (hash-table-p tbl)
         tbl
         (let ((neu (make-hash-table)))
-          (puthash name %generic-registry neu)
+          (puthash name *generic-registry* neu)
           neu))))
 
 ;; %generic-dispatch: Tag aus (car obj), Methode suchen, mit allen

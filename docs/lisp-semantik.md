@@ -445,7 +445,7 @@ Single-Dispatch auf den Struct-Tag (`car`) des ersten Arguments.
   `(defmethod skaliere ((x kreis) faktor) ...)`.
 - Ohne passenden Tag und ohne `t`-Methode: Fehler `keine Methode für …`.
 - Methoden sind Lambdas in einer Registry-Hashtabelle
-  (`%generic-registry`); `defmethod` desselben Tags überschreibt still
+  (`*generic-registry*`); `defmethod` desselben Tags überschreibt still
   (Hot-Patching per SWANK).
 - Explizit nicht dabei: Vererbung, `call-next-method`, `:before`/`:after`,
   Multi-Dispatch. Implementierung rein Lisp, kein Kernel-Eingriff.

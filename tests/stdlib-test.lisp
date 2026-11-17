@@ -56,16 +56,16 @@
 
 (deftest defvar-ops :suite 'stdlib-variablen
   ;; eval: defvar im Test-Rumpf wäre lokal gebunden (Lambda-Scope)
-  (is (equal? 'v (eval '(defvar v 1))))
-  (is (equal? 'v (eval '(defvar v 2))))
-  (is (equal? 1  v)))
+  (is (equal? '*v* (eval '(defvar *v* 1))))
+  (is (equal? '*v* (eval '(defvar *v* 2))))
+  (is (equal? 1  *v*)))
 
 (deftest defparameter-ops :suite 'stdlib-variablen
   ;; eval: wie defvar — global binden, nicht Lambda-lokal
-  (is (equal? 'p (eval '(defparameter p 1))))
+  (is (equal? '*p* (eval '(defparameter *p* 1))))
   ;; defparameter überschreibt immer (CL-Unterschied zu defvar)
-  (is (equal? 'p (eval '(defparameter p 2 "docstring wird ignoriert"))))
-  (is (equal? 2  p)))
+  (is (equal? '*p* (eval '(defparameter *p* 2 "docstring wird ignoriert"))))
+  (is (equal? 2  *p*)))
 
 ;; === Strukturen ========================================================
 

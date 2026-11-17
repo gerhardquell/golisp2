@@ -169,6 +169,9 @@ func BaseEnv() *Env {
 	// Live-Tracing einzelner Funktionen
 	RegisterTrace(env)
 
+	// Dynamische Variablen: special-Namen (defvar/defparameter)
+	RegisterDynvar(env)
+
 	return env
 }
 

@@ -27,7 +27,7 @@ var clEpoch = time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // RegisterCLCompatPrims hängt sort/sqrt/exp/log/expt/get-universal-time ins Environment ein.
 func RegisterCLCompatPrims(env *Env) {
-  _ = env.Set("sort", makeFn(withFnDesignator(env, 1, fnSort)))
+  _ = env.Set("sort", makeCtxFn(withFnDesignator(env, 1, fnSort)))
   _ = env.Set("sqrt", makeFn(fnSqrt))
   _ = env.Set("exp", makeFn(fnExp))
   _ = env.Set("log", makeFn(fnLog))
@@ -38,7 +38,7 @@ func RegisterCLCompatPrims(env *Env) {
 // sort: (sort seq pred &key key) → neue, sortierte Liste bzw. neuer Vektor
 // (nicht-destruktiv, auch bei Vektoren). pred(a b) wahr → a kommt vor b.
 // key (optional) wird vor dem Vergleich auf jedes Element angewandt.
-func fnSort(args []*Cell) (*Cell, error) {
+func fnSort(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("sort: mindestens 2 Argumente nötig (liste pred)")
   }
@@ -78,7 +78,7 @@ func fnSort(args []*Cell) (*Cell, error) {
     if key == nil {
       return c, nil
     }
-    k, err := apply(key, []*Cell{c})
+    k, err := applyWithCtx(key, []*Cell{c}, ectx)
     return Primary(k), err
   }
 
@@ -97,7 +97,7 @@ func fnSort(args []*Cell) (*Cell, error) {
       callErr = err
       return false
     }
-    res, err := apply(pred, []*Cell{a, b})
+    res, err := applyWithCtx(pred, []*Cell{a, b}, ectx)
     if err != nil {
       callErr = err
       return false

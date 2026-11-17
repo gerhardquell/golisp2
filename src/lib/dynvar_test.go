@@ -97,7 +97,7 @@ func TestDynLetMischen(t *testing.T) {
 func TestDynClosureNachLetSiehtAltenWert(t *testing.T) {
   v := `(defvar *dv2-d* 1) (defun dv2-mach () (let ((*dv2-d* 2)) (lambda () *dv2-d*))) `
   evalStdlibEq(t, v+`(funcall (dv2-mach))`, "1")
-  evalStdlibEq(t, v+`(let ((f (dv2-mach))) (let ((*dv2-d* 5)) (f)))`, "5")
+  evalStdlibEq(t, v+`(let ((f (dv2-mach))) (let ((*dv2-d* 5)) (funcall f)))`, "5")
 }
 
 func TestDynProgv(t *testing.T) {
@@ -262,4 +262,55 @@ func TestDynMakrosBindenDynamisch(t *testing.T) {
     (list (loop for *dv3-l* in '(1 2) collect (dv3-gl)) (dv3-gl))`, "((1 2) 0)")
   evalStdlibEq(t, `(defvar *dv3-w* 0) (defun dv3-gw () *dv3-w*)
     (list (loop for *dv3-w* from 1 to 2 collect (dv3-gw)) (dv3-gw))`, "((1 2) 0)")
+}
+
+// ── Schritt 4: Primitiven mit Rückruf (Spec §3.2, §4) ──
+
+const dv4 = `(defvar *dv4-x* 1) (defun dv4-g (&rest ignore) *dv4-x*) `
+
+func TestDynRueckrufFuncallApply(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (list (funcall #'dv4-g) (funcall 'dv4-g) (apply #'dv4-g '(1 2)) (apply 'dv4-g 1 '(2))))`, "(2 2 2 2)")
+  // applyWithCtx-Pfad: FUNC-Cell (funcall) als Ziel eines Go-Aufrufs
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (multiple-value-call #'funcall (values 'dv4-g)))`, "2")
+}
+
+func TestDynRueckrufMapcar(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (list (mapcar (lambda (e) (dv4-g)) '(1)) (mapcar 'dv4-g '(1))))`, "((2) (2))")
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (mapcar #'funcall (list #'dv4-g)))`, "(2)")
+}
+
+func TestDynRueckrufSort(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (sort '(1 2 3) (lambda (a b) (if (= *dv4-x* 2) (> a b) (< a b)))))`, "(3 2 1)")
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (sort '(1 2 3) #'< :key (lambda (e) (if (= *dv4-x* 2) (- e) e))))`, "(3 2 1)")
+}
+
+func TestDynRueckrufReduce(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (reduce (lambda (a b) (+ a b *dv4-x*)) '(1 2 3)))`, "10")
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (reduce #'+ '(1 2 3) :initial-value 0 :key (lambda (e) (* e *dv4-x*))))`, "12")
+}
+
+func TestDynRueckrufMaphash(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((h (make-hash-table)) (r nil)) (setf (gethash 'a h) 1)
+    (let ((*dv4-x* 2)) (maphash (lambda (k v) (setq r (dv4-g))) h)) r)`, "2")
+}
+
+func TestDynRueckrufFormat(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (format nil "~/dv4-g/ ~{~/dv4-g/~}" 0 '(0 0)))`, `"2 22"`)
+}
+
+func TestDynRueckrufSequenz(t *testing.T) {
+  evalStdlibEq(t, dv4+`(let ((*dv4-x* 2)) (list (find-if (lambda (e) (= e *dv4-x*)) '(1 2 3))
+    (find 2 '(1 2 3) :key (lambda (e) (* e *dv4-x*)))
+    (position-if (lambda (e) (= e *dv4-x*)) '(1 2 3))
+    (map 'list #'dv4-g '(0)) (some (lambda (e) (= e *dv4-x*)) '(2))
+    (remove-if (lambda (e) (= e *dv4-x*)) '(1 2 3))))`, "(2 1 1 (2) t (1 3))")
+}
+
+func TestDynRueckrufTrace(t *testing.T) {
+  evalStdlibEq(t, dv4+`(defun dv4-t () *dv4-x*) (trace 'dv4-t)
+    (let ((r (let ((*dv4-x* 2)) (list (dv4-t) (funcall 'dv4-t))))) (untrace 'dv4-t) r)`, "(2 2)")
+}
+
+func TestDynRueckrufOhneBindungUnveraendert(t *testing.T) {
+  evalStdlibEq(t, dv4+`(list (mapcar 'dv4-g '(1)) (funcall #'dv4-g) (sort '(2 1) #'<) (format nil "~/dv4-g/" 0))`, `((1) 1 (1 2) "1")`)
 }

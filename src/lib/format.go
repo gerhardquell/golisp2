@@ -34,7 +34,7 @@ import (
 
 // RegisterFormat hängt (format ...) ins Environment ein.
 func RegisterFormat(env *Env) {
-  _ = env.Set("format", makeFn(fnFormat))
+  _ = env.Set("format", makeCtxFn(fnFormat))
   globalFormatEnv = env // für ~/fun/-Direktive (Lookup der User-Funktion)
 }
 
@@ -44,7 +44,7 @@ func RegisterFormat(env *Env) {
 var globalFormatEnv *Env
 
 // fnFormat: (format dest control . args)
-func fnFormat(args []*Cell) (*Cell, error) {
+func fnFormat(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("format: min. 2 Argumente (dest control . args)")
   }
@@ -57,7 +57,7 @@ func fnFormat(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("format: control muss String sein")
   }
   ctrl := []rune(args[1].Val)
-  st := &fmtState{out: &strings.Builder{}, args: args[2:]}
+  st := &fmtState{out: &strings.Builder{}, args: args[2:], ectx: ectx}
   formatRun(st, ctrl, 0)
   if st.err != nil {
     return nil, st.err
@@ -83,6 +83,7 @@ type fmtState struct {
   args []*Cell
   idx  int   // nächstes zu verbrauchendes Argument
   err  error
+  ectx evalCtx // für ~/fun/ (dynamische Bindungen)
 }
 
 // pkind: Art eines Direktiven-Parameters.

@@ -54,7 +54,7 @@ func emitUserFunc(st *fmtState, ctrl []rune, pos int, params []pval, colon, at b
   if st.err != nil {
     return pos
   }
-  result, err := apply(fn, []*Cell{arg})
+  result, err := applyWithCtx(fn, []*Cell{arg}, st.ectx)
   if err != nil {
     st.err = fmt.Errorf("format: ~/%s/: %v", name, err)
     return pos
@@ -79,7 +79,7 @@ func emitRecursive(st *fmtState, ctrl []rune, pos int, at bool) int {
     lst := st.consume()
     subArgs = cellToSlice(lst)
   }
-  sub := &fmtState{out: &strings.Builder{}, args: subArgs}
+  sub := &fmtState{out: &strings.Builder{}, args: subArgs, ectx: st.ectx}
   formatRun(sub, []rune(cstr.Val), 0)
   if sub.err != nil {
     st.err = sub.err
@@ -152,7 +152,7 @@ func emitIteration(st *fmtState, ctrl []rune, pos int, colon, at bool) (int, boo
 
   // step führt Body einmal auf args aus; liefert verbleibende args + esc.
   step := func(args []*Cell) ([]*Cell, bool) {
-    sub := &fmtState{out: st.out, args: args, idx: 0}
+    sub := &fmtState{out: st.out, args: args, idx: 0, ectx: st.ectx}
     _, esc := formatRun(sub, bodyRunes, 0)
     if sub.err != nil {
       st.err = sub.err
@@ -207,7 +207,7 @@ func emitIteration(st *fmtState, ctrl []rune, pos int, colon, at bool) (int, boo
 
 func emitCase(st *fmtState, ctrl []rune, pos int, colon, at bool) int {
   body, npos := findBlock(ctrl, pos, '(', ')')
-  sub := &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx}
+  sub := &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx}
   formatRun(sub, ctrlSlice(ctrl, body), 0)
   if sub.err != nil {
     st.err = sub.err
@@ -404,7 +404,7 @@ func (st *fmtState) peek() *Cell {
 
 // sub erzeugt einen Sub-State mit getrenntem out (für clauses).
 func (st *fmtState) sub(rng [2]int) *fmtState {
-  return &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx}
+  return &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx}
 }
 
 // cellToSlice: Liste → []*Cell. Nutzt types_helpers.

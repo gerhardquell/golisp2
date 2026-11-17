@@ -23,11 +23,11 @@ func RegisterSequence(env *Env) {
   _ = env.Set("subseq",      makeFn(fnSubseq))
   _ = env.Set("copy-seq",    makeFn(fnCopySeq))
   _ = env.Set("concatenate", makeFn(fnConcatenate))
-  _ = env.Set("map",         makeFn(withFnDesignator(env, 1, fnMap)))
-  _ = env.Set("some",        makeFn(withFnDesignator(env, 0, fnSome)))
+  _ = env.Set("map",         makeCtxFn(withFnDesignator(env, 1, fnMap)))
+  _ = env.Set("some",        makeCtxFn(withFnDesignator(env, 0, fnSome)))
   for _, name := range []string{"find", "position", "count"} {
-    _ = env.Set(name,         makeFn(seqSearchFn(env, name, false)))
-    _ = env.Set(name + "-if", makeFn(seqSearchFn(env, name + "-if", true)))
+    _ = env.Set(name,         makeCtxFn(seqSearchFn(env, name, false)))
+    _ = env.Set(name + "-if", makeCtxFn(seqSearchFn(env, name + "-if", true)))
   }
 }
 
@@ -167,7 +167,7 @@ func seqRow(cols [][]*Cell, i int) []*Cell {
   return row
 }
 
-func fnMap(args []*Cell) (*Cell, error) {
+func fnMap(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("map: mindestens 3 Argumente nötig (typ f sequenz…)")
   }
@@ -181,7 +181,7 @@ func fnMap(args []*Cell) (*Cell, error) {
   }
   results := make([]*Cell, 0, n)
   for i := 0; i < n; i++ {
-    r, err := apply(args[1], seqRow(cols, i))
+    r, err := applyWithCtx(args[1], seqRow(cols, i), ectx)
     if err != nil {
       return nil, err
     }
@@ -193,7 +193,7 @@ func fnMap(args []*Cell) (*Cell, error) {
   return makeSeq(results, isVec), nil
 }
 
-func fnSome(args []*Cell) (*Cell, error) {
+func fnSome(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("some: mindestens 2 Argumente nötig (p sequenz…)")
   }
@@ -202,7 +202,7 @@ func fnSome(args []*Cell) (*Cell, error) {
     return nil, err
   }
   for i := 0; i < n; i++ {
-    r, err := apply(args[0], seqRow(cols, i))
+    r, err := applyWithCtx(args[0], seqRow(cols, i), ectx)
     if err != nil {
       return nil, err
     }
@@ -216,8 +216,8 @@ func fnSome(args []*Cell) (*Cell, error) {
 // seqSearchFn baut find/position/count und ihre -if-Varianten. Das erste
 // Argument ist bei -if ein Prädikat, sonst das gesuchte Objekt (kann selbst
 // ein Symbol sein — daher kein withFnDesignator).
-func seqSearchFn(env *Env, name string, isIf bool) func([]*Cell) (*Cell, error) {
-  return func(args []*Cell) (*Cell, error) {
+func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
+  return func(args []*Cell, ectx evalCtx) (*Cell, error) {
     if len(args) < 2 {
       return nil, fmt.Errorf("%s: mindestens 2 Argumente nötig", name)
     }
@@ -249,7 +249,7 @@ func seqSearchFn(env *Env, name string, isIf bool) func([]*Cell) (*Cell, error) 
     for i, x := range items {
       k := x
       if key != nil {
-        r, err := apply(key, []*Cell{x})
+        r, err := applyWithCtx(key, []*Cell{x}, ectx)
         if err != nil {
           return nil, err
         }
@@ -258,13 +258,13 @@ func seqSearchFn(env *Env, name string, isIf bool) func([]*Cell) (*Cell, error) 
       var hit bool
       switch {
       case isIf:
-        r, err := apply(test, []*Cell{k})
+        r, err := applyWithCtx(test, []*Cell{k}, ectx)
         if err != nil {
           return nil, err
         }
         hit = IsTruthy(Primary(r))
       case test != nil:
-        r, err := apply(test, []*Cell{item, k})
+        r, err := applyWithCtx(test, []*Cell{item, k}, ectx)
         if err != nil {
           return nil, err
         }

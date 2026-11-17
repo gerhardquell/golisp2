@@ -102,7 +102,7 @@ func RegisterHashtables(env *Env) {
   _ = env.Set("clrhash", makeFn(fnClrhash))
   _ = env.Set("hash-table-count", makeFn(fnHashTableCount))
   _ = env.Set("hash-table-p", makeFn(fnHashTableP))
-  _ = env.Set("maphash", makeFn(fnMaphash))
+  _ = env.Set("maphash", makeCtxFn(fnMaphash))
 }
 
 // asTable prüft HASHTABLE-Typ und liefert den Zustand.
@@ -244,7 +244,7 @@ func fnHashTableP(args []*Cell) (*Cell, error) {
 // maphash: (fn table) → ruft (funcall fn key value) für jeden Eintrag,
 // liefert nil (CL). Iterationsreihenfolge ist bewusst unspezifiziert
 // (Go-Map) — wie in CL, wo sie implementierungsabhängig ist.
-func fnMaphash(args []*Cell) (*Cell, error) {
+func fnMaphash(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) != 2 {
     return nil, fmt.Errorf("maphash: 2 Argumente nötig")
   }
@@ -256,7 +256,7 @@ func fnMaphash(args []*Cell) (*Cell, error) {
   // selbst modifizieren, ohne den Lock zu verklemmen (CL erlaubt
   // add/remove des aktuellen Keys).
   for _, e := range ht.snapshot() {
-    if _, err := apply(args[0], []*Cell{e.key, e.val}); err != nil {
+    if _, err := applyWithCtx(args[0], []*Cell{e.key, e.val}, ectx); err != nil {
       return nil, err
     }
   }

@@ -389,7 +389,11 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     }
     args, pooled, err := evalArgsPooled(expr.Cdr, env, ectx.child())
     if err != nil { return nil, err }
-    res, err := fn.Fn(args)
+    if ectx.dyn != nil {
+      res, err = callFuncDyn(fn, args, ectx.dyn)
+    } else {
+      res, err = fn.Fn(args)
+    }
     if pooled { putArgSlice(args) }
     return res, err
   }
@@ -461,15 +465,37 @@ func resolveFn(env *Env, fn *Cell) *Cell {
 // withFnDesignator: Primitive, deren i-tes Argument eine Funktion ist,
 // akzeptieren dort auch ein Symbol (resolveFn). Kopiert args nur, wenn
 // nötig — der Slice kann aus dem Arg-Pool stammen.
-func withFnDesignator(env *Env, i int, f func([]*Cell) (*Cell, error)) func([]*Cell) (*Cell, error) {
-  return func(args []*Cell) (*Cell, error) {
+func withFnDesignator(env *Env, i int, f ctxFn) ctxFn {
+  return func(args []*Cell, ectx evalCtx) (*Cell, error) {
     if i < len(args) && args[i] != nil && args[i].Type == ATOM {
       cp := append([]*Cell(nil), args...)
       cp[i] = resolveFn(env, cp[i])
       args = cp
     }
-    return f(args)
+    return f(args, ectx)
   }
+}
+
+// ctxFn: Fassung einer Primitive mit Rückruf, die den evalCtx des Aufrufers
+// bekommt (dynamische Bindungen, Spec §4). makeCtxFn legt sie im Env-Feld
+// der FUNC-Cell ab — wie gaHandle/Vector/FOREIGN, Cell und Cell.Fn bleiben
+// unverändert; Fn ist dieselbe Logik ohne Bindungen.
+type ctxFn func(args []*Cell, ectx evalCtx) (*Cell, error)
+
+func makeCtxFn(f ctxFn) *Cell {
+  return &Cell{Type: FUNC, Env: f, Fn: func(args []*Cell) (*Cell, error) {
+    return f(args, evalCtx{})
+  }}
+}
+
+// callFuncDyn: FUNC-Aufruf bei aktiven Bindungen (evalList, applyWithCtx
+// prüfen vorher ectx.dyn != nil — ohne Bindungen genau ein Nil-Vergleich).
+// Weiter geht nur dyn; Tiefe und runState wie bisher bei apply.
+func callFuncDyn(fn *Cell, args []*Cell, dyn *dynBinding) (*Cell, error) {
+  if f, ok := fn.Env.(ctxFn); ok {
+    return f(args, evalCtx{dyn: dyn})
+  }
+  return fn.Fn(args)
 }
 
 func apply(fn *Cell, args []*Cell) (*Cell, error) {
@@ -488,7 +514,9 @@ func Apply(fn *Cell, args []*Cell) (*Cell, error) {
 
 func applyWithCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   switch fn.Type {
-  case FUNC: return fn.Fn(args)
+  case FUNC:
+    if ectx.dyn != nil { return callFuncDyn(fn, args, ectx.dyn) }
+    return fn.Fn(args)
   case LAMBDA: return applyLambda(fn, args, ectx)
   default:   return nil, fmt.Errorf("apply: '%s' ist keine Funktion", fn)
   }

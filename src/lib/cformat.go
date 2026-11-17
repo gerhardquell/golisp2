@@ -219,7 +219,7 @@ func cformatString(cfmt string, args []*Cell) (string, error) {
       args[i] = MakeInt(int64(c.Num))
     }
   }
-  res, err := fnFormat(append([]*Cell{MakeNil(), MakeStr(cl)}, args...))
+  res, err := fnFormat(append([]*Cell{MakeNil(), MakeStr(cl)}, args...), evalCtx{})
   if err != nil {
     return "", err
   }

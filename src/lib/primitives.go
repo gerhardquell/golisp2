@@ -62,11 +62,11 @@ func BaseEnv() *Env {
 	_ = env.Set("nil", MakeNil())
 
 	// apply, funcall
-	_ = env.Set("apply", makeFn(withFnDesignator(env, 0, fnApply)))
-	_ = env.Set("funcall", makeFn(func(args []*Cell) (*Cell, error) {
-		return fnFuncall(env, args)
+	_ = env.Set("apply", makeCtxFn(withFnDesignator(env, 0, fnApply)))
+	_ = env.Set("funcall", makeCtxFn(func(args []*Cell, ectx evalCtx) (*Cell, error) {
+		return fnFuncall(env, args, ectx)
 	}))
-	_ = env.Set("mapcar", makeFn(withFnDesignator(env, 0, fnMapcar)))
+	_ = env.Set("mapcar", makeCtxFn(withFnDesignator(env, 0, fnMapcar)))
 	_ = env.Set("exit", makeFn(fnExit))
 
 	// gensym
@@ -429,7 +429,7 @@ func fnWarn(args []*Cell) (*Cell, error) {
 
 // apply: (apply fn arg1 ... liste) → fn auf alle Argumente anwenden
 // Letztes Argument muss LIST sein, wird gespliced
-func fnApply(args []*Cell) (*Cell, error) {
+func fnApply(args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("apply: 2+ Argumente nötig")
 	}
@@ -444,12 +444,12 @@ func fnApply(args []*Cell) (*Cell, error) {
 	if err != nil {
 		return nil, err
 	}
-	return apply(fn, append(combined, rest...))
+	return applyWithCtx(fn, append(combined, rest...), ectx)
 }
 
 // funcall: (funcall fn arg1 arg2 ...) → fn auf Argumente anwenden.
 // Ein Symbol wird wie in CL global aufgelöst (Root-Env), nicht lexikalisch.
-func fnFuncall(env *Env, args []*Cell) (*Cell, error) {
+func fnFuncall(env *Env, args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("funcall: mindestens 1 Argument nötig")
 	}
@@ -457,7 +457,7 @@ func fnFuncall(env *Env, args []*Cell) (*Cell, error) {
 	if fn.Type == ATOM {
 		return nil, fmt.Errorf("funcall: '%s' ist keine Funktion", fn)
 	}
-	return apply(fn, args[1:])
+	return applyWithCtx(fn, args[1:], ectx)
 }
 
 // exit: (exit [code]) → beendet den Prozess sofort mit Exit-Code (Default 0).
@@ -479,7 +479,7 @@ func fnExit(args []*Cell) (*Cell, error) {
 // mapcar: (mapcar fn liste) → wendet fn auf jedes Element an.
 // Primitiv (keine Spezialform): beide Args normal evaluiert, damit mapcar
 // first-class bleibt — (funcall mapcar ...), (apply mapcar ...) etc.
-func fnMapcar(args []*Cell) (*Cell, error) {
+func fnMapcar(args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("mapcar: 2 Argumente nötig")
 	}
@@ -490,7 +490,7 @@ func fnMapcar(args []*Cell) (*Cell, error) {
 	}
 	var results []*Cell
 	for _, x := range items {
-		res, err := apply(fn, []*Cell{x})
+		res, err := applyWithCtx(fn, []*Cell{x}, ectx)
 		if err != nil {
 			return nil, err
 		}

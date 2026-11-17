@@ -114,24 +114,21 @@ func fnTraceP(args []*Cell) (*Cell, error) {
 }
 
 func makeTracedWrapper(name string, original *Cell) *Cell {
-  return &Cell{
-    Type: FUNC,
-    Fn: func(args []*Cell) (*Cell, error) {
-      depth := traceDepth.Add(1)
-      defer traceDepth.Add(-1)
+  return makeCtxFn(func(args []*Cell, ectx evalCtx) (*Cell, error) {
+    depth := traceDepth.Add(1)
+    defer traceDepth.Add(-1)
 
-      indent := strings.Repeat("  ", int(depth-1))
-      argStr := formatTraceArgs(args)
-      _ = WriteError(fmt.Sprintf("%s(%s %s)\n", indent, name, argStr))
+    indent := strings.Repeat("  ", int(depth-1))
+    argStr := formatTraceArgs(args)
+    _ = WriteError(fmt.Sprintf("%s(%s %s)\n", indent, name, argStr))
 
-      res, err := apply(original, args)
-      if err != nil {
-        return nil, err
-      }
-      _ = WriteError(fmt.Sprintf("%s(%s %s) => %s\n", indent, name, argStr, res.String()))
-      return res, nil
-    },
-  }
+    res, err := applyWithCtx(original, args, ectx)
+    if err != nil {
+      return nil, err
+    }
+    _ = WriteError(fmt.Sprintf("%s(%s %s) => %s\n", indent, name, argStr, res.String()))
+    return res, nil
+  })
 }
 
 func formatTraceArgs(args []*Cell) string {

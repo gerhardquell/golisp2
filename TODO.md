@@ -126,15 +126,22 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 - [x] sigo gegen sigoREST: Token-Zahlen als Ganzzahl. Geprüft 17.11.: `sigo*` liefert
       `prompt-/completion-/cached-/reasoning-tokens` als `integer`, `cost-usd`/`elapsed` als `float`.
 - [ ] SLIME/Emacs: Inspector und REPL mit den neuen Druckformen (`3.0`).
-- [ ] Code außerhalb des Repos auf die Breaking Changes durchsehen (golisp2web,
+- [x] Code außerhalb des Repos auf die Breaking Changes durchsehen (golisp2web,
       Space Beagle, `/u/ki-projekte`): `~N:a`, kleines `~x`, `(eql 1 1.0)`, Druckform
-      `4.0`, Float als Index, Überlauf als Fehler.
+      `4.0`, Float als Index, Überlauf als Fehler. Erledigt 17.11. (Space Beagle ausgenommen,
+      eigenständig): Testsuiten von golisp2-lernen, nexora, rag-medizin und 173 Kartentests
+      laufen mit 0.32.0 wie mit 0.24.1; statische Suche nach den Mustern ohne echten Treffer.
+      Gefunden: nur die Karte `ganzzahl-pruefen` (s. u.).
+- [ ] Installiert ist noch `/usr/local/bin/golisp2` 0.24.1 — alle externen Projekte laufen
+      auf dem alten Stand. Deploy bringt die Breaking Changes seit 0.25.0 dorthin.
 
 ### Doku in anderen Repos
 
 - [ ] Kopien der KI-Referenz sagen noch „Zahl (64-bit Float)“: `golisp2-ide`,
       `ai-vergleiche`, `OpenCEM`, `sixhat`, `lispbuch`.
 - [ ] Lispbuch Kap. 16 („Float-only“) nachziehen.
+- [ ] golisp2-lernen, Karte `ganzzahl-pruefen` (`karten/terminalUndProzesse.lisp:16`) lehrt
+      die alte Semantik: „`integerp` fehlt“, „`(typep 3.0 'integer)` → t, jede Zahl ist float64“.
 
 ### Danach (aus der Analyse vom 15.11.)
 

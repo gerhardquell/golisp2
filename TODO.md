@@ -146,9 +146,9 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
       `ai-vergleiche`, `OpenCEM`, `sixhat`, `lispbuch`. Erledigt 17.11.: Es waren alte
       eingebettete Fassungen der golisp2-Zutat in deren `CLAUDE.md`; ersetzt durch die aktuelle
       Zutat (auch in `cltl2`), Zutat selbst korrigiert. Dort jeweils nicht committet.
-- [ ] nexora `CLAUDE.md`: alter golisp2-Abschnitt mit eigenen Projekt-Notizen (Records,
+- [x] nexora `CLAUDE.md`: alter golisp2-Abschnitt mit eigenen Projekt-Notizen (Records,
       Hash-Tabellen, „Keine Vektoren“ — teils veraltet). Gerhard entscheidet: ersetzen und
-      Notizen übernehmen/streichen?
+      Notizen übernehmen/streichen? Erledigt 17.11.: ersetzt, gültige Notizen übernommen.
 - [ ] Lispbuch Kap. 16 („Float-only“) nachziehen.
 - [x] golisp2-lernen, Karte `ganzzahl-pruefen` (`karten/terminalUndProzesse.lisp:16`) lehrt
       die alte Semantik: „`integerp` fehlt“, „`(typep 3.0 'integer)` → t, jede Zahl ist float64“.

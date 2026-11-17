@@ -49,7 +49,20 @@ func TestNichtSpecialNachDefine(t *testing.T) {
   }
 }
 
+// vergissSpecial nimmt Namen nach dem Test aus der prozessweiten Menge,
+// für Tests, die den Zustand vor dem ersten defvar brauchen (-count=N).
+func vergissSpecial(t *testing.T, names ...string) {
+  t.Cleanup(func() {
+    specialMu.Lock()
+    for _, n := range names {
+      delete(specialSyms, MakeAtom(n))
+    }
+    specialMu.Unlock()
+  })
+}
+
 func TestDeclareSpecialWarnungOhneSternchen(t *testing.T) {
+  vergissSpecial(t, "dv-n", "**", "*dv-o", "dv-p*")
   out := stderrVon(t, `(defvar dv-n 1) (defvar dv-n 2) (defparameter dv-n 3)`)
   want := "WARN: defvar dv-n ohne *…* — jede let-Bindung von dv-n ist jetzt dynamisch"
   if n := strings.Count(out, want); n != 1 {
@@ -246,6 +259,7 @@ func TestDynBinderNormalerParameter(t *testing.T) {
 
 // Spec §3.3/§9.2: vor dem defvar definiert → bindet weiter lexikalisch.
 func TestDynBinderGrenzeVorDefvar(t *testing.T) {
+  vergissSpecial(t, "*dv3-c*")
   evalStdlibEq(t, `(defun dv3-lies-c () *dv3-c*)
     (defun dv3-alt (*dv3-c*) (list *dv3-c* (dv3-lies-c)))
     (defvar *dv3-c* 1)

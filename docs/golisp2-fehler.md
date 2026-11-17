@@ -351,6 +351,47 @@ dynamisch.
 `(let ((*x* 2)) (makunbound '*x*))` entfernte still den globalen Wert. Jetzt
 Fehler `makunbound: *x* ist dynamisch gebunden`.
 
+## I. Sandbox (20261117, 0.34.0)
+
+Seit 0.34.0 gibt es `make-sandbox`/`sandbox-eval` für KI-Code. Regeln:
+`docs/lisp-semantik.md`, Abschnitt „Sandbox“. Jede Sandbox baut ein eigenes
+`BaseEnv` — dabei fielen zwei globale Zustände auf, die nur das zuletzt
+gebaute Env kannten. Sie betrafen vorher schon jede weitere
+SWANK-Verbindung (`handleConn` baut je Verbindung ein `BaseEnv`).
+
+### I1. `~/fun/` suchte im zuletzt gebauten Env  [FIXED 0.34.0]
+**Symptom:** `format` merkte sich das Env in der globalen `globalFormatEnv`,
+der letzte `RegisterFormat`-Aufruf gewann. Nach `(make-sandbox)` hätte
+`(format nil "~/up/" "hi")` die globale Funktion `up` nicht mehr gefunden.
+**Fix:** `format` fängt sein Env bei der Registrierung: global → `"HI"`; in
+der Sandbox findet `~/fun/` nur Sandbox-Funktionen
+(`format: ~/up/: env: unbekanntes Symbol 'up'`).
+
+### I2. `trace`-Zustand war global  [FIXED 0.34.0]
+**Symptom:** `RegisterTrace` setzte Root und Originale global zurück. Nach
+`(trace 'tr) (make-sandbox)` fand `(untrace 'tr)` das Original nicht mehr.
+**Fix:** Zustand je Root-Env → `(untrace 'tr)` → `tr`.
+
+### I3. Zeitlimit greift nicht mitten in einer langen Go-Operation  [LIMITATION]
+`(sleep 3000)`, ein großes `sort`, ein Regex oder ein `sigo`-HTTP-Aufruf
+laufen zu Ende; die Frist greift beim nächsten Funktionsaufruf oder
+Schleifendurchlauf. Kommt keiner mehr, liefert `sandbox-eval` den Wert:
+`(sandbox-eval (make-sandbox :zeitlimit 1) '(begin (sleep 3000) 'nach))` →
+`nach` nach 3 s. `sigo` hat seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`).
+
+### I4. Speicher pro Sandbox bleibt  [LIMITATION]
+Jede Sandbox kostet rund 1 MB (eigenes `BaseEnv` + stdlib, gemessen mit
+`(memstats)`: 10 Sandboxen ≈ +11 MB) und wird bis Prozessende nicht
+freigegeben (Zustandstabelle in `sandbox.go`). Eine Sandbox wiederverwenden
+statt eine pro Aufruf. Quoten für Speicher und CPU gibt es nicht.
+
+### I5. Callbacks sehen den Abbruch-Kontext auch außerhalb der Sandbox  [KNOWN]
+Verhaltensänderung: Callbacks aus Primitiven (`mapcar`, `sort`, `maphash`,
+`format ~/fun/` …) erben jetzt den Abbruch-Kontext des Aufrufers — nötig,
+damit das Zeitlimit dort greift. Eine Endlosschleife in einem
+`mapcar`-Callback innerhalb eines abgebrochenen `parfunc :timeout` bricht
+jetzt ab; vorher lief sie still weiter.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

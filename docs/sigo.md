@@ -170,6 +170,26 @@ Damit das trägt, muss `(eval …)` im globalen Environment auswerten
 (`Env.Root()`) — sonst verschwinden die Definitionen im Child-Env.
 Siehe Invarianten in `CLAUDE.md`.
 
+**Mit Sandbox (seit 0.34.0):** Der KI-Code läuft dann in einer eigenen
+Root-Umgebung ohne `system`, `exec`, Datei schreiben, `getenv`, `exit` und
+Dienste; seine Definitionen bleiben in der Sandbox. Details:
+`docs/lisp-semantik.md`, Abschnitt „Sandbox“.
+
+```lisp
+(define sb (make-sandbox :zeitlimit 60))
+(sandbox-eval sb (sigo "schreibe (defun fib (n) ...)" "cl46-s"))
+(sandbox-eval sb '(fib 10))     ; fib ist nur in sb definiert
+```
+
+- `sandbox-eval` mit einem **String** liest **alle** Formen und wertet sie
+  der Reihe nach aus (Wert der letzten) — anders als `read`, das still nur
+  die erste nimmt. Liefert die KI mehrere `defun`, sind danach alle da.
+- Das Zeitlimit (Standard 10 s) gilt nur für den Code in der Sandbox. Das
+  äußere `sigo` oben läuft vorher beim Aufrufer. Ruft der KI-Code selbst
+  `sigo`, reichen 10 s oft nicht — dann `:zeitlimit` höher setzen.
+  `sigo` hat zusätzlich seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`); das
+  Zeitlimit unterbricht einen laufenden HTTP-Aufruf nicht.
+
 **Prompt-Hygiene:** Den Prompt so formulieren, dass die KI *nur* Lisp-Code
 zurückgibt, ohne Erklärungen und ohne Markdown-Fences:
 

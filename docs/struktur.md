@@ -84,6 +84,8 @@ golisp2/
                          format-Ausgaben nach Emacs um)
       docstring.go       Docstring-Registry für (documentation 'name 'function)
       trace.go           trace, untrace, trace? (Live-Tracing von Funktionen)
+      sandbox.go         make-sandbox, sandbox-eval: eigene Root-Umgebung mit
+                         Whitelist und Zeitlimit für KI-Code
       sysinfo.go         argv, getenv, environ
       timefuncs.go       now (Unix-Sekunden), format-time (strftime-Teilmenge)
       defloc.go          Definition-Locations für M-. (SLIME)

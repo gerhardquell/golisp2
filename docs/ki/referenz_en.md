@@ -156,6 +156,7 @@ sorted (basis of `tools/gen-reference.lisp`); `(lisp-implementation-version)` �
 - **GenAlg:** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **Redefine:** `redefine-policy redef-log redef-log-clear defined-in`
 - **Trace:** `trace untrace trace?`
+- **Sandbox (AI code):** `(make-sandbox [:zeitlimit sec] [:erlaube '(name …)])` → `#<foreign sandbox>`; `(sandbox-eval sb form-or-string)` → value of the last form; a string: **all** forms (unlike `read`). Own root environment: definitions stay there. Allowed: arithmetic, lists, strings, stdlib, output, `parfunc`/`spawn`/`chan-*`, `sigo`, reading files; blocked: `system exec load`, writing files, `getenv exit argv`, `redefine-policy trace`, services (`pg-* http-* ws-* webserv maxima-* ga-*`) → error `sandbox: system nicht erlaubt (freigeben mit :erlaube)`. Time limit default 10 s, also in callbacks and goroutines → `sandbox: Zeitlimit 10 s überschritten`
 - **defsystem-lite:** `defsystem load-system unload-system loaded-systems system-symbols`
 - **Web bridge (golisp2web):** `http-serve http-static http-stop http-port http-upload http-wait webserv ws-call ws-clients ws-emit ws-emit-to ws-eval ws-export ws-unexport browser-open`
 - **Condition-lite:** `define-condition signal handler-case documentation` (see section 7)

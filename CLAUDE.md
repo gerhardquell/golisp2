@@ -112,7 +112,22 @@ Das gefährlichste Duplikat ist keine Go-Datei. Es ist ein `define` in
 - **`(eval (read (sigo …)))` schreibt zur Laufzeit ins globale Env.** Das ist
   das selbsterweiternde Muster und ausdrücklich gewollt — aber es ist auch der
   direkteste Weg, eine Definition still zu überschreiben. Bei Arbeit an diesem
-  Pfad: doppelt hinschauen.
+  Pfad: doppelt hinschauen. Alternative ohne volle Rechte:
+  `(sandbox-eval (make-sandbox) (sigo …))` — Definitionen bleiben in der Sandbox.
+
+### Sandbox (`src/lib/sandbox.go`)
+
+- Die Sandbox-Root registriert ihre Primitiven **selbst** (`BaseEnv` +
+  `LoadStdlib`, dann Gesperrtes entfernen). Nie Cells aus einer vollen
+  Umgebung kopieren: `withFnDesignator`, `seqSearchFn`, `resolveFn` und
+  `format` fangen das `env` ihrer Registrierung — `(funcall 'system …)` käme
+  über das gefangene Env an die volle Umgebung.
+- Darum auch kein globaler Zustand in `RegisterXxx` (nur das zuletzt gebaute
+  Env gewönne, siehe `docs/golisp2-fehler.md` I1/I2).
+- **Neue Primitive → in `sandbox.go` einordnen.** Ohne Eintrag ist sie in der
+  Sandbox gesperrt — außer ihre `RegisterXxx` steht in `sandboxGruppen`, dann
+  ist sie erlaubt. `TestSandboxSperrliste` bzw. `TestSandboxErlaubtListe`
+  schlagen in beiden Fällen an und verlangen die bewusste Entscheidung.
 
 ### Wo kommt neuer Code hin?
 
@@ -239,7 +254,7 @@ Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 | `docs/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `src/lib/swank/` arbeitest |
 | `docs/emacs-golisp2web.md` | golisp2web aus dem SLIME-REPL starten/steuern, `parfunc`+`system`-Muster, Beispiele | du golisp2web aus Emacs heraus benutzen willst |
 | `docs/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `src/lib/sigorest.go` arbeitest |
-| `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, dynamische Variablen, `setq*`, `case`, FORMAT | Semantik unklar ist |
+| `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, dynamische Variablen, Sandbox, `setq*`, `case`, FORMAT | Semantik unklar ist |
 | `docs/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
 | `docs/referenz-generiert.md` | Vollständige Funktionsreferenz, generiert aus `(env-symbols)` | du eine konkrete Funktion nachschlägst |
 | `docs/golisp2-cheatsheet.md` | Cheatsheet + Semantik-Überblick (Mensch-Referenz); KI-Version: `src/embed/ki-referenz.md` | du Sprachsemantik kompakt nachschlägst |

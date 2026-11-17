@@ -302,6 +302,17 @@ Ohne Angabe schickt golisp2 `temperature` 0.2 (`GOLISP_SIGO_TEMPERATURE`), `0` i
 Fehler (sigoREST liest 0 als „nicht gesetzt" → 1.0). `max_tokens` bleibt beim
 Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/sigo.md`.
 
+### Sandbox (KI-Code, seit 0.34.0)
+```lisp
+(define sb (make-sandbox))                 ; :zeitlimit sek (Default 10), :erlaube '(getenv …)
+(sandbox-eval sb (sigo "schreibe defun …")) ; String: alle Formen, Wert der letzten
+(sandbox-eval sb '(fib 10))                ; Definitionen bleiben in sb
+(sandbox-eval sb '(system "ls"))           ; ERR: sandbox: system nicht erlaubt (freigeben mit :erlaube)
+```
+Gesperrt: `system`, `exec`, `load`, Datei schreiben, `getenv`, `exit`, Dienste (`pg-*`, `http-*` …).
+Erlaubt: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen, `sigo`, Datei lesen.
+Details: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
+
 ### Goroutinen und Concurrency
 ```lisp
 (define c (chan-make 10))         ; Channel erstellen
@@ -929,6 +940,7 @@ ausgedrückt werden.
 | Datei lesen/schreiben | `(file-read "f")`, `(file-write "f" "content")` |
 | SQL ausführen | `(pg-query conn "SELECT ...")` |
 | KI aufrufen | `(sigo "prompt")` |
+| KI-Code eingeschränkt ausführen | `(sandbox-eval (make-sandbox) code)` |
 | Formatierte Ausgabe | `(format nil "~A ~D" "x" 42)` |
 | Makro schreiben | `(defmacro m (p) body...)` |
 | Global definieren | `(define x 42)`, `(defun f () ...)` |

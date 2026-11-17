@@ -14,6 +14,7 @@ import (
   "slices"
   "strings"
   "testing"
+  "time"
 )
 
 // sbEnv: globales Env mit stdlib, darin sb = (make-sandbox).
@@ -284,4 +285,67 @@ func TestSandboxErlaubtListe(t *testing.T) {
       t.Errorf("%s nicht mehr erlaubt: Liste hier nachziehen", n)
     }
   }
+}
+
+// sbFrist: src muss innerhalb von 5 s mit einem Fehler enden, der want enthält.
+func sbFrist(t *testing.T, env *Env, src, want string) {
+  t.Helper()
+  done := make(chan error, 1)
+  go func() { _, err := sbRun(env, src); done <- err }()
+  select {
+  case err := <-done:
+    if err == nil || !strings.Contains(err.Error(), want) {
+      t.Errorf("%s: Fehler %v, want …%s…", src, err, want)
+    }
+  case <-time.After(5 * time.Second):
+    t.Fatalf("%s: läuft nach 5 s noch", src)
+  }
+}
+
+func TestSandboxZeitlimit(t *testing.T) {
+  env := sbEnv(t, "(make-sandbox :zeitlimit 1)")
+  meldung := "sandbox: Zeitlimit 1 s überschritten"
+  sbFrist(t, env, "(sandbox-eval sb '(while t ()))", meldung)
+  sbFrist(t, env, "(sandbox-eval sb '(mapcar (lambda (x) (while t ())) '(1)))", meldung)
+  sbFrist(t, env, `(sandbox-eval sb '(sort (list 2 1) (lambda (a b) (while t ()))))`, meldung)
+  // parfunc-Worker: Fehler steht als (:error …) im Ergebnis, die Frist beendet ihn
+  start := time.Now()
+  sbWant(t, env, "(car (car (sandbox-eval sb '(parfunc r (while t ())))))", ":error")
+  if d := time.Since(start); d > 3*time.Second {
+    t.Errorf("parfunc-Worker: %v bis zum Abbruch", d)
+  }
+  sbFrist(t, sbEnv(t, "(make-sandbox :zeitlimit 0.5)"), "(sandbox-eval sb '(while t ()))",
+    "sandbox: Zeitlimit 0.5 s überschritten")
+  // Standard 10 s: ein kurzer Aufruf läuft durch
+  sbWant(t, sbEnv(t, "(make-sandbox)"), "(sandbox-eval sb '(+ 1 2))", "3")
+}
+
+// Eine spawn-Goroutine, die sandbox-eval überlebt, endet mit der Frist.
+func TestSandboxZeitlimitSpawn(t *testing.T) {
+  env := sbEnv(t, "(make-sandbox :zeitlimit 1)")
+  start := time.Now()
+  sbRun(env, "(define r (sandbox-eval sb '(spawn (lambda () (while t ())))))")
+  // überlebt das sandbox-eval, bis zur Frist
+  sbWant(t, env, "(chan-recv (sandbox-eval sb '(spawn (lambda () (sleep 0.2) 42))))", "(:ok 42)")
+  sbFrist(t, env, `(let ((m (chan-recv r))) (error (format nil "~a" m)))`, "cancelled")
+  if d := time.Since(start); d < 900*time.Millisecond {
+    t.Errorf("spawn-Goroutine nach %v beendet, vor der Frist", d)
+  }
+}
+
+// Spec §5: ein Callback im abgebrochenen parfunc-Worker bricht jetzt ab.
+// Vorher lief die Schleife im mapcar-Callback nach dem :timeout weiter.
+func TestDynCallbackSiehtAbbruch(t *testing.T) {
+  env := BaseEnv()
+  if err := LoadStdlib(env); err != nil {
+    t.Fatal(err)
+  }
+  sbWant(t, env, `(begin
+    (define c (chan-make 100000))
+    (parfunc r :timeout 0.2
+      (mapcar (lambda (x) (while t (chan-try-send c 1) (sleep 0.001))) '(1)))
+    (sleep 0.1)
+    (while (chan-try-recv c) ())
+    (sleep 0.2)
+    (chan-try-recv c))`, "()")
 }

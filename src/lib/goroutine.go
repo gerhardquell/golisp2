@@ -307,7 +307,9 @@ func fnLockMake(args []*Cell) (*Cell, error) {
 // Fehler und panics gehen zusätzlich auf stderr. Ist der Channel beim
 // Senden geschlossen oder vom Benutzer gefüllt, wird das Ergebnis verworfen
 // (Meldung auf stderr) – die Goroutine endet trotzdem.
-// Die Goroutine erbt die dynamischen Bindungen des Starters (Spec §3.5).
+// Die Goroutine erbt die dynamischen Bindungen des Starters (Spec §3.5)
+// und seinen Abbruch-Kontext: sie endet mit der Frist einer Sandbox, auch
+// wenn sie das sandbox-eval überlebt.
 func fnSpawn(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("spawn: genau 1 Argument nötig (Funktion)")
@@ -329,7 +331,7 @@ func fnSpawn(args []*Cell, ectx evalCtx) (*Cell, error) {
         fmt.Fprintln(os.Stderr, "spawn: Ergebnis verworfen (Channel geschlossen oder voll)")
       }
     }()
-    v, err := applyWithCtx(fn, nil, evalCtx{dyn: ectx.dyn})
+    v, err := applyWithCtx(fn, nil, evalCtx{run: ectx.run, dyn: ectx.dyn})
     if err != nil {
       fmt.Fprintf(os.Stderr, "spawn: %v\n", err)
       msg = List(MakeAtom(":error"), MakeStr(err.Error()))

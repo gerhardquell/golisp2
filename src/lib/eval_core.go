@@ -67,9 +67,14 @@ func (e evalCtx) scriptState() *mainScriptState {
 }
 
 // withoutScript liefert e ohne Hauptdatei-Zustand, Cancellation bleibt.
+// Ohne Kontext bleibt nichts übrig: run = nil, keine Allokation.
 func (e evalCtx) withoutScript() evalCtx {
   if e.run != nil && e.run.script != nil {
-    e.run = &runState{ctx: e.run.ctx}
+    if e.run.ctx == nil {
+      e.run = nil
+    } else {
+      e.run = &runState{ctx: e.run.ctx}
+    }
   }
   return e
 }
@@ -390,8 +395,8 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     }
     args, pooled, err := evalArgsPooled(expr.Cdr, env, ectx.child())
     if err != nil { return nil, err }
-    if ectx.dyn != nil {
-      res, err = callFuncDyn(fn, args, ectx.dyn)
+    if ectx.dyn != nil || ectx.run != nil {
+      res, err = callFuncCtx(fn, args, ectx)
     } else {
       res, err = fn.Fn(args)
     }
@@ -497,12 +502,15 @@ func makeCtxFn(f ctxFn) *Cell {
   }}
 }
 
-// callFuncDyn: FUNC-Aufruf bei aktiven Bindungen (evalList, applyWithCtx
-// prüfen vorher ectx.dyn != nil — ohne Bindungen genau ein Nil-Vergleich).
-// Weiter geht nur dyn; Tiefe und runState wie bisher bei apply.
-func callFuncDyn(fn *Cell, args []*Cell, dyn *dynBinding) (*Cell, error) {
+// callFuncCtx: FUNC-Aufruf bei aktiven Bindungen oder Abbruch-Kontext
+// (evalList, applyWithCtx prüfen vorher ectx.dyn != nil || ectx.run != nil
+// — ohne beides zwei Nil-Vergleiche). Weiter gehen dyn und run, damit
+// Callbacks Frist und Abbruch sehen (Sandbox-Spec §3.4); Tiefe 0 wie bei
+// apply. Ohne Hauptdatei-Zustand: defmain im Callback bleibt wirkungslos
+// wie bisher.
+func callFuncCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   if f, ok := fn.Env.(ctxFn); ok {
-    return f(args, evalCtx{dyn: dyn})
+    return f(args, evalCtx{run: ectx.withoutScript().run, dyn: ectx.dyn})
   }
   return fn.Fn(args)
 }
@@ -524,7 +532,7 @@ func Apply(fn *Cell, args []*Cell) (*Cell, error) {
 func applyWithCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   switch fn.Type {
   case FUNC:
-    if ectx.dyn != nil { return callFuncDyn(fn, args, ectx.dyn) }
+    if ectx.dyn != nil || ectx.run != nil { return callFuncCtx(fn, args, ectx) }
     return fn.Fn(args)
   case LAMBDA: return applyLambda(fn, args, ectx)
   default:   return nil, fmt.Errorf("apply: '%s' ist keine Funktion", fn)

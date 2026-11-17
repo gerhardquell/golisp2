@@ -139,8 +139,21 @@ func NewEnv(parent *Env) *Env {
 // (Symbol-Auswertung im Trampolin) gedacht — dort liegt die internierte
 // Cell schon vor.
 func (e *Env) GetSym(sym *Cell) (*Cell, error) {
+  return e.getSymDyn(sym, nil)
+}
+
+// getSymDyn ist GetSym mit den dynamischen Bindungen zwischen Frames und
+// Root-Env (Reihenfolge von lookupSym, dynvar.go). Ein Aufruf statt zwei,
+// damit lookupSym inlinebar bleibt. box.mu ist ein Blatt-Lock.
+func (e *Env) getSymDyn(sym *Cell, dyn *dynBinding) (*Cell, error) {
   e.mu.RLock()
   if e.parent == nil {
+    if dyn != nil {
+      if box := dyn.find(sym); box != nil {
+        e.mu.RUnlock()
+        return box.get(), nil
+      }
+    }
     if val, ok := e.vars[sym.Val]; ok {
       e.mu.RUnlock()
       return val, nil
@@ -162,12 +175,11 @@ func (e *Env) GetSym(sym *Cell) (*Cell, error) {
   }
   parent := e.parent
   e.mu.RUnlock()
-  return parent.GetSym(sym)
+  return parent.getSymDyn(sym, dyn)
 }
 
 // getFrames ist GetSym ohne das Root-Env: sucht nur in den Frames und
-// liefert sonst das Root-Env zurück. lookupSym schiebt dazwischen die
-// dynamischen Bindungen ein (dynvar.go).
+// liefert sonst das Root-Env zurück (lexBound, dynvar.go).
 func (e *Env) getFrames(sym *Cell) (val *Cell, ok bool, root *Env) {
   cur := e
   for {

@@ -22,7 +22,15 @@ var (
   specialSyms = map[*Cell]struct{}{}
 )
 
+// isSpecial: Vorfilter ohne Lock, weil nur *…*-Namen in die Menge kommen
+// (declareSpecial nur über checkSpecialName); progv fragt hier nicht.
+// Nur das erste Zeichen: mit *…*-Prüfung fiele isSpecial aus dem Inlining.
 func isSpecial(sym *Cell) bool {
+  s := sym.Val
+  return s != "" && s[0] == '*' && isSpecialLocked(sym)
+}
+
+func isSpecialLocked(sym *Cell) bool {
   specialMu.RLock()
   _, ok := specialSyms[sym]
   specialMu.RUnlock()
@@ -105,24 +113,10 @@ func (d *dynBinding) without(old *dynBinding) *dynBinding {
 
 // lookupSym ist der einzige Lese-Weg für Variablen (Spec §4): lexikalische
 // Frames, dann dynamische Bindungen, dann Root-Env. Frames zuerst, sonst
-// sähe (progv '(x) '(1) (let ((x 2)) x)) die 1. Ohne dynamische Bindungen
-// bleibt es beim schnellen env.GetSym.
+// sähe (progv '(x) '(1) (let ((x 2)) x)) die 1. Der Weg selbst steckt in
+// env.getSymDyn; lookupSym wird geinlined (ein Aufruf wie früher GetSym).
 func lookupSym(sym *Cell, env *Env, ectx evalCtx) (*Cell, error) {
-  if ectx.dyn == nil {
-    return env.GetSym(sym)
-  }
-  return lookupDyn(sym, env, ectx.dyn)
-}
-
-func lookupDyn(sym *Cell, env *Env, dyn *dynBinding) (*Cell, error) {
-  v, ok, root := env.getFrames(sym)
-  if ok {
-    return v, nil
-  }
-  if box := dyn.find(sym); box != nil {
-    return box.get(), nil
-  }
-  return root.GetSym(sym)
+  return env.getSymDyn(sym, ectx.dyn)
 }
 
 // assignLexOrDyn ist der Zuweisungs-Weg in derselben Reihenfolge wie

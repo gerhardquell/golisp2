@@ -3,20 +3,6 @@
 ; CoAutor: Gerhard Quell
 ; Erstellt: 20260226
 
-;; Modulo fuer kleine Zahlen (wiederholte Subtraktion)
-(defun mod (a b)
-  "Berechnet a modulo b (nur fuer kleine positive a)"
-  (if (< a b)
-      a
-      (mod (- a b) b)))
-
-;; Symbol/String Konvertierung
-(defun symbol->string (sym)
-  "Konvertiert Symbol zu String"
-  (if (atom sym)
-      (string-append "" sym)
-      "complex"))
-
 ;; Zufallszahlen-Setup (einfacher linearer Kongruenzgenerator)
 ;; Verwendet kleine Zahlen für effiziente mod-Berechnung
 (define random-seed 123)
@@ -43,11 +29,6 @@
   "Gibt eine zufällige Ganzzahl zwischen min (inklusiv) und max (exklusiv)"
   (random-next)
   (+ min (fast-mod random-seed (- max min))))
-
-(defun random ()
-  "Gibt eine zufällige Zahl zwischen 0 und 1"
-  (random-next)
-  (/ random-seed random-modulus))
 
 (defun random-choice (lst)
   "Wählt ein zufälliges Element aus der Liste"
@@ -115,35 +96,11 @@
   (cons 'ok (eval expr)))
 
 ;; Liste manipulieren
-(defun nth (n lst)
-  "Gibt das n-te Element der Liste (0-basiert)"
-  (if (<= n 0)
-      (car lst)
-      (nth (- n 1) (cdr lst))))
-
-(defun length (lst)
-  "Länge der Liste"
-  (if (null? lst)
-      0
-      (+ 1 (length (cdr lst)))))
-
 (defun range (start end)
   "Erzeugt Liste [start, end)"
   (if (>= start end)
       '()
       (cons start (range (+ start 1) end))))
-
-(defun take (n lst)
-  "Nimmt die ersten n Elemente"
-  (if (or (<= n 0) (null? lst))
-      '()
-      (cons (car lst) (take (- n 1) (cdr lst)))))
-
-(defun drop (n lst)
-  "Lässt die ersten n Elemente fallen"
-  (if (or (<= n 0) (null? lst))
-      lst
-      (drop (- n 1) (cdr lst))))
 
 ;; Ausgabe-Hilfen
 (defun println-list (lst)
@@ -182,13 +139,5 @@
          (qsort (filter (lambda (x) (< (key-fn x) (key-fn pivot))) rest) key-fn)
          (list pivot)
          (qsort (filter (lambda (x) (>= (key-fn x) (key-fn pivot))) rest) key-fn)))))
-
-(defun filter (pred lst)
-  "Filtert Liste nach Prädikat"
-  (if (null? lst)
-      '()
-      (if (pred (car lst))
-          (cons (car lst) (filter pred (cdr lst)))
-          (filter pred (cdr lst)))))
 
 (println "demo-utils.lisp geladen – Hilfsfunktionen verfügbar")

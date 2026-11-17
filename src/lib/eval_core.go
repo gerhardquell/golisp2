@@ -38,21 +38,45 @@ func SetMaxEvalDepth(v int) {
 // evalCtx trägt pro Eval-Lauf: Rekursionstiefe und Cancellation.
 // Eine Instanz gehört immer nur einer Goroutine an.
 //
-// Wird per VALUE durchgereicht, nicht per Pointer. Der Wert ist 32 Byte
-// (int + Interface + Pointer), passt damit in Register und wird nie
+// Wird per VALUE durchgereicht, nicht per Pointer. Der Wert ist 24 Byte
+// (int + 2 Pointer), passt damit in Register und wird nie
 // geschrieben — child() erzeugt immer eine neue Instanz, niemand mutiert
 // eine bestehende. Als Pointer kostete jedes child() eine Heap-Allokation
 // und machte 84,9 % aller Allokationen des Interpreters aus (PerfTODO §4.5d).
 type evalCtx struct {
-  depth  int
+  depth int
+  run   *runState   // laufweite Felder hinter einem Zeiger; nil = keine
+  dyn   *dynBinding // dynamische Bindungen (dynvar.go); nil = keine
+}
+
+// runState bündelt, was sich nur an Einstiegen ändert (parfunc, eval, load,
+// RunScript). Unveränderlich: wer etwas ändert, baut einen neuen.
+type runState struct {
   ctx    context.Context
   script *mainScriptState // nur während RunScript die Hauptdatei lädt; sonst nil
-  dyn    *dynBinding      // dynamische Bindungen (dynvar.go); nil = keine
+}
+
+func (e evalCtx) context() context.Context {
+  if e.run == nil { return nil }
+  return e.run.ctx
+}
+
+func (e evalCtx) scriptState() *mainScriptState {
+  if e.run == nil { return nil }
+  return e.run.script
+}
+
+// withoutScript liefert e ohne Hauptdatei-Zustand, Cancellation bleibt.
+func (e evalCtx) withoutScript() evalCtx {
+  if e.run != nil && e.run.script != nil {
+    e.run = &runState{ctx: e.run.ctx}
+  }
+  return e
 }
 
 // child liefert einen neuen Kontext für einen nicht-tail-rekursiven Aufruf.
 func (e evalCtx) child() evalCtx {
-  return evalCtx{depth: e.depth + 1, ctx: e.ctx, script: e.script, dyn: e.dyn}
+  return evalCtx{depth: e.depth + 1, run: e.run, dyn: e.dyn}
 }
 
 // check prüft Depth-Limit und Cancellation.
@@ -60,9 +84,9 @@ func (e evalCtx) check() error {
   if e.depth > int(atomic.LoadInt32(&maxEvalDepth)) {
     return &LispError{Msg: MakeStr("eval: maximum recursion depth exceeded")}
   }
-  if e.ctx != nil {
+  if e.run != nil && e.run.ctx != nil {
     select {
-    case <-e.ctx.Done():
+    case <-e.run.ctx.Done():
       return &LispError{Msg: MakeStr("eval: cancelled")}
     default:
     }

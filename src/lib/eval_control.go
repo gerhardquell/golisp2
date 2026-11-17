@@ -203,7 +203,7 @@ func evalEval(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   // fuer REPL (swank:listener-eval) und das selbsterweiternde Muster
   // essenziell ist.
   // Die dynamischen Bindungen des Aufrufers gelten weiter (CL, Spec §3.6).
-  return evalWithCtx(Primary(expr), env.Root(), evalCtx{depth: 0, ctx: ectx.ctx, dyn: ectx.dyn})
+  return evalWithCtx(Primary(expr), env.Root(), evalCtx{depth: 0, run: ectx.withoutScript().run, dyn: ectx.dyn})
 }
 
 // blockReturn: Sentinel-Fehler für (return-from name value)
@@ -520,15 +520,16 @@ func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   ch := make(chan parfuncResult, len(exprList))
 
   workerParent := context.Background()
-  if ectx.ctx != nil {
-    workerParent = ectx.ctx
+  if c := ectx.context(); c != nil {
+    workerParent = c
   }
   workerCtx, cancel := context.WithCancel(workerParent)
   defer cancel()
+  workerRun := &runState{ctx: workerCtx}
 
   for i, expr := range exprList {
     go func(idx int, e *Cell) {
-      val, err := evalWithCtx(e, env, evalCtx{depth: 0, ctx: workerCtx})
+      val, err := evalWithCtx(e, env, evalCtx{depth: 0, run: workerRun})
       // Fehler nicht verschlucken: (:error text) an der Stelle, wie pool-map
       if err != nil { val = List(MakeAtom(":error"), MakeStr(err.Error())) }
       ch <- parfuncResult{idx, Primary(val)}

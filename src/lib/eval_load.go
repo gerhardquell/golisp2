@@ -27,8 +27,7 @@ func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   // Nachgeladene Dateien sind nie Hauptprogramm: defmain darin bleibt
   // wirkungslos (eval_script.go).
-  inner := ectx
-  inner.script = nil
+  inner := ectx.withoutScript()
   // CL: die Datei läuft im globalen Env, nicht im Scope des Aufrufers
   return loadFile(filenameCell.Val, env.Root(), inner)
 }

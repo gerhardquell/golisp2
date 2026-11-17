@@ -19,7 +19,7 @@ import (
 )
 
 // mainScriptState existiert nur, während RunScript die Hauptdatei lädt.
-// Er reist als Zeiger in evalCtx.script mit — kein globaler Zustand,
+// Er reist als Zeiger in evalCtx.run.script mit — kein globaler Zustand,
 // unsichtbar für Goroutinen, (eval …) und nachgeladene Dateien.
 type mainScriptState struct {
   path      string // Hauptdatei, absolut aufgelöst (für Fehlermeldungen, wie loadFile)
@@ -46,7 +46,7 @@ func RunScript(path string, args []string, env *Env) (exitCode int, result *Cell
     resolvedPath = rp
   }
   st := &mainScriptState{path: resolvedPath}
-  result, err = loadFile(resolvedPath, env, evalCtx{script: st})
+  result, err = loadFile(resolvedPath, env, evalCtx{run: &runState{script: st}})
   if err != nil {
     return 1, nil, st.body != nil, err
   }
@@ -74,10 +74,10 @@ func RunScript(path string, args []string, env *Env) (exitCode int, result *Cell
 }
 
 // defmain: (defmain () body...) / (defmain (args) body...)
-// Nur in der Hauptdatei wirksam (ectx.script != nil): merkt den Körper,
+// Nur in der Hauptdatei wirksam (ectx.scriptState() != nil): merkt den Körper,
 // RunScript ruft ihn nach dem Laden auf. Überall sonst: nil, ungeprüft.
 func evalDefmain(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
-  st := ectx.script
+  st := ectx.scriptState()
   if st == nil {
     return MakeNil(), nil
   }

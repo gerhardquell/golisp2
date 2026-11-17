@@ -38,6 +38,13 @@ func evalMultipleValueBind(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     args.Cdr == nil || args.Cdr.Type != LIST {
     return nil, fmt.Errorf("multiple-value-bind: Syntax: (multiple-value-bind (var...) form body...)")
   }
+  // alle Variablen prüfen, bevor die Werte-Form läuft (kein Seiteneffekt bei Fehler)
+  for vars := args.Car; vars != nil && vars.Type == LIST; vars = vars.Cdr {
+    if vars.Car == nil || vars.Car.Type != ATOM {
+      return nil, fmt.Errorf("multiple-value-bind: Variable muss Symbol sein")
+    }
+    if err := rejectSpecial("multiple-value-bind", "Variable", vars.Car); err != nil { return nil, err }
+  }
   v, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil {
     return nil, err
@@ -46,10 +53,6 @@ func evalMultipleValueBind(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   localEnv := NewEnv(env)
   i := 0
   for vars := args.Car; vars != nil && vars.Type == LIST; vars = vars.Cdr {
-    if vars.Car == nil || vars.Car.Type != ATOM {
-      return nil, fmt.Errorf("multiple-value-bind: Variable muss Symbol sein")
-    }
-    if err := rejectSpecial("multiple-value-bind", "Variable", vars.Car); err != nil { return nil, err }
     val := MakeNil()
     if i < len(vals) {
       val = vals[i]

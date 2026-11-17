@@ -133,14 +133,28 @@ func assignLexOrDyn(env *Env, name string, val *Cell, ectx evalCtx) bool {
     return false
   }
   sym := MakeAtom(name)
-  if env.updateFrames(sym, val) {
-    return true
+  return env.updateFrames(sym, val) || assignDyn(sym, val, ectx)
+}
+
+// assignDyn setzt nur die innerste dynamische Bindung (CL symbol-value);
+// false: keine da. defparameter nutzt es direkt (Spec §3.1).
+func assignDyn(sym, val *Cell, ectx evalCtx) bool {
+  if ectx.dyn == nil {
+    return false
   }
   if box := ectx.dyn.find(sym); box != nil {
     box.set(val)
     return true
   }
   return false
+}
+
+// lexBound: hält ein lexikalischer Frame sym (Parameter von vor dem
+// defvar)? Dann bindet let/let* lexikalisch weiter (Spec §3.2). Nur auf
+// dem special-Pfad aufgerufen.
+func lexBound(sym *Cell, env *Env) bool {
+  _, ok, _ := env.getFrames(sym)
+  return ok
 }
 
 // rejectSpecial: Go-Binder binden lexikalisch und weisen special-Namen ab
@@ -177,27 +191,50 @@ func checkLambdaList(who string, params *Cell) error {
 }
 
 func RegisterDynvar(env *Env) {
+  _ = env.Set("%check-special", makeFn(fnCheckSpecial))
   _ = env.Set("%declare-special", makeFn(fnDeclareSpecial))
 }
 
-// (%declare-special 'name) — von defvar/defparameter (stdlib.lisp).
+// checkSpecialName: darf sym special werden? Ein Name ohne *…* wäre ein
+// Fehler-Magnet: stdlib-Lambdas wie (lambda (x) …) schlügen danach fehl.
+func checkSpecialName(who string, sym *Cell) error {
+  if sym == nil || sym.Type != ATOM {
+    return fmt.Errorf("%s: Symbol erwartet, got %s", who, sym)
+  }
+  name := sym.Val
+  if name == "t" {
+    return fmt.Errorf("%s: t ist eine Konstante", who)
+  }
+  if strings.HasPrefix(name, ":") {
+    return fmt.Errorf("%s: Keyword %s ist eine Konstante", who, name)
+  }
+  if !(len(name) >= 3 && strings.HasPrefix(name, "*") && strings.HasSuffix(name, "*")) {
+    return fmt.Errorf("%s: %s ohne *…* — special-Namen brauchen *%s*", who, name, name)
+  }
+  return nil
+}
+
+// (%check-special 'defvar 'name) — defvar/defparameter prüfen den Namen
+// VOR dem globalen Binden (kein Teil-Effekt), markiert wird danach.
+func fnCheckSpecial(args []*Cell) (*Cell, error) {
+  if len(args) != 2 || args[0].Type != ATOM {
+    return nil, fmt.Errorf("%%check-special: (%%check-special 'wer 'name)")
+  }
+  if err := checkSpecialName(args[0].Val, args[1]); err != nil {
+    return nil, err
+  }
+  return args[1], nil
+}
+
+// (%declare-special 'name) — markiert name; von defvar/defparameter erst
+// nach erfolgreichem %defglobal (Spec §3.1).
 func fnDeclareSpecial(args []*Cell) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("%%declare-special: 1 Argument nötig, got %d", len(args))
   }
-  if args[0].Type != ATOM {
-    return nil, fmt.Errorf("%%declare-special: Symbol erwartet, got %s", args[0])
+  if err := checkSpecialName("%declare-special", args[0]); err != nil {
+    return nil, err
   }
-  sym := args[0]
-  name := sym.Val
-  if name == "t" {
-    return nil, fmt.Errorf("%%declare-special: t ist eine Konstante")
-  }
-  if strings.HasPrefix(name, ":") {
-    return nil, fmt.Errorf("%%declare-special: Keyword %s ist eine Konstante", name)
-  }
-  if declareSpecial(sym) && !(len(name) >= 3 && strings.HasPrefix(name, "*") && strings.HasSuffix(name, "*")) {
-    _ = WriteError(fmt.Sprintf("WARN: defvar %s ohne *…* — jede let-Bindung von %s ist jetzt dynamisch\n", name, name))
-  }
-  return sym, nil
+  declareSpecial(args[0])
+  return args[0], nil
 }

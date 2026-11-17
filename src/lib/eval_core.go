@@ -241,7 +241,8 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
         expr = args.Car
         continue
 
-      // special-Namen kommen in die dyn-Kette, der Rest ins Child-Env.
+      // special-Namen kommen in die dyn-Kette (außer schon lexikalisch
+      // gebunden, Spec §3.2), der Rest ins Child-Env.
       // ectx ist eine lokale Kopie: die Zuweisung gilt für den Rumpf und
       // die Tail-Form, der Aufrufer behält seine Kette (Spec §4).
       case "let":
@@ -252,7 +253,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
           if err != nil { return nil, err }
-          if isSpecial(b.Car) {
+          if isSpecial(b.Car) && !lexBound(b.Car, env) {
             dyn = bindDyn(dyn, b.Car, Primary(val))
           } else {
             _ = localEnv.SetSym(b.Car, Primary(val))
@@ -284,7 +285,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
           if err != nil { return nil, err }
-          if isSpecial(b.Car) {
+          if isSpecial(b.Car) && !lexBound(b.Car, localEnv) {
             ectx.dyn = bindDyn(ectx.dyn, b.Car, Primary(val))
           } else {
             _ = localEnv.SetSym(b.Car, Primary(val))

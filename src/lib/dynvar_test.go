@@ -61,23 +61,53 @@ func vergissSpecial(t *testing.T, names ...string) {
   })
 }
 
-func TestDeclareSpecialWarnungOhneSternchen(t *testing.T) {
+// Spec §3.1 (Review 17.11.): Name ohne *…* ist ein Fehler, ohne Teil-Effekt.
+func TestDynDefvarOhneSternchenFehler(t *testing.T) {
   vergissSpecial(t, "dv-n", "**", "*dv-o", "dv-p*")
-  out := stderrVon(t, `(defvar dv-n 1) (defvar dv-n 2) (defparameter dv-n 3)`)
-  want := "WARN: defvar dv-n ohne *…* — jede let-Bindung von dv-n ist jetzt dynamisch"
-  if n := strings.Count(out, want); n != 1 {
-    t.Errorf("Warnung %d× statt 1×, stderr = %q", n, out)
+  for _, c := range []struct{ code, name, who string }{
+    {`(defvar dv-n 1)`, "dv-n", "defvar"},
+    {`(defparameter dv-n 3)`, "dv-n", "defparameter"},
+    {`(defvar ** 1)`, "**", "defvar"}, // zu kurz für *…*
+    {`(defvar *dv-o 2)`, "*dv-o", "defvar"},
+    {`(defvar dv-p* 3)`, "dv-p*", "defvar"},
+  } {
+    dynFehler(t, c.code, c.who+": "+c.name+" ohne *…* — special-Namen brauchen *"+c.name+"*")
+    evalStdlibEq(t, `(trap `+c.code+` (lambda (e) ())) (bound? '`+c.name+`)`, "()")
+    if isSpecial(MakeAtom(c.name)) {
+      t.Errorf("%s: %s nach Fehler special", c.code, c.name)
+    }
   }
-  out = stderrVon(t, `(defvar *dv-n* 1) (defparameter *dv-m* 2)`)
+  out := stderrVon(t, `(defvar *dv-n* 1) (defparameter *dv-m* 2)`)
   if strings.Contains(out, "WARN") {
     t.Errorf("unerwartete Warnung: %q", out)
   }
-  // ** ist zu kurz für *…*, *dv-o / dv-p* haben nur ein Sternchen
-  out = stderrVon(t, `(defvar ** 1) (defvar *dv-o 2) (defvar dv-p* 3)`)
-  for _, name := range []string{"**", "*dv-o", "dv-p*"} {
-    if !strings.Contains(out, "WARN: defvar "+name+" ohne") {
-      t.Errorf("Warnung für %s fehlt: %q", name, out)
+}
+
+// Der Fehler lässt nichts zurück: stdlib-Lambdas mit (x) laufen weiter.
+func TestDynDefvarOhneSternchenStdlibHeil(t *testing.T) {
+  vergissSpecial(t, "x")
+  evalStdlibEq(t, `(trap (defvar x 1) (lambda (e) ()))
+    (list (remove 2 (list 1 2 3)) (handler-case (error "x") (error (c) 'ok))
+      (ignore-errors (error "y")) (defstruct dvf-pt a b) (typecase 1 (number 'n)) (bound? 'x))`,
+    "((1 3) ok () dvf-pt? n ())")
+}
+
+func TestDynDefvarRueckgabe(t *testing.T) {
+  evalStdlibEq(t, `(list (defvar *dvf-r1* 1) (defvar *dvf-r1* 2) (defparameter *dvf-r2* 3) (defparameter *dvf-r2* 4) *dvf-r1* *dvf-r2*)`,
+    "(*dvf-r1* *dvf-r1* *dvf-r2* *dvf-r2* 1 4)")
+}
+
+// Spec §3.1: schlägt das globale Binden fehl, wird der Name nicht special.
+func TestDynDefparameterGlobalFehlerNichtSpecial(t *testing.T) {
+  vergissSpecial(t, "*dvf-fn*")
+  withRedefinePolicy(t, GetRedefinePolicy(), func() { // stellt die Policy wieder her
+    _, err := evalStdlib(t, `(define *dvf-fn* car) (redefine-policy 'error) (defparameter *dvf-fn* 1)`)
+    if err == nil {
+      t.Fatal("defparameter auf FUNC-Bindung unter 'error: Fehler erwartet")
     }
+  })
+  if isSpecial(MakeAtom("*dvf-fn*")) {
+    t.Error("*dvf-fn* nach gescheitertem globalen Binden special")
   }
 }
 
@@ -165,11 +195,11 @@ func TestDynEvalUndLoad(t *testing.T) {
 
 func TestDynDefvarKonstante(t *testing.T) {
   _, err := evalStdlib(t, `(defvar t 1)`)
-  if err == nil || !strings.Contains(err.Error(), "%declare-special: t ist eine Konstante") {
+  if err == nil || !strings.Contains(err.Error(), "defvar: t ist eine Konstante") {
     t.Errorf("defvar t: Fehler erwartet, got %v", err)
   }
   _, err = evalStdlib(t, `(defvar :dv2-k 1)`)
-  if err == nil || !strings.Contains(err.Error(), "%declare-special: Keyword :dv2-k ist eine Konstante") {
+  if err == nil || !strings.Contains(err.Error(), "defvar: Keyword :dv2-k ist eine Konstante") {
     t.Errorf("defvar :k: Fehler erwartet, got %v", err)
   }
 }
@@ -398,5 +428,47 @@ func TestDynGoroutineHTTPHandlerOhneBindung(t *testing.T) {
   got := evalCode(t, env, `(let ((*dv5-h* 7)) (list (dv5-post) *dv5-h* dv5-got))`)
   if got.String() != "(200 7 1)" {
     t.Fatalf("got %s, want (200 7 1)", got)
+  }
+}
+
+// ── Review 17.11. ──
+
+// Spec §3.2: special-Name, der an der Stelle schon lexikalisch gebunden
+// ist (Parameter von vor dem defvar), bindet let/let* lexikalisch weiter.
+func TestDynLetAufLexikalischGebundenenNamen(t *testing.T) {
+  vergissSpecial(t, "*dvf-p*", "*dvf-z*", "*dvf-q*")
+  evalStdlibEq(t, `(defun dvf-dbl (*dvf-p*) (let ((*dvf-p* (* *dvf-p* 2))) *dvf-p*))
+    (defvar *dvf-p* 0) (dvf-dbl 5)`, "10")
+  evalStdlibEq(t, `(defun dvf-lies () *dvf-z*)
+    (defun dvf-alt (*dvf-z*) (let ((*dvf-z* 3)) (list *dvf-z* (dvf-lies))))
+    (defvar *dvf-z* 1) (dvf-alt 2)`, "(3 1)")
+  evalStdlibEq(t, `(defun dvf-lies-q () *dvf-q*)
+    (defun dvf-alt-q (*dvf-q*) (let* ((*dvf-q* (+ *dvf-q* 1)) (y *dvf-q*)) (list *dvf-q* y (dvf-lies-q))))
+    (defvar *dvf-q* 1) (dvf-alt-q 2)`, "(3 3 1)")
+}
+
+// Spec §3.1: defparameter in dynamischer Bindung setzt die innerste Bindung.
+func TestDynDefparameterInBindung(t *testing.T) {
+  evalStdlibEq(t, `(defvar *dvf-x* 1) (defun dvf-g () *dvf-x*)
+    (list (let ((*dvf-x* 2)) (defparameter *dvf-x* 9) (dvf-g)) *dvf-x*)`, "(9 1)")
+}
+
+// Spec §3.1: makunbound auf dynamisch gebundenen Namen ist ein Fehler.
+func TestDynMakunboundInBindung(t *testing.T) {
+  dynFehler(t, `(defvar *dvf-m* 1) (let ((*dvf-m* 2)) (makunbound '*dvf-m*))`,
+    "makunbound: *dvf-m* ist dynamisch gebunden")
+  evalStdlibEq(t, `(defvar *dvf-m* 1) (trap (let ((*dvf-m* 2)) (makunbound '*dvf-m*)) (lambda (e) ())) *dvf-m*`, "1")
+  evalStdlibEq(t, `(defvar *dvf-m2* 1) (makunbound '*dvf-m2*) (bound? '*dvf-m2*)`, "()")
+}
+
+// Review-Befund 6: Binder prüfen alle Variablen vor jeder Auswertung.
+func TestDynBinderPruefungVorAuswertung(t *testing.T) {
+  v := `(defvar *dvf-b* 1) (define dvf-se 0) `
+  for _, c := range []string{
+    `(multiple-value-bind (x *dvf-b*) (setq dvf-se 1) x)`,
+    `(do ((i (setq dvf-se 1) (+ i 1)) (*dvf-b* 0)) ((= i 3) 0))`,
+    `(do* ((i (setq dvf-se 1) (+ i 1)) (*dvf-b* 0)) ((= i 3) 0))`,
+  } {
+    evalStdlibEq(t, v+`(trap `+c+` (lambda (e) ())) dvf-se`, "0")
   }
 }

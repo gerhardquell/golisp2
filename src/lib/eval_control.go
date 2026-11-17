@@ -68,6 +68,19 @@ func evalWhile(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
 }
 
+// checkDoBindings prüft alle (var init step) von do/do*, bevor ein Init
+// läuft — ein Fehler hinterlässt keinen Seiteneffekt.
+func checkDoBindings(who string, bindings *Cell) error {
+  for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
+    spec := b.Car
+    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
+      return fmt.Errorf("%s: Bindung muss (var init step) sein", who)
+    }
+    if err := rejectSpecial(who, "Variable", spec.Car); err != nil { return err }
+  }
+  return nil
+}
+
 // do: (do ((var init step) ...) (test result) body...)
 // Scheme-style: bindet Variablen, iteriert bis test wahr, gibt result zurück.
 func evalDo(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
@@ -75,15 +88,12 @@ func evalDo(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("do: Syntax: (do ((var init step) ...) (test result) body...)")
   }
+  bindings := args.Car
+  if err := checkDoBindings("do", bindings); err != nil { return nil, err }
   // Variablen-Bindungen initialisieren
   localEnv := NewEnv(env)
-  bindings := args.Car
   for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car                         // (var init step)
-    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
-      return nil, fmt.Errorf("do: Bindung muss (var init step) sein")
-    }
-    if err := rejectSpecial("do", "Variable", spec.Car); err != nil { return nil, err }
     name := spec.Car.Val
     init, err := evalWithCtx(spec.Cdr.Car, env, ectx.child())  // init im äußeren env auswerten
     if err != nil { return nil, err }
@@ -141,15 +151,12 @@ func evalDoStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
      args.Cdr == nil || args.Cdr.Type != LIST || args.Cdr.Car == nil {
     return nil, fmt.Errorf("do*: Syntax: (do* ((var init step) ...) (test result) body...)")
   }
-  localEnv := NewEnv(env)
   bindings := args.Car
+  if err := checkDoBindings("do*", bindings); err != nil { return nil, err }
+  localEnv := NewEnv(env)
   // Init sequentiell: jede Bindung sieht die vorherigen (im localEnv!)
   for b := bindings; b != nil && b.Type == LIST; b = b.Cdr {
     spec := b.Car
-    if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
-      return nil, fmt.Errorf("do*: Bindung muss (var init step) sein")
-    }
-    if err := rejectSpecial("do*", "Variable", spec.Car); err != nil { return nil, err }
     var init *Cell
     var err error
     if spec.Cdr != nil && spec.Cdr.Type == LIST {

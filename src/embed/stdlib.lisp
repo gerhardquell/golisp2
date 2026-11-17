@@ -263,23 +263,25 @@
 ;; Root-Env, auch aus let/Funktionsrumpf (%defglobal). Docstring
 ;; (optionales 3. Argument) wird ignoriert. Zweites defvar für dasselbe
 ;; Symbol lässt den Wert stehen, wenn es bereits gebunden ist — special
-;; wird der Name in beiden Fällen.
+;; wird der Name in beiden Fällen. Reihenfolge (Spec §3.1): Name prüfen,
+;; global binden, erst dann special markieren — kein Teil-Effekt.
 (defmacro defvar (name &rest rest)
   (let ((val (if (null rest) () (car rest))))
     `(begin
-       (%declare-special ',name)
-       (if (bound? ',name)
-           ',name
-           (%defglobal ,name ,val)))))
+       (%check-special 'defvar ',name)
+       (if (bound? ',name) () (%defglobal ,name ,val))
+       (%declare-special ',name))))
 
 ;; defparameter: bindet eine globale Variable und überschreibt einen
 ;; bestehenden Wert immer (CL-Compat). Docstring wird ignoriert.
 ;; Still beim Rebind: der Redefine-Guard greift nur bei FUNC/LAMBDA/
-;; MACRO-Bindungen, Wert-Rebinds landen nur im redef-log.
+;; MACRO-Bindungen, Wert-Rebinds landen nur im redef-log. In einer
+;; dynamischen Bindung des Namens setzt %defglobal die innerste Bindung.
 (defmacro defparameter (name val &optional doc)
   `(begin
-     (%declare-special ',name)
-     (%defglobal ,name ,val)))
+     (%check-special 'defparameter ',name)
+     (%defglobal ,name ,val)
+     (%declare-special ',name)))
 
 ;; Registry für setf-Places: Assoc-Liste (accessor . setter).
 (define *setf-expanders* '())

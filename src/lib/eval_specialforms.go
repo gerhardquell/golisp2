@@ -55,6 +55,10 @@ func defineIn(target *Env, form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   val, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
   val = Primary(val)
+  // %defglobal (defparameter) in dynamischer Bindung: innerste Bindung (Spec §3.1)
+  if form.Car.Val == "%defglobal" && assignDyn(args.Car, val, ectx) {
+    return args.Car, nil
+  }
   if err := checkRootRedefine(target, name, val, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
   if err := target.Set(name, val); err != nil { return nil, err }
   RegisterDefinition(name, form.SrcFile(), form.SrcLine)
@@ -161,6 +165,9 @@ func evalMakunbound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   sym = Primary(sym)
   if sym.Type != ATOM {
     return nil, fmt.Errorf("makunbound: Argument muss ein Symbol sein")
+  }
+  if ectx.dyn != nil && ectx.dyn.find(sym) != nil {
+    return nil, fmt.Errorf("makunbound: %s ist dynamisch gebunden", sym.Val)
   }
   root := env.Root()
   old, err := root.Get(sym.Val)

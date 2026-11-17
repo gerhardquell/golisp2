@@ -223,9 +223,8 @@ func fnGaCalc(args []*Cell, ectx evalCtx) (*Cell, error) {
   // wartet); paralleles ga-calc auf denselben GA war schon vorher ein Race.
   h := args[0].Env.(*gaHandle)
   h.dyn = ectx.dyn
-  err = GaCalc(ga)
-  h.dyn = nil
-  if err != nil {
+  defer func() { h.dyn = nil }() // auch bei Panic im Worker
+  if err := GaCalc(ga); err != nil {
     return nil, fmt.Errorf("ga-calc: %v", err)
   }
   return MakeAtom("t"), nil

@@ -152,7 +152,7 @@ func evalMultipleValueSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if i < len(vals) {
       val = vals[i]
     }
-    if err := assignVar(env, vars.Car.Val, val); err != nil {
+    if err := assignVar(env, vars.Car.Val, val, ectx); err != nil {
       return nil, err
     }
     i++

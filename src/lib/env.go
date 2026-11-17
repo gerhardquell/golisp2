@@ -165,6 +165,56 @@ func (e *Env) GetSym(sym *Cell) (*Cell, error) {
   return parent.GetSym(sym)
 }
 
+// getFrames ist GetSym ohne das Root-Env: sucht nur in den Frames und
+// liefert sonst das Root-Env zurück. lookupSym schiebt dazwischen die
+// dynamischen Bindungen ein (dynvar.go).
+func (e *Env) getFrames(sym *Cell) (val *Cell, ok bool, root *Env) {
+  cur := e
+  for {
+    cur.mu.RLock()
+    if cur.parent == nil {
+      cur.mu.RUnlock()
+      return nil, false, cur
+    }
+    if cur.singleSym == sym {
+      val = cur.singleVal
+      cur.mu.RUnlock()
+      return val, true, nil
+    }
+    for i := range cur.entries {
+      if cur.entries[i].sym == sym {
+        val = cur.entries[i].val
+        cur.mu.RUnlock()
+        return val, true, nil
+      }
+    }
+    next := cur.parent
+    cur.mu.RUnlock()
+    cur = next
+  }
+}
+
+// updateFrames ist Update ohne das Root-Env (Gegenstück zu getFrames);
+// Lock-Disziplin wie Update.
+func (e *Env) updateFrames(sym *Cell, val *Cell) bool {
+  e.mu.Lock()
+  defer e.mu.Unlock()
+  if e.parent == nil {
+    return false
+  }
+  if e.singleSym == sym {
+    e.singleVal = val
+    return true
+  }
+  for i := range e.entries {
+    if e.entries[i].sym == sym {
+      e.entries[i].val = val
+      return true
+    }
+  }
+  return e.parent.updateFrames(sym, val)
+}
+
 // SetSym legt einen Wert unter einem internierten Symbol ab. Wie Set, aber
 // ohne den Namen erst internieren zu muessen.
 func (e *Env) SetSym(sym *Cell, val *Cell) error {

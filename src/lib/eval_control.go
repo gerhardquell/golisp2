@@ -202,7 +202,8 @@ func evalEval(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   // So bleiben Definitionen aus (eval (read ...)) global sichtbar, was
   // fuer REPL (swank:listener-eval) und das selbsterweiternde Muster
   // essenziell ist.
-  return evalWithCtx(Primary(expr), env.Root(), evalCtx{depth: 0, ctx: ectx.ctx})
+  // Die dynamischen Bindungen des Aufrufers gelten weiter (CL, Spec §3.6).
+  return evalWithCtx(Primary(expr), env.Root(), evalCtx{depth: 0, ctx: ectx.ctx, dyn: ectx.dyn})
 }
 
 // blockReturn: Sentinel-Fehler für (return-from name value)

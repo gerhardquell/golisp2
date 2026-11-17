@@ -81,7 +81,7 @@ func evalSetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if err != nil {
       return nil, err
     }
-    if err := assignVar(env, name, val); err != nil {
+    if err := assignVar(env, name, val, ectx); err != nil {
       return nil, err
     }
     result = val
@@ -114,6 +114,10 @@ func evalPsetq(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   result := MakeNil()
   for i, name := range names {
+    if assignLexOrDyn(env, name, vals[i], ectx) {
+      result = vals[i]
+      continue
+    }
     if err := env.Update(name, vals[i]); err != nil {
       if err := env.Set(name, vals[i]); err != nil {
         return nil, err
@@ -137,7 +141,7 @@ func evalBound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if sym == nil || (sym.Type != ATOM && sym.Type != STRING) {
     return nil, fmt.Errorf("bound?: Symbol erwartet")
   }
-  if _, err := env.Get(sym.Val); err == nil {
+  if _, err := lookupSym(MakeAtom(sym.Val), env, ectx); err == nil {
     return MakeAtom("t"), nil
   }
   return MakeNil(), nil
@@ -319,6 +323,9 @@ func evalSet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if err != nil { return nil, err }
   name, err := symMacroTarget(env, args.Car.Val)
   if err != nil { return nil, err }
+  if assignLexOrDyn(env, name, Primary(val), ectx) {
+    return MakeAtom(args.Car.Val), nil
+  }
   return MakeAtom(args.Car.Val), env.Update(name, Primary(val))
 }
 
@@ -340,7 +347,7 @@ func evalSetQStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     val, err := evalWithCtx(a.Cdr.Car, env, ectx.child())
     if err != nil { return nil, err }
     val = Primary(val)
-    if err := assignVar(env, name, val); err != nil { return nil, err }
+    if err := assignVar(env, name, val, ectx); err != nil { return nil, err }
   }
   return MakeAtom(lastName), nil
 }
@@ -462,8 +469,8 @@ func evalSymbolMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 // assignVar: Zuweisung für setq/setq*/multiple-value-setq. Eine ungebundene
 // Variable wird wie in CL (SBCL) global angelegt, mit Warnung — im aktuellen
 // Env angelegt wäre sie aus einer Funktion heraus nach dem Aufruf still weg.
-func assignVar(env *Env, name string, val *Cell) error {
-  if env.Update(name, val) == nil {
+func assignVar(env *Env, name string, val *Cell, ectx evalCtx) error {
+  if assignLexOrDyn(env, name, val, ectx) || env.Update(name, val) == nil {
     return nil
   }
   _ = WriteError(fmt.Sprintf("WARN: undefinierte Variable %s – global angelegt\n", name))
@@ -507,9 +514,8 @@ func evalEvalWhen(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 // progv: (progv symbole werte body...) → bindet die Symbole dynamisch
 // an die Werte und wertet body aus (CL). Symbole ohne korrespondierenden
 // Wert werden an nil gebunden (CL: "unbound" — golisp2-Pragmatik).
-// Abweichung: golisp2 kennt keine lexikalisch/dynamisch-Trennung, darum
-// sieht eine lexikalische let-Bindung desselben Namens den progv-Wert
-// (in CL bliebe sie davon unberührt).
+// Auch nicht-special Symbole werden dynamisch gebunden (CL); eine
+// lexikalische Bindung desselben Namens verdeckt den progv-Wert.
 func evalProgv(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if args == nil || args.Type != LIST || args.Cdr == nil || args.Cdr.Type != LIST {
     return nil, fmt.Errorf("progv: Syntax: (progv symbole werte body...)")
@@ -520,7 +526,7 @@ func evalProgv(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   vals, err := evalWithCtx(args.Cdr.Car, env, ectx.child())
   if err != nil { return nil, err }
   vals = Primary(vals)
-  localEnv := NewEnv(env)
+  inner := ectx.child()
   for s, v := syms, vals; s != nil && s.Type == LIST; s = s.Cdr {
     if s.Car == nil || s.Car.Type != ATOM {
       return nil, fmt.Errorf("progv: Symbolliste darf nur Symbole enthalten, got %s", s.Car)
@@ -530,9 +536,9 @@ func evalProgv(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       val = Primary(v.Car)
       v = v.Cdr
     }
-    _ = localEnv.Set(s.Car.Val, val)
+    inner.dyn = bindDyn(inner.dyn, s.Car, val)
   }
-  return evalWithCtx(wrapBegin(args.Cdr.Cdr), localEnv, ectx.child())
+  return evalWithCtx(wrapBegin(args.Cdr.Cdr), env, inner)
 }
 
 // case: (case key-expr ((val1 val2) result1) (else result3) ...)

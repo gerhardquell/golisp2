@@ -16,10 +16,10 @@ import "testing"
 const dynIstVorspann = `(defvar *x* 1) (defun g () *x*) `
 
 func TestDynIstLetUndProgv(t *testing.T) {
-  // ändert sich: Spec §3.2 (CL: 2)
-  evalStdlibEq(t, dynIstVorspann+`(let ((*x* 2)) (g))`, "1")
-  // ändert sich: Spec §3.2 (CL: 3)
-  evalStdlibEq(t, dynIstVorspann+`(progv '(*x*) '(3) (g))`, "1")
+  // Spec §3.2
+  evalStdlibEq(t, dynIstVorspann+`(let ((*x* 2)) (g))`, "2")
+  // Spec §3.2
+  evalStdlibEq(t, dynIstVorspann+`(progv '(*x*) '(3) (g))`, "3")
   evalStdlibEq(t, dynIstVorspann+`(progv '(*x*) '(3) *x*)`, "3")
 }
 
@@ -34,9 +34,9 @@ func TestDynIstParfuncInLet(t *testing.T) {
 }
 
 func TestDynIstClosureAusLet(t *testing.T) {
-  // ändert sich: Spec §3.2 (Closure merkt sich die Bindung nicht → 1)
-  evalStdlibEq(t, dynIstVorspann+`(defun mach () (let ((*x* 2)) (lambda () *x*))) (funcall (mach))`, "2")
-  evalStdlibEq(t, dynIstVorspann+`(defun mach () (let ((*x* 2)) (lambda () *x*))) ((mach))`, "2")
+  // Spec §3.2 (Closure merkt sich die Bindung nicht)
+  evalStdlibEq(t, dynIstVorspann+`(defun mach () (let ((*x* 2)) (lambda () *x*))) (funcall (mach))`, "1")
+  evalStdlibEq(t, dynIstVorspann+`(defun mach () (let ((*x* 2)) (lambda () *x*))) ((mach))`, "1")
 }
 
 func TestDynIstDefvarAufGebundenenNamen(t *testing.T) {

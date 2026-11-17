@@ -47,11 +47,12 @@ type evalCtx struct {
   depth  int
   ctx    context.Context
   script *mainScriptState // nur während RunScript die Hauptdatei lädt; sonst nil
+  dyn    *dynBinding      // dynamische Bindungen (dynvar.go); nil = keine
 }
 
 // child liefert einen neuen Kontext für einen nicht-tail-rekursiven Aufruf.
 func (e evalCtx) child() evalCtx {
-  return evalCtx{depth: e.depth + 1, ctx: e.ctx, script: e.script}
+  return evalCtx{depth: e.depth + 1, ctx: e.ctx, script: e.script, dyn: e.dyn}
 }
 
 // check prüft Depth-Limit und Cancellation.
@@ -116,7 +117,7 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     case NIL, NUMBER, STRING, FUNC, LAMBDA, MACRO, VECTOR: return expr, nil
     case ATOM:
       if len(expr.Val) > 0 && expr.Val[0] == ':' { return expr, nil } // Keywords selbst-auswertend
-      v, err := env.GetSym(expr)
+      v, err := lookupSym(expr, env, ectx)
       if err != nil { return nil, err }
       if v.Type == SYMMACRO {
         // symbol-macrolet: Referenz wertet die Expansion im aktuellen
@@ -216,16 +217,25 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
         expr = args.Car
         continue
 
+      // special-Namen kommen in die dyn-Kette, der Rest ins Child-Env.
+      // ectx ist eine lokale Kopie: die Zuweisung gilt für den Rumpf und
+      // die Tail-Form, der Aufrufer behält seine Kette (Spec §4).
       case "let":
         localEnv := NewEnv(env)
+        dyn := ectx.dyn
         bindings := expr.Cdr.Car
         for bindings != nil && bindings.Type == LIST {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, env, ectx.child())
           if err != nil { return nil, err }
-          _ = localEnv.SetSym(b.Car, Primary(val))
+          if isSpecial(b.Car) {
+            dyn = bindDyn(dyn, b.Car, Primary(val))
+          } else {
+            _ = localEnv.SetSym(b.Car, Primary(val))
+          }
           bindings = bindings.Cdr
         }
+        ectx.dyn = dyn
         // Handle multiple body expressions in let
         body := expr.Cdr.Cdr
         if body == nil {
@@ -250,7 +260,11 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           b := bindings.Car
           val, err := evalWithCtx(b.Cdr.Car, localEnv, ectx.child())  // Im lokalen env auswerten!
           if err != nil { return nil, err }
-          _ = localEnv.SetSym(b.Car, Primary(val))
+          if isSpecial(b.Car) {
+            ectx.dyn = bindDyn(ectx.dyn, b.Car, Primary(val))
+          } else {
+            _ = localEnv.SetSym(b.Car, Primary(val))
+          }
           bindings = bindings.Cdr
         }
         // Body ausführen

@@ -141,10 +141,12 @@ var brokenCases = []closureCase{
     want: "(5 1)",
   },
   {
-    // CL-Äquivalent mit special declaration; hier golisp2-progv.
+    // progv bindet dynamisch (Spec 2026-11-17 §3.2): nach dem progv ist
+    // *x* wieder ungebunden, n bleibt lexikalisch gefangen.
+    // SBCL: (funcall (progv '(*x*) '(1) (let ((n 5)) (lambda () (list n (boundp '*x*)))))) => (5 NIL)
     name: "progv",
-    expr: "(progv '(*x*) '(1) (let ((n 5)) (lambda () (list n *x*))))",
-    want: "(5 1)",
+    expr: "(progv '(*x*) '(1) (let ((n 5)) (lambda () (list n (bound? '*x*)))))",
+    want: "(5 ())",
   },
 }
 

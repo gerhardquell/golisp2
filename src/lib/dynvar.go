@@ -40,6 +40,109 @@ func declareSpecial(sym *Cell) bool {
   return true
 }
 
+// dynBinding ist die unveränderliche Kette der dynamischen Bindungen eines
+// evalCtx (Spec §4). Äußerer und innerer ectx teilen sie; beim Verlassen
+// eines let gilt einfach wieder die alte Kette. Veränderlich ist nur die
+// Box (setq) — darum der Mutex, Worker können sie später teilen.
+type dynBinding struct {
+  sym  *Cell
+  box  *dynBox
+  next *dynBinding
+}
+
+type dynBox struct {
+  mu  sync.Mutex
+  val *Cell
+}
+
+func (b *dynBox) get() *Cell {
+  b.mu.Lock()
+  v := b.val
+  b.mu.Unlock()
+  return v
+}
+
+func (b *dynBox) set(v *Cell) {
+  b.mu.Lock()
+  b.val = v
+  b.mu.Unlock()
+}
+
+func (d *dynBinding) find(sym *Cell) *dynBox {
+  if n := d.findNode(sym); n != nil {
+    return n.box
+  }
+  return nil
+}
+
+// bindDyn hängt sym=val vorn an d. Ein älterer Eintrag für sym wäre danach
+// verdeckt und fällt aus der neuen Kette (Präfix kopiert, Rest geteilt):
+// Tail-Rekursion durch ein dynamisches let wächst so weder in Speicher noch
+// Lesezeit. d selbst bleibt unverändert.
+func bindDyn(d *dynBinding, sym, val *Cell) *dynBinding {
+  if old := d.findNode(sym); old != nil {
+    d = d.without(old)
+  }
+  return &dynBinding{sym: sym, box: &dynBox{val: val}, next: d}
+}
+
+func (d *dynBinding) findNode(sym *Cell) *dynBinding {
+  for ; d != nil; d = d.next {
+    if d.sym == sym {
+      return d
+    }
+  }
+  return nil
+}
+
+// without kopiert die Knoten vor old; Tiefe ≤ Zahl verschiedener Namen.
+func (d *dynBinding) without(old *dynBinding) *dynBinding {
+  if d == old {
+    return old.next
+  }
+  return &dynBinding{sym: d.sym, box: d.box, next: d.next.without(old)}
+}
+
+// lookupSym ist der einzige Lese-Weg für Variablen (Spec §4): lexikalische
+// Frames, dann dynamische Bindungen, dann Root-Env. Frames zuerst, sonst
+// sähe (progv '(x) '(1) (let ((x 2)) x)) die 1. Ohne dynamische Bindungen
+// bleibt es beim schnellen env.GetSym.
+func lookupSym(sym *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  if ectx.dyn == nil {
+    return env.GetSym(sym)
+  }
+  return lookupDyn(sym, env, ectx.dyn)
+}
+
+func lookupDyn(sym *Cell, env *Env, dyn *dynBinding) (*Cell, error) {
+  v, ok, root := env.getFrames(sym)
+  if ok {
+    return v, nil
+  }
+  if box := dyn.find(sym); box != nil {
+    return box.get(), nil
+  }
+  return root.GetSym(sym)
+}
+
+// assignLexOrDyn ist der Zuweisungs-Weg in derselben Reihenfolge wie
+// lookupSym: lexikalischer Frame, dann dynamische Bindung. false heißt:
+// keins von beiden — der Aufrufer macht weiter wie bisher (global).
+func assignLexOrDyn(env *Env, name string, val *Cell, ectx evalCtx) bool {
+  if ectx.dyn == nil {
+    return false
+  }
+  sym := MakeAtom(name)
+  if env.updateFrames(sym, val) {
+    return true
+  }
+  if box := ectx.dyn.find(sym); box != nil {
+    box.set(val)
+    return true
+  }
+  return false
+}
+
 func RegisterDynvar(env *Env) {
   _ = env.Set("%declare-special", makeFn(fnDeclareSpecial))
 }
@@ -54,6 +157,12 @@ func fnDeclareSpecial(args []*Cell) (*Cell, error) {
   }
   sym := args[0]
   name := sym.Val
+  if name == "t" {
+    return nil, fmt.Errorf("%%declare-special: t ist eine Konstante")
+  }
+  if strings.HasPrefix(name, ":") {
+    return nil, fmt.Errorf("%%declare-special: Keyword %s ist eine Konstante", name)
+  }
   if declareSpecial(sym) && !(len(name) >= 3 && strings.HasPrefix(name, "*") && strings.HasSuffix(name, "*")) {
     _ = WriteError(fmt.Sprintf("WARN: defvar %s ohne *…* — jede let-Bindung von %s ist jetzt dynamisch\n", name, name))
   }

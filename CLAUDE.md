@@ -82,6 +82,7 @@ umgehen.
 | Parsen | `src/lib/reader.go` (`Read` / `ReadAll`) |
 | SWANK-Framing | `src/lib/swank/framing.go` |
 | Eval-Schleife | `src/lib/eval_core.go` |
+| Variablen lesen/zuweisen | `lookupSym` / `assignLexOrDyn` (`src/lib/dynvar.go`) |
 
 Wer anderswo einen HTTP-Client gegen `:9080` aufmacht, einen zweiten Parser
 baut oder eine eigene Truthiness-Prüfung schreibt, macht es falsch — auch wenn
@@ -130,12 +131,16 @@ Lambda-Calls und alle Tail-Spezialformen (`if`, `begin`, `let`, `cond`) setzen
 `expr`/`env` und machen `continue` im `for {}`-Loop. Kein neuer Stack-Frame,
 O(1) Stack bei beliebig tiefer Tail-Rekursion. Wer hier einen rekursiven
 `Eval()`-Aufruf einbaut, zerstört das lautlos.
+Dynamisches `let` setzt nur `ectx.dyn` (unveränderliche Kette) und macht
+`continue` — beim Verlassen wird nichts zurückgesetzt. Wer Bindungen per
+`defer`/Restore baut, zerstört TCO.
 
 **`(eval form)` läuft im globalen Environment (`Env.Root()`)**
 Nicht im dynamischen Lambda-Scope — Common-Lisp-Semantik. Notwendig, damit
 Definitionen aus `(eval (read ...))` (REPL, `swank-repl:listener-eval`,
 selbsterweiterndes Muster) global sichtbar bleiben und nicht im Child-Env der
-aufrufenden Lambda-Kette verschwinden.
+aufrufenden Lambda-Kette verschwinden. Dynamische Bindungen (`ectx.dyn`) des
+Aufrufers sieht `eval` trotzdem.
 
 **Singleton-Nil + Symbol-Interning**
 Genau **eine** NIL-Cell (`MakeNil()`), und genau **eine** Cell pro
@@ -154,6 +159,13 @@ Zwei bewusste Ausnahmen: Zahlen sind ausgenommen (`(eq 5 5)` → `()`,
 damit der Small-Int-Cache `eq` nicht durch die Hintertür verändert; CL
 lässt das unspezifiziert), Strings werden nicht interniert
 (`(eq "a" "a")` → `()`, wie CL).
+
+**Dynamische Variablen**
+Die Special-Menge (`specialSyms`, `dynvar.go`) ist prozessweit und
+Pointer-geschlüsselt; Symbol-Cells werden dafür nicht verändert. Tests
+mit `defvar` brauchen eigene Namen (oder `vergissSpecial`). Primitiven
+mit Rückruf tragen ihre ctx-Fassung im `Env`-Feld der FUNC-Cell
+(`makeCtxFn`) — `Cell`/`Cell.Fn` bleiben unverändert (`gogui`).
 
 **Multi-Body via `wrapBegin`**
 `defun`/`lambda`/`defmacro` wrappen mehrere Body-Ausdrücke zur *Definitionszeit*
@@ -227,7 +239,7 @@ Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 | `docs/swank.md` | SWANK-Protokoll, Framing, Op-Tabelle, SLIME-Details | du an `src/lib/swank/` arbeitest |
 | `docs/emacs-golisp2web.md` | golisp2web aus dem SLIME-REPL starten/steuern, `parfunc`+`system`-Muster, Beispiele | du golisp2web aus Emacs heraus benutzen willst |
 | `docs/sigo.md` | sigoREST: Env-Vars, Rate-Limiting, Multi-Host, Muster | du an `src/lib/sigorest.go` arbeitest |
-| `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, `setq*`, `case`, FORMAT | Semantik unklar ist |
+| `docs/lisp-semantik.md` | `eq`/`equal?`, `let`/`let*`, dynamische Variablen, `setq*`, `case`, FORMAT | Semantik unklar ist |
 | `docs/memory.md` | GC-Verhalten, `(memstats)`, Best Practices | du Speicher untersuchst |
 | `docs/referenz-generiert.md` | Vollständige Funktionsreferenz, generiert aus `(env-symbols)` | du eine konkrete Funktion nachschlägst |
 | `docs/golisp2-cheatsheet.md` | Cheatsheet + Semantik-Überblick (Mensch-Referenz); KI-Version: `src/embed/ki-referenz.md` | du Sprachsemantik kompakt nachschlägst |

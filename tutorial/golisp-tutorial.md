@@ -1923,7 +1923,7 @@ Bindet Listenelemente an Variablen. Nur flache Muster: Verschachtelung, Punktpaa
 
 **Syntax:** `(defvar name [wert])`
 
-Definiert eine Variable mit Dokumentationskonvention; Neuauswertung definiert nicht neu (CL-defvar-Semantik in defsystem-Kontext).
+Definiert eine globale Variable, nur wenn sie noch ungebunden ist; Neuauswertung lässt den Wert stehen. Der Name wird **special** (wie in CL): `let`, `let*` und `progv` binden ihn dynamisch, aufgerufene Funktionen sehen die Bindung. Namen daher mit `*…*` schreiben, sonst gibt es eine Warnung. Details: `docs/lisp-semantik.md`, „Dynamische Variablen“.
 
 ```lisp
 (defvar *zaehler* 0)
@@ -1945,7 +1945,7 @@ Liefert den Docstring einer defun/defmacro-Definition (String-Literal nach der P
 
 **Syntax:** `(defparameter name wert [doc])`
 
-Definiert eine globale Variable und setzt sie **immer** — anders als `defvar`, das einen vorhandenen Wert behält.
+Definiert eine globale Variable und setzt sie **immer** — anders als `defvar`, das einen vorhandenen Wert behält. Der Name wird wie bei `defvar` special.
 
 ```lisp
 (defparameter *grenze* 10)

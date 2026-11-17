@@ -19,13 +19,13 @@
 | `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
 | `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
 | `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
+| `%declare-special` | Intern: Name als special markieren, WARN ohne *…* (defvar/defparameter, dynvar.go) |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |
 | `%ganzzahl-pruefen` | Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
-| `*generic-registry*` | Hash-Table der generischen Funktionen |
 | `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
@@ -87,6 +87,7 @@
 | `*class-types*` | Registry (name (slot-namen)) der defclass-Klassen, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
 | `*condition-types*` | Registry der definierten Condition-Typen |
 | `*deftypes*` | Registry (name expander) der deftype-Definitionen (types.lisp) |
+| `*generic-registry*` | Hash-Table der generischen Funktionen |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
 | `*setf-expanders*` | Registry der setf-Expander |
@@ -160,12 +161,12 @@
 | `define-condition` | Condition-Typ mit Slots definieren |
 | `defined-in` | Liste der Symbole, die in der geladenen Datei definiert wurden |
 | `defmethod` | Methode fuer generische Funktion definieren; Dispatch (var typ), typ = Struct, Klasse oder t |
-| `defparameter` | globale Variable definieren, ueberschreibt immer (CL-Compat) |
+| `defparameter` | globale Variable definieren, ueberschreibt immer; Name wird special (CL-Compat) |
 | `defstruct` | Struktur definieren: erzeugt make-name, name-slot-Accessoren, name-p |
 | `defstruct-resolve-name` | Intern: Namensaufloesung des defstruct-Makros |
 | `defsystem` | System aus Dateien (:components) mit Abhaengigkeiten (:depends-on) definieren |
 | `deftype` | Eigener Typname: (deftype ziffer () '(integer 0 9)), mit Parametern (deftype bis (&optional (n '*)) …) |
-| `defvar` | Variable definieren (Dokumentationskonvention) |
+| `defvar` | globale Variable definieren, nur wenn ungebunden; Name wird special (dynamisch per let/progv) |
 | `destructuring-bind` | Listenelemente an Variablen binden (flache Muster) |
 | `directory-files` | sortierte Namen in dir, optional Glob-Muster; Verzeichnisse mit / |
 | `documentation` | Docstring einer defun/defmacro abfragen ('function) |

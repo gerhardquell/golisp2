@@ -72,7 +72,7 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(the type form)` | Deklaration | Typ **ignoriert** (kein Typsystem) |
 | `(declare . decls)` | Deklaration | No-op |
 | `(eval-when (situation) . body)` | Situationssteuerung | |
-| `(progv syms vals . body)` | Dynamic binding | **Achtung:** lex/dyn-Trennung fehlt |
+| `(progv syms vals . body)` | Dynamische Bindung | wie CL: aufgerufene Funktionen sehen die Werte; lexikalische Bindungen schützen |
 | `(and . exprs)` | Kurzschluss | |
 | `(or . exprs)` | Kurzschluss | |
 | `(not x)` | Negation | |
@@ -181,6 +181,7 @@ Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgel
 ### Makros
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` über `setf`; `defparameter` überschreibt immer, `defvar` nur wenn ungebunden
+- **Dynamische Variablen** (CL `special`, seit 0.33.0): `defvar`/`defparameter` machen den Namen special (ohne `*…*` → `WARN`). `let`/`let*`/`progv` (damit auch `dolist`/`dotimes`/`loop`) binden ihn dynamisch: aufgerufene Funktionen, Callbacks (`mapcar`, `sort` …), `eval`/`load` und Worker von `parfunc`/`spawn`/`pool-map` sehen die Bindung. `setq` trifft die innerste Bindung; nach dem `let` gilt wieder der alte Wert. Closures merken sich die Bindung nicht. HTTP-/WS-/GUI-Handler sehen nur den globalen Wert
 - `(ignore-errors . body)` → Wert oder `()` bei Fehler (nur ein Wert, kein Condition-Objekt; `throw`/`return-from` laufen durch)
 - `(assert form)` → `t` oder Fehler `assert failed: form` — nur ein Argument, keine eigene Meldung
 - `(destructuring-bind (a b c) liste . body)` — **nur flach**: verschachtelte Muster, Punktpaare und `&rest`/`&key`/`&optional` → Fehler. Für Rest: `(destructuring-bind (a b) l …)` plus `(cddr l)`
@@ -278,7 +279,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | Fall | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | oft `t` (Small-Int) |
-| `progv` | Lex/dyn-Trennung fehlt | Dynamisch |
+| Lambda-Parameter, `do`, `multiple-value-bind` auf `defvar`-Namen | Fehler „… ist special — mit let binden“ | bindet dynamisch |
 | `declare` | No-op | Type-Checks |
 | `the` | Typ ignoriert | Type-Checks |
 | `(eval form)` | Global | Global (ok) |
@@ -323,9 +324,9 @@ kennen, um nicht zu raten:
   kein `handler-bind`, kein `restart-case`, kein MOP.
 - Slot-Namen flach — keine Verdeckung über Vererbung hinweg.
 
-### 10.4 Keine Lex/Dyn-Trennung bei progv
-- `progv` bindet wie `let` — lexikalische Shadowings sehen den progv-Wert.
-- CL: lexikalische Bindung schützt vor progv.
+### 10.4 Dynamische Variablen: Grenzen
+- Lambda vor dem `defvar` definiert → sein Parameter gleichen Namens bindet weiter lexikalisch (Prüfung nur bei Definition).
+- Kein `(declare (special x))`, kein `defconstant`, kein `symbol-value`/`set`.
 
 ### 10.5 Kein Compile-File
 - Reiner Interpreter. Kein `compile-file`, `load` von FASLs.

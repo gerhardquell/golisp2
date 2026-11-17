@@ -70,7 +70,7 @@
 | `(the type form)` | 声明 | 类型被**忽略**（无类型系统） |
 | `(declare . decls)` | 声明 | 空操作 |
 | `(eval-when (situation) . body)` | 时机控制 | |
-| `(progv syms vals . body)` | 动态绑定 | **注意：** 没有词法/动态区分 |
+| `(progv syms vals . body)` | 动态绑定 | 同 CL：被调用的函数能看到这些值；词法绑定不受影响 |
 | `(and . exprs)` | 短路求值 | |
 | `(or . exprs)` | 短路求值 | |
 | `(not x)` | 取反 | |
@@ -178,6 +178,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 宏
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` 基于 `setf`；`defparameter` 总是覆盖，`defvar` 仅在未绑定时赋值
+- **动态变量**（CL `special`，自 0.33.0 起）：`defvar`/`defparameter` 使名字成为 special（不带 `*…*` → `WARN`）。`let`/`let*`/`progv`（因而 `dolist`/`dotimes`/`loop` 也是）对其动态绑定：被调用的函数、回调（`mapcar`、`sort` …）、`eval`/`load` 以及 `parfunc`/`spawn`/`pool-map` 的工作协程都能看到该绑定。`setq` 作用于最内层绑定；`let` 结束后恢复旧值。闭包不会记住该绑定。HTTP/WS/GUI 处理函数只看到全局值
 - `(ignore-errors . body)` → 值，出错时为 `()`（只有一个值，没有 condition 对象；`throw`/`return-from` 照常穿过）
 - `(assert form)` → `t` 或报错 `assert failed: form` —— 只接受一个参数，不能自定义信息
 - `(destructuring-bind (a b c) list . body)` —— **仅限扁平模式**：嵌套模式、点对和 `&rest`/`&key`/`&optional` → 报错。取剩余部分：`(destructuring-bind (a b) l …)` 再加 `(cddr l)`
@@ -274,7 +275,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | 情况 | GoLisp2 | CL |
 |------|---------|-----|
 | `(eq 5 5)` | `()` —— `eq` 对数字总是 `()`（设计如此） | 常为 `t`（小整数） |
-| `progv` | 没有词法/动态区分 | 动态 |
+| 以 `defvar` 名字作 lambda 参数、`do`、`multiple-value-bind` 变量 | 报错 “… ist special — mit let binden” | 动态绑定 |
 | `declare` | 空操作 | 类型检查 |
 | `the` | 忽略类型 | 类型检查 |
 | `(eval form)` | 全局 | 全局（一致） |
@@ -318,9 +319,9 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
   没有 `handler-bind`，没有 `restart-case`，没有 MOP。
 - 槽名是扁平的 —— 跨继承不能遮蔽。
 
-### 10.4 progv 没有词法/动态区分
-- `progv` 的绑定方式同 `let` —— 词法遮蔽也会看到 progv 的值。
-- CL：词法绑定不受 progv 影响。
+### 10.4 动态变量：限制
+- 在 `defvar` 之前定义的 lambda → 其同名参数仍按词法绑定（只在定义时检查）。
+- 没有 `(declare (special x))`、没有 `defconstant`、没有 `symbol-value`/`set`。
 
 ### 10.5 没有 compile-file
 - 纯解释器。没有 `compile-file`，不能加载 FASL。

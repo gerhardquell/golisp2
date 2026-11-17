@@ -78,7 +78,7 @@ Wichtige:
 (labels ((f (p) body)) ...)       ; Lokale Funktionen (rekursiv, gegenseitig)
 
 (eval-when (situation) body...)   ; Situationssteuerung
-(progv (syms) (vals) body...)     ; Dynamisches Binding (⚠️ siehe §9)
+(progv (syms) (vals) body...)     ; Dynamisches Binding (wie CL)
 ```
 
 ### Kontrollfluss
@@ -602,8 +602,8 @@ bei Start automatisch geladen.
 (push 1 var)                      ; var = (cons 1 var)
 (pop var)                         ; car + set!
 
-(defvar v 1)                      ; Definiert, wenn nicht gebunden
-(defvar v 2)                      ; Erstzugriff gewinnt (idempotent)
+(defvar *v* 1)                    ; Definiert, wenn nicht gebunden; *v* wird special
+(defvar *v* 2)                    ; Erstzugriff gewinnt (idempotent)
 
 (setf (car x) 42)                 ; Generisch, defstruct registriert automatisch
 (incf x) (decf x)                 ; setf-Kurzformen (+1/-1)
@@ -754,6 +754,12 @@ wenn Pointer-Identität *explizit* gemeint ist.
   `load` wertet die Datei immer im globalen Env aus. Die Closure
   bleibt lexikalisch. Lokale Helfer: `labels`/`flet` oder `(define (f p) ...)`
 - `(eval form)` → **immer in `Env.Root()`**, nie im Lambda-Scope
+- Dynamische Variablen (seit 0.33.0): `defvar`/`defparameter` machen den Namen special.
+  `let`/`let*`/`progv` binden ihn dann dynamisch — aufgerufene Funktionen, Callbacks,
+  `eval`/`load` und `parfunc`/`spawn`/`pool-map`-Worker sehen die Bindung:
+  `(defvar *t* 1) (defun g () *t*) (let ((*t* 2)) (g))` → `2`.
+  Lambda-Parameter, `do`, `multiple-value-bind` mit special-Namen → Fehler.
+  Details: `docs/lisp-semantik.md`.
 
 ### Redefine-Policy
 ```lisp
@@ -775,7 +781,7 @@ wenn Pointer-Identität *explizit* gemeint ist.
 |------|-------------------|--------------|
 | `(eq 5 5)` | `()` — `eq` auf Zahlen immer `()` (Design) | Oft `t` (Small-Int-Cache) |
 | Zahlen | nur `int64` und `float64`; `(/ 7 2)` → `3.5`; Überlauf = Fehler | Bignum, Brüche (`7/2`) |
-| `progv` | Lex/dyn-Trennung fehlt | Dynamisch, lexikalische Bindungen schützen |
+| Lambda-Parameter, `do`, `multiple-value-bind` auf `defvar`-Namen | Fehler „… ist special — mit let binden“ | bindet dynamisch |
 | `declare` | No-op | Type-Checks, Optimierungen |
 | `the` | Typ ignoriert | Type-Checks zur Laufzeit |
 | `(macrolet ...)` | Nicht-rekursiv | Rekursiv |
@@ -833,13 +839,14 @@ Klassen-Hierarchien; Dispatch allein auf Struct-Tag.
 Recovery-Mechanismen (Retry, Use-Value) — dafür weiterhin manuell über
 `catch`/`throw`.
 
-### 10.4 Keine Lex/Dyn-Trennung bei progv
+### 10.4 Dynamische Variablen: Grenzen
 
-- `progv` bindet wie `let` — lexikalische Shadowings sehen den progv-Wert.
-- In CL schützt eine lexikalische Bindung vor progv.
-
-**Auswirkung:** Dynamische Variablen können unerwartet durch lexikalische
-Bindungen überdeckt werden.
+- Lambda vor dem `defvar` definiert → sein Parameter gleichen Namens bindet
+  weiter lexikalisch (geprüft wird nur bei der Definition).
+- Eine Closure merkt sich die Bindung nicht: nach dem `let` sieht sie den
+  dann gültigen Wert.
+- HTTP-/WS-/GUI-Handler und SWANK beginnen ohne Bindungen.
+- Kein `(declare (special x))`, kein `defconstant`, kein `symbol-value`/`set`.
 
 ### 10.5 Kein Compile-File
 

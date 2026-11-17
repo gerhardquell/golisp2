@@ -41,6 +41,8 @@ golisp2/
       reader.go          Parser: String → Cell-Baum (NewReader, Read, ReadAll)
       env.go             Environment: Get, Set, Update, Symbols (verkettete
                          Scopes, RWMutex); Set-Hook für Redefine-Guard
+      dynvar.go          Dynamische Variablen: Special-Menge, Bindungskette,
+                         lookupSym/assignLexOrDyn, %declare-special
 
       eval_core.go       Eval-Trampolin, apply, evalArgs (TCO-Invariante!)
       eval_lambda.go     Lambda/Closure-Logik: makeLambda, applyLambda,

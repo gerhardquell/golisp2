@@ -207,7 +207,8 @@ Eine Quelle: `resolveFn` (`src/lib/eval_core.go`).
 dynamischen Lambda-Scope. Das ist Common-Lisp-Semantik und für GoLisp2
 essenziell: Definitionen aus `(eval (read …))` — REPL, `swank-repl:listener-eval`,
 das selbsterweiternde Muster — müssen global sichtbar bleiben und dürfen nicht
-im Child-Env der aufrufenden Lambda-Kette verschwinden.
+im Child-Env der aufrufenden Lambda-Kette verschwinden. Dynamische Bindungen
+des Aufrufers sieht `eval` trotzdem (CL).
 
 ---
 
@@ -430,8 +431,8 @@ Das Root-Env bewacht Redefinitionen über `(redefine-policy 'allow|'warn|'error)
 - `(makunbound 'sym)` entfernt eine Root-Bindung samt DefLoc-Eintrag.
   Fehler bei ungebundenem Symbol; auf FUNC/LAMBDA/MACRO greift die Policy.
 
-Bewusste Grenzen: `setq`/`progv` am Root über LAMBDA bleiben still (kein
-Quell-Kontext). FUNC-Log-Events kennen die neue Quelle nicht (`NewFile ""`).
+Bewusste Grenzen: `setq` am Root über LAMBDA bleibt still (kein
+Quell-Kontext); `progv` schreibt nicht ins Root-Env. FUNC-Log-Events kennen die neue Quelle nicht (`NewFile ""`).
 
 ## Generische Funktionen (CLOS-light)
 
@@ -473,7 +474,8 @@ veränderlichen Zustand: `(defclass schiff (name (energie 100)))`.
 
 ## `defvar` vs. `defparameter`
 
-Beide binden eine globale Variable (CL-Compat, Makros in stdlib.lisp).
+Beide binden eine globale Variable (CL-Compat, Makros in stdlib.lisp) und
+machen den Namen special (siehe „Dynamische Variablen“).
 Der Unterschied liegt im Rebind-Verhalten:
 
 | Form | bereits gebunden? | Verhalten |
@@ -492,6 +494,66 @@ Der Unterschied liegt im Rebind-Verhalten:
 Optionaler Docstring (3. Argument) wird akzeptiert und ignoriert.
 Wert-Rebinds lösen keinen Redefine-Warn aus (der Guard greift nur bei
 FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
+
+---
+
+## Dynamische Variablen (seit 0.33.0)
+
+`defvar` und `defparameter` erklären den Namen für **special** (CL), auch
+wenn er schon gebunden ist und `defvar` den Wert stehen lässt. Das gilt
+global und für immer; `makunbound` entfernt den Wert, nicht die Eigenschaft.
+`define` und `setq` auf Ungebundenes machen nichts special. Ein Name ohne
+`*…*` gibt einmal eine Warnung, weil dann jedes `let` auf ihn dynamisch wird:
+
+```
+WARN: defvar n ohne *…* — jede let-Bindung von n ist jetzt dynamisch
+```
+
+**Binden:** `let`, `let*` und `progv` binden special-Namen dynamisch, für
+die Dauer des Rumpfs. Alles, was in dieser Zeit läuft, sieht die Bindung —
+aufgerufene Funktionen, Callbacks aus Primitiven (`mapcar`, `sort`,
+`reduce`, `maphash`, …), `eval` und `load`. Danach gilt wieder der vorige
+Wert, auch nach `error`, `throw` oder `return-from`. Ein `let` darf
+special- und normale Namen mischen. Makros, die zu `let` expandieren
+(`dolist`, `dotimes`, `destructuring-bind`, `loop … for`), binden dadurch
+ebenfalls dynamisch.
+
+```lisp
+(defvar *x* 1)
+(defun g () *x*)
+(let ((*x* 2)) (g))              ; → 2
+(progv '(*x*) '(3) (g))          ; → 3
+(g)                              ; → 1
+```
+
+**Lesen:** lexikalische Frames, dann die innerste dynamische Bindung, dann
+der globale Wert. Eine lexikalische Bindung schützt also vor `progv`:
+`(let ((x 2)) (progv '(x) '(1) x))` → `2`.
+
+**Zuweisen:** `setq`, `set!`, `psetq` und `setf` auf einen special-Namen
+treffen die innerste dynamische Bindung, ohne Bindung den globalen Wert.
+Nach dem `let` ist die Zuweisung weg:
+`(let ((*x* 2)) (setq *x* 5)) *x*` → `1`.
+
+**Closures merken sich die Bindung nicht.** Nach dem `let` sehen sie den
+dann gültigen Wert:
+`(defun mach () (let ((*x* 2)) (lambda () *x*)))  (funcall (mach))` → `1`.
+
+**Binder-Fehler:** Lambda-Parameter (`defun`, `lambda`, `defmacro`,
+`flet`/`labels`, `&optional`/`&key`/`&rest`), `do`/`do*` und
+`multiple-value-bind` binden lexikalisch und weisen special-Namen ab:
+`defun: Parameter *x* ist special — mit let binden`. Lambda-Listen werden
+**bei der Definition** geprüft, nicht beim Aufruf. Grenze: Wird das Lambda
+vor dem `defvar` definiert, bindet sein Parameter weiter lexikalisch.
+
+**Goroutinen:** `parfunc`, `spawn`, `pool-map` und die Fitness-Worker von
+`ga-calc` erben die Bindungen, die beim Start galten — dieselbe Bindung,
+kein Schnappschuss: ein `setq` im Worker sieht auch der Starter. Ein `let`
+im Worker gilt nur dort. HTTP-Handler (`http-serve`, `webserv`), WS-Bridge,
+GUI-Callbacks und SWANK-Verbindungen beginnen ohne Bindungen und sehen den
+globalen Wert.
+
+Nicht vorhanden: `(declare (special x))`, `defconstant`, `symbol-value`/`set`.
 
 ---
 

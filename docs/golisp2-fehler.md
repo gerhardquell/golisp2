@@ -281,6 +281,56 @@ wird die Ganzzahl nach Float gewandelt. Ganzzahl gegen Ganzzahl ist exakt.
 - `~r` ohne Basis mit Float ist ein Fehler (CL verlangt eine Ganzzahl), vorher still gekürzt;
   `~nr` druckt einen Float wie `~a`, wie `~d`.
 
+
+## H. Dynamische Variablen (20261117, 0.33.0)
+
+Seit 0.33.0 sind `defvar`-/`defparameter`-Namen special wie in CL. Regeln:
+`docs/lisp-semantik.md`, Abschnitt „Dynamische Variablen“.
+
+### H1. `let` auf einen `defvar`-Namen bindet dynamisch  [FIXED 0.33.0]
+**Symptom:** `(defvar *x* 1) (defun g () *x*) (let ((*x* 2)) (g))` → `1`;
+die aufgerufene Funktion sah die Bindung nie.
+**Fix:** → `2`. Gilt für `let`, `let*` und Makros, die zu `let` expandieren
+(`dolist`, `dotimes`, `destructuring-bind`, `loop … for`).
+
+### H2. `progv` wirkt jetzt auf aufgerufene Funktionen  [FIXED 0.33.0]
+**Symptom:** `(progv '(*x*) '(3) (g))` → `1`; `progv` legte nur ein
+lexikalisches Child-Env an und überdeckte lexikalische Bindungen.
+**Fix:** → `3`. Eine lexikalische Bindung schützt jetzt wie in CL:
+`(let ((x 2)) (progv '(x) '(1) x))` → `2`.
+
+### H3. Lambda-Parameter, `do`, `multiple-value-bind` mit special-Namen  [KNOWN]
+`(defvar *x* 1) (defun f (*x*) …)` → Fehler
+`defun: Parameter *x* ist special — mit let binden`. Ebenso `do`/`do*`
+(`do: Variable *x* ist special …`) und `multiple-value-bind`. CL bände
+dynamisch; golisp2 bindet dort nur lexikalisch und meldet es laut.
+Abhilfe: anderer Parametername oder `(let ((*x* p)) …)` im Rumpf.
+
+### H4. Lambda vor dem `defvar` bindet weiter lexikalisch  [LIMITATION]
+Lambda-Listen werden bei der Definition geprüft, nicht beim Aufruf (kostet
+sonst auf dem heißesten Pfad). `(defun alt (*z*) (list *z* (lies)))
+(defvar *z* 1) (alt 2)` → `(2 1)`: `alt` bindet `*z*` lexikalisch, `lies`
+sieht den globalen Wert. Abhilfe: `defvar` vor den Funktionen.
+
+### H5. Closure merkt sich die Bindung nicht  [KNOWN]
+`(defun mach () (let ((*x* 2)) (lambda () *x*)))  (funcall (mach))` → `1`
+(vor 0.33.0: `2`). Wie CL: die Bindung endet mit dem `let`. Wer den Wert
+festhalten will, bindet ihn lexikalisch: `(let ((w *x*)) (lambda () w))`.
+
+### H6. Handler beginnen ohne Bindungen  [KNOWN]
+HTTP-Handler (`http-serve`, `webserv`), WS-Bridge, GUI-Callbacks und
+SWANK-Verbindungen sehen nur die globalen Werte, auch wenn der Server in
+einem `let` gestartet wurde. `parfunc`, `spawn`, `pool-map` und `ga-calc`
+erben dagegen die Bindungen; ein `setq` im Worker trifft dieselbe Bindung
+und ist für den Starter sichtbar.
+
+### H7. Interne Variablen umbenannt  [KNOWN]
+Ein `defvar` ohne `*…*` warnt jetzt (`WARN: defvar n ohne *…* — …`).
+Deshalb heißen interne Variablen jetzt `*generic-registry*` (vorher
+`%generic-registry`), `*swank--insp-…*` (vorher `swank--insp-…`) und
+`*tf-err-tag*` (vorher `%tf-err-tag`). Wer sie direkt benutzt hat, muss
+nachziehen.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

@@ -533,7 +533,7 @@ func evalParfunc(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 
   for i, expr := range exprList {
     go func(idx int, e *Cell) {
-      val, err := evalWithCtx(e, env, evalCtx{depth: 0, run: workerRun})
+      val, err := evalWithCtx(e, env, evalCtx{depth: 0, run: workerRun, dyn: ectx.dyn}) // Spec §3.5
       // Fehler nicht verschlucken: (:error text) an der Stelle, wie pool-map
       if err != nil { val = List(MakeAtom(":error"), MakeStr(err.Error())) }
       ch <- parfuncResult{idx, Primary(val)}

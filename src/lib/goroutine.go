@@ -111,7 +111,7 @@ func RegisterGoroutines(env *Env) {
   _ = env.Set("chan-close", makeFn(fnChanClose))
   _ = env.Set("chan-closed?", makeFn(fnChanClosedP))
   _ = env.Set("lock-make", makeFn(fnLockMake))
-  _ = env.Set("spawn", makeFn(fnSpawn))
+  _ = env.Set("spawn", makeCtxFn(fnSpawn))
 }
 
 // ---- Channel-Funktionen ----
@@ -307,7 +307,8 @@ func fnLockMake(args []*Cell) (*Cell, error) {
 // Fehler und panics gehen zusätzlich auf stderr. Ist der Channel beim
 // Senden geschlossen oder vom Benutzer gefüllt, wird das Ergebnis verworfen
 // (Meldung auf stderr) – die Goroutine endet trotzdem.
-func fnSpawn(args []*Cell) (*Cell, error) {
+// Die Goroutine erbt die dynamischen Bindungen des Starters (Spec §3.5).
+func fnSpawn(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("spawn: genau 1 Argument nötig (Funktion)")
   }
@@ -328,7 +329,7 @@ func fnSpawn(args []*Cell) (*Cell, error) {
         fmt.Fprintln(os.Stderr, "spawn: Ergebnis verworfen (Channel geschlossen oder voll)")
       }
     }()
-    v, err := apply(fn, nil)
+    v, err := applyWithCtx(fn, nil, evalCtx{dyn: ectx.dyn})
     if err != nil {
       fmt.Fprintf(os.Stderr, "spawn: %v\n", err)
       msg = List(MakeAtom(":error"), MakeStr(err.Error()))

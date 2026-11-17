@@ -12,8 +12,10 @@ package lib
 
 import (
   "fmt"
+  "net/http"
   "os"
   "path/filepath"
+  "strconv"
   "strings"
   "testing"
   "time"
@@ -313,4 +315,74 @@ func TestDynRueckrufTrace(t *testing.T) {
 
 func TestDynRueckrufOhneBindungUnveraendert(t *testing.T) {
   evalStdlibEq(t, dv4+`(list (mapcar 'dv4-g '(1)) (funcall #'dv4-g) (sort '(2 1) #'<) (format nil "~/dv4-g/" 0))`, `((1) 1 (1 2) "1")`)
+}
+
+// ── Schritt 5: Goroutinen erben die Bindungen (Spec §3.5) ──
+
+const dv5 = `(defvar *dv5-x* 1) (defun dv5-g () *dv5-x*) `
+
+func TestDynGoroutineParfunc(t *testing.T) {
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 5)) (parfunc r (dv5-g) (dv5-g)) r)`, "(5 5)")
+}
+
+func TestDynGoroutinePoolMap(t *testing.T) {
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 5)) (pool-map 2 (lambda (e) (+ e (dv5-g))) '(1 2 3)))`, "(6 7 8)")
+}
+
+func TestDynGoroutineSpawn(t *testing.T) {
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 5)) (chan-recv (spawn #'dv5-g)))`, "(:ok 5)")
+  evalStdlibEq(t, dv5+`(chan-recv (spawn (lambda () (dv5-g))))`, "(:ok 1)")
+}
+
+func TestDynGoroutineGaCalc(t *testing.T) {
+  evalStdlibEq(t, dv5+`(define ga (ga-create 'bit1 5 4 (lambda (g) (dv5-g)))) (ga-init ga)
+    (let ((*dv5-x* 7)) (ga-calc ga)) (ga-result ga)`, "(7.0 7.0 7.0 7.0)")
+  // nach dem let: wieder der globale Wert
+  evalStdlibEq(t, dv5+`(define ga (ga-create 'bit1 5 4 (lambda (g) (dv5-g)))) (ga-init ga)
+    (let ((*dv5-x* 7)) (ga-calc ga)) (ga-calc ga) (ga-result ga)`, "(1.0 1.0 1.0 1.0)")
+}
+
+func TestDynGoroutineSetqTeiltBindung(t *testing.T) {
+  evalStdlibEq(t, dv5+`(list (let ((*dv5-x* 5)) (parfunc r (setq *dv5-x* 9)) *dv5-x*) *dv5-x*)`, "(9 1)")
+  evalStdlibEq(t, dv5+`(list (let ((*dv5-x* 5)) (chan-recv (spawn (lambda () (setq *dv5-x* 9)))) *dv5-x*) *dv5-x*)`, "(9 1)")
+}
+
+func TestDynGoroutineLetBleibtImWorker(t *testing.T) {
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 5)) (parfunc r (let ((*dv5-x* 8)) (dv5-g))) (list r *dv5-x*))`, "((8) 5)")
+}
+
+// Für -race: viele Worker schreiben und lesen dieselbe geerbte Box.
+func TestDynGoroutineRaceSetq(t *testing.T) {
+  var b strings.Builder
+  for i := 1; i <= 32; i++ {
+    fmt.Fprintf(&b, " (begin (setq *dv5-x* %d) (dv5-g))", i)
+  }
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 0)) (parfunc r`+b.String()+`) (list (length r) (> *dv5-x* 0))) *dv5-x*`, "1")
+  evalStdlibEq(t, dv5+`(let ((*dv5-x* 0)) (pool-map 8 (lambda (e) (setq *dv5-x* e) (dv5-g)) '(1 2 3 4 5 6 7 8 9 10 11 12)) (> *dv5-x* 0))`, "t")
+}
+
+// HTTP-Handler beginnen ohne Bindungen (Spec §3.5): der Handler läuft in
+// einer Server-Goroutine, während der Starter noch im let steckt.
+func TestDynGoroutineHTTPHandlerOhneBindung(t *testing.T) {
+  ws, env := wsTestServer(t)
+  srv := &Cell{Type: LIST, Env: ws}
+  evalCode(t, env, `(%declare-special '*dv5-h*) (define *dv5-h* 1) (define dv5-got nil)`)
+  handler := evalCode(t, env, `(lambda (f c) (setq dv5-got *dv5-h*))`)
+  if _, err := fnHTTPUpload([]*Cell{srv, MakeStr("/up"), handler}); err != nil {
+    t.Fatalf("http-upload: %v", err)
+  }
+  url := "http://127.0.0.1:" + strconv.Itoa(ws.port) + "/up"
+  _ = env.Set("dv5-post", makeFn(func([]*Cell) (*Cell, error) {
+    body, ct := multipartBody(t, "file", "a.txt", "x")
+    resp, err := http.Post(url, ct, body)
+    if err != nil {
+      return nil, err
+    }
+    resp.Body.Close()
+    return MakeInt(int64(resp.StatusCode)), nil
+  }))
+  got := evalCode(t, env, `(let ((*dv5-h* 7)) (list (dv5-post) *dv5-h* dv5-got))`)
+  if got.String() != "(200 7 1)" {
+    t.Fatalf("got %s, want (200 7 1)", got)
+  }
 }

@@ -19,18 +19,19 @@ import (
 
 // gaHandle verpackt einen GA als Lisp-Objekt in Cell.Env.
 type gaHandle struct {
-  ga *GA
+  ga  *GA
+  dyn *dynBinding // Bindungen des laufenden ga-calc für die Fitness (Spec §3.5)
 }
 
 // makeGACell erzeugt einen opaken Handle fuer einen GA.
-func makeGACell(ga *GA) *Cell {
+func makeGACell(h *gaHandle) *Cell {
   return &Cell{
     Type: FUNC,
     Val:  "ga",
     Fn: func(_ []*Cell) (*Cell, error) {
       return nil, fmt.Errorf("ga: Handle ist kein aufrufbares Objekt")
     },
-    Env: &gaHandle{ga: ga},
+    Env: h,
   }
 }
 
@@ -123,7 +124,8 @@ func genomeToCell(ga *GA, genome []byte) (*Cell, error) {
 }
 
 // makeLispGenFunc erzeugt einen Go-Fitness-Callback, der eine Lisp-Funktion aufruft.
-func makeLispGenFunc(ga *GA, fn *Cell) GenFunc {
+func makeLispGenFunc(h *gaHandle, fn *Cell) GenFunc {
+  ga := h.ga
   return func(genome []byte) (score float64) {
     defer func() {
       if r := recover(); r != nil {
@@ -134,7 +136,7 @@ func makeLispGenFunc(ga *GA, fn *Cell) GenFunc {
     if err != nil {
       return 0
     }
-    result, err := apply(fn, []*Cell{genomeCell})
+    result, err := applyWithCtx(fn, []*Cell{genomeCell}, evalCtx{dyn: h.dyn})
     result = Primary(result)
     if err != nil || result == nil || result.Type != NUMBER {
       return 0
@@ -169,8 +171,9 @@ func fnGaCreate(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, fmt.Errorf("ga-create: %v", err)
   }
-  ga.genFunc = makeLispGenFunc(ga, fn)
-  return makeGACell(ga), nil
+  h := &gaHandle{ga: ga}
+  ga.genFunc = makeLispGenFunc(h, fn)
+  return makeGACell(h), nil
 }
 
 // fnGaInit: (ga-init ga) -> t
@@ -208,7 +211,7 @@ func fnGaCross(args []*Cell) (*Cell, error) {
 }
 
 // fnGaCalc: (ga-calc ga) -> t
-func fnGaCalc(args []*Cell) (*Cell, error) {
+func fnGaCalc(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("ga-calc: 1 Argument erwartet")
   }
@@ -216,7 +219,13 @@ func fnGaCalc(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  if err := GaCalc(ga); err != nil {
+  // Gesetzt vor dem Start der Worker, gelöscht nach ihrem Ende (GaCalc
+  // wartet); paralleles ga-calc auf denselben GA war schon vorher ein Race.
+  h := args[0].Env.(*gaHandle)
+  h.dyn = ectx.dyn
+  err = GaCalc(ga)
+  h.dyn = nil
+  if err != nil {
     return nil, fmt.Errorf("ga-calc: %v", err)
   }
   return MakeAtom("t"), nil
@@ -311,7 +320,7 @@ func RegisterGenAlg(env *Env) {
   _ = env.Set("ga-create", makeFn(fnGaCreate))
   _ = env.Set("ga-init", makeFn(fnGaInit))
   _ = env.Set("ga-cross", makeFn(fnGaCross))
-  _ = env.Set("ga-calc", makeFn(fnGaCalc))
+  _ = env.Set("ga-calc", makeCtxFn(fnGaCalc))
   _ = env.Set("ga-select", makeFn(fnGaSelect))
   _ = env.Set("ga-result", makeFn(fnGaResult))
   _ = env.Set("ga-mut", makeFn(fnGaMut))

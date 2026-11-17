@@ -29,8 +29,8 @@ func TestDynIstSetqInLet(t *testing.T) {
 }
 
 func TestDynIstParfuncInLet(t *testing.T) {
-  // ändert sich: Spec §3.5 (Worker erben die Bindung → (5 5))
-  evalStdlibEq(t, dynIstVorspann+`(let ((*x* 5)) (parfunc r (g) (g)) r)`, "(1 1)")
+  // Spec §3.5
+  evalStdlibEq(t, dynIstVorspann+`(let ((*x* 5)) (parfunc r (g) (g)) r)`, "(5 5)")
 }
 
 func TestDynIstClosureAusLet(t *testing.T) {

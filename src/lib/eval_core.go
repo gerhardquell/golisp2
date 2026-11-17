@@ -457,8 +457,16 @@ func resolveFn(env *Env, fn *Cell) *Cell {
   if fn == nil || fn.Type != ATOM {
     return fn
   }
-  if v, err := env.Root().GetSym(fn); err == nil && (v.Type == FUNC || v.Type == LAMBDA) {
+  root := env.Root()
+  v, err := root.GetSym(fn)
+  if err == nil && (v.Type == FUNC || v.Type == LAMBDA) {
     return v
+  }
+  if err != nil {
+    // funcall/apply/mapcar 'x in einer Sandbox: Sperrmeldung statt "keine Funktion"
+    if serr := sandboxSperre(root, fn.Val); serr != nil {
+      return makeFn(func([]*Cell) (*Cell, error) { return nil, serr })
+    }
   }
   return fn
 }

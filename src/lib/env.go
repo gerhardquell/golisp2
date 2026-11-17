@@ -159,7 +159,7 @@ func (e *Env) getSymDyn(sym *Cell, dyn *dynBinding) (*Cell, error) {
       return val, nil
     }
     e.mu.RUnlock()
-    return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", sym.Val)
+    return nil, unbekanntesSymbol(e, sym.Val)
   }
   if e.singleSym == sym {
     val := e.singleVal
@@ -263,7 +263,7 @@ func (e *Env) Get(name string) (*Cell, error) {
       return val, nil
     }
     e.mu.RUnlock()
-    return nil, fmt.Errorf("env: unbekanntes Symbol '%s'", name)
+    return nil, unbekanntesSymbol(e, name)
   }
   if e.singleSym != nil && e.singleSym.Val == name {
     val := e.singleVal

@@ -2711,6 +2711,18 @@ Abfragen bei sigoREST, kostenlos: Kosten im Zeitfenster (Unix-Sekunden wie `now`
 (gethash "input_cost" (sigo-model-info "zai-glm53-f"))   ; => 0.07
 ```
 
+### make-sandbox / sandbox-eval
+
+**Syntax:** `(make-sandbox &key zeitlimit erlaube)`, `(sandbox-eval sb form-oder-string)`
+
+Eigene Root-Umgebung für KI-Code: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen, `sigo` und Datei lesen sind erlaubt; `system`, `exec`, `load`, Datei schreiben, `getenv`, `exit`, Dienste u. a. sind gesperrt und lassen sich per `:erlaube` einzeln freigeben. Ein String wird ganz gelesen (alle Formen, Wert der letzten). Definitionen bleiben in der Sandbox.
+
+```lisp
+(define sb (make-sandbox))
+(sandbox-eval sb "(defun fib (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))) (fib 10)") ; => 55
+(sandbox-eval sb '(system "ls"))  ; Fehler: sandbox: system nicht erlaubt (freigeben mit :erlaube)
+```
+
 ## Genetische Algorithmen
 
 ### ga-create

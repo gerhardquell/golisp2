@@ -28,6 +28,9 @@ import (
 const defaultExecTimeout = 60 * time.Second
 
 func evalExec(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  if err := sandboxSperre(env.Root(), "exec"); err != nil {
+    return nil, err
+  }
   if args == nil || args.Car == nil {
     return nil, fmt.Errorf("exec: Programmname erwartet")
   }

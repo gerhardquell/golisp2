@@ -172,6 +172,9 @@ func BaseEnv() *Env {
 	// Dynamische Variablen: special-Namen (defvar/defparameter)
 	RegisterDynvar(env)
 
+	// Sandbox für KI-Code (sandbox.go)
+	RegisterSandbox(env)
+
 	return env
 }
 

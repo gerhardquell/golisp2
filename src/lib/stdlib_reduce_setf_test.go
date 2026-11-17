@@ -71,7 +71,10 @@ func TestReduceCL(t *testing.T) {
   // start/end
   evalStdlibEq(t, `(reduce + '(1 2 3 4 5) :start 1 :end 4)`, "9")
   // key: ohne init bleibt erstes Element roh, Rest durch key
-  evalStdlibEq(t, `(reduce + '(2 3 4) :key (lambda (x) (* x x)))`, "27") // 2 + 9 + 16
+  // :key gilt auch für das erste Element (CL, SBCL-Referenz)
+  evalStdlibEq(t, `(reduce + '(2 3 4) :key (lambda (x) (* x x)))`, "29") // 4 + 9 + 16
+  evalStdlibEq(t, `(reduce + '(5) :key (lambda (x) (* x x)))`, "25")
+  evalStdlibEq(t, `(reduce - '(1 2 3) :key (lambda (x) (* 10 x)) :from-end t)`, "20")
   evalStdlibEq(t, `(reduce + '(2 3 4) :initial-value 0 :key (lambda (x) (* x x)))`, "29")
   // max/min (interne reduce-Nutzer) müssen mitwandern
   evalStdlibEq(t, `(max 3 1 4 1 5)`, "5")

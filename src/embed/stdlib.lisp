@@ -98,7 +98,7 @@
         (%reduce-fold f s initial-value key from-end)
         (if (null s)
             (error "reduce: leere Sequenz ohne :initial-value")
-            (%reduce-fold f (cdr s) (car s) key from-end)))))
+            (%reduce-fold f (cdr s) (if key (funcall key (car s)) (car s)) key from-end)))))
 
 (defun for-each (f lst)
   (if (null lst)

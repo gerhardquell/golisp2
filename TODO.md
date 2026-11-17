@@ -12,8 +12,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 - [ ] Lispbuch: Remote anlegen? (Repo hat keinen — 6 Commits nur lokal)
 - [ ] Lispbuch: `src/ch2/` und `src/chapters/` driften — Kap. 8/12/16/24/27
       in ch2 älter (ohne sort/sqrt-Fixes), Kap. 1 in ch2 neuer. Richtung?
-- [ ] Lispbuch-`CLAUDE.md`: Sprachabschnitt veraltet („keine Hash-Maps",
-      „KEIN CL-Condition-System").
+- [x] Lispbuch-`CLAUDE.md`: Sprachabschnitt veraltet („keine Hash-Maps",
+      „KEIN CL-Condition-System"). Erledigt 17.11. mit dem Ersetzen durch die aktuelle Zutat (a696670).
 - [x] Printer: Große Floats erscheinen in Exponentialschreibweise
       (geprüft 19.10.: `(now)` → `1.7924418639679012e+09`). Erledigt 20.10.: Regel wie
       Python-`repr` (Festkomma 1e-4 ≤ |x| < 1e16), eine Quelle `FormatNumber`.

@@ -409,11 +409,11 @@ func fnEql(args []*Cell) (*Cell, error) {
 	return MakeNil(), nil
 }
 
-// random: (random) → nichtnegative Ganzzahl; (random n) → Ganzzahl in
+// random: (random) → Float in [0, 1); (random n) → Ganzzahl in
 // [0, n) für Ganzzahl n, Float in [0, n) für Float n.
 func fnRandom(args []*Cell) (*Cell, error) {
 	if len(args) == 0 {
-		return MakeInt(rand.Int63()), nil
+		return MakeNum(rand.Float64()), nil
 	}
 	if err := checkNumbers("random", args[:1]); err != nil {
 		return nil, err

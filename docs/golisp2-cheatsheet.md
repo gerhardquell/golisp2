@@ -208,6 +208,7 @@ Ganzzahl, `42.0` ein Float. Details: `docs/lisp-semantik.md`, Abschnitt „Zahle
 (integerp 3) (floatp 3.0)         ; → t t   Zahlart prüfen
 (random 10)                       ; → Ganzzahl in [0,10)
 (random 1.0)                      ; → Float in [0,1)
+(random)                          ; → Float in [0,1)
 (values 1 2 3)                    ; Multi-Values
 ```
 Index und Anzahl müssen Ganzzahlen sein: `(nth 2.0 l)` ist ein Fehler,

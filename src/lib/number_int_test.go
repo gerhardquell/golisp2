@@ -274,7 +274,7 @@ func TestIntZahlart(t *testing.T) {
     want NumKind
   }{
     {`(random 10)`, NumInt},
-    {`(random)`, NumInt},
+    {`(random)`, NumFloat},
     {`(random 1.0)`, NumFloat},
     {`(random 10.0)`, NumFloat},
     {`(+ 1 2)`, NumInt},
@@ -294,6 +294,19 @@ func TestIntZahlart(t *testing.T) {
     }
     if got = Primary(got); got.Type != NUMBER || got.NumKind != c.want {
       t.Errorf("eval(%q) = %s mit Zahlart %d, want %d", c.src, got, got.NumKind, c.want)
+    }
+  }
+}
+
+// TestRandomOhneArgument: (random) → Float in [0,1), wie es die Demos mit (< (random) 0.4) erwarten.
+func TestRandomOhneArgument(t *testing.T) {
+  for i := 0; i < 200; i++ {
+    c, err := evalStr(`(random)`)
+    if err != nil {
+      t.Fatal(err)
+    }
+    if c.NumKind != NumFloat || c.Num < 0 || c.Num >= 1 {
+      t.Fatalf("(random) = %v, will Float in [0,1)", c)
     }
   }
 }

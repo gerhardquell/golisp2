@@ -67,11 +67,13 @@ func freshLine(out *strings.Builder, n int) {
 }
 
 // emitPadded: ~A/~S mit mincol,colinc,minpad,padchar. at=rechtsbündig (CL: ~@A füllt links).
-func emitPadded(st *fmtState, s string, params []pval, at bool) {
+// CL 22.3: v-Parameter verbrauchen ihre Argumente vor dem Wert.
+func emitPadded(st *fmtState, render func(*Cell) string, params []pval, at bool) {
   mincol := resolveInt(st, paramGet(params, 0), 0)
   colinc := resolveInt(st, paramGet(params, 1), 1)
   minpad := resolveInt(st, paramGet(params, 2), 0)
   padchar := resolveRune(st, paramGet(params, 3), ' ')
+  s := render(st.consume())
   if colinc < 1 {
     colinc = 1
   }
@@ -182,15 +184,25 @@ func emitR(st *fmtState, params []pval, colon, at bool) {
   baseParam := paramGet(params, 0)
   if baseParam.kind != pMissing {
     base := resolveInt(st, baseParam, 10)
-    n := toInt(st.consume())
+    c := st.consume()
     if base < 2 || base > 36 {
       st.err = fmt.Errorf("format: ~R base %d außerhalb 2..36", base)
       return
     }
-    st.out.WriteString(strconv.FormatInt(n, base))
+    // CL 22.3.2.1: ~nR wie ~D — Nicht-Ganzzahl wird wie ~A gedruckt
+    if c == nil || c.Type != NUMBER || c.NumKind != NumInt {
+      st.out.WriteString(aesthetic(c))
+      return
+    }
+    st.out.WriteString(strconv.FormatInt(c.Int, base))
     return
   }
-  n := toInt(st.consume())
+  c := st.consume()
+  if c == nil || c.Type != NUMBER || c.NumKind != NumInt {
+    st.err = fmt.Errorf("format: ~R ohne Basis braucht eine Ganzzahl, nicht %s", aesthetic(c))
+    return
+  }
+  n := c.Int
   if colon && at {
     // old roman
     st.out.WriteString(oldRoman(int(n)))

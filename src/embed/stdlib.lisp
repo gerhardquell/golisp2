@@ -52,7 +52,10 @@
 (defun length (lst)
   (define (len-acc l n)
     (if (null l) n (len-acc (cdr l) (+ n 1))))
-  (if (eq (%cell-type lst) 'vector) (%vector-length lst) (len-acc lst 0)))
+  (case (%cell-type lst)
+    (vector (%vector-length lst))
+    (string (string-length lst))
+    (t (len-acc lst 0))))
 
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))

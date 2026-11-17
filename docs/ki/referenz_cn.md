@@ -106,7 +106,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 算术/比较
 `+ - * / mod rem remainder abs floor ceiling truncate round ash random values sqrt exp log expt` —— `(log x)` 仅自然对数，x > 0；`expt` 也支持负数/分数指数（`(expt 0.9 -2)`），NaN/Inf → 报错；`mod` 同 CL 向下取整（`(mod -3 2)` → 1），`rem`/`remainder` 向零取整（→ -1）
 `(floor x [d])` `ceiling` `truncate` `round` 同 CL：返回两个值（商、余数）—— `(truncate 7 2)` → `3 1`；`round` 取偶（`(round 2.5)` → 2，`(round 3.5)` → 4）；`(ash x n)` 位移，n < 0 时右移
-**两种数字：** 整数（`int64`：`42`、`-7`）和浮点数（`float64`：`3.14`、`1e3`、`1.`）。浮点数打印时总带小数点：`3.0`。`+ - *`：全是整数 → 整数，有一个浮点数 → 浮点数（`(* 1.5 2)` → `3.0`）。`(/ 6 2)` → `3`，`(/ 7 2)` → `3.5`。`floor ceiling truncate round` → 总是整数；`sqrt exp log` → 总是浮点数（`(sqrt 16)` → `4.0`）。**溢出 = 报错**（`*: Ganzzahl-Überlauf`），没有大整数。索引/个数（`nth aref substring iota dotimes loop repeat` 等）必须是整数 —— `(nth 2.0 l)` → 报错；请用 `(floor x)`。`(random 10)` → 整数，`(random 1.0)` → 浮点数。`integerp` `floatp` 判断数字种类，`(float 3)` → `3.0`。
+**两种数字：** 整数（`int64`：`42`、`-7`）和浮点数（`float64`：`3.14`、`1e3`、`1.`）。浮点数打印时总带小数点：`3.0`。`+ - *`：全是整数 → 整数，有一个浮点数 → 浮点数（`(* 1.5 2)` → `3.0`）。`(/ 6 2)` → `3`，`(/ 7 2)` → `3.5`。`floor ceiling truncate round` → 总是整数；`sqrt exp log` → 总是浮点数（`(sqrt 16)` → `4.0`）。**溢出 = 报错**（`*: Ganzzahl-Überlauf`），没有大整数。索引/个数（`nth aref substring iota dotimes loop repeat` 等）必须是整数 —— `(nth 2.0 l)` → 报错；请用 `(floor x)`。`(random 10)` → 整数，`(random 1.0)` 和 `(random)` → [0, 1) 内的浮点数。`integerp` `floatp` 判断数字种类，`(float 3)` → `3.0`。
 `(parse-int "42")` → 整数，`(parse-float "4.5")` → 浮点数 —— 仅十进制，无进制参数；无效输入 → 报错（不是 `nil`）
 `= /= < > >= <= equal? eql eq eq?` —— 数值比较为 CL 链式：`(< 1 2 3)` → `t`，`(/= 1 2 3)` → `t`（两两不同）；`eq`=指针，`=` 按值比较（`(= 1 1.0)` → `t`）；`eql` 同 CL（数字按种类和值：`(eql 1 1.0)` → `()`，字符串从不相等），`equal?`=结构比较，数字同 `eql`（哈希表、向量、通道只按同一性比较，同 CL `equal`）
 

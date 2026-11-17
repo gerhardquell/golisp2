@@ -274,7 +274,7 @@ Das gilt für Printer, `~a` und `number->string` (`numberStr`/`FormatNumber`,
 | `floor ceiling truncate round` | Ergebnis immer Ganzzahl | `(floor 3.7)` → `3` |
 | `sqrt exp log` | immer Float | `(sqrt 16)` → `4.0` |
 | `expt` | Ganzzahl hoch Ganzzahl ≥ 0 → Ganzzahl, sonst Float | `(expt 2 10)` → `1024`, `(expt 2 -1)` → `0.5` |
-| `random` | `(random 10)` → Ganzzahl, `(random 1.0)` → Float in [0, 1) | |
+| `random` | `(random 10)` → Ganzzahl, `(random 1.0)` und `(random)` → Float in [0, 1) | |
 | `ash` | nur Ganzzahlen | `(ash 1 10)` → `1024` |
 
 **Überlauf ist ein Fehler**, kein stiller Wechsel zu Float:

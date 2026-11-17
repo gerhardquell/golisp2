@@ -272,6 +272,15 @@ gerade ist — `(/ 7 2)` → `3.5`. Abhilfe: `(nth (floor n 2) l)`.
 `(= 9007199254740993 9007199254740992.0)` → `t`. Beim gemischten Vergleich
 wird die Ganzzahl nach Float gewandelt. Ganzzahl gegen Ganzzahl ist exakt.
 
+### G9. `(random)`, `~va`, `(length "abc")`, `~r` mit Float  [FIXED 0.32.0, 20261117]
+- `(random)` ohne Argument liefert einen Float aus [0, 1) (vorher eine große Ganzzahl —
+  `(< (random) 0.4)` in den Demos war dadurch fast nie wahr).
+- `~va`/`~vs` verbrauchen den Breiten-Parameter vor dem Wert (CL 22.3), wie schon `~vd`:
+  `(format nil "~va|" 5 3)` → `"3    |"`.
+- `(length "abc")` → `3` (vorher `cdr: Liste erwartet`).
+- `~r` ohne Basis mit Float ist ein Fehler (CL verlangt eine Ganzzahl), vorher still gekürzt;
+  `~nr` druckt einen Float wie `~a`, wie `~d`.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

@@ -95,6 +95,52 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       20-Nachrichten-Fensters; Retrieval über `/v1/embeddings` statt Komplett-Referenz;
       sigoREST (anderes Repo): Thinking pro Request abschalten.
 
+## 6. Offen nach dem Ganzzahl-Typ (16.11.2026, Stand 0.31.1)
+
+Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
+`docs/lisp-semantik.md` (Zahlen), `docs/golisp2-fehler.md` (Abschnitt G).
+
+### Entscheidungen (Gerhard)
+
+- [ ] `ash-left`/`ash-right` (`stdlib.lisp`) und `MakeNumber` (`types_helpers.go`)
+      haben keine Aufrufer mehr — löschen? (`ash-*` wäre Breaking.)
+- [ ] Zellgröße 112 → 96 Byte: `LispType` als `uint8`, `SrcLine` als `int32`.
+      Eigener Schritt, vorher und nachher messen.
+- [ ] Worktree `.worktrees/ganzzahl-typ` und Zweig `ganzzahl-typ` entfernen?
+
+### Fehler (geprüft 16.11., nicht angefasst)
+
+- [x] `(random)` ohne Argument liefert eine große Ganzzahl statt `[0,1)`.
+      `tests/genetic-programming-demo.lisp` und `tests/demo-utils.lisp` rechnen mit
+      `(< (random) 0.4)` deshalb falsch. Erledigt 17.11. (0.32.0): Float aus `[0,1)`.
+- [x] `~va` verbraucht den Breiten-Parameter in falscher Reihenfolge:
+      `(format nil "~va|" 5 3)` → `"5  |"` statt `"3    |"`. Bei `~vd` schon behoben.
+      Erledigt 17.11.: `~a`/`~s` lösen v-Parameter vor dem Wert auf.
+- [x] `(length "abc")` → `cdr: Liste erwartet`. Erledigt 17.11.: `length` kennt Strings.
+- [x] `~r` kürzt einen Float still (`~d` druckt ihn seit 0.31.0 wie `~a`). Erledigt 17.11.:
+      `~r` ohne Basis → Fehler (CL), `~nr` wie `~d`. `~p` war kein Fehler (1.5 ≠ 1 → Plural, CL).
+
+### Noch zu prüfen
+
+- [ ] Postgres gegen echte Datenbank: `int2/int4/int8` exakt, Ganzzahl-Parameter als `int64`.
+- [ ] sigo gegen sigoREST: Token-Zahlen als Ganzzahl.
+- [ ] SLIME/Emacs: Inspector und REPL mit den neuen Druckformen (`3.0`).
+- [ ] Code außerhalb des Repos auf die Breaking Changes durchsehen (golisp2web,
+      Space Beagle, `/u/ki-projekte`): `~N:a`, kleines `~x`, `(eql 1 1.0)`, Druckform
+      `4.0`, Float als Index, Überlauf als Fehler.
+
+### Doku in anderen Repos
+
+- [ ] Kopien der KI-Referenz sagen noch „Zahl (64-bit Float)“: `golisp2-ide`,
+      `ai-vergleiche`, `OpenCEM`, `sixhat`, `lispbuch`.
+- [ ] Lispbuch Kap. 16 („Float-only“) nachziehen.
+
+### Danach (aus der Analyse vom 15.11.)
+
+- [ ] Dynamische Variablen (`defvar` mit echter Bindung über `let`) — braucht Spec.
+- [ ] Eingeschränktes Env für KI-Code (`(eval (read (sigo …)))`) — braucht Spec.
+- [ ] `destructuring-bind` vollständig; `setf` auf Listen ändert statt neu zu binden.
+
 ## 5. Beim Zusammenführen als erledigt erkannt (19.10.2026)
 
 | Punkt | Beleg |

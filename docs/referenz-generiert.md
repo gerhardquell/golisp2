@@ -299,7 +299,7 @@
 | `println` | Werte mit Newline auf stdout, letztes Argument zurueck |
 | `push` | Makro: wert vor Liste in var einfuegen |
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
-| `random` | Zufallszahl; mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
+| `random` | Zufallszahl; ohne n Float aus [0, 1), mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
 | `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |
 | `read` | String in Lisp-Datenstruktur parsen |
 | `read-line` | eine Zeile von stdin lesen |

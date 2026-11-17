@@ -150,11 +150,9 @@ func formatRun(st *fmtState, ctrl []rune, pos int) (int, bool) {
 
     switch d {
     case 'A', 'a':
-      s := aesthetic(st.consume())
-      emitPadded(st, s, params, at)
+      emitPadded(st, aesthetic, params, at)
     case 'S', 's':
-      s := readable(st.consume())
-      emitPadded(st, s, params, at)
+      emitPadded(st, readable, params, at)
     case 'D', 'd':
       emitRadix(st, params, colon, at, 10)
     case 'B', 'b':

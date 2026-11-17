@@ -596,9 +596,10 @@ Rundet gegen die nächste ganze Zahl ab.
 
 **Syntax:** `(random)  bzw.  (random n)`
 
-Liefert eine Zufallszahl. Ohne Argument eine große ganze Zahl, mit n einen Wert von 0 bis n-1.
+Liefert eine Zufallszahl. Ohne Argument einen Float aus [0, 1), mit einer Ganzzahl n eine Ganzzahl von 0 bis n-1, mit einem Float n einen Float aus [0, n).
 
 ```lisp
+(random)      ; => z. B. 0.7231
 (random 6)
 (random 100)
 ```

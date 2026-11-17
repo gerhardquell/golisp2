@@ -157,3 +157,19 @@ func TestFormatT(t *testing.T) {
 func TestFormatAppendString(t *testing.T) {
   evalEq(t, `(format "x=" "~a" 5)`, `"x=5"`)
 }
+
+// TestFormatVParamVorWert: CL 22.3 — v-Parameter verbrauchen ihr Argument vor dem Wert.
+func TestFormatVParamVorWert(t *testing.T) {
+  evalEq(t, `(format nil "~va|" 5 3)`, `"3    |"`)
+  evalEq(t, `(format nil "~v@a|" 5 3)`, `"    3|"`)
+  evalEq(t, `(format nil "~vs|" 5 "x")`, `"\"x\"  |"`)
+  evalEq(t, `(format nil "~5,,,va|" "*" 3)`, `"3****|"`)
+}
+
+// TestFormatRFloat: ~R ohne Basis braucht eine Ganzzahl (CL), ~nR druckt Nicht-Ganzzahlen wie ~A.
+func TestFormatRFloat(t *testing.T) {
+  evalEq(t, `(format nil "~r" 2)`, `"two"`)
+  evalErr(t, `(format nil "~r" 2.5)`)
+  evalErr(t, `(format nil "~@r" 2.0)`)
+  evalEq(t, `(format nil "~2r" 2.5)`, `"2.5"`)
+}

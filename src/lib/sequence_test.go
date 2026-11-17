@@ -117,3 +117,9 @@ func TestEqlPrimitive(t *testing.T) {
   // Go-Primitive: auch ohne Stdlib vorhanden
   evalEq(t, `(eql 2 2)`, "t")
 }
+
+func TestLengthString(t *testing.T) {
+  evalStdlibEq(t, `(length "abc")`, "3")
+  evalStdlibEq(t, `(length "")`, "0")
+  evalStdlibEq(t, `(length "äöü")`, "3")
+}

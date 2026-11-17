@@ -754,11 +754,13 @@ wenn Pointer-Identität *explizit* gemeint ist.
   `load` wertet die Datei immer im globalen Env aus. Die Closure
   bleibt lexikalisch. Lokale Helfer: `labels`/`flet` oder `(define (f p) ...)`
 - `(eval form)` → **immer in `Env.Root()`**, nie im Lambda-Scope
-- Dynamische Variablen (seit 0.33.0): `defvar`/`defparameter` machen den Namen special.
+- Dynamische Variablen (seit 0.33.0): `defvar`/`defparameter` machen den Namen special
+  (Name ohne `*…*` → Fehler).
   `let`/`let*`/`progv` binden ihn dann dynamisch — aufgerufene Funktionen, Callbacks,
   `eval`/`load` und `parfunc`/`spawn`/`pool-map`-Worker sehen die Bindung:
   `(defvar *t* 1) (defun g () *t*) (let ((*t* 2)) (g))` → `2`.
   Lambda-Parameter, `do`, `multiple-value-bind` mit special-Namen → Fehler.
+  `defparameter` im `let` setzt die Bindung, `makunbound` darin → Fehler.
   Details: `docs/lisp-semantik.md`.
 
 ### Redefine-Policy

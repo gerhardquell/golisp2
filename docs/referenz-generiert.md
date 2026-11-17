@@ -9,6 +9,7 @@
 | `%builtin-subtype?` | Intern: Subtyp-Pruefung in *type-parents* (types.lisp) |
 | `%builtin-type?` | Intern: Pruefung ob Name ein eingebauter Typ ist (types.lisp) |
 | `%cell-type` | Intern: Kern-Typ einer Cell als Symbol (celltype.go) |
+| `%check-special` | Intern: special-Namen pruefen, Fehler ohne *…* (defvar/defparameter, dynvar.go) |
 | `%class-instance?` | |
 | `%cond-coerce` | Intern: Argument in Condition umwandeln (condition.lisp) |
 | `%cond-get` | Intern: Key aus Property-Liste lesen |
@@ -19,7 +20,7 @@
 | `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
 | `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
 | `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
-| `%declare-special` | Intern: Name als special markieren, WARN ohne *…* (defvar/defparameter, dynvar.go) |
+| `%declare-special` | Intern: Name als special markieren (defvar/defparameter, dynvar.go) |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
 | `%file-shared?` | Intern: Datei bereits durch anderes System geladen (defsystem) |

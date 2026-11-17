@@ -178,7 +178,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 宏
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` 基于 `setf`；`defparameter` 总是覆盖，`defvar` 仅在未绑定时赋值
-- **动态变量**（CL `special`，自 0.33.0 起）：`defvar`/`defparameter` 使名字成为 special（不带 `*…*` → `WARN`）。`let`/`let*`/`progv`（因而 `dolist`/`dotimes`/`loop` 也是）对其动态绑定：被调用的函数、回调（`mapcar`、`sort` …）、`eval`/`load` 以及 `parfunc`/`spawn`/`pool-map` 的工作协程都能看到该绑定。`setq` 作用于最内层绑定；`let` 结束后恢复旧值。闭包不会记住该绑定。HTTP/WS/GUI 处理函数只看到全局值
+- **动态变量**（CL `special`，自 0.33.0 起）：`defvar`/`defparameter` 使名字成为 special（不带 `*…*` → 报错，不绑定任何值）。`let`/`let*`/`progv`（因而 `dolist`/`dotimes`/`loop` 也是）对其动态绑定：被调用的函数、回调（`mapcar`、`sort` …）、`eval`/`load` 以及 `parfunc`/`spawn`/`pool-map` 的工作协程都能看到该绑定。`setq` 作用于最内层绑定；`let` 结束后恢复旧值。在 `let` 内 `defparameter` 设置该绑定；在其中 `makunbound` → 报错。若名字已被词法绑定（`defvar` 之前定义的参数），`let` 进行词法绑定。闭包不会记住该绑定。HTTP/WS/GUI 处理函数只看到全局值
 - `(ignore-errors . body)` → 值，出错时为 `()`（只有一个值，没有 condition 对象；`throw`/`return-from` 照常穿过）
 - `(assert form)` → `t` 或报错 `assert failed: form` —— 只接受一个参数，不能自定义信息
 - `(destructuring-bind (a b c) list . body)` —— **仅限扁平模式**：嵌套模式、点对和 `&rest`/`&key`/`&optional` → 报错。取剩余部分：`(destructuring-bind (a b) l …)` 再加 `(cddr l)`

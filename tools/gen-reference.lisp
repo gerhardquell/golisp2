@@ -418,7 +418,8 @@
     (oddp . "t wenn ganze Zahl n ungerade ist (CL), sonst Fehler bei Nicht-Ganzzahl")
     (1+ . "n + 1 (CL)")
     (1- . "n - 1 (CL)")
-    (%declare-special . "Intern: Name als special markieren, WARN ohne *…* (defvar/defparameter, dynvar.go)")
+    (%check-special . "Intern: special-Namen pruefen, Fehler ohne *…* (defvar/defparameter, dynvar.go)")
+    (%declare-special . "Intern: Name als special markieren (defvar/defparameter, dynvar.go)")
     (%ganzzahl-pruefen . "Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg)")
     (zip . "zwei Listen elementweise zu Paaren verbinden")))
 

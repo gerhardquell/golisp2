@@ -310,7 +310,7 @@ Abhilfe: anderer Parametername oder `(let ((*x* p)) …)` im Rumpf.
 Lambda-Listen werden bei der Definition geprüft, nicht beim Aufruf (kostet
 sonst auf dem heißesten Pfad). `(defun alt (*z*) (list *z* (lies)))
 (defvar *z* 1) (alt 2)` → `(2 1)`: `alt` bindet `*z*` lexikalisch, `lies`
-sieht den globalen Wert. Abhilfe: `defvar` vor den Funktionen.
+sieht den globalen Wert. Abhilfe: `defvar` vor den Funktionen. Siehe H8.
 
 ### H5. Closure merkt sich die Bindung nicht  [KNOWN]
 `(defun mach () (let ((*x* 2)) (lambda () *x*)))  (funcall (mach))` → `1`
@@ -324,12 +324,32 @@ einem `let` gestartet wurde. `parfunc`, `spawn`, `pool-map` und `ga-calc`
 erben dagegen die Bindungen; ein `setq` im Worker trifft dieselbe Bindung
 und ist für den Starter sichtbar.
 
-### H7. Interne Variablen umbenannt  [KNOWN]
-Ein `defvar` ohne `*…*` warnt jetzt (`WARN: defvar n ohne *…* — …`).
-Deshalb heißen interne Variablen jetzt `*generic-registry*` (vorher
+### H7. `defvar` ohne `*…*` ist ein Fehler; interne Variablen umbenannt  [KNOWN]
+`(defvar n 1)` → `defvar: n ohne *…* — special-Namen brauchen *n*`
+(ebenso `defparameter`). Zuerst war es nur eine Warnung — dann scheiterten
+nach `(defvar x)` `remove`, `handler-case`, `ignore-errors`, `defstruct` und
+`typecase`, weil die stdlib zur Laufzeit `(lambda (x) …)` erzeugt. Kein
+Teil-Effekt: Nach dem Fehler ist der Name weder gebunden noch special.
+Interne Variablen heißen deshalb `*generic-registry*` (vorher
 `%generic-registry`), `*swank--insp-…*` (vorher `swank--insp-…`) und
 `*tf-err-tag*` (vorher `%tf-err-tag`). Wer sie direkt benutzt hat, muss
 nachziehen.
+
+### H8. `let` auf einen lexikalisch gebundenen special-Namen  [FIXED 0.33.0]
+**Symptom:** `(defun dbl (*p*) (let ((*p* (* *p* 2))) *p*)) (defvar *p* 0)
+(dbl 5)` → `5`: das `let` band dynamisch, gelesen wurde aber der Parameter.
+**Fix:** → `10`. Hält ein lexikalischer Frame den Namen (Parameter von vor
+dem `defvar`), bindet `let`/`let*` ihn lexikalisch weiter; `progv` bleibt
+dynamisch.
+
+### H9. `defparameter` in einer dynamischen Bindung  [FIXED 0.33.0]
+**Symptom:** `(let ((*x* 2)) (defparameter *x* 9) (g))` → `2`, danach
+`*x*` → `9`: der globale Wert wurde gesetzt, die Bindung nicht.
+**Fix:** → `9`, danach `1` — wie CL (`symbol-value`).
+
+### H10. `makunbound` in einer dynamischen Bindung  [FIXED 0.33.0]
+`(let ((*x* 2)) (makunbound '*x*))` entfernte still den globalen Wert. Jetzt
+Fehler `makunbound: *x* ist dynamisch gebunden`.
 
 ---
 

@@ -503,11 +503,22 @@ FUNC/LAMBDA/MACRO), landen aber im `redef-log`.
 wenn er schon gebunden ist und `defvar` den Wert stehen lässt. Das gilt
 global und für immer; `makunbound` entfernt den Wert, nicht die Eigenschaft.
 `define` und `setq` auf Ungebundenes machen nichts special. Ein Name ohne
-`*…*` gibt einmal eine Warnung, weil dann jedes `let` auf ihn dynamisch wird:
+`*…*` ist ein **Fehler** — sonst würde jedes `let` und jedes stdlib-Lambda
+`(lambda (n) …)` auf ihn dynamisch bzw. scheitern:
 
 ```
-WARN: defvar n ohne *…* — jede let-Bindung von n ist jetzt dynamisch
+ERR: defvar: n ohne *…* — special-Namen brauchen *n*
 ```
+
+Kein Teil-Effekt: Nach dem Fehler ist `n` weder gebunden noch special.
+Ebenso wird der Name nicht special, wenn das globale Binden scheitert
+(z. B. `(redefine-policy 'error)` auf eine FUNC-Bindung).
+
+`defparameter` innerhalb einer dynamischen Bindung desselben Namens setzt
+die innerste Bindung (CL `symbol-value`), nicht den globalen Wert:
+`(let ((*x* 2)) (defparameter *x* 9) (g))` → `9`, danach `*x*` → `1`.
+`makunbound` auf einen dynamisch gebundenen Namen ist ein Fehler
+(`makunbound: *x* ist dynamisch gebunden`).
 
 **Binden:** `let`, `let*` und `progv` binden special-Namen dynamisch, für
 die Dauer des Rumpfs. Alles, was in dieser Zeit läuft, sieht die Bindung —
@@ -543,8 +554,19 @@ dann gültigen Wert:
 `flet`/`labels`, `&optional`/`&key`/`&rest`), `do`/`do*` und
 `multiple-value-bind` binden lexikalisch und weisen special-Namen ab:
 `defun: Parameter *x* ist special — mit let binden`. Lambda-Listen werden
-**bei der Definition** geprüft, nicht beim Aufruf. Grenze: Wird das Lambda
-vor dem `defvar` definiert, bindet sein Parameter weiter lexikalisch.
+**bei der Definition** geprüft, nicht beim Aufruf; `do`/`do*` und
+`multiple-value-bind` prüfen alle Variablen, bevor etwas ausgewertet wird.
+Grenze: Wird das Lambda vor dem `defvar` definiert, bindet sein Parameter
+weiter lexikalisch — und ein `let` auf diesen Namen im Rumpf ebenfalls, so
+verhält sich der alte Code durchgehend wie vorher (`progv` bindet immer
+dynamisch):
+
+```lisp
+(defun lies () *z*)
+(defun alt (*z*) (let ((*z* 3)) (list *z* (lies))))
+(defvar *z* 1)
+(alt 2)                          ; → (3 1)
+```
 
 **Goroutinen:** `parfunc`, `spawn`, `pool-map` und die Fitness-Worker von
 `ga-calc` erben die Bindungen, die beim Start galten — dieselbe Bindung,

@@ -235,3 +235,53 @@ func TestSandboxSperrliste(t *testing.T) {
     t.Errorf("Sperrliste geändert:\n got: %q\nwant: %q", got, want)
   }
 }
+
+// Hält die erlaubten BaseEnv-Namen fest (ohne stdlib-Lisp): eine neue
+// Primitive in einer Grundmengen-Gruppe wäre sonst still erlaubt.
+func TestSandboxErlaubtListe(t *testing.T) {
+  root := BaseEnv()
+  var got []string
+  for _, n := range root.Symbols() {
+    if sandboxErlaubt()[n] {
+      got = append(got, n)
+    }
+  }
+  slices.Sort(got)
+  want := []string{
+    "%cell-type", "%check-special", "%declare-special", "%ganzzahl-pruefen",
+    "%list->vector", "%make-struct", "%vector->list", "%vector-length", "*", "+", "-", "/",
+    "/=", "<", "<=", "=", ">", ">=", "abs", "append", "apply", "aref", "arrayp", "aset",
+    "ash", "atom", "atom?", "car", "cdr", "ceiling", "chan-close", "chan-closed?",
+    "chan-make", "chan-recv", "chan-select", "chan-send", "chan-try-recv", "chan-try-send",
+    "clrhash", "concatenate", "cons", "copy-seq", "count", "count-if", "defined-in",
+    "directory-files", "documentation", "drop", "elt", "env-symbols", "eq", "eq?", "eql",
+    "equal?", "err-write", "error", "exp", "expt", "file-exists?", "file-read",
+    "file-stat", "find", "find-if", "float", "floatp", "floor", "format", "format-time",
+    "funcall", "gensym", "get-file-path", "get-universal-time", "get-working-directory",
+    "gethash", "hash-table-count", "hash-table-p", "integerp", "intern", "json-encode",
+    "json-parse", "list", "list->string", "list-tail", "list?", "lock-make", "log",
+    "make-array", "make-hash-table", "map", "mapcar", "maphash", "memstats", "mod", "nil",
+    "now", "nth", "null", "null?", "number->string", "number?", "parse-float", "parse-int",
+    "position", "position-if", "print", "printf", "println", "puthash", "random", "read",
+    "regex-find", "regex-find-all", "regex-match", "regex-replace", "regex-split", "rem",
+    "remainder", "remhash", "round", "shell-assoc", "sigo", "sigo*", "sigo-budget",
+    "sigo-costs", "sigo-model-info", "sigo-models", "sigo-reference", "sigo-request",
+    "sigo-usage", "sleep", "some", "sort", "spawn", "sprintf", "sqrt", "sscanf",
+    "string->list", "string->number", "string-append", "string-contains",
+    "string-downcase", "string-join", "string-length", "string-replace", "string-split",
+    "string-trim", "string-upcase", "string/=", "string<", "string<=", "string=",
+    "string>", "string>=", "string?", "subseq", "substring", "symbol->string",
+    "symbol-name", "symbol?", "t", "take", "truncate", "values", "vector", "vector-pop",
+    "vector-push-extend", "vectorp", "warn",
+  }
+  for _, n := range got {
+    if !slices.Contains(want, n) {
+      t.Errorf("neue Primitive %s: in sandbox.go bewusst erlauben oder sperren", n)
+    }
+  }
+  for _, n := range want {
+    if !slices.Contains(got, n) {
+      t.Errorf("%s nicht mehr erlaubt: Liste hier nachziehen", n)
+    }
+  }
+}

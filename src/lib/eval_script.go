@@ -92,7 +92,9 @@ func evalDefmain(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   if st.body != nil {
     return nil, fmt.Errorf("defmain: bereits definiert in %s:%d", st.path, st.srcLine)
   }
-  st.body = makeLambda(args.Car, wrapBegin(args.Cdr), env)
+  body, err := makeLambda("defmain", args.Car, wrapBegin(args.Cdr), env)
+  if err != nil { return nil, err }
+  st.body = body
   st.takesArgs = n == 1
   st.srcLine = form.SrcLine
   return MakeNil(), nil

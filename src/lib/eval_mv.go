@@ -49,6 +49,7 @@ func evalMultipleValueBind(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if vars.Car == nil || vars.Car.Type != ATOM {
       return nil, fmt.Errorf("multiple-value-bind: Variable muss Symbol sein")
     }
+    if err := rejectSpecial("multiple-value-bind", "Variable", vars.Car); err != nil { return nil, err }
     val := MakeNil()
     if i < len(vals) {
       val = vals[i]

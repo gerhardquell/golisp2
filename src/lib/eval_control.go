@@ -83,6 +83,7 @@ func evalDo(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
       return nil, fmt.Errorf("do: Bindung muss (var init step) sein")
     }
+    if err := rejectSpecial("do", "Variable", spec.Car); err != nil { return nil, err }
     name := spec.Car.Val
     init, err := evalWithCtx(spec.Cdr.Car, env, ectx.child())  // init im äußeren env auswerten
     if err != nil { return nil, err }
@@ -148,6 +149,7 @@ func evalDoStar(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
     if spec == nil || spec.Type != LIST || spec.Car == nil || spec.Car.Type != ATOM {
       return nil, fmt.Errorf("do*: Bindung muss (var init step) sein")
     }
+    if err := rejectSpecial("do*", "Variable", spec.Car); err != nil { return nil, err }
     var init *Cell
     var err error
     if spec.Cdr != nil && spec.Cdr.Type == LIST {
@@ -227,7 +229,8 @@ func evalFlet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       return nil, fmt.Errorf("flet: Definition muss (name (params...) body...) sein")
     }
     name := def.Car.Val
-    lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), env)
+    lam, err := makeLambda("flet", def.Cdr.Car, wrapBegin(def.Cdr.Cdr), env)
+    if err != nil { return nil, err }
     _ = localEnv.Set(name, lam)
   }
   return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())
@@ -245,7 +248,8 @@ func evalLabels(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       return nil, fmt.Errorf("labels: Definition muss (name (params...) body...) sein")
     }
     name := def.Car.Val
-    lam  := makeLambda(def.Cdr.Car, wrapBegin(def.Cdr.Cdr), localEnv)
+    lam, err := makeLambda("labels", def.Cdr.Car, wrapBegin(def.Cdr.Cdr), localEnv)
+    if err != nil { return nil, err }
     _ = localEnv.Set(name, lam)
   }
   return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())

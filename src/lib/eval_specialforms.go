@@ -40,7 +40,8 @@ func defineIn(target *Env, form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
       return nil, fmt.Errorf("define: Funktionsrumpf fehlt")
     }
     name := sig.Car.Val
-    lam  := makeLambda(sig.Cdr, wrapBegin(args.Cdr), env)
+    lam, err := makeLambda("define", sig.Cdr, wrapBegin(args.Cdr), env)
+    if err != nil { return nil, err }
     if err := checkRootRedefine(target, name, lam, form.SrcFile(), form.SrcLine); err != nil { return nil, err }
     if err := target.Set(name, lam); err != nil { return nil, err }
     RegisterDefinition(name, form.SrcFile(), form.SrcLine)
@@ -284,7 +285,8 @@ func evalDefun(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   name := args.Car.Val
   doc, hasDoc, body := extractDocstring(args.Cdr.Cdr)
-  lam  := makeLambda(args.Cdr.Car, wrapBegin(body), env)
+  lam, err := makeLambda("defun", args.Cdr.Car, wrapBegin(body), env)
+  if err != nil { return nil, err }
   // CL: immer global, auch aus let oder Funktionsrumpf. Die Closure (env)
   // bleibt lexikalisch — nur der Name landet im Root-Env.
   root := env.Root()
@@ -300,7 +302,7 @@ func evalDefun(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 }
 
 func evalLambda(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
-  return makeLambda(args.Car, wrapBegin(args.Cdr), env), nil
+  return makeLambda("lambda", args.Car, wrapBegin(args.Cdr), env)
 }
 
 func evalBegin(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
@@ -398,7 +400,8 @@ func evalDefmacro(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   name := args.Car.Val
   doc, hasDoc, body := extractDocstring(args.Cdr.Cdr)
-  lam  := makeLambda(args.Cdr.Car, wrapBegin(body), env)
+  lam, err := makeLambda("defmacro", args.Cdr.Car, wrapBegin(body), env)
+  if err != nil { return nil, err }
   lam.Type = MACRO   // ← einziger Unterschied zu defun!
   // CL: immer global, auch aus let oder Funktionsrumpf. Die Closure (env)
   // bleibt lexikalisch — nur der Name landet im Root-Env.
@@ -430,7 +433,8 @@ func evalMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
        spec.Cdr == nil || spec.Cdr.Type != LIST {
       return nil, fmt.Errorf("macrolet: Bindung muss (name (params...) body...) sein")
     }
-    lam := makeLambda(spec.Cdr.Car, wrapBegin(spec.Cdr.Cdr), env)
+    lam, err := makeLambda("macrolet", spec.Cdr.Car, wrapBegin(spec.Cdr.Cdr), env)
+    if err != nil { return nil, err }
     lam.Type = MACRO
     _ = localEnv.Set(spec.Car.Val, lam)
   }

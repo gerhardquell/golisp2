@@ -143,6 +143,39 @@ func assignLexOrDyn(env *Env, name string, val *Cell, ectx evalCtx) bool {
   return false
 }
 
+// rejectSpecial: Go-Binder binden lexikalisch und weisen special-Namen ab
+// (Spec §3.3). what ist "Parameter" oder "Variable".
+func rejectSpecial(who, what string, sym *Cell) error {
+  if sym != nil && sym.Type == ATOM && isSpecial(sym) {
+    return fmt.Errorf("%s: %s %s ist special — mit let binden", who, what, sym.Val)
+  }
+  return nil
+}
+
+// checkLambdaList prüft alle Namen einer Lambda-Liste bei der Definition
+// (makeLambda), nie beim Aufruf: name, (name default supplied-p),
+// &rest/&body-Name und Dotted-Rest. Ein späteres defvar wirkt nicht zurück.
+func checkLambdaList(who string, params *Cell) error {
+  for p := params; p != nil; p = p.Cdr {
+    if p.Type == ATOM {
+      return rejectSpecial(who, "Parameter", p)  // (a . rest)
+    }
+    if p.Type != LIST || p.Car == nil {
+      return nil
+    }
+    param := p.Car
+    if param.Type != LIST {
+      if err := rejectSpecial(who, "Parameter", param); err != nil { return err }
+      continue
+    }
+    if err := rejectSpecial(who, "Parameter", param.Car); err != nil { return err }
+    if s := param.Cdr; s != nil && s.Type == LIST && s.Cdr != nil && s.Cdr.Type == LIST {
+      if err := rejectSpecial(who, "Parameter", s.Cdr.Car); err != nil { return err }
+    }
+  }
+  return nil
+}
+
 func RegisterDynvar(env *Env) {
   _ = env.Set("%declare-special", makeFn(fnDeclareSpecial))
 }

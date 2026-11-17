@@ -21,8 +21,13 @@ import (
 // makeLambda baut eine Closure-Cell (Type:LAMBDA, Env=Closure).
 // Der gefangene Env braucht keine Markierung: die Frame-Lebensdauer
 // gehoert dem Go-GC, und der haelt die parent-Kette transitiv am Leben.
-func makeLambda(params, body *Cell, env *Env) *Cell {
-  return &Cell{Type: LAMBDA, Car: params, Cdr: body, Env: env}
+// Einziger Erzeuger von LAMBDA/MACRO-Cells, darum hier die special-Prüfung
+// der Lambda-Liste (who = definierende Form für die Fehlermeldung).
+func makeLambda(who string, params, body *Cell, env *Env) (*Cell, error) {
+  if err := checkLambdaList(who, params); err != nil {
+    return nil, err
+  }
+  return &Cell{Type: LAMBDA, Car: params, Cdr: body, Env: env}, nil
 }
 
 // applyLambda wendet eine Lambda/Closure auf Argumente an.

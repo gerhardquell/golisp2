@@ -191,3 +191,75 @@ func TestDynKetteWaechstNicht(t *testing.T) {
     t.Error("Box von b nicht geteilt")
   }
 }
+
+// ── Schritt 3: Binder-Fehler (Spec §3.3, §9.1, §9.2) ──
+
+func dynFehler(t *testing.T, code, want string) {
+  t.Helper()
+  _, err := evalStdlib(t, code)
+  if err == nil || !strings.Contains(err.Error(), want) {
+    t.Errorf("%s\n  Fehler %q erwartet, got %v", code, want, err)
+  }
+}
+
+func TestDynBinderFehlerLambdaListe(t *testing.T) {
+  v := `(defvar *dv3-a* 1) `
+  fehler := func(wer string) string { return wer + ": Parameter *dv3-a* ist special — mit let binden" }
+  for _, c := range []struct{ code, wer string }{
+    {`(defun dv3-f1 (*dv3-a*) 1)`, "defun"},
+    {`(defun dv3-f2 (x &optional *dv3-a*) 1)`, "defun"},
+    {`(lambda (&optional (*dv3-a* 2)) 1)`, "lambda"},
+    {`(lambda (&optional (y 2 *dv3-a*)) 1)`, "lambda"},
+    {`(lambda (&key *dv3-a*) 1)`, "lambda"},
+    {`(lambda (&key (*dv3-a* 2)) 1)`, "lambda"},
+    {`(lambda (&key (y 2 *dv3-a*)) 1)`, "lambda"},
+    {`(lambda (&rest *dv3-a*) 1)`, "lambda"},
+    {`(lambda (x . *dv3-a*) 1)`, "lambda"},
+    {`(defmacro dv3-m1 (&body *dv3-a*) 1)`, "defmacro"},
+    {`(defmacro dv3-m2 (x *dv3-a*) 1)`, "defmacro"},
+    {`(define (dv3-f3 *dv3-a*) 1)`, "define"},
+    {`(flet ((dv3-l (*dv3-a*) 1)) 0)`, "flet"},
+    {`(labels ((dv3-l (*dv3-a*) 1)) 0)`, "labels"},
+    {`(macrolet ((dv3-l (*dv3-a*) 1)) 0)`, "macrolet"},
+    {`(defgeneric dv3-gen (x)) (defmethod dv3-gen ((*dv3-a* t)) 1)`, "lambda"},
+  } {
+    dynFehler(t, v+c.code, fehler(c.wer))
+  }
+  // Fehler bei der Definition: der Name bleibt ungebunden
+  evalStdlibEq(t, v+`(trap (defun dv3-f4 (*dv3-a*) 1) (lambda (e) ())) (bound? 'dv3-f4)`, "()")
+}
+
+func TestDynBinderFehlerDoUndMvb(t *testing.T) {
+  v := `(defvar *dv3-b* 1) `
+  dynFehler(t, v+`(do ((*dv3-b* 0 (+ *dv3-b* 1))) ((= *dv3-b* 3) 0))`, "do: Variable *dv3-b* ist special — mit let binden")
+  dynFehler(t, v+`(do* ((i 0 (+ i 1)) (*dv3-b* 0)) ((= i 3) 0))`, "do*: Variable *dv3-b* ist special — mit let binden")
+  dynFehler(t, v+`(multiple-value-bind (x *dv3-b*) (values 1 2) x)`, "multiple-value-bind: Variable *dv3-b* ist special — mit let binden")
+}
+
+func TestDynBinderNormalerParameter(t *testing.T) {
+  evalStdlibEq(t, `(defvar *dv3-n* 10) (defun dv3-add (x) (+ x *dv3-n*))
+    (list (dv3-add 1) (let ((*dv3-n* 5)) (dv3-add 1)) (funcall (lambda (y) (* y *dv3-n*)) 2))`, "(11 6 20)")
+  evalStdlibEq(t, `(defvar *dv3-n2* 3) (do ((i 0 (+ i 1)) (s 0 (+ s *dv3-n2*))) ((= i 2) s))`, "6")
+}
+
+// Spec §3.3/§9.2: vor dem defvar definiert → bindet weiter lexikalisch.
+func TestDynBinderGrenzeVorDefvar(t *testing.T) {
+  evalStdlibEq(t, `(defun dv3-lies-c () *dv3-c*)
+    (defun dv3-alt (*dv3-c*) (list *dv3-c* (dv3-lies-c)))
+    (defvar *dv3-c* 1)
+    (dv3-alt 2)`, "(2 1)")
+}
+
+// Spec §9.1: Makros, die zu let expandieren, binden dynamisch.
+func TestDynMakrosBindenDynamisch(t *testing.T) {
+  evalStdlibEq(t, `(defvar *dv3-e* 0) (defun dv3-g () *dv3-e*)
+    (let ((acc ())) (dolist (*dv3-e* '(1 2)) (setq acc (cons (dv3-g) acc))) acc)`, "(2 1)")
+  evalStdlibEq(t, `(defvar *dv3-t* 99) (defun dv3-gt () *dv3-t*)
+    (let ((acc ())) (dotimes (*dv3-t* 3) (setq acc (cons (dv3-gt) acc))) (cons *dv3-t* acc))`, "(99 2 1 0)")
+  evalStdlibEq(t, `(defvar *dv3-d* 0) (defun dv3-gd () *dv3-d*)
+    (destructuring-bind (*dv3-d* y) '(5 6) (list (dv3-gd) y))`, "(5 6)")
+  evalStdlibEq(t, `(defvar *dv3-l* 0) (defun dv3-gl () *dv3-l*)
+    (list (loop for *dv3-l* in '(1 2) collect (dv3-gl)) (dv3-gl))`, "((1 2) 0)")
+  evalStdlibEq(t, `(defvar *dv3-w* 0) (defun dv3-gw () *dv3-w*)
+    (list (loop for *dv3-w* from 1 to 2 collect (dv3-gw)) (dv3-gw))`, "((1 2) 0)")
+}

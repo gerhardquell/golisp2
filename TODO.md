@@ -140,8 +140,10 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 - [ ] Kopien der KI-Referenz sagen noch „Zahl (64-bit Float)“: `golisp2-ide`,
       `ai-vergleiche`, `OpenCEM`, `sixhat`, `lispbuch`.
 - [ ] Lispbuch Kap. 16 („Float-only“) nachziehen.
-- [ ] golisp2-lernen, Karte `ganzzahl-pruefen` (`karten/terminalUndProzesse.lisp:16`) lehrt
+- [x] golisp2-lernen, Karte `ganzzahl-pruefen` (`karten/terminalUndProzesse.lisp:16`) lehrt
       die alte Semantik: „`integerp` fehlt“, „`(typep 3.0 'integer)` → t, jede Zahl ist float64“.
+      Erledigt 17.11., ebenso Karte `zufall` (`(random 1.0)` → 0, „shuffle fehlt“); dort
+      nicht committet, Import in die DB steht aus.
 
 ### Danach (aus der Analyse vom 15.11.)
 

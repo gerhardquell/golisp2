@@ -97,7 +97,7 @@
     (*systems* . "Registry der definierten Systeme (defsystem)")
     (*type-parents* . "Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp)")
     (+ . "Addition aller Argumente; alle Ganzzahl → Ganzzahl, ein Float dabei → Float")
-    (- . "Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0")
+    (- . "Subtraktion (erstes minus Rest); (- x) negiert, (-) → Fehler")
     (/ . "Division: alle Ganzzahl und teilbar → Ganzzahl, sonst Float ((/ 7 2) → 3.5); Fehler bei Division durch 0")
     (< . "numerisch kleiner")
     (<= . "numerisch kleiner oder gleich")

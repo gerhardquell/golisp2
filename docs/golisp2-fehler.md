@@ -494,6 +494,13 @@ Datei `()` (wie `sandbox-eval` mit leerem String).
 Tutorial (`type-of`) beschrieben noch das Float-only-Modell vor 0.31.
 **Fix:** `3.0` ist `float`: `(typep 3.0 'integer)` → `()`.
 
+### L3. `(-)` ohne Argumente lieferte `0`  [FIXED 0.36.2]
+**Symptom:** `(-)` → `0`; Common Lisp verlangt mindestens ein Argument.
+Ebenso `(apply - '())`.
+**Fix:** `(-)` → Fehler `-: min. 1 Argument`. `(- x)` negiert weiter,
+`(+)` → `0` und `(*)` → `1` bleiben (wie CL). `(/)` war schon ein Fehler
+(`/: min. 2 Argumente`).
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

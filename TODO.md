@@ -160,7 +160,10 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 - [x] Dynamische Variablen (`defvar` mit echter Bindung über `let`) — braucht Spec.
       Erledigt 17.11. (0.33.0, bis 2ca165f, gepusht, installiert). Regeln: `docs/lisp-semantik.md`,
       `docs/golisp2-fehler.md` Abschnitt H.
-- [ ] Eingeschränktes Env für KI-Code (`(eval (read (sigo …)))`) — braucht Spec.
+- [x] Eingeschränktes Env für KI-Code (`(eval (read (sigo …)))`) — braucht Spec.
+      Erledigt 18.11. (0.34.0): `make-sandbox`/`sandbox-eval`, Sicherheitsreview mit drei
+      Funden (blockierende Operationen, verschachtelte Freigabe, `file-read` auf Geräte) behoben.
+      Regeln: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
 - [ ] `destructuring-bind` vollständig; `setf` auf Listen ändert statt neu zu binden.
 
 ## 5. Beim Zusammenführen als erledigt erkannt (19.10.2026)

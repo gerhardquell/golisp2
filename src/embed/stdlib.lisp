@@ -202,14 +202,16 @@
 ;; nth-value: seit 20260723 Go-Spezialform (eval_mv.go) – früher Makro
 ;; auf nth + multiple-value-list; als Makro hier wäre es toter Code.
 
-;; push/pop – verändern eine Variable
+;; push/pop – verändern eine Variable oder einen setf-Place;
+;; push liefert die neue Liste (CL). Place-Teilformen werden wie bei
+;; incf/decf zweimal ausgewertet.
 (defmacro push (val var)
-  `(set! ,var (cons ,val ,var)))
+  `(setf ,var (cons ,val ,var)))
 
 (defmacro pop (var)
   (let ((tmp (gensym)))
     `(let ((,tmp (car ,var)))
-       (set! ,var (cdr ,var))
+       (setf ,var (cdr ,var))
        ,tmp)))
 
 ;; Assoziationsliste: Wert setzen oder hinzufügen

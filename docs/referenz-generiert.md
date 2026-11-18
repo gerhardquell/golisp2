@@ -288,14 +288,14 @@
 | `pg-query` | SELECT, Liste von Zeilen als Assoziationslisten |
 | `plusp` | CL-Name fuer positive? |
 | `pool-map` | wie mapcar, hoechstens n Aufrufe gleichzeitig; Reihenfolge bleibt, Fehler → (:error text) an der Stelle |
-| `pop` | Makro: erstes Element aus Liste in var entfernen und liefern |
+| `pop` | Makro: erstes Element aus Liste in var/Place entfernen und liefern |
 | `position` | Index des ersten passenden Elements (:test :key) |
 | `position-if` | Index des ersten Elements mit Praedikat (:key) |
 | `positive?` | t, wenn groesser 0 |
 | `print` | Werte ohne Newline auf stdout, letztes Argument zurueck |
 | `printf` | C-Format direkt auf stdout ausgeben |
 | `println` | Werte mit Newline auf stdout, letztes Argument zurueck |
-| `push` | Makro: wert vor Liste in var einfuegen |
+| `push` | Makro: wert vor Liste in var/Place einfuegen, liefert die neue Liste |
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
 | `random` | Zufallszahl; ohne n Float aus [0, 1), mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
 | `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |

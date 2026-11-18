@@ -613,8 +613,8 @@ bei Start automatisch geladen.
 (dolist (x '(1 2 3))
   (println x))
 
-(push 1 var)                      ; var = (cons 1 var)
-(pop var)                         ; car + set!
+(push 1 var)                      ; (setf var (cons 1 var)) → neue Liste; auch Places
+(pop var)                         ; car + setf
 
 (defvar *v* 1)                    ; Definiert, wenn nicht gebunden; *v* wird special
 (defvar *v* 2)                    ; Erstzugriff gewinnt (idempotent)

@@ -103,3 +103,15 @@ func TestBuchluecken20260818DestructuringBind(t *testing.T) {
   evalStdlibEq(t, `(destructuring-bind (a (b c)) '(1 (2 3)) b)`, "2")
   evalStdlibEq(t, `(destructuring-bind (a . b) '(1 2) b)`, "(2)")
 }
+
+// push/pop über setf: push liefert die neue Liste (CL), beide auf Places, 0.36.3
+func TestPushPopRueckgabeUndPlaces(t *testing.T) {
+  evalStdlibEq(t, `(let ((xs '(2 3))) (push 1 xs))`, "(1 2 3)")
+  evalStdlibEq(t, `(let ((xs '(2 3))) (push 1 xs) xs)`, "(1 2 3)")
+  evalStdlibEq(t, `(let ((xs '(2 3))) (pop xs))`, "2")
+  evalStdlibEq(t, `(let ((l (list (list 2) 9))) (push 1 (car l)))`, "(1 2)")
+  evalStdlibEq(t, `(let ((l (list (list 2) 9))) (push 1 (car l)) l)`, "((1 2) 9)")
+  evalStdlibEq(t, `(let ((l (list (list 1 2) 9))) (list (pop (car l)) l))`, "(1 ((2) 9))")
+  evalStdlibEq(t, `(let ((h (make-hash-table))) (push 1 (gethash 'k h)) (push 2 (gethash 'k h)))`, "(2 1)")
+  evalStdlibEq(t, `(defstruct pushpt xs) (let ((p (make-pushpt :xs '(2)))) (list (push 1 (pushpt-xs p)) (pushpt-xs p)))`, "((1 2) (1 2))")
+}

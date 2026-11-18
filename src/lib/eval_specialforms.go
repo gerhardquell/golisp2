@@ -407,9 +407,8 @@ func evalDefmacro(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   }
   name := args.Car.Val
   doc, hasDoc, body := extractDocstring(args.Cdr.Cdr)
-  lam, err := makeLambda("defmacro", args.Cdr.Car, wrapBegin(body), env)
+  lam, err := makeMacro("defmacro", args.Cdr.Car, wrapBegin(body), env)
   if err != nil { return nil, err }
-  lam.Type = MACRO   // ← einziger Unterschied zu defun!
   // CL: immer global, auch aus let oder Funktionsrumpf. Die Closure (env)
   // bleibt lexikalisch — nur der Name landet im Root-Env.
   root := env.Root()
@@ -440,9 +439,8 @@ func evalMacrolet(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
        spec.Cdr == nil || spec.Cdr.Type != LIST {
       return nil, fmt.Errorf("macrolet: Bindung muss (name (params...) body...) sein")
     }
-    lam, err := makeLambda("macrolet", spec.Cdr.Car, wrapBegin(spec.Cdr.Cdr), env)
+    lam, err := makeMacro("macrolet", spec.Cdr.Car, wrapBegin(spec.Cdr.Cdr), env)
     if err != nil { return nil, err }
-    lam.Type = MACRO
     _ = localEnv.Set(spec.Car.Val, lam)
   }
   return evalWithCtx(wrapBegin(args.Cdr), localEnv, ectx.child())

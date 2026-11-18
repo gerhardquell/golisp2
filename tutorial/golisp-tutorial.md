@@ -147,11 +147,14 @@ Setzt mehrere Variablen sequentiell; fehlende Variablen werden neu angelegt.
 
 **Syntax:** `(defmacro name (parameter ...) body ...)`
 
-Definiert ein Makro, das zur Expandierungszeit transformiert wird.
+Definiert ein Makro, das zur Expandierungszeit transformiert wird. Die Lambda-Liste zerlegt wie `destructuring-bind` verschachtelt (CL); bei `defun`/`lambda` ist ein Muster ein Definitionsfehler.
 
 ```lisp
 (defmacro unless (test . body) `(if ,test () (begin ,@body)))
 (unless nil 'ok)
+(defmacro mit-paar ((x y) &body body) `(let ((,x 1) (,y 2)) ,@body))
+(mit-paar (p q) (+ p q))
+; => 3
 ```
 
 ### macroexpand
@@ -1908,15 +1911,17 @@ Liefert mehrere Werte; verwendende Stellen sehen den Hauptwert (CL-multiple-valu
 
 ### destructuring-bind
 
-**Syntax:** `(destructuring-bind (var ...) expr body ...)`
+**Syntax:** `(destructuring-bind lambda-liste expr body ...)`
 
-Bindet Listenelemente an Variablen. Nur flache Muster: Verschachtelung, Punktpaare und Lambda-Keywords (`&rest`, `&key`, `&optional`) sind ein Fehler. Für den Rest der Liste: `(cddr l)` o. ä.
+Spezialform (seit 0.36.0). Wertet `expr` einmal aus und bindet die Liste an die Lambda-Liste wie CL: `&optional`, `&rest`/`&body`, `&key`, Punktpaare auf jeder Ebene und verschachtelte Muster an Pflichtstellen. Falsche Anzahl ist ein Fehler. Muster in `&optional`/`&key`/`&rest` sind ein Fehler, ebenso eine special Variable im Muster (mit `let` binden).
 
 ```lisp
-(destructuring-bind (a b c) '(1 2 3) (list a b c))
-; => (1 2 3)
-(destructuring-bind (a &rest r) '(1 2 3) r)
-; Fehler: destructuring-bind: &rest nicht unterstützt (nur flach, ohne Lambda-Keywords)
+(destructuring-bind ((a b) c &key (d 4)) '((1 2) 3 :d 5) (list a b c d))
+; => (1 2 3 5)
+(destructuring-bind (a (b &optional (c 9)) . r) '(1 (2) 3 4) (list a b c r))
+; => (1 2 9 (3 4))
+(destructuring-bind (a b) '(1) b)
+; Fehler: destructuring-bind: zu wenig Werte (brauche 'b')
 ```
 
 ### defvar

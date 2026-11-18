@@ -163,7 +163,10 @@ func rejectSpecial(who, what string, sym *Cell) error {
 // checkLambdaList prüft alle Namen einer Lambda-Liste bei der Definition
 // (makeLambda), nie beim Aufruf: name, (name default supplied-p),
 // &rest/&body-Name und Dotted-Rest. Ein späteres defvar wirkt nicht zurück.
-func checkLambdaList(who string, params *Cell) error {
+// nested (Makros, destructuring-bind): eine Liste an Pflichtstelle ist ein
+// Muster und wird rekursiv geprüft; sonst ist sie ein Definitionsfehler.
+func checkLambdaList(who string, params *Cell, nested bool) error {
+  pflicht, nachRest := true, false
   for p := params; p != nil; p = p.Cdr {
     if p.Type == ATOM {
       return rejectSpecial(who, "Parameter", p)  // (a . rest)
@@ -172,9 +175,29 @@ func checkLambdaList(who string, params *Cell) error {
       return nil
     }
     param := p.Car
+    if param.Type == NIL && !(pflicht && nested) {  // () ist ein (leeres) Muster
+      if nested {
+        return fmt.Errorf("%s: verschachteltes Muster nur an Pflichtstellen", who)
+      }
+      return fmt.Errorf("%s: Parameter muss Atom sein", who)
+    }
     if param.Type != LIST {
+      switch param.Val {
+      case "&optional", "&key": pflicht, nachRest = false, false
+      case "&rest", "&body": pflicht, nachRest = false, true
+      }
       if err := rejectSpecial(who, "Parameter", param); err != nil { return err }
       continue
+    }
+    switch {
+    case pflicht && nested:
+      if err := checkLambdaList(who, param, true); err != nil { return err }
+      continue
+    case pflicht || nachRest || param.Car.Type != ATOM:
+      if nested {
+        return fmt.Errorf("%s: verschachteltes Muster nur an Pflichtstellen", who)
+      }
+      return fmt.Errorf("%s: Parameter muss Atom sein", who)
     }
     if err := rejectSpecial(who, "Parameter", param.Car); err != nil { return err }
     if s := param.Cdr; s != nil && s.Type == LIST && s.Cdr != nil && s.Cdr.Type == LIST {

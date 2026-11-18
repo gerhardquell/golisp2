@@ -405,6 +405,31 @@ wertet nur die führenden regulären Parameter ohne Zwischen-Slice aus und über
 - `:allow-other-keys t` im Aufruf wird nicht unterstützt — dafür `&allow-other-keys` in der
   Definition.
 
+### Muster: `destructuring-bind` und Makros (seit 0.36.0)
+
+`destructuring-bind` (Spezialform, Rumpf endrekursiv wie bei `let`), `defmacro` und `macrolet`
+binden über denselben Weg und zerlegen zusätzlich verschachtelt wie CL; `lambda`/`defun`
+bleiben flach.
+
+- Eine Liste an einer Pflichtstelle ist selbst eine Lambda-Liste und wird gegen den Wert
+  gebunden, rekursiv. Punktpaare gehen auf jeder Ebene: `(a (b . c) . d)`.
+- Muster nur an Pflichtstellen. In `&optional`/`&key`/`&rest` ist ein Muster ein Fehler, auch
+  `&key ((:kw var) default)` und `&rest (a b)`. In `lambda`/`defun` ist jedes Muster ein
+  Fehler — bei der Definition, mit dem Namen der Form (`defun: Parameter muss Atom sein`).
+- Falsche Anzahl ist ein Fehler (`destructuring-bind: zu wenig Werte (brauche 'b')`,
+  `… zu viele Werte (2 überzählig)`); trifft ein Muster eine Nicht-Liste:
+  `… Liste erwartet für (a b), bekam 5`. In Makros heißt das Präfix `lambda:`.
+- `&rest`/`&body` und Punktpaar binden das Original-Listenende (geteilt, O(1) wie CL), das
+  keine echte Liste sein muss: `(destructuring-bind (a . b) '(1 . 2) b)` → `2`. Mit `&key`
+  wird der Rest kopiert.
+- special-Namen im Muster → Fehler (`… ist special — mit let binden`).
+
+```lisp
+(destructuring-bind ((a b) c &key (d 4)) '((1 2) 3 :d 5) (list a b c d))  ; → (1 2 3 5)
+(defmacro mit-paar ((x y) &body body) `(let ((,x 1) (,y 2)) ,@body))
+(mit-paar (p q) (+ p q))                                                ; → 3
+```
+
 ## Rekursionstiefe und `parfunc`
 
 - `eval` bricht ab, wenn die nicht-tail-rekursive Tiefe `MaxEvalDepth` (Default 100000) überschreitet. Ergebnis ist ein `LispError`, kein Prozessabbruch.
@@ -526,8 +551,7 @@ aufgerufene Funktionen, Callbacks aus Primitiven (`mapcar`, `sort`,
 `reduce`, `maphash`, …), `eval` und `load`. Danach gilt wieder der vorige
 Wert, auch nach `error`, `throw` oder `return-from`. Ein `let` darf
 special- und normale Namen mischen. Makros, die zu `let` expandieren
-(`dolist`, `dotimes`, `destructuring-bind`, `loop … for`), binden dadurch
-ebenfalls dynamisch.
+(`dolist`, `dotimes`, `loop … for`), binden dadurch ebenfalls dynamisch.
 
 ```lisp
 (defvar *x* 1)
@@ -553,9 +577,11 @@ dann gültigen Wert:
 **Binder-Fehler:** Lambda-Parameter (`defun`, `lambda`, `defmacro`,
 `flet`/`labels`, `&optional`/`&key`/`&rest`), `do`/`do*` und
 `multiple-value-bind` binden lexikalisch und weisen special-Namen ab:
-`defun: Parameter *x* ist special — mit let binden`. Lambda-Listen werden
-**bei der Definition** geprüft, nicht beim Aufruf; `do`/`do*` und
-`multiple-value-bind` prüfen alle Variablen, bevor etwas ausgewertet wird.
+`defun: Parameter *x* ist special — mit let binden`. Ebenso
+`destructuring-bind` (seit 0.36.0, auch in verschachtelten Mustern).
+Lambda-Listen werden **bei der Definition** geprüft, nicht beim Aufruf;
+`do`/`do*`, `multiple-value-bind` und `destructuring-bind` prüfen alle
+Variablen, bevor etwas ausgewertet wird.
 Grenze: Wird das Lambda vor dem `defvar` definiert, bindet sein Parameter
 weiter lexikalisch — und ein `let` auf diesen Namen im Rumpf ebenfalls, so
 verhält sich der alte Code durchgehend wie vorher (`progv` bindet immer

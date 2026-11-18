@@ -38,9 +38,10 @@
 | `(begin . body)` | 顺序执行 | 尾调用；别名：`progn`、`locally`；多表达式体通过 `wrapBegin` |
 | `(let (bind) . body)` | 并行绑定 | 支持尾调用 |
 | `(let* (bind) . body)` | 顺序绑定 | 支持尾调用；**原生特殊形式**（不在 stdlib 中——每个绑定都能看到前面的绑定） |
+| `(destructuring-bind lambda-list expr . body)` | 解构列表 | 支持尾调用；自 0.36.0 起为特殊形式。lambda 列表同 CL：必需位置上的嵌套模式、点对、`&optional`/`&rest`/`&key`。数量不符 → 报错（`destructuring-bind: zu wenig Werte (brauche 'b')`（值太少））；`&optional`/`&key`/`&rest` 中的模式 → 报错；模式中的 special 变量 → 报错（用 `let` 绑定） |
 | `(lambda (p) . body)` | 闭包 | `&optional`、`&key`、`&rest`/`&body`、`&allow-other-keys`；`&key` 同 CL：从实参的值中成对读取，首次出现者生效；未知关键字、关键字缺少值、关键字位置上不是关键字 → 报错 |
 | `(defun f (p) . body)` | 全局函数 | 总是全局（同 CL），即使写在 `let` 或函数体内——闭包仍是词法的；局部辅助函数用 `labels`/`flet` 或 `(define (f p) ...)`；多表达式体通过 `wrapBegin` |
-| `(defmacro m (p) . body)` | 全局宏 | 总是全局，同 `defun`；`defstruct` 亦然 |
+| `(defmacro m (p) . body)` | 全局宏 | 总是全局，同 `defun`；`defstruct` 亦然。lambda 列表像 `destructuring-bind` 一样嵌套解构（`macrolet` 亦然）：`(defmacro m ((x y) &body b) …)`；在 `defun`/`lambda` 中模式是定义错误（`defun: Parameter muss Atom sein`） |
 | `(defmain (args) . body)` | 脚本入口 | 仅当文件为主程序时（shebang/`golisp2 f.lisp`）；加载后运行；返回值 = 退出码 0–255；否则为 `nil`。`args` 不含程序名/文件名；只在主文件顶层/特殊形式中生效，经由 `funcall`/`apply`/`mapcar` 不生效 |
 | `(define sym val)` | 变量定义 | 全局或局部；`(define (f p) body)` = `(define f (lambda (p) body))` 的简写 |
 | `(set! sym val)` | 更新一对 | 仅 `env.Update` —— **未绑定时报错**，不新建绑定 |
@@ -177,12 +178,11 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 `remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` —— 仅限列表；`(remove x l)` 用 `equal?` 比较，**没有** `:test`/`:key`（→ 报错 „zu viele Argumente“（参数过多））；`(make-list n :initial-element x)`；`(getf plist key [default])`
 
 ### 宏
-`when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
+`when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` 基于 `setf`；`defparameter` 总是覆盖，`defvar` 仅在未绑定时赋值
 - **动态变量**（CL `special`，自 0.33.0 起）：`defvar`/`defparameter` 使名字成为 special（不带 `*…*` → 报错，不绑定任何值）。`let`/`let*`/`progv`（因而 `dolist`/`dotimes`/`loop` 也是）对其动态绑定：被调用的函数、回调（`mapcar`、`sort` …）、`eval`/`load` 以及 `parfunc`/`spawn`/`pool-map` 的工作协程都能看到该绑定。`setq` 作用于最内层绑定；`let` 结束后恢复旧值。在 `let` 内 `defparameter` 设置该绑定；在其中 `makunbound` → 报错。若名字已被词法绑定（`defvar` 之前定义的参数），`let` 进行词法绑定。闭包不会记住该绑定。HTTP/WS/GUI 处理函数只看到全局值
 - `(ignore-errors . body)` → 值，出错时为 `()`（只有一个值，没有 condition 对象；`throw`/`return-from` 照常穿过）
 - `(assert form)` → `t` 或报错 `assert failed: form` —— 只接受一个参数，不能自定义信息
-- `(destructuring-bind (a b c) list . body)` —— **仅限扁平模式**：嵌套模式、点对和 `&rest`/`&key`/`&optional` → 报错。取剩余部分：`(destructuring-bind (a b) l …)` 再加 `(cddr l)`
 - `macroexpand-1` = `macroexpand`（两者都只展开一层）
 
 **注意：** 这里列出 `let*` 只是照顾 CL 习惯——实际实现是第 2 节中的原生特殊形式
@@ -288,7 +288,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | `(make-hash-table)`（默认 `eql`）中的字符串键 | 按内容：两次 `"rot"` = 同一个键 | `eql` → 同一性，两个 `"rot"` 字面量 = 两个键；需要时用 `:test 'equal` |
 | `(puthash k h v)` | 表在第 2 个位置；优先用 `(setf (gethash k h) v)` | Emacs Lisp：`(puthash k v h)` |
 | `stringp` `consp` `equal` | 不存在 → 报错 „unbekanntes Symbol“（未知符号）；改用 `string?`、`(typep x 'cons)`、`equal?` | 存在 |
-| `destructuring-bind` 使用 `&rest`/`&key`、嵌套、点对 | 报错 —— 仅限扁平模式 | 完全支持 |
+| `&optional`/`&key`/`&rest` 中的模式（`destructuring-bind`、`defmacro`） | 报错 —— 模式只能在必需位置 | 允许 |
 | `(member x l)` | 没有 `:test`；字符串按结构比较 | `eql`（字符串需 `:test 'equal`） |
 | `(last l)` | 返回**元素**，不是 cons 单元 | 最后一个 cons 单元 |
 | `(slurp)` | 读取 **stdin**；读文件 → `(file-read path)` | – |

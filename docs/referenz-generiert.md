@@ -18,8 +18,6 @@
 | `%cond-type?` | Intern: Typ-Pruefung einer Condition |
 | `%cond?` | Intern: Pruefung ob Objekt eine Condition ist |
 | `%cons-type` | Intern: type-of fuer Cons: Condition-, Struct- oder cons-Typ (types.lisp) |
-| `%db-bindings` | Intern: Codegenerator fuer destructuring-bind |
-| `%db-var-pruefen` | Intern: lehnt nicht-flache destructuring-bind-Muster laut ab |
 | `%declare-special` | Intern: Name als special markieren (defvar/defparameter, dynvar.go) |
 | `%deftype-check` | Intern: deftype-Name gegen eingebaute Typen, Structs, Conditions pruefen (types.lisp) |
 | `%deftype-expand` | Intern: deftype-Expander mit Argumenten aufrufen (types.lisp) |
@@ -166,7 +164,6 @@
 | `defsystem` | System aus Dateien (:components) mit Abhaengigkeiten (:depends-on) definieren |
 | `deftype` | Eigener Typname: (deftype ziffer () '(integer 0 9)), mit Parametern (deftype bis (&optional (n '*)) …) |
 | `defvar` | globale Variable definieren, nur wenn ungebunden; Name wird special (dynamisch per let/progv) |
-| `destructuring-bind` | Listenelemente an Variablen binden (flache Muster) |
 | `directory-files` | sortierte Namen in dir, optional Glob-Muster; Verzeichnisse mit / |
 | `documentation` | Docstring einer defun/defmacro abfragen ('function) |
 | `dolist` | Makro: ueber Liste iterieren, Ergebnisform () |

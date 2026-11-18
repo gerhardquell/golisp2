@@ -40,9 +40,10 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(begin . body)` | Sequenz | Tail; Aliase: `progn`, `locally`; Multi-Body via `wrapBegin` |
 | `(let (bind) . body)` | Parallel-Bindung | Tail-fähig |
 | `(let* (bind) . body)` | Sequentielle Bindung | Tail-fähig; **native Spezialform** (nicht Stdlib — jede Bindung sieht die vorherigen) |
+| `(destructuring-bind lambda-liste expr . body)` | Liste zerlegen | Tail-fähig; Spezialform seit 0.36.0. Lambda-Liste wie CL: verschachtelte Muster an Pflichtstellen, Punktpaare, `&optional`/`&rest`/`&key`. Falsche Anzahl → Fehler (`destructuring-bind: zu wenig Werte (brauche 'b')`); Muster in `&optional`/`&key`/`&rest` → Fehler; special Variable im Muster → Fehler (mit `let` binden) |
 | `(lambda (p) . body)` | Closure | `&optional`, `&key`, `&rest`/`&body`, `&allow-other-keys`; `&key` wie CL: paarweise aus den Werten, erstes Vorkommen gewinnt; unbekannter Schlüssel, Schlüssel ohne Wert oder Nicht-Schlüsselwort an Schlüsselposition → Fehler |
 | `(defun f (p) . body)` | Globale Funktion | immer global (CL), auch aus `let`/Funktionsrumpf — Closure bleibt lexikalisch; lokale Helfer: `labels`/`flet` oder `(define (f p) ...)`; Multi-Body via `wrapBegin` |
-| `(defmacro m (p) . body)` | Globales Makro | immer global, wie `defun`; ebenso `defstruct` |
+| `(defmacro m (p) . body)` | Globales Makro | immer global, wie `defun`; ebenso `defstruct`. Lambda-Liste zerlegt verschachtelt wie `destructuring-bind` (auch `macrolet`): `(defmacro m ((x y) &body b) …)`; bei `defun`/`lambda` ist ein Muster ein Definitionsfehler (`defun: Parameter muss Atom sein`) |
 | `(defmain (args) . body)` | Skript-Einstieg | Nur wenn Datei Hauptprogramm (Shebang/`golisp2 f.lisp`); läuft nach dem Laden; Rückgabe = Exit-Code 0–255; sonst `nil`. `args` ohne Binary/Dateiname; wirkt nur auf oberster Ebene/in Spezialformen der Hauptdatei, nicht über `funcall`/`apply`/`mapcar` |
 | `(define sym val)` | Var-Def | Global oder lokal; `(define (f p) body)` = Kurzform für `(define f (lambda (p) body))` |
 | `(set! sym val)` | Ein Paar updaten | Nur `env.Update` — **Fehler falls ungebunden**, legt nichts neu an |
@@ -180,12 +181,11 @@ Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgel
 `remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen; `(remove x l)` vergleicht mit `equal?`, **kein** `:test`/`:key` (→ Fehler „zu viele Argumente“); `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Makros
-`when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert destructuring-bind macroexpand-1`
+`when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` über `setf`; `defparameter` überschreibt immer, `defvar` nur wenn ungebunden
 - **Dynamische Variablen** (CL `special`, seit 0.33.0): `defvar`/`defparameter` machen den Namen special (ohne `*…*` → Fehler, nichts gebunden). `let`/`let*`/`progv` (damit auch `dolist`/`dotimes`/`loop`) binden ihn dynamisch: aufgerufene Funktionen, Callbacks (`mapcar`, `sort` …), `eval`/`load` und Worker von `parfunc`/`spawn`/`pool-map` sehen die Bindung. `setq` trifft die innerste Bindung; nach dem `let` gilt wieder der alte Wert. `defparameter` im `let` setzt die Bindung; `makunbound` darin → Fehler. Ist der Name schon lexikalisch gebunden (Parameter von vor dem `defvar`), bindet `let` lexikalisch. Closures merken sich die Bindung nicht. HTTP-/WS-/GUI-Handler sehen nur den globalen Wert
 - `(ignore-errors . body)` → Wert oder `()` bei Fehler (nur ein Wert, kein Condition-Objekt; `throw`/`return-from` laufen durch)
 - `(assert form)` → `t` oder Fehler `assert failed: form` — nur ein Argument, keine eigene Meldung
-- `(destructuring-bind (a b c) liste . body)` — **nur flach**: verschachtelte Muster, Punktpaare und `&rest`/`&key`/`&optional` → Fehler. Für Rest: `(destructuring-bind (a b) l …)` plus `(cddr l)`
 - `macroexpand-1` = `macroexpand` (beide genau eine Stufe)
 
 **Achtung:** `let*` steht hier nur als CL-Gewohnheits-Anker — die
@@ -292,7 +292,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | String-Schlüssel in `(make-hash-table)` (Default `eql`) | nach Inhalt: zweimal `"rot"` = ein Schlüssel | `eql` → Identität, zwei `"rot"`-Literale = zwei Schlüssel; dafür `:test 'equal` |
 | `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` | vorhanden |
-| `destructuring-bind` mit `&rest`/`&key`, verschachtelt, Punktpaar | Fehler — nur flache Muster | voll unterstützt |
+| Muster in `&optional`/`&key`/`&rest` (`destructuring-bind`, `defmacro`) | Fehler — Muster nur an Pflichtstellen | erlaubt |
 | `(member x l)` | kein `:test`; vergleicht Strings strukturell | `eql` (Strings nur mit `:test 'equal`) |
 | `(last l)` | liefert das **Element**, nicht die Zelle | letzte Cons-Zelle |
 | `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |

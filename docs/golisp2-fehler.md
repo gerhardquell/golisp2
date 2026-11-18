@@ -291,7 +291,8 @@ Seit 0.33.0 sind `defvar`-/`defparameter`-Namen special wie in CL. Regeln:
 **Symptom:** `(defvar *x* 1) (defun g () *x*) (let ((*x* 2)) (g))` → `1`;
 die aufgerufene Funktion sah die Bindung nie.
 **Fix:** → `2`. Gilt für `let`, `let*` und Makros, die zu `let` expandieren
-(`dolist`, `dotimes`, `destructuring-bind`, `loop … for`).
+(`dolist`, `dotimes`, `loop … for`). `destructuring-bind` ist seit 0.36.0
+eine Spezialform und weist special-Namen ab (J5).
 
 ### H2. `progv` wirkt jetzt auf aufgerufene Funktionen  [FIXED 0.33.0]
 **Symptom:** `(progv '(*x*) '(3) (g))` → `1`; `progv` legte nur ein
@@ -407,6 +408,53 @@ konnte eine neue Sandbox sich `system` freigeben.
 Speicher bis zum Absturz.
 **Fix:** In der Sandbox liest `file-read` nur reguläre Dateien (auch nicht
 `sys-stdin`); außerhalb unverändert.
+
+## J. destructuring-bind und Makro-Lambda-Listen (20261118, 0.36.0)
+
+`destructuring-bind` ist seit 0.36.0 eine Spezialform und bindet über
+denselben Weg wie Lambda-Listen. Regeln: `docs/lisp-semantik.md`,
+Abschnitt „Lambda-Listen“.
+
+### J1. `destructuring-bind` nur flach  [FIXED 0.36.0]
+**Symptom:** Verschachtelte Muster, Punktpaare und `&optional`/`&rest`/`&key`
+waren ein Fehler (`destructuring-bind: &rest nicht unterstützt …`).
+**Fix:** Lambda-Liste wie CL:
+`(destructuring-bind (a (b &optional (c 9)) . r) '(1 (2) 3 4) (list a b c r))`
+→ `(1 2 9 (3 4))`.
+
+### J2. Falsche Anzahl ging still durch  [FIXED 0.36.0, Breaking]
+**Symptom:** `(destructuring-bind (a b) '(1) b)` → `()`; überzählige Werte
+wurden ignoriert.
+**Fix:** Fehler `destructuring-bind: zu wenig Werte (brauche 'b')` bzw.
+`destructuring-bind: zu viele Werte (2 überzählig)`. `&optional` und `&rest`
+erlauben die Abweichung.
+
+### J3. Makros zerlegten nicht verschachtelt  [FIXED 0.36.0]
+**Symptom:** `(defmacro mit-paar ((x y) &body body) …)` wurde angenommen, der
+Aufruf scheiterte mit `lambda: Parameter muss Atom sein`.
+**Fix:** `defmacro` und `macrolet` zerlegen verschachtelt wie CL. Fehler beim
+Makro-Aufruf behalten das Präfix `lambda:`
+(`lambda: Liste erwartet für (x y), bekam p`).
+
+### J4. Muster in `lambda`/`defun` erst beim Aufruf gemeldet  [FIXED 0.36.0]
+**Symptom:** `(lambda ((a b)) a)`, `(lambda (&key ((:kw v) 1)) v)` und
+`(lambda (&rest (a b)) a)` wurden angenommen und scheiterten erst beim
+Aufruf, teils irreführend (`unbekanntes Schlüsselwort :kw`,
+`unbekanntes Symbol 'a'`).
+**Fix:** Definitionsfehler mit dem Namen der definierenden Form:
+`lambda: Parameter muss Atom sein`, `defun: Parameter muss Atom sein`; in
+`defmacro`: `defmacro: verschachteltes Muster nur an Pflichtstellen`.
+
+### J5. special-Name in `destructuring-bind`  [KNOWN]
+Vor 0.36.0 expandierte `destructuring-bind` zu `let` und band
+`(defvar *x* 1)`-Namen dynamisch. Jetzt Fehler wie bei Lambda-Parametern (H3):
+`destructuring-bind: Parameter *x* ist special — mit let binden`.
+`macroexpand` liefert für `destructuring-bind` keine `let`-Kette mehr.
+
+### J6. Muster in `&optional`/`&key`/`&rest`  [LIMITATION]
+CL erlaubt sie, golisp2 nicht:
+`destructuring-bind: verschachteltes Muster nur an Pflichtstellen`. `&whole`
+und `&environment` gibt es nicht.
 
 ---
 

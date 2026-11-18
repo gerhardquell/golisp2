@@ -71,6 +71,9 @@ Wichtige:
 
 (let ((x 1) (y 2) ...) body...)   ; Parallel binden
 (let* ((x 1) (y (+ x 1)) ...)     ; Sequentiell binden (Stdlib)
+(destructuring-bind ((a b) c &key (d 4)) '((1 2) 3 :d 5) body...)
+                                  ; Liste zerlegen wie CL (verschachtelt, &optional/&rest/&key, Punktpaar);
+                                  ; falsche Anzahl = Fehler, Muster nur an Pflichtstellen
 
 (macrolet ((m (p) body)) ...)     ; Lokale Makros (nicht-rekursiv)
 (symbol-macrolet ((s exp)) ...)   ; Lokale Symbol-Makros
@@ -678,6 +681,8 @@ wenn Pointer-Identität *explizit* gemeint ist.
 ```lisp
 (defmacro when (test . body)
   `(if ,test (progn ,@body) nil))
+(defmacro mit-paar ((x y) &body body)  ; Lambda-Liste zerlegt verschachtelt (CL),
+  `(let ((,x 1) (,y 2)) ,@body))       ; defun/lambda: Muster = Definitionsfehler
 ```
 
 ### Macroexpand

@@ -508,6 +508,15 @@ Ebenso `(apply - '())`.
 `(1 2 3 4 5)`. Da `nil` und `()` dasselbe sind, fällt auch `nil` weg:
 `(flatten '(1 nil 2))` → `(1 2)`.
 
+### L5. `push` lieferte das Symbol statt der neuen Liste  [FIXED 0.36.3]
+**Symptom:** `(let ((xs '(2 3))) (push 1 xs))` → `xs` (Folge von C5:
+das Makro expandierte zu `set!`). `push`/`pop` auf Places
+(`(push x (car l))`, `(gethash k h)`, Struct-Slot) → `set!: Syntax`.
+**Fix:** `push` und `pop` expandieren zu `setf` → `push` liefert die
+neue Liste `(1 2 3)` (CL), beide gehen auf jeden `setf`-Place.
+Place-Teilformen werden wie bei `incf`/`decf` zweimal ausgewertet.
+`pushnew` gibt es nicht. `set!` selbst liefert weiter das Symbol (C5).
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

@@ -889,7 +889,7 @@ Gibt t zurück, wenn x nil ist.
 
 **Syntax:** `(type-of x)`
 
-Typ eines Werts als Symbol: `integer`, `float`, `string`, `symbol`, `keyword`, `boolean`, `null`, `cons`, `function`, `compiled-function`, `macro`, `hash-table`, `vector` oder der Name eines Structs bzw. einer Condition. `3.0` ist `integer` (der Kern kennt nur `float64`).
+Typ eines Werts als Symbol: `integer`, `float`, `string`, `symbol`, `keyword`, `boolean`, `null`, `cons`, `function`, `compiled-function`, `macro`, `hash-table`, `vector` oder der Name eines Structs bzw. einer Condition. `3.0` ist `float`, nicht `integer` (Ganzzahl `int64` und Float `float64` sind verschiedene Zahlarten).
 
 ```lisp
 (type-of 3)          ; => integer

@@ -93,7 +93,7 @@ func TestDefunRegistersLocation(t *testing.T) {
 }
 
 // Leere Quelle (leer, nur Leerraum, nur Kommentar) → (), nie rohes Go-nil
-// (sonst panic in handler-case/pair?, golisp2-fehler.md K4).
+// (sonst panic in handler-case/pair?, golisp2-fehler.md L1).
 func TestLoadLeereQuelleIstNil(t *testing.T) {
   dir := t.TempDir()
   for _, inhalt := range []string{"", "  \n\t", "; nur Kommentar\n"} {

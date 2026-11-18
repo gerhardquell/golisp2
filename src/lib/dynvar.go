@@ -175,6 +175,12 @@ func checkLambdaList(who string, params *Cell, nested bool) error {
       return nil
     }
     param := p.Car
+    if param.Type == NIL && !(pflicht && nested) {  // () ist ein (leeres) Muster
+      if nested {
+        return fmt.Errorf("%s: verschachteltes Muster nur an Pflichtstellen", who)
+      }
+      return fmt.Errorf("%s: Parameter muss Atom sein", who)
+    }
     if param.Type != LIST {
       switch param.Val {
       case "&optional", "&key": pflicht, nachRest = false, false

@@ -165,6 +165,12 @@ func TestDestructuringBindSpezialform(t *testing.T) {
     // Spec §3.2
     {src: `(destructuring-bind ((a b) c &key (d 4)) '((1 2) 3 :d 5) (list a b c d))`, want: "(1 2 3 5)"},
     {src: `(destructuring-bind (a (b &optional (c 9)) . r) '(1 (2) 3 4) (list a b c r))`, want: "(1 2 9 (3 4))"},
+    // () als Untermuster passt nur auf () (CL)
+    {src: `(destructuring-bind (() a) '(() 1) a)`, want: "1"},
+    {src: `(destructuring-bind (() a) '((5) 1) a)`, fehler: "destructuring-bind: zu viele Werte (1 überzählig)"},
+    {src: `(destructuring-bind (() a) '(5 1) a)`, fehler: "destructuring-bind: Liste erwartet für (), bekam 5"},
+    {src: `(destructuring-bind (a &optional ()) '(1) a)`, fehler: "destructuring-bind: verschachteltes Muster nur an Pflichtstellen"},
+    {src: `(lambda (() a) a)`, fehler: "lambda: Parameter muss Atom sein"},
     // Punktpaar auf jeder Ebene
     {src: `(destructuring-bind (a . b) '(1 2) b)`, want: "(2)"},
     {src: `(destructuring-bind (a (b . c) . d) '(1 (2 3 4) 5 6) (list a b c d))`, want: "(1 2 (3 4) (5 6))"},

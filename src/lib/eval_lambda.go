@@ -158,7 +158,8 @@ func bindArgs(params *Cell, args []*Cell, tail *Cell, localEnv *Env, ectx evalCt
         return fmt.Errorf("%s: zu wenig %s (brauche '%s')", who, anzahlWort(who), param)
       }
       if param.Type != ATOM {
-        if !nested || param.Type != LIST {
+        // () als Untermuster passt nur auf () (CL)
+        if !nested || (param.Type != LIST && param.Type != NIL) {
           return fmt.Errorf("%s: Parameter muss Atom sein", who)
         }
         vals, ende, err := musterWerte(who, param, args[argIdx])

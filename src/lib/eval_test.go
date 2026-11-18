@@ -356,13 +356,6 @@ func TestEvalStrictArith(t *testing.T) {
   evalEq(t, `(= 1 1)`, "t")
 }
 
-// TestEvalIfPermissive dokumentiert IST: degenerierte if-Formen werfen
-// keinen Fehler, sondern liefern Nil.
-func TestEvalIfPermissive(t *testing.T) {
-  evalEq(t, `(if)`, "()")          // kein cond → Nil
-  evalEq(t, `(if nil)`, "()")      // kein else → Nil
-}
-
 // TestEvalTrap sichert Fehlerbehandlung (projekteigen, kein CL).
 // Syntax: (trap body handler). handler wird ausgewertet (→ Lambda) und
 // mit der Fehler-Cell als Argument aufgerufen.
@@ -654,4 +647,28 @@ func TestKeyArgsOneBindingPath(t *testing.T) {
 func toApply(call string) string {
   form, _ := Read(call)
   return "(apply " + form.Car.String() + " (list" + strings.TrimPrefix(form.String(), "("+form.Car.String()) + ")"
+}
+
+// quote braucht genau 1, if 2 oder 3 Argumente (CL) — sonst Syntaxfehler
+// statt still NIL bzw. ignorierter Überzähliger.
+func TestQuoteIfSyntax(t *testing.T) {
+  fehler := []struct{ src, msg string }{
+    {"(quote)", "quote: Syntax: (quote x)"},
+    {"(quote a b)", "quote: Syntax: (quote x)"},
+    {"(if)", "if: Syntax: (if test dann [sonst])"},
+    {"(if t)", "if: Syntax: (if test dann [sonst])"},
+    {"(if t 1 2 3)", "if: Syntax: (if test dann [sonst])"},
+    {"(if nil 1 2 3)", "if: Syntax: (if test dann [sonst])"},
+  }
+  for _, c := range fehler {
+    _, err := evalStr(c.src)
+    if err == nil || err.Error() != c.msg {
+      t.Errorf("eval(%q) Fehler = %v, want %q", c.src, err, c.msg)
+    }
+  }
+  evalEq(t, "(quote a)", "a")
+  evalEq(t, "'(1 2)", "(1 2)")
+  evalEq(t, "(if t 1)", "1")
+  evalEq(t, "(if nil 1)", "()")
+  evalEq(t, "(if nil 1 2)", "2")
 }

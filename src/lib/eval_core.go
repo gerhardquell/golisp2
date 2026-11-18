@@ -182,7 +182,11 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
       switch expr.Car.Val {
 
       // ── Nicht-Tail: Ergebnis sofort zurückgeben ──
-      case "quote":        return expr.Cdr.Car, nil
+      case "quote":
+        if a := expr.Cdr; a == nil || a.Type != LIST || (a.Cdr != nil && a.Cdr.Type != NIL) {
+          return nil, fmt.Errorf("quote: Syntax: (quote x)")
+        }
+        return expr.Cdr.Car, nil
       case "macroexpand":  return evalMacroexpand(expr.Cdr, env, ectx)
       case "bound?":       return evalBound(expr.Cdr, env, ectx)
       case "makunbound":   return evalMakunbound(expr.Cdr, env, ectx)
@@ -240,12 +244,21 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
 
       // ── Tail: expr/env setzen, Loop weiter ──
       case "if":
-        cond, err := evalWithCtx(expr.Cdr.Car, env, ectx.child())
+        // Nur Pointer-/Typvergleiche: if ist der heißeste Pfad.
+        test := expr.Cdr
+        if test == nil || test.Type != LIST || test.Cdr == nil || test.Cdr.Type != LIST {
+          return nil, fmt.Errorf("if: Syntax: (if test dann [sonst])")
+        }
+        sonst := test.Cdr.Cdr
+        if sonst != nil && sonst.Type != NIL && (sonst.Type != LIST || (sonst.Cdr != nil && sonst.Cdr.Type != NIL)) {
+          return nil, fmt.Errorf("if: Syntax: (if test dann [sonst])")
+        }
+        cond, err := evalWithCtx(test.Car, env, ectx.child())
         if err != nil { return nil, err }
         if IsTruthy(cond) {
-          expr = expr.Cdr.Cdr.Car
-        } else if expr.Cdr.Cdr != nil && expr.Cdr.Cdr.Cdr != nil && expr.Cdr.Cdr.Cdr.Type == LIST {
-          expr = expr.Cdr.Cdr.Cdr.Car
+          expr = test.Cdr.Car
+        } else if sonst != nil && sonst.Type == LIST {
+          expr = sonst.Car
         } else {
           return MakeNil(), nil
         }

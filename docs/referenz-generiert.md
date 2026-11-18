@@ -95,7 +95,7 @@
 | `*systems*` | Registry der definierten Systeme (defsystem) |
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
 | `+` | Addition aller Argumente; alle Ganzzahl → Ganzzahl, ein Float dabei → Float |
-| `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → 0 |
+| `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → Fehler |
 | `/` | Division: alle Ganzzahl und teilbar → Ganzzahl, sonst Float ((/ 7 2) → 3.5); Fehler bei Division durch 0 |
 | `/=` | numerisch paarweise verschieden (CL) |
 | `1+` | n + 1 (CL) |
@@ -195,7 +195,7 @@
 | `find-all` | alle Vorkommen von item (Default-Test equal?) |
 | `find-if` | erstes Element mit Praedikat (:key) |
 | `first` | Alias fuer car |
-| `flatten` | rekursiv flache Liste |
+| `flatten` | rekursiv flache Liste; leere Teillisten fallen weg |
 | `float` | Zahl als Float: (float 3) → 3.0 |
 | `floatp` | t, wenn Float (float64); (floatp 3) → () |
 | `floor` | zur naechsten ganzen Zahl abrunden; Ergebnis ist eine Ganzzahl |

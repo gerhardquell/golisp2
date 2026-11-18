@@ -479,6 +479,35 @@ Hintergrund und auf dem Server bis zum Ende.
 der Treiber bricht das Statement auf dem Server ab. Kein eigenes `:timeout`:
 die Frist kommt von Sandbox oder `parfunc`.
 
+## L. Kleinkram (20261118, 0.36.2)
+
+### L1. `load` einer leeren Datei lieferte rohes Go-nil  [FIXED 0.36.2]
+**Symptom:** `(handler-case (load "leer.lisp") (error (e) …))` →
+`panic recovered: … nil pointer dereference in (pair? RAW__1)`;
+`(list (load "leer.lisp"))` → `list: Argument 1 ist nil`. Ebenso Dateien
+nur mit Leerraum oder Kommentar.
+**Fix:** `load` liefert wie bisher den Wert der letzten Form, bei leerer
+Datei `()` (wie `sandbox-eval` mit leerem String).
+
+### L2. KI-Referenz: „`3.0` ist `integer`"  [FIXED 0.36.2, nur Doku]
+**Symptom:** `ki-referenz.md` (Abschnitt Typen), `referenz_cn.md` und das
+Tutorial (`type-of`) beschrieben noch das Float-only-Modell vor 0.31.
+**Fix:** `3.0` ist `float`: `(typep 3.0 'integer)` → `()`.
+
+### L3. `(-)` ohne Argumente lieferte `0`  [FIXED 0.36.2]
+**Symptom:** `(-)` → `0`; Common Lisp verlangt mindestens ein Argument.
+Ebenso `(apply - '())`.
+**Fix:** `(-)` → Fehler `-: min. 1 Argument`. `(- x)` negiert weiter,
+`(+)` → `0` und `(*)` → `1` bleiben (wie CL). `(/)` war schon ein Fehler
+(`/: min. 2 Argumente`).
+
+### L4. `flatten` übernahm leere Teillisten als Atom  [FIXED 0.36.2]
+**Symptom:** `(flatten '((1 2) () (3 (4 5))))` → `(1 2 () 3 4 5)`, weil
+`(pair? ())` falsch ist.
+**Fix:** `()` trägt nichts bei (wie `alexandria:flatten`) →
+`(1 2 3 4 5)`. Da `nil` und `()` dasselbe sind, fällt auch `nil` weg:
+`(flatten '(1 nil 2))` → `(1 2)`.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

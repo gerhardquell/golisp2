@@ -28,6 +28,14 @@ func TestBuchluecken20260818Sequenzen(t *testing.T) {
   evalStdlibEq(t, `(make-list 0)`, "()")
 }
 
+// flatten: () trägt nichts bei (wie alexandria:flatten), 0.36.2
+func TestFlattenLeereTeillisten(t *testing.T) {
+  evalStdlibEq(t, `(flatten '((1 2) () (3 (4 5))))`, "(1 2 3 4 5)")
+  evalStdlibEq(t, `(flatten '(1 (2 (3 4)) 5))`, "(1 2 3 4 5)")
+  evalStdlibEq(t, `(flatten '(() (())))`, "()")
+  evalStdlibEq(t, `(flatten '())`, "()")
+}
+
 func TestBuchluecken20260818Plist(t *testing.T) {
   evalStdlibEq(t, `(getf '(a 1 b 2) 'b)`, "2")
   evalStdlibEq(t, `(getf '(a 1 b 2) 'c)`, "()")

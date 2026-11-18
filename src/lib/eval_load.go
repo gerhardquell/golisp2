@@ -52,7 +52,7 @@ func loadFile(filename string, env *Env, ectx evalCtx) (*Cell, error) {
   }
 
   src := string(data) // nicht trimmen: führende Leerzeilen zählen für SrcLine
-  var result *Cell
+  result := MakeNil() // leere Datei → (), nie rohes Go-nil
 
   // Ein Pointer für die ganze Datei: alle Formen teilen denselben String,
   // statt jede ihren eigenen Header zu tragen.
@@ -85,7 +85,7 @@ func LoadString(src string, env *Env) (*Cell, error) {
 
 func loadStringWithCtx(src string, env *Env, ectx evalCtx) (*Cell, error) {
   src = strings.TrimSpace(src)
-  var result *Cell
+  result := MakeNil()
   r := NewReader(src)
   for {
     r.skipWS()

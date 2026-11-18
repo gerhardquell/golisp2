@@ -206,11 +206,11 @@ func fnAdd(args []*Cell) (*Cell, error) {
 }
 
 func fnSub(args []*Cell) (*Cell, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("-: min. 1 Argument")
+	}
 	if err := checkNumbers("-", args); err != nil {
 		return nil, err
-	}
-	if len(args) == 0 {
-		return MakeInt(0), nil
 	}
 	if allInts(args) {
 		i, ok := args[0].Int, true

@@ -23,6 +23,20 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
 
 ## 2. Fehler und Kleinkram
 
+- [ ] **Stellenzahl der Go-Primitiven (0.37.0, inkompatibel)** – gefunden 18.11. in golisp2-lernen:
+      überzählige Argumente werden still ignoriert: `(cons 1 2 3)` → `(1 . 2)`, `(car '(1 2) 5)` → `1`,
+      `(abs 1 2)` → `1`, `(null '() '())` → `t`; Stdlib-Lisp-Funktionen melden dagegen „zu viele Argumente“.
+      Spezialform `not` (`eval_specialforms.go:393`) liest nur `args.Car`: `(not)` → `t`, `(not 1 2)` → `()`.
+      Untersuchung 18.11. (nichts geändert): 222 Go-Funktionen; 95 prüfen das Maximum, 75 nur das Minimum,
+      44 gar nichts. Von den 116 ohne Maximum: 58 feste Stellenzahl (aus höchstem `args[i]` ablesbar),
+      58 variadisch/optional. Probelauf mit Logger in `Env.Set` über alle Tests: kein Aufruf im Repo mit
+      zu vielen Argumenten. Vorschlag A: Prüfung in jeder Funktion selbst (wie die 95), kein Laufzeit-Overhead;
+      `TestCellSize` verbietet ein Arity-Feld in `Cell`. SWANK-Arglisten und Tutorial-Signaturen sind ungenau
+      (`(< x y)` 2-stellig, `substring` ohne optionales Ende). Aufwand ≈ ½ Tag. Gerhard: zurückgestellt.
+      Analyse-Werkzeuge: `tmp/arity/` (main.go, scan.py).
+- [ ] `(/ 5)` ist ein Fehler, CL liefert den Kehrwert (`1/5` bzw. `0.2`). Entscheidung offen (18.11.).
+- [ ] `(read "")` liefert `()`, CL meldet end-of-file (18.11., nicht geändert).
+
 - [x] `format ~e` / `~g` runden falsch: `(format nil "~e" 1.5)` → `"2e+00"`
       (CL: `"1.5e+0"`). Erledigt 20.10.: ohne `d`/`e` so viele Stellen wie nötig;
       `printf "%e"` behält C-Form `e+00`, `%0We` füllt jetzt mit `0`.

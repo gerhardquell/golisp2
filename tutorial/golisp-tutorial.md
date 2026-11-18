@@ -3725,7 +3725,7 @@ Gibt t zurück, wenn alle Elemente die Prädikatfunktion erfüllen.
 
 **Syntax:** `(flatten liste)`
 
-Entfernt eine Ebene von Verschachtelungen; rekursiv flach.
+Macht die Liste rekursiv flach; leere Teillisten `()` fallen weg.
 
 ```lisp
 (flatten '((1 2) (3 (4))))

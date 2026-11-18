@@ -195,7 +195,7 @@
 | `find-all` | alle Vorkommen von item (Default-Test equal?) |
 | `find-if` | erstes Element mit Praedikat (:key) |
 | `first` | Alias fuer car |
-| `flatten` | rekursiv flache Liste |
+| `flatten` | rekursiv flache Liste; leere Teillisten fallen weg |
 | `float` | Zahl als Float: (float 3) → 3.0 |
 | `floatp` | t, wenn Float (float64); (floatp 3) → () |
 | `floor` | zur naechsten ganzen Zahl abrunden; Ergebnis ist eine Ganzzahl |

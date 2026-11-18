@@ -501,6 +501,13 @@ Ebenso `(apply - '())`.
 `(+)` → `0` und `(*)` → `1` bleiben (wie CL). `(/)` war schon ein Fehler
 (`/: min. 2 Argumente`).
 
+### L4. `flatten` übernahm leere Teillisten als Atom  [FIXED 0.36.2]
+**Symptom:** `(flatten '((1 2) () (3 (4 5))))` → `(1 2 () 3 4 5)`, weil
+`(pair? ())` falsch ist.
+**Fix:** `()` trägt nichts bei (wie `alexandria:flatten`) →
+`(1 2 3 4 5)`. Da `nil` und `()` dasselbe sind, fällt auch `nil` weg:
+`(flatten '(1 nil 2))` → `(1 2)`.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

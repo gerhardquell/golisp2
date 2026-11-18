@@ -119,9 +119,10 @@
 
 (defun flatten (lst)
   (cond
-    ((null lst)       ())
+    ((null lst)        ())
+    ((null (car lst))  (flatten (cdr lst)))
     ((pair? (car lst)) (append (flatten (car lst)) (flatten (cdr lst))))
-    (t                (cons (car lst) (flatten (cdr lst))))))
+    (t                 (cons (car lst) (flatten (cdr lst))))))
 
 (defun zip (lst1 lst2)
   (if (or (null lst1) (null lst2))

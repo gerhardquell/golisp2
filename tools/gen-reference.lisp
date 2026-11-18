@@ -179,7 +179,7 @@
     (filter . "Elemente, fuer die das Praedikat wahr ist")
     (find-all . "alle Vorkommen von item (Default-Test equal?)")
     (first . "Alias fuer car")
-    (flatten . "rekursiv flache Liste")
+    (flatten . "rekursiv flache Liste; leere Teillisten fallen weg")
     (float . "Zahl als Float: (float 3) → 3.0")
     (floatp . "t, wenn Float (float64); (floatp 3) → ()")
     (integerp . "t, wenn Ganzzahl (int64); (integerp 3.0) → ()")

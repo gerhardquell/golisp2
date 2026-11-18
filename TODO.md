@@ -164,7 +164,10 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
       Erledigt 18.11. (0.34.0): `make-sandbox`/`sandbox-eval`, Sicherheitsreview mit drei
       Funden (blockierende Operationen, verschachtelte Freigabe, `file-read` auf Geräte) behoben.
       Regeln: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
-- [ ] `destructuring-bind` vollständig; `setf` auf Listen ändert statt neu zu binden.
+- [x] `destructuring-bind` vollständig. Erledigt 18.11. (0.36.0): Spezialform, CL-Lambda-Liste,
+      verschachtelt auch in `defmacro`/`macrolet`, falsche Anzahl ist ein Fehler, Rest geteilt.
+      Regeln: `docs/lisp-semantik.md` („Muster“), `docs/golisp2-fehler.md` Abschnitt J.
+- [ ] `setf` auf Listen ändert statt neu zu binden.
 
 ## 5. Beim Zusammenführen als erledigt erkannt (19.10.2026)
 

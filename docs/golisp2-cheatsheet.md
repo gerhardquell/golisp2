@@ -310,7 +310,7 @@ Modell-Maximum. Viele Calls parallel, aber begrenzt: `pool-map`. Details: `docs/
 (sandbox-eval sb '(system "ls"))           ; ERR: sandbox: system nicht erlaubt (freigeben mit :erlaube)
 ```
 Gesperrt: `system`, `exec`, `load`, Datei schreiben, `getenv`, `exit`, Dienste (`pg-*`, `http-*` …).
-Erlaubt: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen, `sigo`, Datei lesen.
+Erlaubt: Rechnen, Listen, Strings, stdlib, Ausgabe, Goroutinen, Datei lesen (nur reguläre Dateien). `sigo` nur per `:erlaube`; `make-sandbox`/`sandbox-eval` nie.
 Details: `docs/lisp-semantik.md`, Abschnitt „Sandbox“.
 
 ### Goroutinen und Concurrency

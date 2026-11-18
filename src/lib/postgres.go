@@ -11,6 +11,7 @@
 package lib
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -26,8 +27,8 @@ type pgConn struct {
 // RegisterPostgres registriert alle Postgres-Funktionen in der Umgebung
 func RegisterPostgres(env *Env) {
 	_ = env.Set("pg-connect", makeFn(fnPgConnect))
-	_ = env.Set("pg-query", makeFn(fnPgQuery))
-	_ = env.Set("pg-exec", makeFn(fnPgExec))
+	_ = env.Set("pg-query", makeCtxFn(fnPgQuery))
+	_ = env.Set("pg-exec", makeCtxFn(fnPgExec))
 	_ = env.Set("pg-close", makeFn(fnPgClose))
 }
 
@@ -55,7 +56,7 @@ func fnPgConnect(args []*Cell) (*Cell, error) {
 
 // pg-query: (pg-query conn "SELECT * FROM users WHERE id = $1" 42)
 // Gibt eine Liste von Zeilen zurück, jede Zeile ist eine Assoziationsliste
-func fnPgQuery(args []*Cell) (*Cell, error) {
+func fnPgQuery(args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("pg-query: connection and query required")
 	}
@@ -80,9 +81,10 @@ func fnPgQuery(args []*Cell) (*Cell, error) {
 	}
 
 	// Führe Query aus
-	rows, err := conn.db.Query(query, params...)
+	ctx := pgContext(ectx)
+	rows, err := conn.db.QueryContext(ctx, query, params...)
 	if err != nil {
-		return nil, fmt.Errorf("pg-query: %w", err)
+		return nil, pgErr(ctx, "pg-query", err)
 	}
 	defer rows.Close()
 
@@ -121,7 +123,7 @@ func fnPgQuery(args []*Cell) (*Cell, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("pg-query: %w", err)
+		return nil, pgErr(ctx, "pg-query", err)
 	}
 
 	return SliceToCell(resultRows), nil
@@ -129,7 +131,7 @@ func fnPgQuery(args []*Cell) (*Cell, error) {
 
 // pg-exec: (pg-exec conn "INSERT INTO users (name) VALUES ($1)" "Alice")
 // Gibt die Anzahl der betroffenen Zeilen zurück
-func fnPgExec(args []*Cell) (*Cell, error) {
+func fnPgExec(args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("pg-exec: connection and query required")
 	}
@@ -154,9 +156,10 @@ func fnPgExec(args []*Cell) (*Cell, error) {
 	}
 
 	// Führe Query aus
-	result, err := conn.db.Exec(query, params...)
+	ctx := pgContext(ectx)
+	result, err := conn.db.ExecContext(ctx, query, params...)
 	if err != nil {
-		return nil, fmt.Errorf("pg-exec: %w", err)
+		return nil, pgErr(ctx, "pg-exec", err)
 	}
 
 	// Anzahl betroffener Zeilen
@@ -166,6 +169,23 @@ func fnPgExec(args []*Cell) (*Cell, error) {
 	}
 
 	return MakeInt(affected), nil
+}
+
+// pgContext: Abbruch-Kontext des Aufrufers (Sandbox-Frist, parfunc
+// :timeout), ohne Kontext Background.
+func pgContext(ectx evalCtx) context.Context {
+	if ctx := ectx.context(); ctx != nil {
+		return ctx
+	}
+	return context.Background()
+}
+
+// pgErr: bei Abbruch derselbe Fehler wie check(), sonst die Treibermeldung.
+func pgErr(ctx context.Context, name string, err error) error {
+	if ctx.Err() != nil {
+		return cancelledErr()
+	}
+	return fmt.Errorf("%s: %w", name, err)
 }
 
 // pg-close: (pg-close conn)

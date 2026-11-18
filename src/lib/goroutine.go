@@ -103,11 +103,11 @@ func getMutex(c *Cell) (*goMutex, error) {
 // RegisterGoroutines fügt alle Nebenläufigkeits-Primitiven in env ein
 func RegisterGoroutines(env *Env) {
   _ = env.Set("chan-make", makeFn(fnChanMake))
-  _ = env.Set("chan-send", makeFn(fnChanSend))
-  _ = env.Set("chan-recv", makeFn(fnChanRecv))
+  _ = env.Set("chan-send", makeCtxFn(fnChanSend))
+  _ = env.Set("chan-recv", makeCtxFn(fnChanRecv))
   _ = env.Set("chan-try-recv", makeFn(fnChanTryRecv))
   _ = env.Set("chan-try-send", makeFn(fnChanTrySend))
-  _ = env.Set("chan-select", makeFn(fnChanSelect))
+  _ = env.Set("chan-select", makeCtxFn(fnChanSelect))
   _ = env.Set("chan-close", makeFn(fnChanClose))
   _ = env.Set("chan-closed?", makeFn(fnChanClosedP))
   _ = env.Set("lock-make", makeFn(fnLockMake))
@@ -145,8 +145,9 @@ func recvValues(v *Cell, ok bool) *Cell {
   return MakeValues([]*Cell{v, MakeAtom("t")})
 }
 
-// chanPut: Senden unter mu.RLock; geschlossener Channel → Fehler statt panic
-func chanPut(gc *goChannel, v *Cell, block bool, name string) (bool, error) {
+// chanPut: Senden unter mu.RLock; geschlossener Channel → Fehler statt panic.
+// done (nil = keiner) bricht blockierendes Senden ab.
+func chanPut(gc *goChannel, v *Cell, block bool, name string, done <-chan struct{}) (bool, error) {
   gc.mu.RLock()
   defer gc.mu.RUnlock()
   closedErr := fmt.Errorf("%s: Channel geschlossen", name)
@@ -155,6 +156,7 @@ func chanPut(gc *goChannel, v *Cell, block bool, name string) (bool, error) {
     select {
     case gc.ch <- v: return true, nil
     case <-gc.done:  return false, closedErr
+    case <-done:     return false, cancelledErr()
     }
   }
   select {
@@ -164,11 +166,11 @@ func chanPut(gc *goChannel, v *Cell, block bool, name string) (bool, error) {
 }
 
 // chan-send: (chan-send ch wert)
-func fnChanSend(args []*Cell) (*Cell, error) {
+func fnChanSend(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 { return nil, fmt.Errorf("chan-send: 2 Argumente nötig") }
   gc, err := getChannel(args[0])
   if err != nil { return nil, err }
-  if _, err := chanPut(gc, args[1], true, "chan-send"); err != nil { return nil, err }
+  if _, err := chanPut(gc, args[1], true, "chan-send", ectx.done()); err != nil { return nil, err }
   return args[1], nil
 }
 
@@ -177,21 +179,25 @@ func fnChanTrySend(args []*Cell) (*Cell, error) {
   if len(args) != 2 { return nil, fmt.Errorf("chan-try-send: 2 Argumente nötig") }
   gc, err := getChannel(args[0])
   if err != nil { return nil, err }
-  sent, err := chanPut(gc, args[1], false, "chan-try-send")
+  sent, err := chanPut(gc, args[1], false, "chan-try-send", nil)
   if err != nil { return nil, err }
   if sent { return MakeAtom("t"), nil }
   return MakeNil(), nil
 }
 
 // chan-recv: (chan-recv ch [:timeout sek])
-func fnChanRecv(args []*Cell) (*Cell, error) {
+func fnChanRecv(args []*Cell, ectx evalCtx) (*Cell, error) {
   syntax := fmt.Errorf("chan-recv: Syntax: (chan-recv ch [:timeout sek])")
   if len(args) != 1 && len(args) != 3 { return nil, syntax }
   gc, err := getChannel(args[0])
   if err != nil { return nil, err }
   if len(args) == 1 {
-    v, ok := <-gc.ch
-    return recvValues(v, ok), nil
+    select {
+    case v, ok := <-gc.ch:
+      return recvValues(v, ok), nil
+    case <-ectx.done():
+      return nil, cancelledErr()
+    }
   }
   if args[1] == nil || args[1].Val != ":timeout" { return nil, syntax }
   d, ok := timeoutArg(args[2])
@@ -203,6 +209,8 @@ func fnChanRecv(args []*Cell) (*Cell, error) {
     return recvValues(v, ok), nil
   case <-timer.C:
     return recvValues(nil, false), nil
+  case <-ectx.done():
+    return nil, cancelledErr()
   }
 }
 
@@ -221,7 +229,7 @@ func fnChanTryRecv(args []*Cell) (*Cell, error) {
 
 // chan-select: (chan-select chans [:timeout sek]) → (values x t i) / (values nil nil nil)
 // Geschlossene und leere Channels scheiden aus; sind alle weg, endet das Warten.
-func fnChanSelect(args []*Cell) (*Cell, error) {
+func fnChanSelect(args []*Cell, ectx evalCtx) (*Cell, error) {
   syntax := fmt.Errorf("chan-select: Syntax: (chan-select chans [:timeout sek])")
   if len(args) != 1 && len(args) != 3 { return nil, syntax }
   var d time.Duration
@@ -234,7 +242,7 @@ func fnChanSelect(args []*Cell) (*Cell, error) {
   if args[0] != nil && args[0].Type != LIST && args[0].Type != NIL { return nil, syntax }
   chans := CellToSlice(args[0])
   if len(chans) == 0 { return nil, fmt.Errorf("chan-select: leere Channel-Liste") }
-  cases := make([]reflect.SelectCase, len(chans), len(chans)+1)
+  cases := make([]reflect.SelectCase, len(chans), len(chans)+2)
   index := make([]int, len(chans))
   for i, c := range chans {
     gc, err := getChannel(c)
@@ -253,14 +261,21 @@ func fnChanSelect(args []*Cell) (*Cell, error) {
       cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(timer.C)})
     }
   }
+  ctxCase := -1
+  if done := ectx.done(); done != nil {
+    ctxCase = len(cases)
+    cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(done)})
+  }
   none := MakeValues([]*Cell{MakeNil(), MakeNil(), MakeNil()})
   for len(index) > 0 {
     chosen, v, ok := reflect.Select(cases)
     if chosen == timeoutCase { return none, nil }
+    if chosen == ctxCase { return nil, cancelledErr() }
     if !ok {
       cases = append(cases[:chosen], cases[chosen+1:]...)
       index = append(index[:chosen], index[chosen+1:]...)
       if hasTimeout { timeoutCase-- }
+      if ctxCase >= 0 { ctxCase-- }
       continue
     }
     x, _ := v.Interface().(*Cell)
@@ -327,7 +342,7 @@ func fnSpawn(args []*Cell, ectx evalCtx) (*Cell, error) {
         fmt.Fprintf(os.Stderr, "spawn: panic: %v\n", r)
         msg = List(MakeAtom(":error"), MakeStr(fmt.Sprintf("panic: %v", r)))
       }
-      if sent, _ := chanPut(gc, msg, false, "spawn"); !sent {
+      if sent, _ := chanPut(gc, msg, false, "spawn", nil); !sent {
         fmt.Fprintln(os.Stderr, "spawn: Ergebnis verworfen (Channel geschlossen oder voll)")
       }
     }()

@@ -9,6 +9,7 @@
 package lib
 
 import (
+  "context"
   "os"
   "path/filepath"
   "slices"
@@ -311,9 +312,9 @@ func TestSandboxZeitlimit(t *testing.T) {
   sbFrist(t, env, "(sandbox-eval sb '(while t ()))", meldung)
   sbFrist(t, env, "(sandbox-eval sb '(mapcar (lambda (x) (while t ())) '(1)))", meldung)
   sbFrist(t, env, `(sandbox-eval sb '(sort (list 2 1) (lambda (a b) (while t ()))))`, meldung)
-  // parfunc-Worker: Fehler steht als (:error …) im Ergebnis, die Frist beendet ihn
+  // parfunc-Worker: sandbox-eval kehrt zur Frist zurück, nicht erst mit parfunc
   start := time.Now()
-  sbWant(t, env, "(car (car (sandbox-eval sb '(parfunc r (while t ())))))", ":error")
+  sbFrist(t, env, "(sandbox-eval sb '(parfunc r (while t ())))", meldung)
   if d := time.Since(start); d > 3*time.Second {
     t.Errorf("parfunc-Worker: %v bis zum Abbruch", d)
   }
@@ -351,4 +352,54 @@ func TestDynCallbackSiehtAbbruch(t *testing.T) {
     (while (chan-try-recv c) ())
     (sleep 0.2)
     (chan-try-recv c))`, "()")
+}
+
+// Blockierendes Warten (sleep, chan-*, lock-Deadlock) endet mit der Frist.
+func TestSandboxZeitlimitBlockiert(t *testing.T) {
+  env := sbEnv(t, "(make-sandbox :zeitlimit 0.5)")
+  meldung := "sandbox: Zeitlimit 0.5 s überschritten"
+  for _, form := range []string{
+    "(sleep 3000)",
+    "(chan-recv (chan-make))",
+    "(chan-send (chan-make) 1)",
+    "(chan-select (list (chan-make)))",
+    "(let ((l (lock-make))) (lock l (lock l 1)))",
+  } {
+    start := time.Now()
+    sbFrist(t, env, "(sandbox-eval sb '"+form+")", meldung)
+    if d := time.Since(start); d > 2500*time.Millisecond {
+      t.Errorf("%s: %v bis zum Abbruch", form, d)
+    }
+  }
+}
+
+func TestSandboxNichtFreigebbar(t *testing.T) {
+  env := sbEnv(t, "(make-sandbox)")
+  sbWantErr(t, env, "(make-sandbox :erlaube '(make-sandbox))", "make-sandbox: make-sandbox ist nicht freigebbar")
+  sbWantErr(t, env, "(make-sandbox :erlaube '(sandbox-eval))", "make-sandbox: sandbox-eval ist nicht freigebbar")
+}
+
+func TestSandboxFileReadNurRegulaer(t *testing.T) {
+  pfad := filepath.Join(t.TempDir(), "regulaer.txt")
+  if err := os.WriteFile(pfad, []byte("inhalt"), 0644); err != nil {
+    t.Fatal(err)
+  }
+  env := sbEnv(t, "(make-sandbox :zeitlimit 2)")
+  sbWantErr(t, env, `(sandbox-eval sb '(file-read "/dev/zero"))`, "file-read: in der Sandbox nur reguläre Dateien: /dev/zero")
+  sbWantErr(t, env, `(sandbox-eval sb '(file-read "sys-stdin"))`, "file-read: in der Sandbox nur reguläre Dateien: sys-stdin")
+  sbWant(t, env, `(sandbox-eval sb '(file-read "`+pfad+`"))`, `"inhalt"`)
+}
+
+// Außerhalb der Sandbox: sleep hört auf den Abbruch-Kontext.
+func TestSleepAbbruch(t *testing.T) {
+  ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+  defer cancel()
+  start := time.Now()
+  _, err := fnSleep([]*Cell{MakeInt(3000)}, evalCtx{run: &runState{ctx: ctx}})
+  if err == nil || err.Error() != "eval: cancelled" {
+    t.Errorf("sleep: Fehler %v, want eval: cancelled", err)
+  }
+  if d := time.Since(start); d > time.Second {
+    t.Errorf("sleep: %v bis zum Abbruch", d)
+  }
 }

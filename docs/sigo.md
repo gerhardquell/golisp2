@@ -189,7 +189,8 @@ Dienste; seine Definitionen bleiben in der Sandbox. Details:
   `sigo` nur mit `(make-sandbox :erlaube '(sigo))`; dann reichen 10 s oft
   nicht — `:zeitlimit` höher setzen.
   `sigo` hat zusätzlich seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`); das
-  Zeitlimit unterbricht einen laufenden HTTP-Aufruf nicht.
+  Zeitlimit unterbricht einen laufenden HTTP-Aufruf nicht — `sandbox-eval`
+  kehrt trotzdem zur Frist zurück, der Aufruf läuft im Hintergrund zu Ende.
 
 **Prompt-Hygiene:** Den Prompt so formulieren, dass die KI *nur* Lisp-Code
 zurückgibt, ohne Erklärungen und ohne Markdown-Fences:

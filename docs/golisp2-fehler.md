@@ -372,12 +372,15 @@ der Sandbox findet `~/fun/` nur Sandbox-Funktionen
 `(trace 'tr) (make-sandbox)` fand `(untrace 'tr)` das Original nicht mehr.
 **Fix:** Zustand je Root-Env → `(untrace 'tr)` → `tr`.
 
-### I3. Zeitlimit greift nicht mitten in einer langen Go-Operation  [LIMITATION]
-`(sleep 3000)`, ein großes `sort`, ein Regex oder ein `sigo`-HTTP-Aufruf
-laufen zu Ende; die Frist greift beim nächsten Funktionsaufruf oder
-Schleifendurchlauf. Kommt keiner mehr, liefert `sandbox-eval` den Wert:
-`(sandbox-eval (make-sandbox :zeitlimit 1) '(begin (sleep 3000) 'nach))` →
-`nach` nach 3 s. `sigo` hat seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`).
+### I3. Zeitlimit hielt bei blockierenden Operationen nicht  [FIXED 0.34.0, Rest LIMITATION]
+**Symptom:** Mit `:zeitlimit 1` hing `sandbox-eval` bei `(sleep 3000)` 3 s,
+bei `chan-recv`/`chan-send`/`chan-select` ohne Partner und beim
+`lock`-Deadlock für immer.
+**Fix:** `sandbox-eval` wertet in eigener Goroutine aus und kehrt immer zur
+Frist zurück; `sleep` und `chan-*` brechen mit dem Kontext ab.
+**Rest:** Was den Abbruch nicht sieht (`lock`, großes `sort`, Regex,
+`sigo`-HTTP-Aufruf), läuft im Hintergrund weiter, ein `lock`-Deadlock für
+immer. `sigo` hat seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`).
 
 ### I4. Speicher pro Sandbox bleibt  [LIMITATION]
 Jede Sandbox kostet rund 1 MB (eigenes `BaseEnv` + stdlib, gemessen mit
@@ -390,7 +393,20 @@ Verhaltensänderung: Callbacks aus Primitiven (`mapcar`, `sort`, `maphash`,
 `format ~/fun/` …) erben jetzt den Abbruch-Kontext des Aufrufers — nötig,
 damit das Zeitlimit dort greift. Eine Endlosschleife in einem
 `mapcar`-Callback innerhalb eines abgebrochenen `parfunc :timeout` bricht
-jetzt ab; vorher lief sie still weiter.
+jetzt ab; vorher lief sie still weiter. Ebenso brechen `sleep` und `chan-*`
+im abgebrochenen Worker jetzt mit `eval: cancelled` ab.
+
+### I6. Verschachtelte Sandbox hatte volle Rechte  [FIXED 0.34.0]
+**Symptom:** `(make-sandbox :erlaube '(make-sandbox sandbox-eval))` — darin
+konnte eine neue Sandbox sich `system` freigeben.
+**Fix:** `make-sandbox`/`sandbox-eval` sind nie freigebbar →
+`make-sandbox: make-sandbox ist nicht freigebbar`.
+
+### I7. `file-read` auf Gerätedateien  [FIXED 0.34.0]
+**Symptom:** `(file-read "/dev/zero")` in der Sandbox las ohne Ende und fraß
+Speicher bis zum Absturz.
+**Fix:** In der Sandbox liest `file-read` nur reguläre Dateien (auch nicht
+`sys-stdin`); außerhalb unverändert.
 
 ---
 

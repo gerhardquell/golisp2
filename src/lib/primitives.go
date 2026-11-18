@@ -95,7 +95,7 @@ func BaseEnv() *Env {
 	}))
 
 	// Zeitfunktionen
-	_ = env.Set("sleep", makeFn(fnSleep))
+	_ = env.Set("sleep", makeCtxFn(fnSleep))
 	RegisterTime(env)
 
 	// sigoREST
@@ -604,8 +604,9 @@ func fnMemstats(args []*Cell) (*Cell, error) {
 	return result, nil
 }
 
-// sleep: (sleep ms) → pausiert für n Millisekunden
-func fnSleep(args []*Cell) (*Cell, error) {
+// sleep: (sleep ms) → pausiert für n Millisekunden; bricht mit dem
+// Abbruch-Kontext ab (Sandbox-Frist, parfunc :timeout).
+func fnSleep(args []*Cell, ectx evalCtx) (*Cell, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("sleep: 1 Argument nötig (Millisekunden)")
 	}
@@ -613,8 +614,14 @@ func fnSleep(args []*Cell) (*Cell, error) {
 	if ms < 0 {
 		return nil, fmt.Errorf("sleep: negative Zeit nicht erlaubt")
 	}
-	time.Sleep(time.Duration(ms) * time.Millisecond)
-	return MakeNil(), nil
+	timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return MakeNil(), nil
+	case <-ectx.done():
+		return nil, cancelledErr()
+	}
 }
 
 // ---- Typ-Prädikate ----

@@ -92,9 +92,24 @@ func (e evalCtx) check() error {
   if e.run != nil && e.run.ctx != nil {
     select {
     case <-e.run.ctx.Done():
-      return &LispError{Msg: MakeStr("eval: cancelled")}
+      return cancelledErr()
     default:
     }
+  }
+  return nil
+}
+
+// cancelledErr: Fehler bei Abbruch des Kontexts — check() und blockierende
+// Primitiven (sleep, chan-*).
+func cancelledErr() error {
+  return &LispError{Msg: MakeStr("eval: cancelled")}
+}
+
+// done: Done-Channel des Abbruch-Kontexts; ohne Kontext nil — ein
+// nil-Channel feuert in select nie, das Warten bleibt wie ohne Kontext.
+func (e evalCtx) done() <-chan struct{} {
+  if ctx := e.context(); ctx != nil {
+    return ctx.Done()
   }
   return nil
 }

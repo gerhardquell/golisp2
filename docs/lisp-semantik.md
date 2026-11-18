@@ -639,7 +639,7 @@ Standard-Freigaben:
 | stdin | `read-line`, `gets`, `slurp` |
 | Redefinition, Trace | `redefine-policy`, `redef-log`, `redef-log-clear`, `trace`, `trace?`, `untrace` |
 | sigo global | `sigo-host`, `sigo-system-prompt`, `sigo-usage-reset` |
-| Sandbox | `make-sandbox`, `sandbox-eval` |
+| Sandbox | `make-sandbox`, `sandbox-eval` — nie freigebbar: `make-sandbox: sandbox-eval ist nicht freigebbar` |
 | Dienste | `pg-*`, `maxima-*`, `http-*`, `ws-*`, `webserv`, `ga-*`, `browser-open` |
 
 **`:erlaube`** schaltet einzelne gesperrte Namen frei:
@@ -653,16 +653,19 @@ erlaubter Name ist ein Fehler — laut statt still:
 `spawn`-Goroutine, die das `sandbox-eval` überlebt, endet mit der Frist.
 Meldungen:
 
-- direkt und in Callbacks: `sandbox: Zeitlimit 1 s überschritten`;
-- `parfunc`-Worker: `(:error "eval: cancelled")` an seiner Stelle im Ergebnis;
+- `sandbox-eval` kehrt immer zur Frist zurück:
+  `sandbox: Zeitlimit 1 s überschritten`;
 - `spawn`: `spawn: eval: cancelled` auf stderr, im Channel
   `(:error "eval: cancelled")`.
 
-Grenzen: Eine einzelne lange Go-Operation (`(sleep 3000)`, ein großes
-`sort`, ein Regex, ein `sigo`-HTTP-Aufruf) wird nicht mittendrin
-unterbrochen; die Frist greift beim nächsten Funktionsaufruf oder
-Schleifendurchlauf. Kommt danach keiner mehr, liefert `sandbox-eval` den
-Wert trotz Fristablauf. `sigo` hat seinen eigenen Timeout
+`sleep`, `chan-recv`, `chan-send` und `chan-select` brechen beim Fristablauf
+ab (`eval: cancelled`) — auch außerhalb der Sandbox, z. B. im
+`parfunc`-Worker nach `:timeout`.
+
+Grenzen: Was den Abbruch nicht sieht (`lock`-Deadlock, ein großes `sort`,
+ein Regex, ein `sigo`-HTTP-Aufruf), läuft im Hintergrund weiter — bis zum
+nächsten Funktionsaufruf oder Schleifendurchlauf, ein Deadlock für immer.
+`sandbox-eval` wartet darauf nicht. `sigo` hat seinen eigenen Timeout
 (`GOLISP_SIGO_TIMEOUT`) und dauert oft länger als 10 s — KI-Code, der selbst
 `sigo` ruft, braucht ein höheres `:zeitlimit`.
 
@@ -682,7 +685,9 @@ wird bis Prozessende nicht freigegeben. Eine Sandbox anlegen und
 wiederverwenden, nicht eine pro Aufruf. Speicher- und CPU-Quoten gibt es nicht.
 
 **Datei lesen ist erlaubt:** KI-Code kann damit Geheimnisse lesen
-(`~/.netrc`, Schlüsseldateien). `getenv` bleibt gesperrt.
+(`~/.netrc`, Schlüsseldateien). `getenv` bleibt gesperrt. `file-read` liest
+in der Sandbox nur reguläre Dateien — `/dev/zero`, FIFOs und `sys-stdin`
+→ `file-read: in der Sandbox nur reguläre Dateien: /dev/zero`.
 
 ---
 

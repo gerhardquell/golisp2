@@ -20,6 +20,7 @@ import (
   "context"
   "errors"
   "fmt"
+  "os"
   "sync"
   "time"
 )
@@ -59,6 +60,10 @@ var sandboxEinzeln = []string{
 
 // sandboxFormen: gesperrte Spezialformen; prüfen selbst per sandboxSperre.
 var sandboxFormen = []string{"exec", "load", "defmain"}
+
+// sandboxNieFreigebbar: auch per :erlaube gesperrt — eine Sandbox in der
+// Sandbox könnte sich jede Freigabe selbst geben.
+var sandboxNieFreigebbar = map[string]bool{"make-sandbox": true, "sandbox-eval": true}
 
 var (
   sandboxErlaubtOnce sync.Once
@@ -172,6 +177,9 @@ func fnMakeSandbox(args []*Cell) (*Cell, error) {
     st.entfernt[n] = true
   }
   for _, c := range erlaube {
+    if c.Type == ATOM && sandboxNieFreigebbar[c.Val] {
+      return nil, fmt.Errorf("make-sandbox: %s ist nicht freigebbar", c.Val)
+    }
     if c.Type != ATOM || !st.entfernt[c.Val] {
       return nil, fmt.Errorf("make-sandbox: %s ist keine sperrbare Funktion", c)
     }
@@ -180,11 +188,32 @@ func fnMakeSandbox(args []*Cell) (*Cell, error) {
   for n := range st.entfernt {
     root.UnsetRoot(n)
   }
+  // Unset vor Set: sonst warnt der Redefine-Guard.
+  if _, ok := root.UnsetRoot("file-read"); ok {
+    _ = root.Set("file-read", makeFn(sandboxFileRead))
+  }
 
   sandboxMu.Lock()
   sandboxen[root] = st
   sandboxMu.Unlock()
   return MakeForeign("sandbox", root), nil
+}
+
+// sandboxFileRead: file-read nur für reguläre Dateien — /dev/zero, FIFOs
+// und sys-stdin könnten ewig lesen oder blockieren.
+func sandboxFileRead(args []*Cell) (*Cell, error) {
+  if len(args) > 0 && args[0].Type == STRING {
+    pfad := args[0].Val
+    if pfad == sysStdin {
+      return nil, fmt.Errorf("file-read: in der Sandbox nur reguläre Dateien: %s", pfad)
+    }
+    if resolved, err := resolvePath(pfad); err == nil {
+      if fi, err := os.Stat(resolved); err == nil && !fi.Mode().IsRegular() {
+        return nil, fmt.Errorf("file-read: in der Sandbox nur reguläre Dateien: %s", pfad)
+      }
+    }
+  }
+  return fnFileRead(args)
 }
 
 // errZeitlimit: Grund des Fristablaufs, unterscheidet ihn vom Abbruch des
@@ -228,15 +257,37 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
       return nil, err
     }
   }
-  res := MakeNil()
-  for f := forms; f != nil && f.Type == LIST; f = f.Cdr {
-    var err error
-    if res, err = evalWithCtx(f.Car, root, inner); err != nil {
-      if context.Cause(ctx) == errZeitlimit {
-        return nil, fmt.Errorf("sandbox: Zeitlimit %s s überschritten", st.zeitText)
-      }
-      return nil, err
-    }
+  // Eigene Goroutine: auch ein Warten, das den Kontext nicht sieht (lock),
+  // hält den Aufrufer nicht über die Frist hinaus fest.
+  // shortcut: eine so hängende Goroutine bleibt liegen (lock-Deadlock),
+  // ausbauen, falls lock kontextfähig wird oder Lecks im Profil auffallen.
+  type ergebnis struct {
+    res *Cell
+    err error
   }
-  return res, nil
+  fertig := make(chan ergebnis, 1)
+  go func() {
+    res := MakeNil()
+    for f := forms; f != nil && f.Type == LIST; f = f.Cdr {
+      var err error
+      if res, err = evalWithCtx(f.Car, root, inner); err != nil {
+        fertig <- ergebnis{nil, err}
+        return
+      }
+    }
+    fertig <- ergebnis{res, nil}
+  }()
+  zeitlimitErr := fmt.Errorf("sandbox: Zeitlimit %s s überschritten", st.zeitText)
+  select {
+  case e := <-fertig:
+    if e.err != nil && context.Cause(ctx) == errZeitlimit {
+      return nil, zeitlimitErr
+    }
+    return e.res, e.err
+  case <-ctx.Done():
+    if context.Cause(ctx) == errZeitlimit {
+      return nil, zeitlimitErr
+    }
+    return nil, cancelledErr()
+  }
 }

@@ -22,7 +22,6 @@ import (
 // Bewusst ohne eigenen Tutorial-Eintrag.
 var tutorialAusnahmen = map[string]bool{
   "nil": true, "t": true, // Konstanten
-  "ash-left": true, "ash-right": true, // Hilfsfunktionen von ash
 }
 
 func TestTutorialDecktAlleSymbole(t *testing.T) {

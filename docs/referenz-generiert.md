@@ -118,8 +118,6 @@
 | `arrayp` | t, wenn Array (= Vektor, nur eindimensional) |
 | `aset` | Vektor-Element setzen, liefert den Wert; auch (setf (aref v i) x) |
 | `ash` | arithmetischer Shift: (ash x n) = x·2^n, negatives n schiebt nach rechts (floor) |
-| `ash-left` | Hilfsfunktion von ash: n-mal verdoppeln |
-| `ash-right` | Hilfsfunktion von ash: n-mal floor-halbieren |
 | `assert` | Makro: signalisiert Fehler, wenn Form nil ergibt |
 | `assoc` | erstes (key . val)-Paar aus Assoziationsliste (equal?) |
 | `atom` | t, wenn x kein Cons ist |

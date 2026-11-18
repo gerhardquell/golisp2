@@ -169,19 +169,6 @@
 (defun gcd (a b)
   (if (= b 0) (abs a) (gcd b (mod a b))))
 
-;; ash ist Go-Primitiv (arith_prims.go, exakt auf int64); ash-left/-right
-;; bleiben als eigenständige Funktionen.
-;; floor statt / : CL-ash rundet beim Rechtsshift Richtung -unendlich
-(defun ash-right (x n)
-  (if (<= n 0)
-    x
-    (ash-right (floor x 2) (- n 1))))
-
-(defun ash-left (x n)
-  (if (<= n 0)
-    x
-    (ash-left (* x 2) (- n 1))))
-
 ;; === Iteratoren =================================================
 
 (defmacro dotimes (var-n . body)

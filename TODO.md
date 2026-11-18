@@ -102,8 +102,8 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 
 ### Entscheidungen (Gerhard)
 
-- [ ] `ash-left`/`ash-right` (`stdlib.lisp`) haben keine Aufrufer mehr — löschen?
-      (wäre Breaking). `MakeNumber` (`types_helpers.go`) am 17.11. gelöscht.
+- [x] `ash-left`/`ash-right` (`stdlib.lisp`) haben keine Aufrufer mehr — löschen?
+      (wäre Breaking). Erledigt 18.11. (0.35.0): gelöscht, Ersatz `(ash x n)` / `(ash x (- n))`. `MakeNumber` (`types_helpers.go`) am 17.11. gelöscht.
 - [ ] Zellgröße 112 → 96 Byte: `LispType` als `uint8`, `SrcLine` als `int32`.
       Eigener Schritt, vorher und nachher messen.
 - [x] Worktree `.worktrees/ganzzahl-typ` und Zweig `ganzzahl-typ` entfernen? Erledigt 17.11.

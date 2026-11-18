@@ -684,8 +684,9 @@ Meldungen:
 - `spawn`: `spawn: eval: cancelled` auf stderr, im Channel
   `(:error "eval: cancelled")`.
 
-`sleep`, `chan-recv`, `chan-send` und `chan-select` brechen beim Fristablauf
-ab (`eval: cancelled`) — auch außerhalb der Sandbox, z. B. im
+`sleep`, `chan-recv`, `chan-send`, `chan-select`, `pg-query` und `pg-exec`
+brechen beim Fristablauf ab (`eval: cancelled`; Postgres bricht auch das
+Statement auf dem Server ab) — auch außerhalb der Sandbox, z. B. im
 `parfunc`-Worker nach `:timeout`.
 
 Grenzen: Was den Abbruch nicht sieht (`lock`-Deadlock, ein großes `sort`,

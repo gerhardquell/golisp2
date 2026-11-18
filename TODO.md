@@ -126,7 +126,9 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 
 ### Noch zu prüfen
 
-- [ ] Postgres gegen echte Datenbank: `int2/int4/int8` exakt, Ganzzahl-Parameter als `int64`.
+- [x] Postgres gegen echte Datenbank: `int2/int4/int8` exakt, Ganzzahl-Parameter als `int64`.
+      Geprüft 18.11. (0.36.1): `TestPgZahlen` (`src/lib/postgres_test.go`, läuft mit
+      `GOLISP2_PG_TEST`), auch 9007199254740993 als `int8` und als Parameter.
 - [x] sigo gegen sigoREST: Token-Zahlen als Ganzzahl. Geprüft 17.11.: `sigo*` liefert
       `prompt-/completion-/cached-/reasoning-tokens` als `integer`, `cost-usd`/`elapsed` als `float`.
 - [ ] SLIME/Emacs: Inspector und REPL mit den neuen Druckformen (`3.0`).

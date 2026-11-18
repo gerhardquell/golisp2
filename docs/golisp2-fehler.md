@@ -456,6 +456,29 @@ CL erlaubt sie, golisp2 nicht:
 `destructuring-bind: verschachteltes Muster nur an Pflichtstellen`. `&whole`
 und `&environment` gibt es nicht.
 
+## K. Kleinkram (20261118, 0.36.1)
+
+### K1. `(quote)` und `(if)` gingen still durch  [FIXED 0.36.1, Breaking]
+**Symptom:** `(quote)` → `()`, `(if)` und `(if t)` → `()`; überzählige Teile
+(`(quote a b)`, `(if t 1 2 3)`) wurden still ignoriert.
+**Fix:** Wie CL: `quote` braucht genau 1 Argument, `if` 2 oder 3. Sonst
+`quote: Syntax: (quote x)` bzw. `if: Syntax: (if test dann [sonst])`.
+
+### K2. Zweites `maxima-close` war ein Fehler  [FIXED 0.36.1]
+**Symptom:** `(maxima-close s)` zweimal → `maxima-close: Session bereits
+geschlossen`; der Zustand wurde dabei ohne Lock gelesen (Datenrennen mit
+nebenläufigem `maxima-eval`).
+**Fix:** Zweites `maxima-close` → `t`. `maxima-eval` nach dem Schließen
+meldet weiter `maxima-eval: Session bereits geschlossen`.
+
+### K3. Postgres ignorierte Sandbox-Frist und `parfunc :timeout`  [FIXED 0.36.1]
+**Symptom:** `(pg-query db "select pg_sleep(5)")` lief nach Ablauf der Frist
+weiter — `sandbox-eval` kehrte zwar zurück, das Statement lief aber im
+Hintergrund und auf dem Server bis zum Ende.
+**Fix:** `pg-query`/`pg-exec` brechen mit dem Kontext ab (`eval: cancelled`),
+der Treiber bricht das Statement auf dem Server ab. Kein eigenes `:timeout`:
+die Frist kommt von Sandbox oder `parfunc`.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

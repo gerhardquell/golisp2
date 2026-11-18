@@ -41,7 +41,7 @@ type maximaSession struct {
 	stdout *bufio.Reader
 	mu     sync.Mutex
 	n      int64
-	closed bool
+	closed bool // nur unter mu
 }
 
 // RegisterMaxima fuegt maxima-open, maxima-eval, maxima-close in env ein
@@ -145,9 +145,6 @@ func asMaximaSession(c *Cell) (*maximaSession, error) {
 	if !ok {
 		return nil, fmt.Errorf("keine Maxima-Session")
 	}
-	if sess.closed {
-		return nil, fmt.Errorf("Session bereits geschlossen")
-	}
 	return sess, nil
 }
 
@@ -164,6 +161,9 @@ func (s *maximaSession) kill() error {
 func (s *maximaSession) evalRaw(expr string, timeout time.Duration) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closed {
+		return "", fmt.Errorf("Session bereits geschlossen")
+	}
 
 	expr = strings.TrimSpace(expr)
 	if expr == "" {

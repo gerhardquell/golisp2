@@ -91,3 +91,26 @@ func TestDefunRegistersLocation(t *testing.T) {
     t.Fatalf("got %+v", loc)
   }
 }
+
+// Leere Quelle (leer, nur Leerraum, nur Kommentar) → (), nie rohes Go-nil
+// (sonst panic in handler-case/pair?, golisp2-fehler.md K4).
+func TestLoadLeereQuelleIstNil(t *testing.T) {
+  dir := t.TempDir()
+  for _, inhalt := range []string{"", "  \n\t", "; nur Kommentar\n"} {
+    path := filepath.Join(dir, "leer.lisp")
+    if err := os.WriteFile(path, []byte(inhalt), 0644); err != nil {
+      t.Fatalf("write: %v", err)
+    }
+    env := BaseEnv()
+    if err := LoadStdlib(env); err != nil {
+      t.Fatalf("stdlib: %v", err)
+    }
+    res, err := LoadString(`(handler-case (list (load "`+path+`")) (error (e) "err"))`, env)
+    if err != nil || res == nil || res.String() != "(())" {
+      t.Fatalf("load %q: got %v, %v; erwartet (())", inhalt, res, err)
+    }
+    if res, err = LoadString(inhalt, env); err != nil || res != MakeNil() {
+      t.Fatalf("LoadString %q: got %v, %v; erwartet NIL", inhalt, res, err)
+    }
+  }
+}

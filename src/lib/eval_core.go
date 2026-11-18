@@ -307,12 +307,10 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
         if err := checkLambdaList("destructuring-bind", muster, true); err != nil { return nil, err }
         val, err := evalWithCtx(expr.Cdr.Cdr.Car, env, ectx.child())
         if err != nil { return nil, err }
-        werte, err := properList("destructuring-bind", Primary(val))
-        if err != nil {
-          return nil, fmt.Errorf("destructuring-bind: Liste erwartet für %s, bekam %s", muster, Primary(val))
-        }
+        werte, ende, err := musterWerte("destructuring-bind", muster, Primary(val))
+        if err != nil { return nil, err }
         localEnv := NewEnv(env)
-        if err := bindArgs(muster, werte, localEnv, ectx, true, "destructuring-bind"); err != nil { return nil, err }
+        if err := bindArgs(muster, werte, ende, localEnv, ectx, true, "destructuring-bind"); err != nil { return nil, err }
         body := expr.Cdr.Cdr.Cdr
         if body == nil || body.Type != LIST {
           return MakeNil(), nil

@@ -136,7 +136,7 @@ func TestBindArgsPraefix(t *testing.T) {
   for _, f := range faelle {
     muster, _ := Read(f.muster)
     werte, _ := Read(f.werte)
-    err := bindArgs(muster, CellToSlice(werte), NewEnv(BaseEnv()), evalCtx{}, true, "destructuring-bind")
+    err := bindArgs(muster, CellToSlice(werte), nil, NewEnv(BaseEnv()), evalCtx{}, true, "destructuring-bind")
     if err == nil || err.Error() != f.fehler {
       t.Errorf("%s gegen %s: Fehler %v, want %q", f.muster, f.werte, err, f.fehler)
     }
@@ -144,7 +144,7 @@ func TestBindArgsPraefix(t *testing.T) {
   muster, _ := Read("((a b) c &key (d 4))")
   werte, _ := Read("((1 2) 3 :d 5)")
   env := NewEnv(BaseEnv())
-  if err := bindArgs(muster, CellToSlice(werte), env, evalCtx{}, true, "destructuring-bind"); err != nil {
+  if err := bindArgs(muster, CellToSlice(werte), nil, env, evalCtx{}, true, "destructuring-bind"); err != nil {
     t.Fatalf("Bindung: %v", err)
   }
   var got []string
@@ -203,12 +203,43 @@ func TestDestructuringBindSpezialform(t *testing.T) {
 }
 
 // TestDestructuringBindTCO: Spec §6 — Endrekursion durch den Rumpf ist O(1)
-// Stack: 1 000 000 Tail-Aufrufe. Bewusst mit kurzen Listen statt (iota 1000000):
-// bindArgs kopiert Werte und Rest je Schritt (properList, SliceToCell), das
-// Spec-Beispiel wäre O(n²) — 10 000 Elemente ≈ 3 s, 1 000 000 endet nicht.
+// Stack, und der Rest wird geteilt statt kopiert (Spec §2.3): sonst wäre
+// das Ablaufen der Liste O(n²).
 func TestDestructuringBindTCO(t *testing.T) {
-  evalStdlibEq(t, `(defun lauf (x n) (destructuring-bind (a . r) x (if (> a 0) (lauf (list (- a 1)) (+ n 1)) n)))
-    (lauf (list 1000000) 0)`, "1000000")
-  evalStdlibEq(t, `(defun lauf2 (x n) (destructuring-bind (a . r) x (if r (lauf2 r (+ n 1)) n)))
-    (lauf2 (iota 1000) 0)`, "999")
+  evalStdlibEq(t, `(defun lauf (x n) (destructuring-bind (a . r) x (if r (lauf r (+ n 1)) n)))
+    (lauf (iota 1000000) 0)`, "999999")
+}
+
+// TestDestructuringBindRestTeilen: &rest/&body und Punktpaar binden das
+// Original-Listenende (Spec §2.3, §4 „Rest teilen“).
+func TestDestructuringBindRestTeilen(t *testing.T) {
+  mr := "(defmacro mr ((a . rest)) `(list ',a ',rest)) "
+  pruefeLambdaListFaelle(t, []lambdaListFall{
+    // unechtes Listenende (CL)
+    {src: `(destructuring-bind (a . b) '(1 . 2) b)`, want: "2"},
+    {src: `(destructuring-bind (a &rest r) '(1 . 2) r)`, want: "2"},
+    {src: `(destructuring-bind (x ((a . b))) '(0 ((1 . 2))) (list x a b))`, want: "(0 1 2)"},
+    {src: `(destructuring-bind (a &optional b . r) '(1 2 . 3) (list a b r))`, want: "(1 2 3)"},
+    // geteilt: dieselbe Cell wie im Original
+    {src: `(define x '(1 2 3)) (destructuring-bind (a . r) x (eq r (cdr x)))`, want: "t"},
+    {src: `(define x '(1 2 3)) (destructuring-bind (a &rest r) x (eq r (cdr x)))`, want: "t"},
+    {src: `(define x '(1 2 3)) (destructuring-bind (a &body r) x (eq r (cdr x)))`, want: "t"},
+    {src: `(define x '(0 (1 2 3))) (destructuring-bind (z (a . r)) x (eq r (cdr (car (cdr x)))))`, want: "t"},
+    // zu viele Werte: Cons-Zellen des Endes, ein unechtes Ende zählt eins
+    {src: `(destructuring-bind (a) '(1 . 2) a)`, fehler: "destructuring-bind: zu viele Werte (1 überzählig)"},
+    {src: `(destructuring-bind (a) '(1 2 . 3) a)`, fehler: "destructuring-bind: zu viele Werte (2 überzählig)"},
+    {src: `(destructuring-bind (a &optional b) '(1 2 3) a)`, fehler: "destructuring-bind: zu viele Werte (1 überzählig)"},
+    {src: `(destructuring-bind (x (a)) '(0 (1 2 3)) a)`, fehler: "destructuring-bind: zu viele Werte (2 überzählig)"},
+    // zu wenig Werte, Nicht-Liste
+    {src: `(destructuring-bind (a b c) '(1 2) a)`, fehler: "destructuring-bind: zu wenig Werte (brauche 'c')"},
+    {src: `(destructuring-bind (a &optional b) '(1 . 2) a)`, fehler: "destructuring-bind: Liste erwartet für (a &optional b), bekam (1 . 2)"},
+    {src: `(destructuring-bind (&rest r) 5 r)`, fehler: "destructuring-bind: Liste erwartet für (&rest r), bekam 5"},
+    // &key liest alle Werte, auch nach &rest; unechtes Ende ist ein Fehler
+    {src: `(destructuring-bind (a &rest r &key x y) '(1 :y 2 :x 3) (list a r x y))`, want: "(1 (:y 2 :x 3) 3 2)"},
+    {src: `(destructuring-bind (a &key x) '(1 :x . 2) x)`, fehler: "destructuring-bind: Liste erwartet für (a &key x), bekam (1 :x . 2)"},
+    // Makro mit Punktpaar-Muster
+    {src: mr + `(mr (1 2 3))`, want: "(1 (2 3))"},
+    {src: mr + `(mr (1 . 2))`, want: "(1 2)"},
+    {src: mr + `(mr (1))`, want: "(1 ())"},
+  })
 }

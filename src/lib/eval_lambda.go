@@ -48,7 +48,7 @@ func applyLambda(lambda *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("applyLambda: Lambda hat keinen Closure-Env")
   }
   localEnv   := NewEnv(closureEnv)
-  if err := bindArgs(lambda.Car, args, localEnv, ectx, lambda.Type == MACRO, "lambda"); err != nil {
+  if err := bindArgs(lambda.Car, args, nil, localEnv, ectx, lambda.Type == MACRO, "lambda"); err != nil {
     return nil, err
   }
   return evalWithCtx(lambda.Cdr, localEnv, ectx.child())
@@ -101,8 +101,10 @@ func bindSupplied(localEnv *Env, supplied string, delivered bool) {
 // an Schlüsselposition sind Fehler.
 // nested: eine Liste an Pflichtstelle ist selbst eine Lambda-Liste
 // (Makros, destructuring-bind); who ist das Präfix der Meldungen.
+// tail: Listenende nach args (musterWerte) — &rest/Punktpaar binden es
+// geteilt; nil bei lambda-Aufrufen (args sind alle Werte).
 // Die Struktur der Liste hat checkLambdaList schon geprüft.
-func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx, nested bool, who string) error {
+func bindArgs(params *Cell, args []*Cell, tail *Cell, localEnv *Env, ectx evalCtx, nested bool, who string) error {
   section := 0  // 0=regulär, 1=&optional, 2=&key
   argIdx  := 0
   hasRest := false
@@ -114,7 +116,7 @@ func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx, nested bo
     if p.Type == NIL { break }
     if p.Type == ATOM {
       // Dotted rest-Parameter: (lambda (a b . rest) ...)
-      _ = localEnv.Set(p.Val, SliceToCell(args[argIdx:]))
+      _ = localEnv.Set(p.Val, restListe(args[argIdx:], tail))
       hasRest = true
       break
     }
@@ -143,7 +145,7 @@ func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx, nested bo
         if p == nil || p.Type != LIST || p.Car == nil {
           return fmt.Errorf("%s: &rest braucht Parameter-Namen", who)
         }
-        _ = localEnv.Set(p.Car.Val, SliceToCell(args[argIdx:]))
+        _ = localEnv.Set(p.Car.Val, restListe(args[argIdx:], tail))
         hasRest = true
         p = p.Cdr  // &key darf folgen und liest dieselben Argumente
         continue
@@ -159,11 +161,9 @@ func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx, nested bo
         if !nested || param.Type != LIST {
           return fmt.Errorf("%s: Parameter muss Atom sein", who)
         }
-        vals, err := properList(who, args[argIdx])
-        if err != nil {
-          return fmt.Errorf("%s: Liste erwartet für %s, bekam %s", who, param, args[argIdx])
-        }
-        if err := bindArgs(param, vals, localEnv, ectx, true, who); err != nil { return err }
+        vals, ende, err := musterWerte(who, param, args[argIdx])
+        if err != nil { return err }
+        if err := bindArgs(param, vals, ende, localEnv, ectx, true, who); err != nil { return err }
         argIdx++
         continue
       }
@@ -217,10 +217,69 @@ func bindArgs(params *Cell, args []*Cell, localEnv *Env, ectx evalCtx, nested bo
     }
     return nil
   }
-  if !hasRest && argIdx < len(args) {
-    return fmt.Errorf("%s: zu viele %s (%d überzählig)", who, anzahlWort(who), len(args)-argIdx)
+  if !hasRest && (argIdx < len(args) || tail != nil && tail.Type != NIL) {
+    return fmt.Errorf("%s: zu viele %s (%d überzählig)", who, anzahlWort(who), len(args)-argIdx+zelleZahl(tail))
   }
   return nil
+}
+
+// musterWerte teilt den Wert für ein Muster (destructuring-bind, Makro-
+// Muster): nur so viele Elemente wie Pflicht- und &optional-Stellen in den
+// Slice, das Listenende geht geteilt an bindArgs (Spec §4 „Rest teilen“).
+// Mit &key wird der ganze Wert gewandelt (Schlüssel stehen überall), ende
+// ist dann nil.
+func musterWerte(who string, muster, wert *Cell) (vals []*Cell, ende *Cell, err error) {
+  stellen, mitKey, offen := 0, false, true
+  for p := muster; p != nil && p.Type == LIST; p = p.Cdr {
+    switch p.Car.Val {
+    case "&key": mitKey, offen = true, false
+    case "&rest", "&body": offen = false
+    case "&optional", "&allow-other-keys":
+    default:
+      if offen { stellen++ }
+    }
+  }
+  if mitKey {
+    if vals, err = properList(who, wert); err != nil { return nil, nil, listeErwartet(who, muster, wert) }
+    return vals, nil, nil
+  }
+  ende = wert
+  for ; stellen > 0 && ende != nil && ende.Type == LIST; stellen-- {
+    vals = append(vals, ende.Car)
+    ende = ende.Cdr
+  }
+  if ende != nil && ende.Type != LIST && ende.Type != NIL && (stellen > 0 || len(vals) == 0) {
+    return nil, nil, listeErwartet(who, muster, wert)
+  }
+  return vals, ende, nil
+}
+
+func listeErwartet(who string, muster, wert *Cell) error {
+  return fmt.Errorf("%s: Liste erwartet für %s, bekam %s", who, muster, wert)
+}
+
+// restListe: args vor das geteilte Listenende tail; ohne tail (lambda) eine
+// frische Liste.
+func restListe(args []*Cell, tail *Cell) *Cell {
+  if tail == nil {
+    return SliceToCell(args)
+  }
+  for i := len(args) - 1; i >= 0; i-- {
+    tail = Cons(args[i], tail)
+  }
+  return tail
+}
+
+// zelleZahl: überzählige Werte im Listenende — Cons-Zellen, ein unechtes
+// Ende zählt eins. Nur im Fehlerpfad.
+func zelleZahl(c *Cell) (n int) {
+  for ; c != nil && c.Type == LIST; c = c.Cdr {
+    n++
+  }
+  if c != nil && c.Type != NIL {
+    n++
+  }
+  return n
 }
 
 // anzahlWort: lambda zählt Argumente, destructuring-bind Werte (Spec §3.3).
@@ -260,7 +319,7 @@ func bindEvalArgs(params *Cell, argExprs *Cell, callerEnv, localEnv *Env, ectx e
   }
   rest, err := evalExprList(argExprs, callerEnv, ectx)
   if err != nil { return err }
-  return bindArgs(p, rest, localEnv, ectx, false, "lambda")
+  return bindArgs(p, rest, nil, localEnv, ectx, false, "lambda")
 }
 
 // evalExprList wertet eine Liste von Ausdrücken aus und liefert einen Slice.

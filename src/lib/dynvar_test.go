@@ -302,8 +302,6 @@ func TestDynMakrosBindenDynamisch(t *testing.T) {
     (let ((acc ())) (dolist (*dv3-e* '(1 2)) (setq acc (cons (dv3-g) acc))) acc)`, "(2 1)")
   evalStdlibEq(t, `(defvar *dv3-t* 99) (defun dv3-gt () *dv3-t*)
     (let ((acc ())) (dotimes (*dv3-t* 3) (setq acc (cons (dv3-gt) acc))) (cons *dv3-t* acc))`, "(99 2 1 0)")
-  evalStdlibEq(t, `(defvar *dv3-d* 0) (defun dv3-gd () *dv3-d*)
-    (destructuring-bind (*dv3-d* y) '(5 6) (list (dv3-gd) y))`, "(5 6)")
   evalStdlibEq(t, `(defvar *dv3-l* 0) (defun dv3-gl () *dv3-l*)
     (list (loop for *dv3-l* in '(1 2) collect (dv3-gl)) (dv3-gl))`, "((1 2) 0)")
   evalStdlibEq(t, `(defvar *dv3-w* 0) (defun dv3-gw () *dv3-w*)

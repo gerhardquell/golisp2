@@ -297,6 +297,34 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
         env = localEnv
         continue
 
+      // Lambda-Liste wie bei Makros (verschachtelt), gebunden über bindArgs;
+      // Rumpf wie bei let, der letzte Ausdruck per continue (Spec §4).
+      case "destructuring-bind":
+        if expr.Cdr == nil || expr.Cdr.Type != LIST || expr.Cdr.Cdr == nil || expr.Cdr.Cdr.Type != LIST {
+          return nil, fmt.Errorf("destructuring-bind: Syntax: (destructuring-bind lambda-liste ausdruck rumpf…)")
+        }
+        muster := expr.Cdr.Car
+        if err := checkLambdaList("destructuring-bind", muster, true); err != nil { return nil, err }
+        val, err := evalWithCtx(expr.Cdr.Cdr.Car, env, ectx.child())
+        if err != nil { return nil, err }
+        werte, err := properList("destructuring-bind", Primary(val))
+        if err != nil {
+          return nil, fmt.Errorf("destructuring-bind: Liste erwartet für %s, bekam %s", muster, Primary(val))
+        }
+        localEnv := NewEnv(env)
+        if err := bindArgs(muster, werte, localEnv, ectx, true, "destructuring-bind"); err != nil { return nil, err }
+        body := expr.Cdr.Cdr.Cdr
+        if body == nil || body.Type != LIST {
+          return MakeNil(), nil
+        }
+        for body.Cdr != nil && body.Cdr.Type == LIST {
+          if _, err := evalWithCtx(body.Car, localEnv, ectx.child()); err != nil { return nil, err }
+          body = body.Cdr
+        }
+        expr = body.Car
+        env = localEnv
+        continue
+
       case "let*":
         localEnv := NewEnv(env)
         bindings := expr.Cdr.Car

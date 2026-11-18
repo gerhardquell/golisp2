@@ -156,3 +156,59 @@ func TestBindArgsPraefix(t *testing.T) {
     t.Errorf("Bindung a b c d = %s, want 1 2 3 5", s)
   }
 }
+
+// TestDestructuringBindSpezialform: Spec §3.1–§3.3, §5 (Schritt 2 des Plans).
+func TestDestructuringBindSpezialform(t *testing.T) {
+  vergissSpecial(t, "*dbs-y*")
+  syntax := "destructuring-bind: Syntax: (destructuring-bind lambda-liste ausdruck rumpf…)"
+  pruefeLambdaListFaelle(t, []lambdaListFall{
+    // Spec §3.2
+    {src: `(destructuring-bind ((a b) c &key (d 4)) '((1 2) 3 :d 5) (list a b c d))`, want: "(1 2 3 5)"},
+    {src: `(destructuring-bind (a (b &optional (c 9)) . r) '(1 (2) 3 4) (list a b c r))`, want: "(1 2 9 (3 4))"},
+    // Punktpaar auf jeder Ebene
+    {src: `(destructuring-bind (a . b) '(1 2) b)`, want: "(2)"},
+    {src: `(destructuring-bind (a (b . c) . d) '(1 (2 3 4) 5 6) (list a b c d))`, want: "(1 2 (3 4) (5 6))"},
+    {src: `(destructuring-bind ((a . b) . c) '((1) 2) (list a b c))`, want: "(1 () (2))"},
+    // Lambda-Keywords
+    {src: `(destructuring-bind (a &key (k 7)) '(1) (list a k))`, want: "(1 7)"},
+    {src: `(destructuring-bind (a &key (k 7 k-p)) '(1 :k 2) (list a k k-p))`, want: "(1 2 t)"},
+    {src: `(destructuring-bind (a b &rest c) '(1 2 3 4) c)`, want: "(3 4)"},
+    {src: `(destructuring-bind (a &optional b) '(1) b)`, want: "()"},
+    {src: `(destructuring-bind (a &optional (b (+ a 1))) '(1) b)`, want: "2"},
+    // Form: ohne Rumpf (), leeres Muster, lexikalisch und nicht nach außen
+    {src: `(destructuring-bind (a) '(1))`, want: "()"},
+    {src: `(destructuring-bind () '() 5)`, want: "5"},
+    {src: `(define a 10) (list (destructuring-bind (a) '(1) a) a)`, want: "(1 10)"},
+    {src: `(define z 3) (destructuring-bind (a) (list z) (+ a z))`, want: "6"},
+    // Ausdruck genau einmal ausgewertet
+    {src: `(define n 0) (destructuring-bind ((a) b) (begin (setq n (+ n 1)) '((1) 2)) (list a b n))`, want: "(1 2 1)"},
+    // Spec §5: keine let-Kette mehr
+    {src: `(define f '(destructuring-bind (a b) '(1 2) (+ a b))) (equal? (macroexpand f) f)`, want: "t"},
+
+    // Spec §3.3
+    {src: `(destructuring-bind (a b) '(1) a)`, fehler: "destructuring-bind: zu wenig Werte (brauche 'b')"},
+    {src: `(destructuring-bind (a) '(1 2 3) a)`, fehler: "destructuring-bind: zu viele Werte (2 überzählig)"},
+    {src: `(destructuring-bind (x (a b)) '(1 5) a)`, fehler: "destructuring-bind: Liste erwartet für (a b), bekam 5"},
+    {src: `(destructuring-bind (x (a b)) '(1 (2)) a)`, fehler: "destructuring-bind: zu wenig Werte (brauche 'b')"},
+    {src: `(destructuring-bind (a b) 5 a)`, fehler: "destructuring-bind: Liste erwartet für (a b), bekam 5"},
+    {src: `(destructuring-bind (a b) '(1 . 2) a)`, fehler: "destructuring-bind: Liste erwartet für (a b), bekam (1 . 2)"},
+    {src: `(destructuring-bind (a &optional ((b c))) '(1) a)`, fehler: "destructuring-bind: verschachteltes Muster nur an Pflichtstellen"},
+    {src: `(destructuring-bind (a &key ((b c) 1)) '(1) a)`, fehler: "destructuring-bind: verschachteltes Muster nur an Pflichtstellen"},
+    {src: `(destructuring-bind (a &rest (b c)) '(1) a)`, fehler: "destructuring-bind: verschachteltes Muster nur an Pflichtstellen"},
+    {src: `(defvar *dbs-y* 1) (destructuring-bind (a *dbs-y*) '(1 2) a)`, fehler: "destructuring-bind: Parameter *dbs-y* ist special — mit let binden"},
+    {src: `(defvar *dbs-y* 1) (destructuring-bind (a (b . *dbs-y*)) '(1 (2)) a)`, fehler: "destructuring-bind: Parameter *dbs-y* ist special"},
+    {src: `(destructuring-bind)`, fehler: syntax},
+    {src: `(destructuring-bind (a))`, fehler: syntax},
+  })
+}
+
+// TestDestructuringBindTCO: Spec §6 — Endrekursion durch den Rumpf ist O(1)
+// Stack: 1 000 000 Tail-Aufrufe. Bewusst mit kurzen Listen statt (iota 1000000):
+// bindArgs kopiert Werte und Rest je Schritt (properList, SliceToCell), das
+// Spec-Beispiel wäre O(n²) — 10 000 Elemente ≈ 3 s, 1 000 000 endet nicht.
+func TestDestructuringBindTCO(t *testing.T) {
+  evalStdlibEq(t, `(defun lauf (x n) (destructuring-bind (a . r) x (if (> a 0) (lauf (list (- a 1)) (+ n 1)) n)))
+    (lauf (list 1000000) 0)`, "1000000")
+  evalStdlibEq(t, `(defun lauf2 (x n) (destructuring-bind (a . r) x (if r (lauf2 r (+ n 1)) n)))
+    (lauf2 (iota 1000) 0)`, "999")
+}

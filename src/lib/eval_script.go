@@ -77,6 +77,9 @@ func RunScript(path string, args []string, env *Env) (exitCode int, result *Cell
 // Nur in der Hauptdatei wirksam (ectx.scriptState() != nil): merkt den Körper,
 // RunScript ruft ihn nach dem Laden auf. Überall sonst: nil, ungeprüft.
 func evalDefmain(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  if err := sandboxSperre(env.Root(), "defmain"); err != nil {
+    return nil, err
+  }
   st := ectx.scriptState()
   if st == nil {
     return MakeNil(), nil

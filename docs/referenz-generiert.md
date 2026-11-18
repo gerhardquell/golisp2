@@ -262,6 +262,7 @@
 | `make-array` | Vektor der Laenge n anlegen, :initial-element (Default ()) |
 | `make-hash-table` | thread-sichere Hash-Table erzeugen |
 | `make-list` | Liste mit n Elementen (:initial-element) |
+| `make-sandbox` | Sandbox fuer KI-Code: eigene Root-Umgebung mit Whitelist (:zeitlimit Sek., Default 10; :erlaube '(name ...)) |
 | `map` | Funktion ueber Sequenzen, Ergebnis 'list/'vector/nil |
 | `mapcar` | Funktion elementweise anwenden, Ergebnisliste (first-class, #' moeglich) |
 | `maphash` | Funktion (key wert) auf jeden Hash-Eintrag anwenden |
@@ -326,6 +327,7 @@
 | `rest` | Alias fuer cdr |
 | `reverse` | Liste umdrehen |
 | `round` | auf naechste ganze Zahl runden, Rundung-zum-Geraden bei .5 (CL); 2 Werte: Quotient, Rest |
+| `sandbox-eval` | Form oder String (alle Formen) in der Sandbox auswerten, Wert der letzten; Zeitlimit gilt auch in Callbacks und Goroutinen |
 | `second` | Alias fuer cadr |
 | `set-difference` | Elemente von a ohne die aus b |
 | `set-nth` | Kopie mit n-tem Element ersetzt |

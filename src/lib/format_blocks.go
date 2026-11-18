@@ -20,7 +20,7 @@ import (
 
 // ---- ~/fun/ User-Funktion ----
 
-// emitUserFunc: ~/name/ ruft die benannte Funktion (globalFormatEnv) mit
+// emitUserFunc: ~/name/ ruft die benannte Funktion (st.env) mit
 // dem nächsten format-arg auf, schreibt das Ergebnis aesthetic. GoLisp hat
 // keine Packages → ~/<symbol>/ (kein package:prefix). CL übergibt ferner
 // stream/colon/atsign/params an f; hier vereinfacht auf (f arg).
@@ -41,11 +41,11 @@ func emitUserFunc(st *fmtState, ctrl []rune, pos int, params []pval, colon, at b
     st.err = fmt.Errorf("format: ~/fun/ braucht Funktionsnamen")
     return pos
   }
-  if globalFormatEnv == nil {
+  if st.env == nil {
     st.err = fmt.Errorf("format: ~/fun/ kein Environment registriert")
     return pos
   }
-  fn, err := globalFormatEnv.Get(name)
+  fn, err := st.env.Get(name)
   if err != nil {
     st.err = fmt.Errorf("format: ~/%s/: %v", name, err)
     return pos
@@ -79,7 +79,7 @@ func emitRecursive(st *fmtState, ctrl []rune, pos int, at bool) int {
     lst := st.consume()
     subArgs = cellToSlice(lst)
   }
-  sub := &fmtState{out: &strings.Builder{}, args: subArgs, ectx: st.ectx}
+  sub := &fmtState{out: &strings.Builder{}, args: subArgs, ectx: st.ectx, env: st.env}
   formatRun(sub, []rune(cstr.Val), 0)
   if sub.err != nil {
     st.err = sub.err
@@ -152,7 +152,7 @@ func emitIteration(st *fmtState, ctrl []rune, pos int, colon, at bool) (int, boo
 
   // step führt Body einmal auf args aus; liefert verbleibende args + esc.
   step := func(args []*Cell) ([]*Cell, bool) {
-    sub := &fmtState{out: st.out, args: args, idx: 0, ectx: st.ectx}
+    sub := &fmtState{out: st.out, args: args, idx: 0, ectx: st.ectx, env: st.env}
     _, esc := formatRun(sub, bodyRunes, 0)
     if sub.err != nil {
       st.err = sub.err
@@ -207,7 +207,7 @@ func emitIteration(st *fmtState, ctrl []rune, pos int, colon, at bool) (int, boo
 
 func emitCase(st *fmtState, ctrl []rune, pos int, colon, at bool) int {
   body, npos := findBlock(ctrl, pos, '(', ')')
-  sub := &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx}
+  sub := &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx, env: st.env}
   formatRun(sub, ctrlSlice(ctrl, body), 0)
   if sub.err != nil {
     st.err = sub.err
@@ -404,7 +404,7 @@ func (st *fmtState) peek() *Cell {
 
 // sub erzeugt einen Sub-State mit getrenntem out (für clauses).
 func (st *fmtState) sub(rng [2]int) *fmtState {
-  return &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx}
+  return &fmtState{out: &strings.Builder{}, args: st.args, idx: st.idx, ectx: st.ectx, env: st.env}
 }
 
 // cellToSlice: Liste → []*Cell. Nutzt types_helpers.

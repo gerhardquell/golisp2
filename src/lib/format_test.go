@@ -111,7 +111,7 @@ func TestFormatBasic(t *testing.T) {
   }
 }
 
-// TestFormatUserFunc: ~/fun/ ruft benannte Funktion (globalFormatEnv) auf.
+// TestFormatUserFunc: ~/fun/ ruft benannte Funktion (Root-Env von format) auf.
 func TestFormatUserFunc(t *testing.T) {
   evalEq(t, `(begin
               (defun up (s) (string-upcase s))

@@ -67,9 +67,14 @@ func (e evalCtx) scriptState() *mainScriptState {
 }
 
 // withoutScript liefert e ohne Hauptdatei-Zustand, Cancellation bleibt.
+// Ohne Kontext bleibt nichts übrig: run = nil, keine Allokation.
 func (e evalCtx) withoutScript() evalCtx {
   if e.run != nil && e.run.script != nil {
-    e.run = &runState{ctx: e.run.ctx}
+    if e.run.ctx == nil {
+      e.run = nil
+    } else {
+      e.run = &runState{ctx: e.run.ctx}
+    }
   }
   return e
 }
@@ -87,9 +92,24 @@ func (e evalCtx) check() error {
   if e.run != nil && e.run.ctx != nil {
     select {
     case <-e.run.ctx.Done():
-      return &LispError{Msg: MakeStr("eval: cancelled")}
+      return cancelledErr()
     default:
     }
+  }
+  return nil
+}
+
+// cancelledErr: Fehler bei Abbruch des Kontexts — check() und blockierende
+// Primitiven (sleep, chan-*).
+func cancelledErr() error {
+  return &LispError{Msg: MakeStr("eval: cancelled")}
+}
+
+// done: Done-Channel des Abbruch-Kontexts; ohne Kontext nil — ein
+// nil-Channel feuert in select nie, das Warten bleibt wie ohne Kontext.
+func (e evalCtx) done() <-chan struct{} {
+  if ctx := e.context(); ctx != nil {
+    return ctx.Done()
   }
   return nil
 }
@@ -390,8 +410,8 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
     }
     args, pooled, err := evalArgsPooled(expr.Cdr, env, ectx.child())
     if err != nil { return nil, err }
-    if ectx.dyn != nil {
-      res, err = callFuncDyn(fn, args, ectx.dyn)
+    if ectx.dyn != nil || ectx.run != nil {
+      res, err = callFuncCtx(fn, args, ectx)
     } else {
       res, err = fn.Fn(args)
     }
@@ -457,8 +477,16 @@ func resolveFn(env *Env, fn *Cell) *Cell {
   if fn == nil || fn.Type != ATOM {
     return fn
   }
-  if v, err := env.Root().GetSym(fn); err == nil && (v.Type == FUNC || v.Type == LAMBDA) {
+  root := env.Root()
+  v, err := root.GetSym(fn)
+  if err == nil && (v.Type == FUNC || v.Type == LAMBDA) {
     return v
+  }
+  if err != nil {
+    // funcall/apply/mapcar 'x in einer Sandbox: Sperrmeldung statt "keine Funktion"
+    if serr := sandboxSperre(root, fn.Val); serr != nil {
+      return makeFn(func([]*Cell) (*Cell, error) { return nil, serr })
+    }
   }
   return fn
 }
@@ -489,12 +517,15 @@ func makeCtxFn(f ctxFn) *Cell {
   }}
 }
 
-// callFuncDyn: FUNC-Aufruf bei aktiven Bindungen (evalList, applyWithCtx
-// prüfen vorher ectx.dyn != nil — ohne Bindungen genau ein Nil-Vergleich).
-// Weiter geht nur dyn; Tiefe und runState wie bisher bei apply.
-func callFuncDyn(fn *Cell, args []*Cell, dyn *dynBinding) (*Cell, error) {
+// callFuncCtx: FUNC-Aufruf bei aktiven Bindungen oder Abbruch-Kontext
+// (evalList, applyWithCtx prüfen vorher ectx.dyn != nil || ectx.run != nil
+// — ohne beides zwei Nil-Vergleiche). Weiter gehen dyn und run, damit
+// Callbacks Frist und Abbruch sehen (Sandbox-Spec §3.4); Tiefe 0 wie bei
+// apply. Ohne Hauptdatei-Zustand: defmain im Callback bleibt wirkungslos
+// wie bisher.
+func callFuncCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   if f, ok := fn.Env.(ctxFn); ok {
-    return f(args, evalCtx{dyn: dyn})
+    return f(args, evalCtx{run: ectx.withoutScript().run, dyn: ectx.dyn})
   }
   return fn.Fn(args)
 }
@@ -516,7 +547,7 @@ func Apply(fn *Cell, args []*Cell) (*Cell, error) {
 func applyWithCtx(fn *Cell, args []*Cell, ectx evalCtx) (*Cell, error) {
   switch fn.Type {
   case FUNC:
-    if ectx.dyn != nil { return callFuncDyn(fn, args, ectx.dyn) }
+    if ectx.dyn != nil || ectx.run != nil { return callFuncCtx(fn, args, ectx) }
     return fn.Fn(args)
   case LAMBDA: return applyLambda(fn, args, ectx)
   default:   return nil, fmt.Errorf("apply: '%s' ist keine Funktion", fn)

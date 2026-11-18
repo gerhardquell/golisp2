@@ -34,17 +34,15 @@ import (
 
 // RegisterFormat hängt (format ...) ins Environment ein.
 func RegisterFormat(env *Env) {
-  _ = env.Set("format", makeCtxFn(fnFormat))
-  globalFormatEnv = env // für ~/fun/-Direktive (Lookup der User-Funktion)
+  // env gefangen statt global: ~/fun/ sucht im eigenen Root-Env — sonst
+  // sähe eine Sandbox das zuletzt gebaute BaseEnv (sandbox.go).
+  _ = env.Set("format", makeCtxFn(func(args []*Cell, ectx evalCtx) (*Cell, error) {
+    return fnFormat(env, args, ectx)
+  }))
 }
 
-// globalFormatEnv: das BaseEnv, von RegisterFormat gestzt. ~/fun/ braucht
-// env-Zugriff zum Look-up der benannten Funktion — Primitive hat kein env.
-// BaseEnv wird mehrfach aufgerufen (Tests); letzter Aufruf gewinnt.
-var globalFormatEnv *Env
-
-// fnFormat: (format dest control . args)
-func fnFormat(args []*Cell, ectx evalCtx) (*Cell, error) {
+// fnFormat: (format dest control . args). env: Root-Env für ~/fun/.
+func fnFormat(env *Env, args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) < 2 {
     return nil, fmt.Errorf("format: min. 2 Argumente (dest control . args)")
   }
@@ -57,7 +55,7 @@ func fnFormat(args []*Cell, ectx evalCtx) (*Cell, error) {
     return nil, fmt.Errorf("format: control muss String sein")
   }
   ctrl := []rune(args[1].Val)
-  st := &fmtState{out: &strings.Builder{}, args: args[2:], ectx: ectx}
+  st := &fmtState{out: &strings.Builder{}, args: args[2:], ectx: ectx, env: env}
   formatRun(st, ctrl, 0)
   if st.err != nil {
     return nil, st.err
@@ -84,6 +82,7 @@ type fmtState struct {
   idx  int   // nächstes zu verbrauchendes Argument
   err  error
   ectx evalCtx // für ~/fun/ (dynamische Bindungen)
+  env  *Env    // für ~/fun/ (Lookup der Funktion); nil bei printf & Co.
 }
 
 // pkind: Art eines Direktiven-Parameters.

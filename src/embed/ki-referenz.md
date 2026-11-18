@@ -156,6 +156,7 @@ sortiert (Basis von `tools/gen-reference.lisp`); `(lisp-implementation-version)`
 - **GenAlg:** `ga-create ga-init ga-cross ga-calc ga-select ga-result ga-mut ga-print ga?`
 - **Redefine:** `redefine-policy redef-log redef-log-clear defined-in`
 - **Trace:** `trace untrace trace?`
+- **Sandbox (KI-Code):** `(make-sandbox [:zeitlimit sek] [:erlaube '(name …)])` → `#<foreign sandbox>`; `(sandbox-eval sb form-oder-string)` → Wert der letzten Form, String: **alle** Formen (anders als `read`). Eigene Root-Umgebung: Definitionen bleiben dort. Erlaubt: Rechnen, Listen, Strings, stdlib, Ausgabe, `parfunc`/`spawn`/`chan-*`, Datei lesen; `sigo` nur per `:erlaube '(sigo)`; gesperrt: `system exec load` Datei schreiben, `getenv exit argv`, `redefine-policy trace`, Dienste (`pg-* http-* ws-* webserv maxima-* ga-*`) → Fehler `sandbox: system nicht erlaubt (freigeben mit :erlaube)`. Zeitlimit Standard 10 s, auch in Callbacks und Goroutinen; `sleep`/`chan-*` brechen ab, `sandbox-eval` kehrt immer zur Frist zurück → `sandbox: Zeitlimit 10 s überschritten`. `make-sandbox`/`sandbox-eval` nie freigebbar; `file-read` dort nur reguläre Dateien
 - **defsystem-lite:** `defsystem load-system unload-system loaded-systems system-symbols`
 - **Web-Bridge (golisp2web):** `http-serve http-static http-stop http-port http-upload http-wait webserv ws-call ws-clients ws-emit ws-emit-to ws-eval ws-export ws-unexport browser-open`
 - **Condition-lite:** `define-condition signal handler-case documentation` (siehe Abschnitt 7)

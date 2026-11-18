@@ -351,6 +351,63 @@ dynamisch.
 `(let ((*x* 2)) (makunbound '*x*))` entfernte still den globalen Wert. Jetzt
 Fehler `makunbound: *x* ist dynamisch gebunden`.
 
+## I. Sandbox (20261117, 0.34.0)
+
+Seit 0.34.0 gibt es `make-sandbox`/`sandbox-eval` für KI-Code. Regeln:
+`docs/lisp-semantik.md`, Abschnitt „Sandbox“. Jede Sandbox baut ein eigenes
+`BaseEnv` — dabei fielen zwei globale Zustände auf, die nur das zuletzt
+gebaute Env kannten. Sie betrafen vorher schon jede weitere
+SWANK-Verbindung (`handleConn` baut je Verbindung ein `BaseEnv`).
+
+### I1. `~/fun/` suchte im zuletzt gebauten Env  [FIXED 0.34.0]
+**Symptom:** `format` merkte sich das Env in der globalen `globalFormatEnv`,
+der letzte `RegisterFormat`-Aufruf gewann. Nach `(make-sandbox)` hätte
+`(format nil "~/up/" "hi")` die globale Funktion `up` nicht mehr gefunden.
+**Fix:** `format` fängt sein Env bei der Registrierung: global → `"HI"`; in
+der Sandbox findet `~/fun/` nur Sandbox-Funktionen
+(`format: ~/up/: env: unbekanntes Symbol 'up'`).
+
+### I2. `trace`-Zustand war global  [FIXED 0.34.0]
+**Symptom:** `RegisterTrace` setzte Root und Originale global zurück. Nach
+`(trace 'tr) (make-sandbox)` fand `(untrace 'tr)` das Original nicht mehr.
+**Fix:** Zustand je Root-Env → `(untrace 'tr)` → `tr`.
+
+### I3. Zeitlimit hielt bei blockierenden Operationen nicht  [FIXED 0.34.0, Rest LIMITATION]
+**Symptom:** Mit `:zeitlimit 1` hing `sandbox-eval` bei `(sleep 3000)` 3 s,
+bei `chan-recv`/`chan-send`/`chan-select` ohne Partner und beim
+`lock`-Deadlock für immer.
+**Fix:** `sandbox-eval` wertet in eigener Goroutine aus und kehrt immer zur
+Frist zurück; `sleep` und `chan-*` brechen mit dem Kontext ab.
+**Rest:** Was den Abbruch nicht sieht (`lock`, großes `sort`, Regex,
+`sigo`-HTTP-Aufruf), läuft im Hintergrund weiter, ein `lock`-Deadlock für
+immer. `sigo` hat seinen eigenen Timeout (`GOLISP_SIGO_TIMEOUT`).
+
+### I4. Speicher pro Sandbox bleibt  [LIMITATION]
+Jede Sandbox kostet rund 1 MB (eigenes `BaseEnv` + stdlib, gemessen mit
+`(memstats)`: 10 Sandboxen ≈ +11 MB) und wird bis Prozessende nicht
+freigegeben (Zustandstabelle in `sandbox.go`). Eine Sandbox wiederverwenden
+statt eine pro Aufruf. Quoten für Speicher und CPU gibt es nicht.
+
+### I5. Callbacks sehen den Abbruch-Kontext auch außerhalb der Sandbox  [KNOWN]
+Verhaltensänderung: Callbacks aus Primitiven (`mapcar`, `sort`, `maphash`,
+`format ~/fun/` …) erben jetzt den Abbruch-Kontext des Aufrufers — nötig,
+damit das Zeitlimit dort greift. Eine Endlosschleife in einem
+`mapcar`-Callback innerhalb eines abgebrochenen `parfunc :timeout` bricht
+jetzt ab; vorher lief sie still weiter. Ebenso brechen `sleep` und `chan-*`
+im abgebrochenen Worker jetzt mit `eval: cancelled` ab.
+
+### I6. Verschachtelte Sandbox hatte volle Rechte  [FIXED 0.34.0]
+**Symptom:** `(make-sandbox :erlaube '(make-sandbox sandbox-eval))` — darin
+konnte eine neue Sandbox sich `system` freigeben.
+**Fix:** `make-sandbox`/`sandbox-eval` sind nie freigebbar →
+`make-sandbox: make-sandbox ist nicht freigebbar`.
+
+### I7. `file-read` auf Gerätedateien  [FIXED 0.34.0]
+**Symptom:** `(file-read "/dev/zero")` in der Sandbox las ohne Ende und fraß
+Speicher bis zum Absturz.
+**Fix:** In der Sandbox liest `file-read` nur reguläre Dateien (auch nicht
+`sys-stdin`); außerhalb unverändert.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

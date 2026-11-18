@@ -19,6 +19,9 @@ import (
 
 // load: (load "datei.lisp") → liest und wertet alle Ausdrücke aus
 func evalLoad(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  if err := sandboxSperre(env.Root(), "load"); err != nil {
+    return nil, err
+  }
   filenameCell, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   filenameCell = Primary(filenameCell)

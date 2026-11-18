@@ -19,44 +19,40 @@ import (
   "sync/atomic"
 )
 
-var (
-  traceMu     sync.RWMutex
-  traceOrigs  map[string]*Cell
-  traceRoot   *Env
-  traceDepth  atomic.Int32
-)
+var traceDepth atomic.Int32
+
+// traceState gehört einem Root-Env. Pro RegisterTrace ein eigener statt
+// globaler Zustand: ein weiteres BaseEnv (Sandbox, sandbox.go) überschriebe
+// sonst Root und Originale des ersten.
+type traceState struct {
+  mu    sync.RWMutex
+  origs map[string]*Cell
+  root  *Env
+}
 
 // RegisterTrace registriert trace/untrace/trace? im Root-Env.
 func RegisterTrace(env *Env) {
-  traceMu.Lock()
-  traceOrigs = make(map[string]*Cell)
-  traceRoot = env.Root()
-  traceDepth.Store(0)
-  traceMu.Unlock()
-
-  _ = env.Set("trace",   makeFn(fnTrace))
-  _ = env.Set("untrace", makeFn(fnUntrace))
-  _ = env.Set("trace?",  makeFn(fnTraceP))
+  ts := &traceState{origs: make(map[string]*Cell), root: env.Root()}
+  _ = env.Set("trace",   makeFn(ts.fnTrace))
+  _ = env.Set("untrace", makeFn(ts.fnUntrace))
+  _ = env.Set("trace?",  makeFn(ts.fnTraceP))
 }
 
 // fnTrace: (trace 'name) -> name
-func fnTrace(args []*Cell) (*Cell, error) {
+func (ts *traceState) fnTrace(args []*Cell) (*Cell, error) {
   if len(args) != 1 || args[0] == nil || args[0].Type != ATOM {
     return nil, fmt.Errorf("trace: 1 Atom-Argument erwartet")
   }
   name := args[0].Val
 
-  traceMu.Lock()
-  defer traceMu.Unlock()
+  ts.mu.Lock()
+  defer ts.mu.Unlock()
 
-  if traceRoot == nil {
-    return nil, fmt.Errorf("trace: kein Root-Env registriert")
-  }
-  if _, ok := traceOrigs[name]; ok {
+  if _, ok := ts.origs[name]; ok {
     return MakeAtom(name), nil
   }
 
-  cur, err := traceRoot.Get(name)
+  cur, err := ts.root.Get(name)
   if err != nil {
     return nil, fmt.Errorf("trace: Symbol '%s' nicht gebunden", name)
   }
@@ -64,49 +60,49 @@ func fnTrace(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("trace: '%s' ist keine Funktion", name)
   }
 
-  traceOrigs[name] = cur
+  ts.origs[name] = cur
   wrapper := makeTracedWrapper(name, cur)
-  if err := traceRoot.Update(name, wrapper); err != nil {
-    delete(traceOrigs, name)
+  if err := ts.root.Update(name, wrapper); err != nil {
+    delete(ts.origs, name)
     return nil, err
   }
   return MakeAtom(name), nil
 }
 
 // fnUntrace: (untrace 'name) -> name | nil, (untrace) -> (name ...)
-func fnUntrace(args []*Cell) (*Cell, error) {
-  traceMu.Lock()
-  defer traceMu.Unlock()
+func (ts *traceState) fnUntrace(args []*Cell) (*Cell, error) {
+  ts.mu.Lock()
+  defer ts.mu.Unlock()
 
   if len(args) == 0 {
-    return untraceAllLocked(), nil
+    return ts.untraceAllLocked(), nil
   }
   if len(args) != 1 || args[0] == nil || args[0].Type != ATOM {
     return nil, fmt.Errorf("untrace: 0 oder 1 Atom-Argument erwartet")
   }
   name := args[0].Val
 
-  orig, ok := traceOrigs[name]
+  orig, ok := ts.origs[name]
   if !ok {
     return MakeNil(), nil
   }
-  delete(traceOrigs, name)
-  if err := traceRoot.Update(name, orig); err != nil {
+  delete(ts.origs, name)
+  if err := ts.root.Update(name, orig); err != nil {
     // Wiederherstellen des Registry-Eintrags, damit Zustand konsistent bleibt.
-    traceOrigs[name] = orig
+    ts.origs[name] = orig
     return nil, err
   }
   return MakeAtom(name), nil
 }
 
 // fnTraceP: (trace? 'name) -> t | nil
-func fnTraceP(args []*Cell) (*Cell, error) {
+func (ts *traceState) fnTraceP(args []*Cell) (*Cell, error) {
   if len(args) != 1 || args[0] == nil || args[0].Type != ATOM {
     return nil, fmt.Errorf("trace?: 1 Atom-Argument erwartet")
   }
-  traceMu.RLock()
-  _, ok := traceOrigs[args[0].Val]
-  traceMu.RUnlock()
+  ts.mu.RLock()
+  _, ok := ts.origs[args[0].Val]
+  ts.mu.RUnlock()
   if ok {
     return MakeAtom("t"), nil
   }
@@ -145,20 +141,20 @@ func formatTraceArgs(args []*Cell) string {
   return b.String()
 }
 
-func untraceAllLocked() *Cell {
-  names := make([]string, 0, len(traceOrigs))
-  for name := range traceOrigs {
+func (ts *traceState) untraceAllLocked() *Cell {
+  names := make([]string, 0, len(ts.origs))
+  for name := range ts.origs {
     names = append(names, name)
   }
   sort.Strings(names)
 
   // Originale zurückschreiben.
   for _, name := range names {
-    if orig, ok := traceOrigs[name]; ok {
-      _ = traceRoot.Update(name, orig)
+    if orig, ok := ts.origs[name]; ok {
+      _ = ts.root.Update(name, orig)
     }
   }
-  clear(traceOrigs)
+  clear(ts.origs)
 
   cells := make([]*Cell, len(names))
   for i, n := range names {

@@ -579,6 +579,118 @@ Nicht vorhanden: `(declare (special x))`, `defconstant`, `symbol-value`/`set`.
 
 ---
 
+## Sandbox (seit 0.34.0)
+
+Eigene Root-Umgebung für KI-Code — zusätzlich zu `(eval (read (sigo …)))`,
+das unverändert volle Rechte hat (`docs/sigo.md`).
+
+```lisp
+(make-sandbox &key zeitlimit erlaube)   ; → #<foreign sandbox>
+(sandbox-eval sb form-oder-string)      ; → Wert der (letzten) Form
+
+(define sb (make-sandbox))
+(sandbox-eval sb "(defun a () 1) (defun b () 2) (+ (a) (b))")   ; → 3
+(sandbox-eval sb '(system "ls"))
+; ERR: sandbox: system nicht erlaubt (freigeben mit :erlaube)
+```
+
+- Eine **Form** wird in der Sandbox ausgewertet, ein **String** ganz
+  gelesen (alle Formen der Reihe nach, Wert der letzten) — `read` nähme
+  still nur die erste.
+- Definitionen (`defun`, `define`, `defmacro` …) bleiben in der Sandbox und
+  gelten für spätere Aufrufe derselben Sandbox. Zwei Sandboxen sehen
+  einander nicht, global ist nichts davon sichtbar. `eval` in der Sandbox
+  läuft in der Sandbox-Root.
+- Fehler kommen als normaler Lisp-Fehler beim Aufrufer an (`trap`,
+  `handler-case`, `ignore-errors`), Text unverändert.
+
+**Whitelist.** Erlaubt ist nur, was `src/lib/sandbox.go` ausdrücklich
+freigibt (`sandboxGruppen`, `sandboxEinzeln`); jede andere Primitive aus
+`BaseEnv()` — auch jede neue — ist gesperrt. Zwei Tests halten beide Listen
+fest (`TestSandboxSperrliste`, `TestSandboxErlaubtListe`): Eine neue
+Primitive fällt dort auf und muss bewusst eingeordnet werden. Die stdlib
+(Lisp-Code) wird ganz geladen; ruft eine stdlib-Funktion etwas Gesperrtes,
+scheitert sie beim Aufruf: `(shell-output "ls")` →
+`sandbox: exec nicht erlaubt …`. Die Sperre greift auch über Umwege:
+`(funcall 'system …)`, `apply`, `mapcar`, `(eval (list 'system …))`, ein
+Makro, das zu `exec` expandiert.
+
+**Erlaubt:** Grundmenge — Rechnen, Listen- und Kern-Primitiven, Strings,
+Regex, Vektoren, Sequenzen, Hash-Tabellen, JSON, `type-of`/`typep`,
+CL-Kompat (`sort` …), `format`, `sprintf`, Zeit (`now`, `format-time`,
+`sleep`), `read`, `documentation`, `memstats`, `env-symbols` — und die
+Standard-Freigaben:
+
+| Gruppe | Namen |
+|---|---|
+| Ausgabe | `print`, `println`, `printf`, `format t`, `warn`, `err-write` |
+| Goroutinen | `parfunc`, `spawn`, `chan-*`, `lock-make`, `lock` |
+| Datei lesen | `file-read`, `file-exists?`, `file-stat`, `directory-files`, `get-working-directory`, `get-file-path` |
+
+**Gesperrt** (Stand 0.34.0, Wahrheit ist `TestSandboxSperrliste`):
+
+| Gruppe | Namen |
+|---|---|
+| Spezialformen | `exec`, `load`, `defmain` |
+| sigo (KI-Aufrufe) | `sigo`, `sigo*`, `sigo-request`, `sigo-models`, `sigo-model-info`, `sigo-reference`, `sigo-usage`, `sigo-costs`, `sigo-budget` — mit Datei lesen zusammen wäre das ein Weg nach außen; freigeben mit `:erlaube` |
+| Shell | `system` |
+| Datei schreiben | `file-write`, `file-append`, `file-delete`, `fprintf`, `set-working-directory` |
+| Prozess | `exit`, `argv`, `getenv`, `environ`, `lisp-implementation-version` |
+| stdin | `read-line`, `gets`, `slurp` |
+| Redefinition, Trace | `redefine-policy`, `redef-log`, `redef-log-clear`, `trace`, `trace?`, `untrace` |
+| sigo global | `sigo-host`, `sigo-system-prompt`, `sigo-usage-reset` |
+| Sandbox | `make-sandbox`, `sandbox-eval` — nie freigebbar: `make-sandbox: sandbox-eval ist nicht freigebbar` |
+| Dienste | `pg-*`, `maxima-*`, `http-*`, `ws-*`, `webserv`, `ga-*`, `browser-open` |
+
+**`:erlaube`** schaltet einzelne gesperrte Namen frei:
+`(make-sandbox :erlaube '(file-write getenv))`. Ein unbekannter oder ohnehin
+erlaubter Name ist ein Fehler — laut statt still:
+`make-sandbox: car ist keine sperrbare Funktion`.
+
+**Zeitlimit.** `:zeitlimit` in Sekunden, Zahl > 0, Standard 10. Es gilt pro
+`sandbox-eval`-Aufruf, auch in Callbacks (`mapcar`, `sort`, `maphash`,
+`format ~/fun/` …), in `parfunc`-Workern und in `spawn`-Goroutinen. Eine
+`spawn`-Goroutine, die das `sandbox-eval` überlebt, endet mit der Frist.
+Meldungen:
+
+- `sandbox-eval` kehrt immer zur Frist zurück:
+  `sandbox: Zeitlimit 1 s überschritten`;
+- `spawn`: `spawn: eval: cancelled` auf stderr, im Channel
+  `(:error "eval: cancelled")`.
+
+`sleep`, `chan-recv`, `chan-send` und `chan-select` brechen beim Fristablauf
+ab (`eval: cancelled`) — auch außerhalb der Sandbox, z. B. im
+`parfunc`-Worker nach `:timeout`.
+
+Grenzen: Was den Abbruch nicht sieht (`lock`-Deadlock, ein großes `sort`,
+ein Regex, ein `sigo`-HTTP-Aufruf), läuft im Hintergrund weiter — bis zum
+nächsten Funktionsaufruf oder Schleifendurchlauf, ein Deadlock für immer.
+`sandbox-eval` wartet darauf nicht. `sigo` hat seinen eigenen Timeout
+(`GOLISP_SIGO_TIMEOUT`) und dauert oft länger als 10 s — KI-Code, der selbst
+`sigo` ruft, braucht ein höheres `:zeitlimit`.
+
+**Funktion aus der Sandbox.** `(sandbox-eval sb 'fib)` liefert die Funktion.
+Außerhalb aufgerufen bleibt sie eingeschränkt (ihre Umgebung ist die
+Sandbox), läuft aber **ohne Zeitlimit** — das gilt nur innerhalb von
+`sandbox-eval`. Umgekehrt läuft eine Closure, die der Aufrufer selbst in die
+Sandbox reicht, mit ihren vollen Rechten.
+
+**Prozessweit bleibt:** Ein `defvar` in der Sandbox macht den Namen auch
+außerhalb special. Docstrings (`documentation`) und Redefinitionen
+(`(redef-log)`, `REDEF:`-Warnungen) der Sandbox landen in den globalen
+Registern.
+
+**Speicher:** Jede Sandbox kostet rund 1 MB (eigenes `BaseEnv` + stdlib) und
+wird bis Prozessende nicht freigegeben. Eine Sandbox anlegen und
+wiederverwenden, nicht eine pro Aufruf. Speicher- und CPU-Quoten gibt es nicht.
+
+**Datei lesen ist erlaubt:** KI-Code kann damit Geheimnisse lesen
+(`~/.netrc`, Schlüsseldateien). `getenv` bleibt gesperrt. `file-read` liest
+in der Sandbox nur reguläre Dateien — `/dev/zero`, FIFOs und `sys-stdin`
+→ `file-read: in der Sandbox nur reguläre Dateien: /dev/zero`.
+
+---
+
 ## Typen: `type-of` und `typep`
 
 ```lisp

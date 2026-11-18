@@ -351,6 +351,8 @@
     (regex-replace . "alle Regex-Treffer ersetzen, $1/${name} fuer Gruppen")
     (regex-split . "String an Regex-Treffern trennen")
     (make-array . "Vektor der Laenge n anlegen, :initial-element (Default ())")
+    (make-sandbox . "Sandbox fuer KI-Code: eigene Root-Umgebung mit Whitelist (:zeitlimit Sek., Default 10; :erlaube '(name ...))")
+    (sandbox-eval . "Form oder String (alle Formen) in der Sandbox auswerten, Wert der letzten; Zeitlimit gilt auch in Callbacks und Goroutinen")
     (vector . "Vektor aus den Argumenten")
     (aref . "Vektor-Element lesen (O(1)), Index 0..n-1")
     (aset . "Vektor-Element setzen, liefert den Wert; auch (setf (aref v i) x)")

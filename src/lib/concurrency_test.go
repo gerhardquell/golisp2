@@ -319,7 +319,7 @@ func TestChanSendCloseParallel(t *testing.T) {
     var wg sync.WaitGroup
     for j := 0; j < 4; j++ {
       wg.Add(2)
-      go func() { defer wg.Done(); _, _ = fnChanSend([]*Cell{ch, MakeNum(1)}) }()
+      go func() { defer wg.Done(); _, _ = fnChanSend([]*Cell{ch, MakeNum(1)}, evalCtx{}) }()
       go func() { defer wg.Done(); _, _ = fnChanTrySend([]*Cell{ch, MakeNum(2)}) }()
     }
     wg.Add(2)

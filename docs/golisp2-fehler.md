@@ -530,6 +530,12 @@ Platzhalter: `type-of` → `compiled-function`, `(funcall (chan-make))`
 `length`/`funcall` → Fehler. Die Port-Angabe in der Webserver-Druckform
 entfällt (`(http-port srv)`).
 
+### L7. `length` meldete den Fehler des inneren `cdr`  [FIXED 0.36.5]
+**Symptom:** `(length 5)` und `(length '(1 2 . 3))` → `cdr: Liste erwartet`
+statt einer Meldung, die `length` nennt.
+**Fix:** `length` prüft Nicht-Sequenzen und unechte Listen selbst:
+`length: Sequenz erwartet: 5`, `length: keine echte Liste: (1 2 . 3)`.
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

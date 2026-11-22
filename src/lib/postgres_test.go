@@ -100,3 +100,29 @@ func TestPgSandboxZeitlimit(t *testing.T) {
     time.Sleep(100 * time.Millisecond)
   }
 }
+
+// Ohne DB: eine normale Liste ist keine Verbindung. Mit DB: das Handle
+// ist FOREIGN.
+func TestPgConnectionIstForeign(t *testing.T) {
+  for name, err := range map[string]error{
+    "pg-query": second(fnPgQuery([]*Cell{keinHandle, MakeStr("select 1")}, evalCtx{})),
+    "pg-exec":  second(fnPgExec([]*Cell{keinHandle, MakeStr("select 1")}, evalCtx{})),
+    "pg-close": second(fnPgClose([]*Cell{keinHandle})),
+  } {
+    if err == nil || err.Error() != name+": not a postgres connection" {
+      t.Errorf("%s mit Liste: err = %v", name, err)
+    }
+  }
+  dsn := os.Getenv("GOLISP2_PG_TEST")
+  if dsn == "" {
+    t.Skip("GOLISP2_PG_TEST nicht gesetzt")
+  }
+  conn, err := fnPgConnect([]*Cell{MakeStr(dsn)})
+  if err != nil {
+    t.Fatalf("pg-connect: %v", err)
+  }
+  t.Cleanup(func() { _, _ = fnPgClose([]*Cell{conn}) })
+  pruefeHandle(t, conn, "pg-connection")
+}
+
+func second(_ *Cell, err error) error { return err }

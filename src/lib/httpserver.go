@@ -60,10 +60,8 @@ func RegisterHTTPFuncs(env *Env) {
 
 // asServer prueft, ob c ein gueltiges Server-Objekt ist.
 func asServer(name string, c *Cell) (*WebServer, error) {
-  if c == nil || c.Type != LIST || c.Env == nil {
-    return nil, fmt.Errorf("%s: kein Server-Objekt", name)
-  }
-  ws, ok := c.Env.(*WebServer)
+  obj, _ := ForeignObj(c, "webserver")
+  ws, ok := obj.(*WebServer)
   if !ok {
     return nil, fmt.Errorf("%s: kein Server-Objekt", name)
   }
@@ -142,7 +140,7 @@ func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
   ws.srv = &http.Server{Handler: ws.mux}
   ws.registerWSRoute()
   go ws.srv.Serve(ln) //nolint:errcheck // Fehler landen im done-Kanal via http-stop
-  return &Cell{Type: LIST, Env: ws, Val: fmt.Sprintf("#<webserver :%d>", ws.port)}, nil
+  return MakeForeign("webserver", ws), nil
 }
 
 // http-static: (http-static srv urlpath dir) → t. Mountet dir unter urlpath,

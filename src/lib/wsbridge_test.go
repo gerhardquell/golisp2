@@ -30,7 +30,7 @@ func wsTestServer(t *testing.T) (*WebServer, *Env) {
   if err != nil {
     t.Fatalf("http-serve: %v", err)
   }
-  ws := cell.Env.(*WebServer)
+  ws := cell.Env.(*WebServer) // FOREIGN "webserver"
   t.Cleanup(func() {
     fnHTTPStop([]*Cell{cell}) //nolint:errcheck
   })
@@ -81,7 +81,7 @@ func TestWSOpCallAndLiveRedefine(t *testing.T) {
   ws, env := wsTestServer(t)
   conn := wsDial(t, ws)
 
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
 
   // ws-export mit Handler, der die Client-ID mitbekommt (Spec §3.2)
   handler, err := Read(`(lambda (c frage) frage)`)
@@ -170,7 +170,7 @@ func TestWSEmitAndClients(t *testing.T) {
     time.Sleep(10 * time.Millisecond)
   }
 
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   res, err := fnWSEmit([]*Cell{srv, MakeAtom("tick"), MakeNum(42)})
   if err != nil {
     t.Fatal(err)
@@ -210,7 +210,7 @@ func TestWSEmitAndClients(t *testing.T) {
 
 func fnWSClientsMust(t *testing.T, ws *WebServer) []*Cell {
   t.Helper()
-  res, err := fnWSClients([]*Cell{{Type: LIST, Env: ws}})
+  res, err := fnWSClients([]*Cell{MakeForeign("webserver", ws)})
   if err != nil {
     t.Fatal(err)
   }
@@ -220,7 +220,7 @@ func fnWSClientsMust(t *testing.T, ws *WebServer) []*Cell {
 func TestWSCallRoundtripAndUnknownClient(t *testing.T) {
   ws, _ := wsTestServer(t)
   conn := wsDial(t, ws)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
 
   deadline := time.Now().Add(2 * time.Second)
   for len(fnWSClientsMust(t, ws)) != 1 {
@@ -281,7 +281,7 @@ func TestWSCallRoundtripAndUnknownClient(t *testing.T) {
 func TestWSCallReentranz(t *testing.T) {
   ws, env := wsTestServer(t)
   conn := wsDial(t, ws)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   if err := env.Set("*srv*", srv); err != nil {
     t.Fatal(err)
   }
@@ -351,7 +351,7 @@ func TestWSOriginCheck(t *testing.T) {
 
 func TestWSUnexport(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   fn, err := Eval(mustRead(t, `(lambda (c) 1)`), env)
   if err != nil {
     t.Fatal(err)

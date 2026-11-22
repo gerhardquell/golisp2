@@ -53,3 +53,19 @@ func TestMaximaCloseNebenlaeufigUndIdempotent(t *testing.T) {
     t.Errorf("maxima-eval nach close: err = %v", err)
   }
 }
+
+func TestMaximaSessionIstForeign(t *testing.T) {
+  _, err := fnMaximaEval([]*Cell{keinHandle, MakeStr("1+1")})
+  if err == nil || err.Error() != "maxima-eval: keine Maxima-Session" {
+    t.Errorf("maxima-eval mit Liste: err = %v", err)
+  }
+  if _, err := exec.LookPath(maximaBinary); err != nil {
+    t.Skip("maxima nicht installiert")
+  }
+  sess, err := fnMaximaOpen(nil)
+  if err != nil {
+    t.Fatalf("maxima-open: %v", err)
+  }
+  t.Cleanup(func() { _, _ = fnMaximaClose([]*Cell{sess}) })
+  pruefeHandle(t, sess, "maxima-session")
+}

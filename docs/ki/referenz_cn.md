@@ -197,7 +197,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 `(setf place val)` —— 通用，`(defstruct ...)` 会自动注册访问器
 
 ### 类型
-- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector`，或结构体名、类名（defclass）、condition 名；类是 `hash-table` 的子类型。`(typep x spec)` 支持类型名、`(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)`（`(n)` = 不含边界，`*` = 无边界）。`3.0` 是 `float`，不是 `integer`：`(typep 3.0 'integer)` → `()`，`(typep 3.0 'real)` → `t`。
+- `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector` `foreign`（Go 句柄），或结构体名、类名（defclass）、condition 名；类是 `hash-table` 的子类型。`(typep x spec)` 支持类型名、`(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)`（`(n)` = 不含边界，`*` = 无边界）。`3.0` 是 `float`，不是 `integer`：`(typep 3.0 'integer)` → `()`，`(typep 3.0 'real)` → `t`。
   另外可用作类型名（`type-of` 不会返回，但可作 `typep` 的父类型）：`rational` `real` `number` `atom` `list` `sequence` `structure-object` `t`。不存在 → `typep: unbekannter Typ '…'`（未知类型）：`fixnum` `character` `double-float` `single-float`。类型名区分大小写 —— `'INTEGER` 未知，只能写 `'integer`。`(typecase x (integer …) ((or string symbol) …) (otherwise …))` 按类型分支，`etypecase` 无匹配时报错。`(check-type x (integer 0 *) ["描述"])` → `()` 或报错。两者都抛出普通 `error`，不是 `type-error`。`(deftype digit () '(integer 0 9))` 定义类型名，带参数：`(deftype upto (&optional (n '*)) (list 'integer 0 n))` → `(typep x '(upto 5))`；与内置类型、结构体、类、condition 同名 → 报错。`(subtypep 'integer 'number)` → 两个值 `t t`；无法判定（`not`、`satisfies`、子区间）→ `() ()`。
 
 ---

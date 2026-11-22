@@ -85,3 +85,18 @@ func TestGaRace(t *testing.T) {
   `
   evalEq(t, src, "16")
 }
+
+func TestGaHandleIstForeign(t *testing.T) {
+  env := BaseEnv()
+  g, err := LoadString("(ga-create 'bit8 3 2 (lambda (x) 1.0))", env)
+  if err != nil {
+    t.Fatal(err)
+  }
+  pruefeHandle(t, g, "ga")
+  for _, c := range []*Cell{keinHandle, MakeForeign("ga", nil), MakeForeign("channel", nil)} {
+    if _, err := fnGaCalc([]*Cell{c}, evalCtx{}); err == nil ||
+      err.Error() != "ga-*: GA-Handle erwartet" {
+      t.Errorf("ga-calc(%v): err = %v", c, err)
+    }
+  }
+}

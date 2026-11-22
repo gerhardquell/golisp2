@@ -407,7 +407,7 @@ func TestDynGoroutineRaceSetq(t *testing.T) {
 // einer Server-Goroutine, während der Starter noch im let steckt.
 func TestDynGoroutineHTTPHandlerOhneBindung(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   evalCode(t, env, `(%declare-special '*dv5-h*) (define *dv5-h* 1) (define dv5-got nil)`)
   handler := evalCode(t, env, `(lambda (f c) (setq dv5-got *dv5-h*))`)
   if _, err := fnHTTPUpload([]*Cell{srv, MakeStr("/up"), handler}); err != nil {

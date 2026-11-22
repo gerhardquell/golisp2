@@ -10,7 +10,10 @@
 
 package lib
 
-import "testing"
+import (
+  "strings"
+  "testing"
+)
 
 func TestSeqElt(t *testing.T) {
   evalStdlibEq(t, `(elt '(a b c) 1)`, "b")
@@ -122,4 +125,18 @@ func TestLengthString(t *testing.T) {
   evalStdlibEq(t, `(length "abc")`, "3")
   evalStdlibEq(t, `(length "")`, "0")
   evalStdlibEq(t, `(length "äöü")`, "3")
+}
+
+// length: Nicht-Sequenzen und unechte Listen nennen length im Fehler, nicht cdr.
+func TestLengthFehler(t *testing.T) {
+  evalStdlibEq(t, `(length '())`, "0")
+  evalStdlibEq(t, `(length '(1 2 3))`, "3")
+  for _, src := range []string{`(length 5)`, `(length 'a)`, `(length '(1 2 . 3))`} {
+    _, err := evalStdlib(t, src)
+    if err == nil {
+      t.Errorf("eval(%q) sollte Fehler geben", src)
+    } else if !strings.Contains(err.Error(), "length:") {
+      t.Errorf("eval(%q) Fehler = %q, want \"length:\" im Text", src, err)
+    }
+  }
 }

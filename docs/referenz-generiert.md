@@ -96,7 +96,7 @@
 | `*type-parents*` | Typhierarchie (typ (direkte-obertypen …)); einzige Quelle fuer type-of/typep (types.lisp) |
 | `+` | Addition aller Argumente; alle Ganzzahl → Ganzzahl, ein Float dabei → Float |
 | `-` | Subtraktion (erstes minus Rest); (- x) negiert, (-) → Fehler |
-| `/` | Division: alle Ganzzahl und teilbar → Ganzzahl, sonst Float ((/ 7 2) → 3.5); Fehler bei Division durch 0 |
+| `/` | Division: alle Ganzzahl und teilbar → Ganzzahl, sonst Float ((/ 7 2) → 3.5); `(/ x)` ist `(/ 1 x)`; Fehler bei Division durch 0 |
 | `/=` | numerisch paarweise verschieden (CL) |
 | `1+` | n + 1 (CL) |
 | `1-` | n - 1 (CL) |
@@ -299,7 +299,7 @@
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
 | `random` | Zufallszahl; ohne n Float aus [0, 1), mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
 | `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |
-| `read` | String in Lisp-Datenstruktur parsen |
+| `read` | String in Lisp-Datenstruktur parsen; leer/nur Kommentar → Fehler `read: end-of-file` |
 | `read-line` | eine Zeile von stdin lesen |
 | `redef-log` | Ringpuffer der Redefinitionen |
 | `redef-log-clear` | Redefinitions-Log leeren |

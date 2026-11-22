@@ -109,6 +109,9 @@ func TestDivNaer(t *testing.T) {
     {`(/ 12 0 2)`, "ERR:/: Division durch 0"},
     {`(/ 12 2 0.0)`, "ERR:/: Division durch 0"},
     {`(/ ` + minI + ` 1 -1)`, "ERR:/: Ganzzahl-Überlauf"},
-    {`(/ 2)`, "ERR:/: min. 2 Argumente"},
+    {`(/ 5)`, "0.2"},
+    {`(/ 1)`, "1"},
+    {`(/ 0.5)`, "2.0"},
+    {`(/ 0)`, "ERR:/: Division durch 0"},
   })
 }

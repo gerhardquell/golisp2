@@ -499,7 +499,8 @@ Tutorial (`type-of`) beschrieben noch das Float-only-Modell vor 0.31.
 Ebenso `(apply - '())`.
 **Fix:** `(-)` → Fehler `-: min. 1 Argument`. `(- x)` negiert weiter,
 `(+)` → `0` und `(*)` → `1` bleiben (wie CL). `(/)` war schon ein Fehler
-(`/: min. 2 Argumente`).
+(`/: min. 2 Argumente`; seit 0.36.5 `/: min. 1 Argument`, und `(/ x)` ist
+jetzt `(/ 1 x)`, siehe L8).
 
 ### L4. `flatten` übernahm leere Teillisten als Atom  [FIXED 0.36.2]
 **Symptom:** `(flatten '((1 2) () (3 (4 5))))` → `(1 2 () 3 4 5)`, weil
@@ -529,6 +530,17 @@ Platzhalter: `type-of` → `compiled-function`, `(funcall (chan-make))`
 `ga`): `type-of` → `foreign`, Druckform `#<foreign channel>` usw.,
 `length`/`funcall` → Fehler. Die Port-Angabe in der Webserver-Druckform
 entfällt (`(http-port srv)`).
+
+### L7. `length` meldete den Fehler des inneren `cdr`  [FIXED 0.36.5]
+**Symptom:** `(length 5)` und `(length '(1 2 . 3))` → `cdr: Liste erwartet`
+statt einer Meldung, die `length` nennt.
+**Fix:** `length` prüft Nicht-Sequenzen und unechte Listen selbst:
+`length: Sequenz erwartet: 5`, `length: keine echte Liste: (1 2 . 3)`.
+
+### L8. `(/ x)` mit einem Argument war ein Fehler  [FIXED 0.36.5]
+**Symptom:** `(/ 5)` → `/: min. 2 Argumente`; CL verlangt `(/ x)` ≡ `(/ 1 x)`.
+**Fix:** `fnDiv` setzt bei einem Argument `1` davor und nutzt denselben
+Codepfad. `(/ 5)` → `0.2`, `(/ 0)` → `Division durch 0`, `(/)` → `/: min. 1 Argument`.
 
 ---
 

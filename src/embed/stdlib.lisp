@@ -51,11 +51,14 @@
 
 (defun length (lst)
   (define (len-acc l n)
-    (if (null l) n (len-acc (cdr l) (+ n 1))))
+    (cond
+      ((atom l) (if (null l) n (error (format nil "length: keine echte Liste: ~s" lst))))
+      (t (len-acc (cdr l) (+ n 1)))))
   (case (%cell-type lst)
     (vector (%vector-length lst))
     (string (string-length lst))
-    (t (len-acc lst 0))))
+    ((null cons) (len-acc lst 0))
+    (t (error (format nil "length: Sequenz erwartet: ~s" lst)))))
 
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))

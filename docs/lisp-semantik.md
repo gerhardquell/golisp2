@@ -269,7 +269,7 @@ Das gilt für Printer, `~a` und `number->string` (`numberStr`/`FormatNumber`,
 | Operation | Regel | Beispiel |
 |---|---|---|
 | `+ - *`, `1+ 1-` | alle Ganzzahl → Ganzzahl; ein Float dabei → Float | `(+ 1 2)` → `3`, `(* 1.5 2)` → `3.0` |
-| `/` | alle Ganzzahl und teilbar → Ganzzahl, sonst Float | `(/ 6 2)` → `3`, `(/ 7 2)` → `3.5` |
+| `/` | alle Ganzzahl und teilbar → Ganzzahl, sonst Float; `(/ x)` ≡ `(/ 1 x)` | `(/ 6 2)` → `3`, `(/ 7 2)` → `3.5`, `(/ 5)` → `0.2` |
 | `mod rem remainder` | beide Ganzzahl → Ganzzahl, sonst Float | `(mod 7.5 2)` → `1.5` |
 | `abs max min` | die Zahlart bleibt erhalten | `(max 1 2.5)` → `2.5`, `(min 1 2.5)` → `1` |
 | `floor ceiling truncate round` | Ergebnis immer Ganzzahl | `(floor 3.7)` → `3` |

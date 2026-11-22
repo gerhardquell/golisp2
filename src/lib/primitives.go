@@ -507,7 +507,7 @@ func fnRead(args []*Cell) (*Cell, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("read: 1 Argument nötig")
 	}
-	return Read(args[0].Val)
+	return ReadForm(args[0].Val)
 }
 
 // gensym: global-atomarer Zähler für eindeutige Symbole.

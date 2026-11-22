@@ -200,6 +200,7 @@ Ganzzahl, `42.0` ein Float. Details: `docs/lisp-semantik.md`, Abschnitt „Zahle
 (* 2 3 4)                         ; → 24
 (/ 6 2)                           ; → 3     teilbar → Ganzzahl
 (/ 7 2)                           ; → 3.5   sonst Float (kein Bruch-Typ)
+(/ 5)                              ; → 0.2   (/ x) ≡ (/ 1 x)
 (* 99999999999 99999999999)       ; Fehler "*: Ganzzahl-Überlauf" (kein Bignum)
 (mod 10 3)                        ; → 1
 (remainder 10 3)                  ; → 1 (wie rem: Richtung Null)
@@ -264,7 +265,7 @@ Index und Anzahl müssen Ganzzahlen sein: `(nth 2.0 l)` ist ein Fehler,
 ```lisp
 (print "hallo")                   ; unreadable, kein newline
 (println "hallo")                 ; + newline
-(read)                            ; von stdin lesen
+(read-line)                      ; eine Zeile von stdin lesen (EOF: Fehler)
 (warn "Achtung")                  ; nach stderr
 ```
 
@@ -519,6 +520,7 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 (ws-export s "echo" (lambda (c text) (string-append "Echo: " text)))
 (ws-emit s 'tick 42)              ; Push an alle Clients
 (http-upload s "/up" (lambda (name content) ...))  ; POST-Dateiupload
+(http-static s "/js" "./public/js" :headers '(("Cache-Control" "no-cache")))  ; Antwort-Header
 (http-wait s)                     ; blockiert bis http-stop
 (http-stop s)
 ; Bausteine einzeln: http-serve (:host, :tls), http-static, http-port,

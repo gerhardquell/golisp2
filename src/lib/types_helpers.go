@@ -56,11 +56,17 @@ func MakeString(s string) *Cell {
   return MakeStr(s)
 }
 
-// CellToSlice konvertiert eine Lisp-Liste in einen Go-Slice
-// Exportierte Version der internen cellToSlice Funktion
+// CellToSlice konvertiert eine Lisp-Liste in einen Go-Slice.
+// Eine Ringliste ist ein panic („CellToSlice: zirkuläre Liste“) — die
+// Signatur hat keinen Fehlerweg, Eval fängt den panic als Fehler; sonst
+// wüchse der Slice bis zum Speicherende. Mit Fehlerweg: properList.
 func CellToSlice(list *Cell) []*Cell {
   var result []*Cell
+  ring := neuerRing(list)
   for list != nil && list.Type == LIST {
+    if len(result) > 0 && ring.zirkulaer(list) {
+      panic(errZirkulaer("CellToSlice"))
+    }
     result = append(result, list.Car)
     list = list.Cdr
   }

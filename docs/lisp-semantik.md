@@ -101,6 +101,48 @@ Unterstützte Places:
 `incf`/`decf` sind setf-Kurzformen (`(incf x)` = `(setf x (+ x 1))`).
 Neue Places registriert `defstruct` automatisch — manuell geht es nicht.
 
+### Listen ändern: `rplaca`, `rplacd`, `nconc` (seit 0.37.0)
+
+Cons-Zellen sind veränderbar wie in CL. `setf` auf einen Listen-Place ändert
+die Zelle selbst — wer dieselbe Zelle sieht, sieht die Änderung:
+
+```lisp
+(define l (list 1 2 3)) (define m l)
+(setf (car l) 9)                   ; = (car (rplaca l 9))
+m                                  ; → (9 2 3)
+(setf (nth 2 (nth 1 matrix)) 99)   ; verschachtelt: (car (rplaca (nthcdr 2 …) 99))
+(rplacd (list 1 2) 3)              ; → (1 . 3)
+(nconc (list 1) () (list 2) 3)     ; → (1 2 . 3), ändert die erste Liste
+(nthcdr 1 l)                       ; → (2 3), ohne Kopie
+```
+
+- Places: `car cdr nth`, dazu `first … fourth rest cadr caddr cadddr cddr caar
+  cdar` (umgeschrieben auf `car`/`cdr`). Auswertung links nach rechts,
+  Rückgabe ist der neue Wert. `()` oder ein Index jenseits des Endes ist
+  keine Cons-Zelle → Fehler. `push`/`pop`/`incf`/`decf` auf diese Places
+  mutieren ebenso. `set-nth` bleibt die kopierende Funktion, `last` liefert
+  weiter das letzte *Element* (nicht CL).
+- Nur Cells mit Typ Liste werden verändert; `()`, Symbole, Zahlen,
+  Funktionen nie (Singleton-NIL und Symbol-Interning bleiben heil).
+- **Literale:** `'(1 2 3)` ist die Zelle aus dem gelesenen Code. Sie zu
+  ändern ist undefiniert (CL) und ändert in golisp2 still den Code:
+  `(defun f () '(1 2 3))` liefert nach `(setf (car (f)) 9)` dauerhaft
+  `(9 2 3)`. Für veränderbare Daten `(list …)` oder `(copy-list '(…))`.
+- **Nebenläufigkeit:** wer Listen zwischen Goroutinen (`spawn`, `parfunc`)
+  teilt und ändert, synchronisiert selbst mit `lock` (wie SBCL). Ein
+  ungeschützter Wettlauf liefert falsche Werte, keinen Speicherschaden.
+- **Ringlisten** lassen sich jetzt bauen (`(rplacd (%last-cons l) l)`, `nconc`
+  mit sich selbst). Der Drucker bricht mit Markierung ab —
+  `(1 2 3 1 2 3 …zirkulär)`, Car-Tiefe über 10000 als `…` —, `length`,
+  `equal?`, `copy-tree`, `append`/`apply` (`properList`), `equal`-Hash-Schlüssel
+  melden laut `…: zirkuläre Liste`. Keine `#1=`-Notation.
+- **Sandbox:** `sandbox-eval` kopiert eine als Form übergebene Liste und das
+  Ergebnis über die Grenze — Listen, Vektoren und Hash-Tabellen, geteilte
+  Teilstrukturen bleiben geteilt (O(n)), ein Zyklus ist ein Fehler. Host und
+  Sandbox teilen keine Cons-Zelle. FOREIGN-Handles gehen als dieselben
+  Objekte über die Grenze; Funktionen nur heraus, eine Funktion in der Form
+  ist ein Fehler (siehe „Funktion aus der Sandbox“).
+
 ---
 
 ## Multiple Values
@@ -478,9 +520,10 @@ Single-Dispatch auf den Struct-Tag (`car`) des ersten Arguments.
 
 ### defclass — Objekte mit Identität
 
-`defstruct` hat Wertsemantik: `(setf (punkt-x p) 9)` bindet `p` an eine
-neue Liste, andere Referenzen sehen den alten Wert. Für geteilten,
-veränderlichen Zustand: `(defclass schiff (name (energie 100)))`.
+`defstruct` hat seit 0.37.0 ebenfalls Identität: `(setf (punkt-x p) 9)`
+ändert die Liste selbst, Aliase sehen es. `defclass` ist die Variante mit
+Hashtabelle, Prädikat-Prüfung in jedem Accessor und Inspector-Slots:
+`(defclass schiff (name (energie 100)))`.
 
 - Objekt = eql-Hashtabelle mit `:class` → `schiff`; `eq` ist Identität.
 - `make-schiff` (&key), `schiff?`, `schiff-SLOT`, `set-schiff-SLOT`.
@@ -627,6 +670,12 @@ das unverändert volle Rechte hat (`docs/sigo.md`).
   gelten für spätere Aufrufe derselben Sandbox. Zwei Sandboxen sehen
   einander nicht, global ist nichts davon sichtbar. `eval` in der Sandbox
   läuft in der Sandbox-Root.
+- Form und Ergebnis gehen als Kopie über die Grenze (seit 0.37.0): Listen,
+  Vektoren und Hash-Tabellen, Sharing bleibt erhalten, Zyklus → Fehler. Die
+  Ergebniskopie läuft unter der Frist der Sandbox. Mutation in der Sandbox
+  erreicht keine Host-Liste und umgekehrt. Eine Funktion (Lambda, Makro,
+  Primitive) in der Form, auch in Vektor oder Hash-Tabelle, ist ein Fehler:
+  `sandbox-eval: Funktion kann nicht in die Sandbox gereicht werden`.
 - Fehler kommen als normaler Lisp-Fehler beim Aufrufer an (`trap`,
   `handler-case`, `ignore-errors`), Text unverändert.
 
@@ -699,8 +748,10 @@ nächsten Funktionsaufruf oder Schleifendurchlauf, ein Deadlock für immer.
 **Funktion aus der Sandbox.** `(sandbox-eval sb 'fib)` liefert die Funktion.
 Außerhalb aufgerufen bleibt sie eingeschränkt (ihre Umgebung ist die
 Sandbox), läuft aber **ohne Zeitlimit** — das gilt nur innerhalb von
-`sandbox-eval`. Umgekehrt läuft eine Closure, die der Aufrufer selbst in die
-Sandbox reicht, mit ihren vollen Rechten.
+`sandbox-eval`. Umgekehrt geht es seit 0.37.0 nicht mehr: eine Funktion in
+der Form, die der Aufrufer hineinreicht, ist ein Fehler. Sie liefe mit
+vollen Rechten, und die Sandbox könnte über `(car f)`/`(cdr f)` und `rplaca`
+ihren Code umschreiben, den der Host danach ausführt.
 
 **Prozessweit bleibt:** Ein `defvar` in der Sandbox macht den Namen auch
 außerhalb special. Docstrings (`documentation`) und Redefinitionen

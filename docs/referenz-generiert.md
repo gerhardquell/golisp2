@@ -25,7 +25,9 @@
 | `%ganzzahl-pruefen` | Intern: (name n) → n; Fehler, wenn n keine Ganzzahl ist, auch bei 2.0 (Go: intArg) |
 | `%generic-dispatch` | Intern: Methodendispatch der generischen Funktionen |
 | `%generic-methods` | Intern: Methodenliste einer generischen Funktion |
+| `%last-cons` | Intern: letzte Cons-Zelle einer Liste (cons_mutation.go) |
 | `%list->vector` | Intern: Liste als neuer Vektor (fuer coerce) |
+| `%list-length` | Intern: Laenge einer echten Liste fuer length, Ringliste ist ein Fehler (cons_mutation.go) |
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
@@ -46,6 +48,7 @@
 | `%reduce-fold` | Intern: Faltkern von reduce |
 | `%remove-first` | Intern: erstes Vorkommen entfernen (unload-system) |
 | `%setf-one` | Intern: einzelne setf-Zuweisung ausfuehren |
+| `%setf-wrap` | Intern: Accessor-Kette um einen Place legen (setf auf cadr & Co.) |
 | `%st-all` | Intern: subtypep-Teilergebnisse, alle muessen gelten (types.lisp) |
 | `%st-bound` | Intern: Bereichsgrenze normalisieren (types.lisp) |
 | `%st-bound-in?` | Intern: Grenze innerhalb einer anderen (types.lisp) |
@@ -89,6 +92,7 @@
 | `*generic-registry*` | Hash-Table der generischen Funktionen |
 | `*loaded-files*` | Liste der bereits geladenen Dateien (defsystem) |
 | `*loaded-systems*` | Liste der geladenen Systeme (defsystem) |
+| `*setf-cxr*` | setf-Places cadr/second & Co. als car/cdr-Kette (stdlib.lisp) |
 | `*setf-expanders*` | Registry der setf-Expander |
 | `*setf-mutators*` | |
 | `*struct-types*` | Registry (name (slot-namen)) der definierten Structs, fuer type-of/typep und SWANK-Inspector (stdlib.lisp) |
@@ -149,7 +153,7 @@
 | `constantly` | Funktion, die stets x zurueckgibt |
 | `copy-list` | flache Listenkopie |
 | `copy-seq` | flache Kopie gleichen Typs |
-| `copy-tree` | tiefe Kopie (rekursiv) |
+| `copy-tree` | tiefe Kopie (rekursiv); Ringliste ist ein Fehler |
 | `count` | Anzahl passender Elemente (:test :key) |
 | `count-if` | Anzahl Elemente mit Praedikat (:key) |
 | `decf` | Makro: place um d (Default 1) vermindern |
@@ -270,10 +274,12 @@
 | `min` | kleinste Zahl |
 | `minusp` | CL-Name fuer negative? |
 | `mod` | Rest wie CL: abgerundet, Vorzeichen des Divisors ((mod -3 2) → 1) |
+| `nconc` | Listen destruktiv aneinanderhaengen, ()-Argumente uebersprungen |
 | `negative?` | t, wenn kleiner 0 |
 | `nil` | NIL-Konstante (Singleton, MakeNil) |
 | `now` | Unix-Sekunden (seit 1970) als Float |
 | `nth` | n-tes Element (0-basiert); n muss eine Ganzzahl sein |
+| `nthcdr` | n-ter Rest der Liste ohne Kopie, ueber das Ende () |
 | `null` | t, wenn nil |
 | `null?` | Alias fuer null |
 | `number->string` | Zahl in String umwandeln |
@@ -322,12 +328,14 @@
 | `rest` | Alias fuer cdr |
 | `reverse` | Liste umdrehen |
 | `round` | auf naechste ganze Zahl runden, Rundung-zum-Geraden bei .5 (CL); 2 Werte: Quotient, Rest |
+| `rplaca` | Car einer Cons-Zelle aendern (in place), liefert die Zelle |
+| `rplacd` | Cdr einer Cons-Zelle aendern (in place), liefert die Zelle |
 | `sandbox-eval` | Form oder String (alle Formen) in der Sandbox auswerten, Wert der letzten; Zeitlimit gilt auch in Callbacks und Goroutinen |
 | `second` | Alias fuer cadr |
 | `set-difference` | Elemente von a ohne die aus b |
 | `set-nth` | Kopie mit n-tem Element ersetzt |
 | `set-working-directory` | Arbeitsverzeichnis wechseln |
-| `setf` | generalisierte Zuweisung: Variablen, (car lst), (gethash key tbl), struct-Slots |
+| `setf` | generalisierte Zuweisung: Variablen, (car/cdr/nth lst) in place, (gethash key tbl), struct-Slots |
 | `shell-assoc` | passendes Paar aus Assoziationsliste suchen (Shell-Output-Parsing) |
 | `shell-output` | stdout von /bin/sh -c cmd als String; Exit != 0 -> Fehler |
 | `shuffle` | neue Liste mit den Elementen in zufaelliger Reihenfolge (Fisher-Yates) |

@@ -44,7 +44,14 @@ func fnAssoc(args []*Cell) (*Cell, error) {
     return nil, err
   }
   for _, pair := range pairs {
-    if pair != nil && pair.Type == LIST && cellEqual(pair.Car, key) {
+    if pair == nil || pair.Type != LIST {
+      continue
+    }
+    gleich, err := cellEqual(pair.Car, key)
+    if err != nil {
+      return nil, err
+    }
+    if gleich {
       return pair, nil
     }
   }

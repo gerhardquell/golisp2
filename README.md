@@ -586,7 +586,7 @@ my-project/
 | **Arithmetik** | `+`, `-`, `*`, `/`, `sqrt` |
 | **Vergleiche** | `=`, `<`, `>`, `>=`, `<=`, `equal?` |
 | **Listen** | `car`, `cdr`, `cons`, `list`, `atom`, `null`, `apply`, `mapcar`, `sort` |
-| **Places (generalisierte Zuweisung)** | `setf` — Variablen, `nth`, `car`/`cdr` (Symbol-Rebind, nicht CL-Aliasing), `gethash`, Struct-Accessoren |
+| **Places (generalisierte Zuweisung)** | `setf` — Variablen, `car`/`cdr`/`nth`/`cadr`… (ändert die Zelle wie CL, auch verschachtelt), `gethash`, Struct-Accessoren; `rplaca`, `rplacd`, `nconc`, `nthcdr` |
 | **Structs & CLOS-light** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash-Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
 | **Vektoren** | `make-array`, `vector`, `aref`, `aset`, `vector-push-extend` |

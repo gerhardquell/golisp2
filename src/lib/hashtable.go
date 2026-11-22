@@ -45,31 +45,56 @@ type HashTable struct {
 // Die Tabelle weicht davon ab, damit String-Schlüssel ohne :test 'equal
 // wie erwartet funktionieren), alles andere nach Pointer. equal: Listen strukturell, Elemente wie eql
 // (mutable Objekte nach Identität, wie CL-equal).
-func (ht *HashTable) keyOf(c *Cell) string {
+func (ht *HashTable) keyOf(name string, c *Cell) (string, error) {
   if ht.test == "equal" {
-    return "E:" + equalKey(c)
+    k, err := equalKey(name, c, 0)
+    return "E:" + k, err
   }
-  return eqlKey(c)
+  return eqlKey(c), nil
+}
+
+// keyOfAtom: keyOf für Schlüssel ohne Listenstruktur (String, Symbol) —
+// dort gibt es keinen Fehlerweg.
+func (ht *HashTable) keyOfAtom(c *Cell) string {
+  k, _ := ht.keyOf("", c)
+  return k
 }
 
 // equalKey: Listen elementweise, Rest via eqlKey. Nicht über Print —
 // sonst kollidieren alle #<hash-table>/#<lambda>. eqlKey quotet Inhalte,
-// damit "a s:b" nicht wie die Liste ("a" "b") aussieht.
-func equalKey(c *Cell) string {
+// damit "a s:b" nicht wie die Liste ("a" "b") aussieht. Ringliste oder
+// Car-Tiefe über maxTiefe → Fehler statt Endlosschleife.
+func equalKey(name string, c *Cell, tiefe int) (string, error) {
   if c == nil || c.Type != LIST {
-    return eqlKey(c)
+    return eqlKey(c), nil
+  }
+  if tiefe > maxTiefe {
+    return "", errZuTief(name)
   }
   var b strings.Builder
   b.WriteString("(")
-  for ; c != nil && c.Type == LIST; c = c.Cdr {
-    b.WriteString(equalKey(c.Car))
+  ring := neuerRing(c)
+  p := c
+  for erste := true; p != nil && p.Type == LIST; p, erste = p.Cdr, false {
+    if !erste && ring.zirkulaer(p) {
+      return "", errZirkulaer(name)
+    }
+    k, err := equalKey(name, p.Car, tiefe+1)
+    if err != nil {
+      return "", err
+    }
+    b.WriteString(k)
     b.WriteString(" ")
   }
-  if c != nil && c.Type != NIL {
-    b.WriteString(". " + equalKey(c))
+  if p != nil && p.Type != NIL {
+    k, err := equalKey(name, p, tiefe+1)
+    if err != nil {
+      return "", err
+    }
+    b.WriteString(". " + k)
   }
   b.WriteString(")")
-  return b.String()
+  return b.String(), nil
 }
 
 func eqlKey(c *Cell) string {
@@ -149,8 +174,12 @@ func fnGethash(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
+  k, err := ht.keyOf("gethash", args[0])
+  if err != nil {
+    return nil, err
+  }
   ht.mu.RLock()
-  e, found := ht.m[ht.keyOf(args[0])]
+  e, found := ht.m[k]
   ht.mu.RUnlock()
   if found {
     return MakeValues([]*Cell{e.val, MakeAtom("t")}), nil
@@ -172,8 +201,12 @@ func fnPuthash(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
+  k, err := ht.keyOf("puthash", args[0])
+  if err != nil {
+    return nil, err
+  }
   ht.mu.Lock()
-  ht.m[ht.keyOf(args[0])] = hashEntry{key: args[0], val: args[2]}
+  ht.m[k] = hashEntry{key: args[0], val: args[2]}
   ht.mu.Unlock()
   return args[2], nil
 }
@@ -187,7 +220,10 @@ func fnRemhash(args []*Cell) (*Cell, error) {
   if err != nil {
     return nil, err
   }
-  k := ht.keyOf(args[0])
+  k, err := ht.keyOf("remhash", args[0])
+  if err != nil {
+    return nil, err
+  }
   ht.mu.Lock()
   _, found := ht.m[k]
   if found {
@@ -273,7 +309,7 @@ func newStringHash() *Cell {
 func (ht *HashTable) getStr(key string) (*Cell, bool) {
   k := MakeStr(key)
   ht.mu.RLock()
-  e, ok := ht.m[ht.keyOf(k)]
+  e, ok := ht.m[ht.keyOfAtom(k)]
   ht.mu.RUnlock()
   if !ok {
     return nil, false
@@ -285,7 +321,7 @@ func (ht *HashTable) getStr(key string) (*Cell, bool) {
 func (ht *HashTable) putStr(key string, val *Cell) {
   k := MakeStr(key)
   ht.mu.Lock()
-  ht.m[ht.keyOf(k)] = hashEntry{key: k, val: val}
+  ht.m[ht.keyOfAtom(k)] = hashEntry{key: k, val: val}
   ht.mu.Unlock()
 }
 
@@ -294,7 +330,7 @@ func (ht *HashTable) putStr(key string, val *Cell) {
 func (ht *HashTable) printName() string {
   k := MakeAtom(":class")
   ht.mu.RLock()
-  e, ok := ht.m[ht.keyOf(k)]
+  e, ok := ht.m[ht.keyOfAtom(k)]
   ht.mu.RUnlock()
   if ok && e.val != nil && e.val.Type == ATOM {
     return e.val.Val

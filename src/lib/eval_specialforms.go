@@ -244,7 +244,9 @@ func macroexpandAll(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   // Top-Level-Makro-Expansion versuchen
   expanded, err := macroexpandOnce(form, env, ectx)
   if err != nil { return nil, err }
-  if !cellEqual(expanded, form) {
+  gleich, err := cellEqual(expanded, form)
+  if err != nil { return nil, err }
+  if !gleich {
     return macroexpandAll(expanded, env, ectx)
   }
   // Kein Makro: rekursiv in car und cdr
@@ -572,11 +574,12 @@ func evalCase(args *Cell, env *Env, ectx evalCtx) (*Cell, *Env, error) {
     if !isElse && test.Type == LIST {
       // Liste von Werten: ((a b c) result)
       for vals := test; vals != nil && vals.Type == LIST; vals = vals.Cdr {
-        if cellEqual(key, vals.Car) { match = true; break }
+        if match, err = cellEqual(key, vals.Car); err != nil { return nil, nil, err }
+        if match { break }
       }
     } else if !isElse {
       // Einzelner Wert: (a result)
-      if cellEqual(key, test) { match = true }
+      if match, err = cellEqual(key, test); err != nil { return nil, nil, err }
     }
 
     if isElse || match {

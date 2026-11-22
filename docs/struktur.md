@@ -106,7 +106,7 @@ golisp2/
       sigorest.go        sigo, sigo-models, sigo-host — HTTP zu sigoREST
                          (Chokepoint: einziger HTTP-Client gegen :9080)
 
-      httpserver.go      Web-Bridge: http-serve (:host, :tls), http-static,
+      httpserver.go      Web-Bridge: http-serve (:host, :tls), http-static (:headers),
                          http-upload, http-port/-wait/-stop, browser-open
       tlscert.go         Ephemere selbstsignierte TLS-Zertifikate für :tls
       wsbridge.go        Web-Bridge: ws-export/-emit/-call u. a., WS-Hub,

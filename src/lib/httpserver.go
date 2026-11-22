@@ -143,8 +143,11 @@ func fnHTTPServe(env *Env, args []*Cell) (*Cell, error) {
   return MakeForeign("webserver", ws), nil
 }
 
-// http-static: (http-static srv urlpath dir) → t. Mountet dir unter urlpath,
-// mehrfach aufrufbar. Kein Directory-Listing, keine Symlinks.
+// http-static: (http-static srv urlpath dir &key headers) → t. Mountet dir
+// unter urlpath, mehrfach aufrufbar. Kein Directory-Listing, keine Symlinks.
+// :headers '(("Cache-Control" "no-cache") ...) setzt diese Antwort-Header
+// bei jeder Antwort der Route (auch 304/404); Go-eigene Header wie
+// Content-Type/Last-Modified bleiben, sofern nicht gleichnamig überschrieben.
 func fnHTTPStatic(args []*Cell) (*Cell, error) {
   if len(args) < 3 {
     return nil, fmt.Errorf("http-static: 3 Argumente (srv urlpath dir) nötig")
@@ -163,12 +166,29 @@ func fnHTTPStatic(args []*Cell) (*Cell, error) {
   if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
     return nil, fmt.Errorf("http-static: '%s' ist kein Verzeichnis", dir)
   }
+  var headers [][2]string
+  if len(args)%2 == 0 {
+    return nil, fmt.Errorf("http-static: Keyword %s ohne Wert", args[len(args)-1])
+  }
+  for i := 3; i+1 < len(args); i += 2 {
+    if args[i].Type != ATOM {
+      return nil, fmt.Errorf("http-static: Keyword erwartet, bekam %s", args[i])
+    }
+    switch args[i].Val {
+    case ":headers":
+      if headers, err = staticHeaders(args[i+1]); err != nil {
+        return nil, err
+      }
+    default:
+      return nil, fmt.Errorf("http-static: unbekanntes Keyword %s", args[i])
+    }
+  }
   pattern := urlpath
   if pattern != "/" && !strings.HasSuffix(pattern, "/") {
     pattern += "/"
   }
   prefix := strings.TrimSuffix(pattern, "/") // "/" → ""
-  if err := ws.handle("http-static", pattern, http.StripPrefix(prefix, staticHandler(dir))); err != nil {
+  if err := ws.handle("http-static", pattern, http.StripPrefix(prefix, staticHandler(dir, headers))); err != nil {
     return nil, err
   }
   return cellT, nil
@@ -243,10 +263,54 @@ func fnHTTPUpload(args []*Cell) (*Cell, error) {
   return cellT, nil
 }
 
+// staticHeaders prüft den :headers-Wert von http-static: echte Liste von
+// (name wert)-Paaren aus Strings, name ein HTTP-Token, wert ohne CR/LF/NUL.
+func staticHeaders(c *Cell) ([][2]string, error) {
+  items, err := properList("http-static", c)
+  if err != nil {
+    return nil, fmt.Errorf("http-static: :headers muss Liste von (name wert) sein, bekam %s", c)
+  }
+  out := make([][2]string, 0, len(items))
+  for _, it := range items {
+    pair, err := properList("http-static", it)
+    if err != nil || len(pair) != 2 || pair[0].Type != STRING || pair[1].Type != STRING {
+      return nil, fmt.Errorf("http-static: :headers-Eintrag muss (name wert) aus zwei Strings sein, bekam %s", it)
+    }
+    name, val := pair[0].Val, pair[1].Val
+    if !isHTTPToken(name) {
+      return nil, fmt.Errorf("http-static: ungültiger Header-Name %q", name)
+    }
+    if strings.ContainsAny(val, "\r\n\x00") {
+      return nil, fmt.Errorf("http-static: Header-Wert von %s enthält CR, LF oder NUL", name)
+    }
+    out = append(out, [2]string{name, val})
+  }
+  return out, nil
+}
+
+// isHTTPToken: RFC 9110 token (tchar) — eigene Prüfung statt x/net/httpguts.
+func isHTTPToken(s string) bool {
+  if s == "" {
+    return false
+  }
+  for _, r := range s {
+    ok := r < 0x80 && (r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' ||
+      r >= '0' && r <= '9' || strings.ContainsRune("!#$%&'*+-.^_`|~", r))
+    if !ok {
+      return false
+    }
+  }
+  return true
+}
+
 // staticHandler liefert Dateien aus root: kein Directory-Listing (fehlendes
-// index.html → 404), keine Symlinks, Path-Traversal-sicher.
-func staticHandler(root string) http.Handler {
+// index.html → 404), keine Symlinks, Path-Traversal-sicher. headers werden
+// vor jeder Antwort gesetzt.
+func staticHandler(root string, headers [][2]string) http.Handler {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    for _, h := range headers {
+      w.Header().Set(h[0], h[1])
+    }
     // filepath.Clean mit fuehrendem Slash: ".." kann nicht entkommen.
     clean := filepath.Clean("/" + r.URL.Path)
     if pathHasSymlink(root, clean) {

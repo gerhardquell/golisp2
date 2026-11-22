@@ -520,6 +520,7 @@ Direktiven: `~A ~S ~D ~B ~O ~X ~R ~P ~C ~F ~E ~G ~$ ~% ~& ~| ~T ~* ~? ~[ ~{ ~( ~
 (ws-export s "echo" (lambda (c text) (string-append "Echo: " text)))
 (ws-emit s 'tick 42)              ; Push an alle Clients
 (http-upload s "/up" (lambda (name content) ...))  ; POST-Dateiupload
+(http-static s "/js" "./public/js" :headers '(("Cache-Control" "no-cache")))  ; Antwort-Header
 (http-wait s)                     ; blockiert bis http-stop
 (http-stop s)
 ; Bausteine einzeln: http-serve (:host, :tls), http-static, http-port,

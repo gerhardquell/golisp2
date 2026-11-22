@@ -198,7 +198,7 @@ implementation is the native special form from section 2
 
 ### Structures
 `(defstruct name [doc] slot|(slot default) ...)` — generates: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)
-`(setf place val)` — generic, `(defstruct ...)` registers accessors automatically
+`(setf place val)` — generic, `(defstruct ...)` registers accessors automatically. List places (`car cdr nth cadr second …`) and struct slots mutate the cell itself (CL): aliases see the change, `(setf (nth 2 (nth 1 m)) 99)` works. `(rplaca c v)`/`(rplacd c v)` → c, `(nconc l1 l2 …)` destructive, `(nthcdr n l)` without copying. Never modify quoted literals `'(…)` (silently changes the code) — use `(list …)`. Mutate lists shared between goroutines only under `lock`. Circular lists: the printer shows `…zirkulär`, `length`/`equal?` raise an error
 
 ### Types
 - `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector` `foreign` (Go handle), struct, class (defclass) or condition name; classes are a subtype of `hash-table`. `(typep x spec)` with type names, `(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)` (`(n)` = exclusive, `*` = open).

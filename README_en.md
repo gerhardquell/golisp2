@@ -573,7 +573,7 @@ my-project/
 | **Arithmetic** | `+`, `-`, `*`, `/`, `sqrt` |
 | **Comparison** | `=`, `<`, `>`, `>=`, `<=`, `equal?` |
 | **Lists** | `car`, `cdr`, `cons`, `list`, `atom`, `null`, `apply`, `mapcar`, `sort` |
-| **Places (generalized assignment)** | `setf` — variables, `nth`, `car`/`cdr` (symbol-rebind, not CL aliasing), `gethash`, struct accessors |
+| **Places (generalized assignment)** | `setf` — variables, `car`/`cdr`/`nth`/`cadr`… (mutates the cell like CL, nested too), `gethash`, struct accessors; `rplaca`, `rplacd`, `nconc`, `nthcdr` |
 | **Structs & CLOS-lite** | `defstruct`, `defgeneric`, `defmethod` |
 | **Hash Tables** | `make-hash-table`, `gethash`, `puthash`, `remhash`, `clrhash`, `hash-table-count`, `hash-table-p`, `maphash` |
 | **Vectors** | `make-array`, `vector`, `aref`, `aset`, `vector-push-extend` |

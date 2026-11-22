@@ -621,7 +621,11 @@ bei Start automatisch geladen.
 (defvar *v* 1)                    ; Definiert, wenn nicht gebunden; *v* wird special
 (defvar *v* 2)                    ; Erstzugriff gewinnt (idempotent)
 
-(setf (car x) 42)                 ; Generisch, defstruct registriert automatisch
+(setf (car x) 42)                 ; ändert die Zelle (rplaca), Aliase sehen es
+(setf (nth 2 (nth 1 m)) 99)       ; verschachtelt; auch cadr/second …, defstruct-Slots
+(rplaca c v) (rplacd c v)         ; Cons-Zelle ändern → c
+(nconc l1 l2)                     ; destruktiv anhängen; (nthcdr n l) ohne Kopie
+; Literale '(…) nicht ändern (CL: undefiniert, ändert den Code) — (list …) nehmen
 (incf x) (decf x)                 ; setf-Kurzformen (+1/-1)
 ```
 

@@ -194,7 +194,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 结构体
 `(defstruct name [doc] slot|(slot default) ...)` —— 生成：`(make-name :slot v ...)`、`name-slot`、`name?`（+ `name-p`）
-`(setf place val)` —— 通用，`(defstruct ...)` 会自动注册访问器
+`(setf place val)` —— 通用，`(defstruct ...)` 会自动注册访问器。列表位置（`car cdr nth cadr second …`）和结构体槽位原地修改 cons 单元（CL）：别名可见修改，`(setf (nth 2 (nth 1 m)) 99)` 可用。`(rplaca c v)`/`(rplacd c v)` → c，`(nconc l1 l2 …)` 破坏性连接，`(nthcdr n l)` 不复制。切勿修改引用字面量 `'(…)`（会悄悄改变代码）——请用 `(list …)`。多个 goroutine 共享的列表只在 `lock` 下修改。循环列表：打印显示 `…zirkulär`，`length`/`equal?` 报错
 
 ### 类型
 - `(type-of x)` → `integer` `float` `string` `symbol` `keyword` `boolean` `null` `cons` `function` `compiled-function` `macro` `hash-table` `vector` `foreign`（Go 句柄），或结构体名、类名（defclass）、condition 名；类是 `hash-table` 的子类型。`(typep x spec)` 支持类型名、`(or …)` `(and …)` `(not …)` `(member …)` `(eql x)` `(satisfies f)` `(integer lo hi)`（`(n)` = 不含边界，`*` = 无边界）。`3.0` 是 `float`，不是 `integer`：`(typep 3.0 'integer)` → `()`，`(typep 3.0 'real)` → `t`。

@@ -103,7 +103,7 @@ var nilCell = &Cell{Type: NIL}
 //
 // Sicher, weil ATOM-Cells nie in-place mutiert werden: die Quellposition
 // stempeln reader.go und eval_load.go ausschliesslich auf LIST-Cells, und
-// destruktive Listen-Ops (rplaca/nconc) gibt es nicht.
+// rplaca/rplacd/nconc (cons_mutation.go) aendern nur Cells mit Type == LIST.
 //
 // Die Tabelle schrumpft nie — wie in CL, wo interne Symbole permanent im
 // Package bleiben. Relevant fuer das selbsterweiternde Muster: KI-

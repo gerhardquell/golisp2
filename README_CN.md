@@ -564,7 +564,7 @@ my-project/
 | **算术运算** | `+`、`-`、`*`、`/`、`sqrt` |
 | **比较运算** | `=`、`<`、`>`、`>=`、`<=`、`equal?` |
 | **列表操作** | `car`、`cdr`、`cons`、`list`、`atom`、`null`、`apply`、`mapcar`、`sort` |
-| **广义赋值（Place）** | `setf` —— 变量、`nth`、`car`/`cdr`（符号重绑定，非 CL 的别名语义）、`gethash`、结构体访问器 |
+| **广义赋值（Place）** | `setf` —— 变量、`car`/`cdr`/`nth`/`cadr`…（像 CL 一样原地修改 cons 单元，可嵌套）、`gethash`、结构体访问器；`rplaca`、`rplacd`、`nconc`、`nthcdr` |
 | **结构体与 CLOS-lite** | `defstruct`、`defgeneric`、`defmethod` |
 | **哈希表** | `make-hash-table`、`gethash`、`puthash`、`remhash`、`clrhash`、`hash-table-count`、`hash-table-p`、`maphash` |
 | **向量** | `make-array`、`vector`、`aref`、`aset`、`vector-push-extend` |

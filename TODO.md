@@ -191,7 +191,9 @@ Ganzzahl-Typ (`int64` neben `float64`) ist gemergt und gepusht. Regeln:
 - [x] `destructuring-bind` vollständig. Erledigt 18.11. (0.36.0): Spezialform, CL-Lambda-Liste,
       verschachtelt auch in `defmacro`/`macrolet`, falsche Anzahl ist ein Fehler, Rest geteilt.
       Regeln: `docs/lisp-semantik.md` („Muster“), `docs/golisp2-fehler.md` Abschnitt J.
-- [ ] `setf` auf Listen ändert statt neu zu binden.
+- [x] `setf` auf Listen ändert statt neu zu binden. Erledigt 22.11. (0.37.0): `rplaca`/`rplacd`/
+      `nconc`/`nthcdr`, `setf` mutiert (auch verschachtelt), defstruct mit Identität, Sandbox-Kopie,
+      Ringlisten-Schutz. Regeln: `docs/lisp-semantik.md` („Listen ändern“).
 
 ## 5. Beim Zusammenführen als erledigt erkannt (19.10.2026)
 

@@ -164,6 +164,8 @@ geben — ein zweites NIL oder ein nicht-interniertes `t` bricht `eq` still.
 Nur lesen, nie modifizieren: eine Mutation trifft `parfunc` *und* jedes
 andere Vorkommen desselben Symbols. Quellpositionen werden deshalb
 ausschließlich auf `LIST`-Cells gestempelt (`reader.go`, `eval_load.go`).
+Mutation ändert das nicht: `rplaca`/`rplacd`/`nconc` verändern ausschließlich
+Cells mit `Type == LIST` — NIL, Symbole und Zahlen nie.
 Konsequenz: `eq` ist Pointer-Identität und für Symbole CL-korrekt —
 `(eq 'foo 'foo)` → `t`. `equal?` bleibt struktureller Vergleich.
 Das Env baut darauf: `GetSym`/`SetSym` schlagen Bindungen per
@@ -228,7 +230,10 @@ Weitere Flags, stdin, SWANK, Exit-Codes: `docs/cli.md`.
 **Performance**
 - Benchmark-driven: messen, revertieren wenn keine Verbesserung. Nicht spekulieren.
 - Nicht jede Allokation ist heap-allokiert. Pooling nur, wenn der Profiler Heap-Druck zeigt.
-- Immutable Cells erlauben Sharing ohne semantische Brüche.
+- Cons-Zellen sind seit 0.37.0 veränderbar (`rplaca`/`rplacd`/`nconc`, `setf`
+  auf Listen-Places, CL). Geteilte Struktur ist damit sichtbar: wer eine Liste
+  weitergibt und ändert, ändert sie für alle. Go-Code, der eine Liste
+  aufbewahrt (Cache, Registry), kopiert sie oder dokumentiert das Teilen.
 
 **Go-Gotchas (erlebte Bugs, keine Theorie)**
 - `:=` im Loop-Body shadowed Variablen aus dem enclosing Block.

@@ -61,7 +61,10 @@ automatisch, golisp2 nicht.
 **Workaround:** separate `(setf a 1)` `(setf b 2)`.
 **Kapitel-Lehre:** Kap15 Abschnitt setf + Aufgabe 7.
 
-### B4. `setf (nth i ...)` braucht Symbol als Place  [LIMITATION]
+### B4. `setf (nth i ...)` braucht Symbol als Place  [FIXED 0.37.0]
+**Behoben 0.37.0:** `setf` auf `car`/`cdr`/`nth`/`cadr`/`second` … ändert die
+Zelle selbst (`rplaca`), verschachtelte Places gehen: `(setf (nth 2 (nth 1 m)) 99)`.
+
 **Datum:** 20260815 (Kap15)
 **Symptom:** `(setf (nth 2 (nth 1 matrix)) 99)` →
 „nth-Place-Argument muss ein Symbol sein". Kein Chaining wie CL.
@@ -70,7 +73,16 @@ gibt es nur für Symbole, nicht Ausdrücke.
 **Workaround:** Zeile extrahieren, ändern, Matrix rebinden.
 **Kapitel-Lehre:** Kap15 Aufgabe 1.
 
-### B5. Keine `rplaca`/`rplacd` (immutable cells)  [LIMITATION]
+### B5. Keine `rplaca`/`rplacd` (immutable cells)  [FIXED 0.37.0]
+**Behoben 0.37.0:** `rplaca`, `rplacd`, `nconc`, `nthcdr` sind Primitiven
+(`src/lib/cons_mutation.go`), `setf` mutiert, defstruct-Objekte haben Identität.
+Bewusst offen (Spec 2026-11-22 §6): `car`/`cdr` auf LAMBDA/MACRO liefern die
+echte Parameterliste bzw. den Rumpf — `rplaca` auf `(car f)` ändert den Code und
+umgeht `checkLambdaList`; über die Sandbox-Grenze gereichte Host-Closures
+kann die Sandbox so umschreiben (Funktionen werden nicht kopiert). Gequotete Literale zu ändern ändert still den Code
+(CL: undefiniert). `equal`-Hash-Tabellen finden einen danach mutierten Schlüssel
+nicht mehr.
+
 **Bereits bekannt** (CLAUDE.md Rekursion & Performance). Hier bestätigt:
 `rplaca`/`rplacd` = unbekannte Symbole. `setf` simuliert Mutation via Rebinding.
 **Kapitel-Lehre:** Kap13 (Immutable Cells), Kap15 CL-Tabelle.

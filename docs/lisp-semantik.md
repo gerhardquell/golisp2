@@ -139,8 +139,9 @@ m                                  ; → (9 2 3)
 - **Sandbox:** `sandbox-eval` kopiert eine als Form übergebene Liste und das
   Ergebnis über die Grenze — Listen, Vektoren und Hash-Tabellen, geteilte
   Teilstrukturen bleiben geteilt (O(n)), ein Zyklus ist ein Fehler. Host und
-  Sandbox teilen keine Cons-Zelle. Funktionen und FOREIGN-Handles gehen als
-  dieselben Objekte über die Grenze (siehe „Funktion aus der Sandbox“).
+  Sandbox teilen keine Cons-Zelle. FOREIGN-Handles gehen als dieselben
+  Objekte über die Grenze; Funktionen nur heraus, eine Funktion in der Form
+  ist ein Fehler (siehe „Funktion aus der Sandbox“).
 
 ---
 
@@ -672,7 +673,9 @@ das unverändert volle Rechte hat (`docs/sigo.md`).
 - Form und Ergebnis gehen als Kopie über die Grenze (seit 0.37.0): Listen,
   Vektoren und Hash-Tabellen, Sharing bleibt erhalten, Zyklus → Fehler. Die
   Ergebniskopie läuft unter der Frist der Sandbox. Mutation in der Sandbox
-  erreicht keine Host-Liste und umgekehrt — außer über Funktionen (s. u.).
+  erreicht keine Host-Liste und umgekehrt. Eine Funktion (Lambda, Makro,
+  Primitive) in der Form, auch in Vektor oder Hash-Tabelle, ist ein Fehler:
+  `sandbox-eval: Funktion kann nicht in die Sandbox gereicht werden`.
 - Fehler kommen als normaler Lisp-Fehler beim Aufrufer an (`trap`,
   `handler-case`, `ignore-errors`), Text unverändert.
 
@@ -745,12 +748,10 @@ nächsten Funktionsaufruf oder Schleifendurchlauf, ein Deadlock für immer.
 **Funktion aus der Sandbox.** `(sandbox-eval sb 'fib)` liefert die Funktion.
 Außerhalb aufgerufen bleibt sie eingeschränkt (ihre Umgebung ist die
 Sandbox), läuft aber **ohne Zeitlimit** — das gilt nur innerhalb von
-`sandbox-eval`. Umgekehrt läuft eine Closure, die der Aufrufer selbst in die
-Sandbox reicht, mit ihren vollen Rechten. Funktionen werden an der Grenze
-nicht kopiert: seit 0.37.0 kann die Sandbox über `(car f)`/`(cdr f)` und
-`rplaca` den Code einer hineingereichten Host-Closure umschreiben, die der
-Host danach mit vollen Rechten ausführt — keine Host-Funktionen in die
-Sandbox reichen (offen, Entscheidung Gerhard).
+`sandbox-eval`. Umgekehrt geht es seit 0.37.0 nicht mehr: eine Funktion in
+der Form, die der Aufrufer hineinreicht, ist ein Fehler. Sie liefe mit
+vollen Rechten, und die Sandbox könnte über `(car f)`/`(cdr f)` und `rplaca`
+ihren Code umschreiben, den der Host danach ausführt.
 
 **Prozessweit bleibt:** Ein `defvar` in der Sandbox macht den Namen auch
 außerhalb special. Docstrings (`documentation`) und Redefinitionen

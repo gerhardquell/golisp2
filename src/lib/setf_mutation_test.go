@@ -173,6 +173,20 @@ func TestSandboxKopiertAnDerGrenze(t *testing.T) {
   // Zyklus über einen Vektor: laut
   evalStdlibErr(t, `(begin (define sb (make-sandbox))
                            (sandbox-eval sb "(let ((v (vector 1))) (aset v 0 (list v)) v)"))`)
+  // Funktionen nur heraus, nie hinein (Host-Code wäre per rplaca umschreibbar)
+  for _, form := range []string{
+    `(sandbox-eval sb (list 'funcall (lambda () 1)))`,
+    `(sandbox-eval sb (list 'quote (vector (lambda () 1))))`,
+    `(sandbox-eval sb (list system "ls"))`,
+    `(sandbox-eval sb (list 'quote (vector system)))`,
+  } {
+    evalStdlibErr(t, `(begin (define sb (make-sandbox)) `+form+`)`)
+  }
+  evalStdlibEq(t, `(trap (sandbox-eval (make-sandbox) (list 'quote (lambda () 1))) (lambda (e) e))`,
+    `"sandbox-eval: Funktion kann nicht in die Sandbox gereicht werden: #<lambda>"`)
+  evalStdlibEq(t, `(begin (define sb (make-sandbox))
+                          (sandbox-eval sb "(defun fib (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))")
+                          (funcall (sandbox-eval sb 'fib) 10))`, "55")
   // Ringliste an der Grenze: laut
   evalStdlibErr(t, `(begin (define sb (make-sandbox)) (define l (list 1 2)) (rplacd (cdr l) l)
                            (sandbox-eval sb (list 'quote l)))`)

@@ -78,8 +78,9 @@ gibt es nur für Symbole, nicht Ausdrücke.
 (`src/lib/cons_mutation.go`), `setf` mutiert, defstruct-Objekte haben Identität.
 Bewusst offen (Spec 2026-11-22 §6): `car`/`cdr` auf LAMBDA/MACRO liefern die
 echte Parameterliste bzw. den Rumpf — `rplaca` auf `(car f)` ändert den Code und
-umgeht `checkLambdaList`; über die Sandbox-Grenze gereichte Host-Closures
-kann die Sandbox so umschreiben (Funktionen werden nicht kopiert). Gequotete Literale zu ändern ändert still den Code
+umgeht `checkLambdaList`. Darum sperrt `sandbox-eval` Funktionen in der
+hineingereichten Form (sonst schriebe die Sandbox Host-Code um); aus der
+Sandbox zurückgegebene Funktionen bleiben erlaubt. Gequotete Literale zu ändern ändert still den Code
 (CL: undefiniert). `equal`-Hash-Tabellen finden einen danach mutierten Schlüssel
 nicht mehr.
 

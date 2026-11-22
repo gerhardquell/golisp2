@@ -252,7 +252,7 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
 
   // Baumkopie an der Grenze (Spec 2026-11-22 §3.4): mit rplaca könnte die
   // Sandbox sonst Host-Listen ändern — und umgekehrt über das Ergebnis.
-  form, err := sandboxKopie(args[1])
+  form, err := sandboxKopie(args[1], true)
   if err != nil {
     return nil, err
   }
@@ -283,7 +283,7 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
     }
     // Ergebniskopie noch in der Sandbox-Goroutine: Frist und Abbruch
     // gelten auch für sie.
-    kopie, err := sandboxKopie(res)
+    kopie, err := sandboxKopie(res, false)
     fertig <- ergebnis{kopie, err}
   }()
   zeitlimitErr := fmt.Errorf("sandbox: Zeitlimit %s s überschritten", st.zeitText)
@@ -304,11 +304,13 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
 // sandboxKopie: Kopie über die Sandbox-Grenze (Spec 2026-11-22 §3.4) —
 // Host und Sandbox teilen danach keine veränderbare Struktur: Listen,
 // Vektoren und Hash-Tabellen werden kopiert, MVALUES wertweise.
-// Funktionen und FOREIGN-Handles bleiben geteilt (siehe lisp-semantik.md,
-// „Funktion aus der Sandbox“). Geteilte Teilstrukturen bleiben geteilt
-// (Memo, O(n) auch für DAGs); ein Zyklus ist ein Fehler.
-func sandboxKopie(c *Cell) (*Cell, error) {
-  g := grenzKopie{kopie: map[*Cell]*Cell{}, offen: map[*Cell]bool{}}
+// FOREIGN-Handles bleiben geteilt. Funktionen dürfen nur heraus
+// (hinein = true sperrt sie): sonst könnte die Sandbox über (car f) und
+// rplaca den Code einer Host-Closure umschreiben, die der Host danach mit
+// vollen Rechten ausführt. Geteilte Teilstrukturen bleiben geteilt (Memo,
+// O(n) auch für DAGs); ein Zyklus ist ein Fehler.
+func sandboxKopie(c *Cell, hinein bool) (*Cell, error) {
+  g := grenzKopie{kopie: map[*Cell]*Cell{}, offen: map[*Cell]bool{}, hinein: hinein}
   if c == nil || c.Type != MVALUES {
     return g.zelle(c, 0)
   }
@@ -326,8 +328,9 @@ func sandboxKopie(c *Cell) (*Cell, error) {
 
 // grenzKopie: kopie = Quelle → Kopie, offen = noch in Arbeit (Zyklus).
 type grenzKopie struct {
-  kopie map[*Cell]*Cell
-  offen map[*Cell]bool
+  kopie  map[*Cell]*Cell
+  offen  map[*Cell]bool
+  hinein bool
 }
 
 const grenzName = "sandbox-eval"
@@ -338,6 +341,11 @@ func (g *grenzKopie) zelle(c *Cell, tiefe int) (*Cell, error) {
   }
   switch c.Type {
   case LIST, VECTOR, HASHTABLE:
+  case LAMBDA, MACRO, FUNC:
+    if g.hinein {
+      return nil, fmt.Errorf("sandbox-eval: Funktion kann nicht in die Sandbox gereicht werden: %s", c)
+    }
+    return c, nil
   default:
     return c, nil
   }

@@ -363,3 +363,15 @@ func TestEnvSymbols(t *testing.T) {
 		}
 	}
 }
+
+// read: leere Eingabe (nur Leerraum/Kommentar) ist end-of-file, nicht ().
+func TestReadEOF(t *testing.T) {
+  evalEq(t, `(read "()")`, "()")
+  evalEq(t, `(read "nil")`, "()")
+  for _, src := range []string{`(read "")`, `(read "   ")`, `(read "; nur kommentar")`} {
+    _, err := evalStr(src)
+    if err == nil || !strings.Contains(err.Error(), "end-of-file") {
+      t.Errorf("eval(%q) = %v, want end-of-file", src, err)
+    }
+  }
+}

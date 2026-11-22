@@ -34,8 +34,8 @@ Geprüft mit golisp2 0.6.1 (3dc0f75); „geprüft 19.10.“ heißt: im Interpret
       `TestCellSize` verbietet ein Arity-Feld in `Cell`. SWANK-Arglisten und Tutorial-Signaturen sind ungenau
       (`(< x y)` 2-stellig, `substring` ohne optionales Ende). Aufwand ≈ ½ Tag. Gerhard: zurückgestellt.
       Analyse-Werkzeuge: `tmp/arity/` (main.go, scan.py).
-- [ ] `(/ 5)` ist ein Fehler, CL liefert den Kehrwert (`1/5` bzw. `0.2`). Entscheidung offen (18.11.).
-- [ ] `(read "")` liefert `()`, CL meldet end-of-file (18.11., nicht geändert).
+- [x] `(/ 5)` ist ein Fehler, CL liefert den Kehrwert (`1/5` bzw. `0.2`). Erledigt 0.36.5: `(/ 5)` → `0.2`.
+- [x] `(read "")` liefert `()`, CL meldet end-of-file (18.11.). Erledigt 0.36.5: `read: end-of-file`.
 - [ ] `http-static` kann keine Antwort-Header setzen (18.11., golisp2-lernen): `staticHandler`
       (`src/lib/httpserver.go`) nutzt `http.ServeContent` → nur Last-Modified, kein `Cache-Control`;
       `webserv` kennt nur `:port :host :tls :html :htmlpath :open`. Nach einem Update zeigt ein offenes

@@ -299,7 +299,7 @@
 | `puthash` | Hash-Eintrag setzen: (puthash key tabelle wert) |
 | `random` | Zufallszahl; ohne n Float aus [0, 1), mit n aus [0, n): Ganzzahl n → Ganzzahl, Float n → Float |
 | `randomlist` | Zufaellige Permutation von (0 1 ... n-1) = (shuffle (iota n)) |
-| `read` | String in Lisp-Datenstruktur parsen |
+| `read` | String in Lisp-Datenstruktur parsen; leer/nur Kommentar → Fehler `read: end-of-file` |
 | `read-line` | eine Zeile von stdin lesen |
 | `redef-log` | Ringpuffer der Redefinitionen |
 | `redef-log-clear` | Redefinitions-Log leeren |

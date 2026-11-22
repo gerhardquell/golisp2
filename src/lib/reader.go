@@ -35,6 +35,15 @@ func Read(s string) (*Cell, error) {
   return r.readExpr()
 }
 
+// ReadForm wie Read, meldet aber eine Eingabe ohne Form (nur Leerraum oder
+// Kommentar) als end-of-file statt als (). Nur für die Primitive read.
+func ReadForm(s string) (*Cell, error) {
+  r := NewReader(strings.TrimSpace(s))
+  r.skipWS()
+  if r.pos >= len(r.src) { return nil, fmt.Errorf("read: end-of-file") }
+  return r.readExpr()
+}
+
 // ReadAll liest alle Ausdrücke aus dem String und gibt sie als Liste
 // zurück. Leerer/Whitespace-only-String → NIL. Für REPL-Eingaben mit
 // mehreren Formen pro Block (z.B. swank:listener-eval).

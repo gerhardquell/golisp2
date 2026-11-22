@@ -1689,7 +1689,7 @@ Gibt Werte mit abschließendem Zeilenumbruch auf stdout aus. Rückgabewert ist d
 
 **Syntax:** `(read str)`
 
-Parst einen String und gibt die entsprechende Lisp-Datenstruktur zurück.
+Parst einen String und gibt die entsprechende Lisp-Datenstruktur zurück. Enthält der String keine Form (leer, nur Leerraum oder Kommentar), meldet `read` `read: end-of-file` (CL); `(read "()")` und `(read "nil")` liefern `()`.
 
 ```lisp
 (read "(+ 1 2)")

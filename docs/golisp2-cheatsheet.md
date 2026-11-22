@@ -265,7 +265,7 @@ Index und Anzahl müssen Ganzzahlen sein: `(nth 2.0 l)` ist ein Fehler,
 ```lisp
 (print "hallo")                   ; unreadable, kein newline
 (println "hallo")                 ; + newline
-(read)                            ; von stdin lesen
+(read-line)                      ; eine Zeile von stdin lesen (EOF: Fehler)
 (warn "Achtung")                  ; nach stderr
 ```
 

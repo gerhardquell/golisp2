@@ -200,6 +200,7 @@ Ganzzahl, `42.0` ein Float. Details: `docs/lisp-semantik.md`, Abschnitt „Zahle
 (* 2 3 4)                         ; → 24
 (/ 6 2)                           ; → 3     teilbar → Ganzzahl
 (/ 7 2)                           ; → 3.5   sonst Float (kein Bruch-Typ)
+(/ 5)                              ; → 0.2   (/ x) ≡ (/ 1 x)
 (* 99999999999 99999999999)       ; Fehler "*: Ganzzahl-Überlauf" (kein Bignum)
 (mod 10 3)                        ; → 1
 (remainder 10 3)                  ; → 1 (wie rem: Richtung Null)

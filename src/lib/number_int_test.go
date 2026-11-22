@@ -122,7 +122,7 @@ func TestIntRechnen(t *testing.T) {
     {`(/ -6 3)`, "-2"},
     {`(/ 6.0 2)`, "3.0"},
     {`(/ 7.0 7)`, "1.0"},
-    {`(/)`, "ERR:/: min. 2 Argumente"},
+    {`(/)`, "ERR:/: min. 1 Argument"},
     {`(/ 1 0)`, "ERR:/: Division durch 0"},
     {`(/ 1 0.0)`, "ERR:/: Division durch 0"},
     {`(/ ` + minI + ` -1)`, "ERR:/: Ganzzahl-Überlauf"},

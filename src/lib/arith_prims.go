@@ -260,8 +260,11 @@ func fnMul(args []*Cell) (*Cell, error) {
 // /: n-är, linksassoziativ. Solange Ganzzahlen aufgehen, bleibt es eine
 // Ganzzahl; ab dem ersten Float oder Rest ist es ein Float.
 func fnDiv(args []*Cell) (*Cell, error) {
-	if len(args) < 2 {
-		return nil, fmt.Errorf("/: min. 2 Argumente")
+	if len(args) == 0 {
+		return nil, fmt.Errorf("/: min. 1 Argument")
+	}
+	if len(args) == 1 { // (/ x) ≡ (/ 1 x), CL
+		args = []*Cell{MakeInt(1), args[0]}
 	}
 	if err := checkNumbers("/", args); err != nil {
 		return nil, err

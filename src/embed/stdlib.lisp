@@ -52,9 +52,8 @@
 (defun length (lst)
   (define (len-acc l n)
     (cond
-      ((pair? l) (len-acc (cdr l) (+ n 1)))
-      ((null l) n)
-      (t (error (format nil "length: keine echte Liste: ~s" lst)))))
+      ((atom l) (if (null l) n (error (format nil "length: keine echte Liste: ~s" lst))))
+      (t (len-acc (cdr l) (+ n 1)))))
   (case (%cell-type lst)
     (vector (%vector-length lst))
     (string (string-length lst))

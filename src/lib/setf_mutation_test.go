@@ -150,6 +150,29 @@ func TestSandboxKopiertAnDerGrenze(t *testing.T) {
   // Mehrfachwerte wertweise kopiert
   evalStdlibEq(t, `(begin (define sb (make-sandbox))
                           (multiple-value-list (sandbox-eval sb "(values (list 1) 2)")))`, "((1) 2)")
+  // Vektoren und Hash-Tabellen werden mitkopiert, in beide Richtungen
+  evalStdlibEq(t, `(begin (define sb (make-sandbox)) (define hl (list 1)) (define h (make-hash-table))
+                          (puthash 'k h hl) (define v (vector hl))
+                          (sandbox-eval sb (list 'rplaca (list 'gethash ''k (list 'quote h)) 9))
+                          (sandbox-eval sb (list 'rplaca (list 'aref (list 'quote v) 0) 8))
+                          (sandbox-eval sb "(define *zz-v* (vector (list 1))) (define *zz-h* (make-hash-table))
+                                            (puthash (list 1) *zz-h* 'eql-liste)")
+                          (rplaca (aref (sandbox-eval sb '*zz-v*) 0) 7)
+                          (list hl (sandbox-eval sb '*zz-v*)
+                                (eq (sandbox-eval sb '*zz-h*) (sandbox-eval sb '*zz-h*))
+                                (hash-table-count (sandbox-eval sb '*zz-h*))))`,
+    "((1) #((1)) () 1)")
+  // geteilte Struktur bleibt geteilt, O(n): 2^60 logische Zellen
+  evalStdlibEq(t, `(begin (define sb (make-sandbox))
+                          (define d (let ((x (list 1))) (dotimes (i 60) (set! x (list x x))) x))
+                          (let ((k (sandbox-eval sb (list 'quote d))))
+                            (list (eq (car k) (cadr k)) (eq k d))))`, "(t ())")
+  evalStdlibEq(t, `(begin (define sb (make-sandbox))
+                          (let ((r (sandbox-eval sb "(let ((x (list 1))) (dotimes (i 60) (setq x (list x x))) x)")))
+                            (eq (car r) (cadr r))))`, "t")
+  // Zyklus über einen Vektor: laut
+  evalStdlibErr(t, `(begin (define sb (make-sandbox))
+                           (sandbox-eval sb "(let ((v (vector 1))) (aset v 0 (list v)) v)"))`)
   // Ringliste an der Grenze: laut
   evalStdlibErr(t, `(begin (define sb (make-sandbox)) (define l (list 1 2)) (rplacd (cdr l) l)
                            (sandbox-eval sb (list 'quote l)))`)

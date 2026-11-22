@@ -281,7 +281,10 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
         return
       }
     }
-    fertig <- ergebnis{res, nil}
+    // Ergebniskopie noch in der Sandbox-Goroutine: Frist und Abbruch
+    // gelten auch für sie.
+    kopie, err := sandboxKopie(res)
+    fertig <- ergebnis{kopie, err}
   }()
   zeitlimitErr := fmt.Errorf("sandbox: Zeitlimit %s s überschritten", st.zeitText)
   select {
@@ -289,10 +292,7 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
     if e.err != nil && context.Cause(ctx) == errZeitlimit {
       return nil, zeitlimitErr
     }
-    if e.err != nil {
-      return nil, e.err
-    }
-    return sandboxKopie(e.res)
+    return e.res, e.err
   case <-ctx.Done():
     if context.Cause(ctx) == errZeitlimit {
       return nil, zeitlimitErr
@@ -301,21 +301,142 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
   }
 }
 
-// sandboxKopie: copy-tree über die Sandbox-Grenze, MVALUES wertweise.
-// Hash-Tabellen, Vektoren und Funktionen bleiben geteilt (copyTree kopiert
-// nur LIST-Cells).
+// sandboxKopie: Kopie über die Sandbox-Grenze (Spec 2026-11-22 §3.4) —
+// Host und Sandbox teilen danach keine veränderbare Struktur: Listen,
+// Vektoren und Hash-Tabellen werden kopiert, MVALUES wertweise.
+// Funktionen und FOREIGN-Handles bleiben geteilt (siehe lisp-semantik.md,
+// „Funktion aus der Sandbox“). Geteilte Teilstrukturen bleiben geteilt
+// (Memo, O(n) auch für DAGs); ein Zyklus ist ein Fehler.
 func sandboxKopie(c *Cell) (*Cell, error) {
+  g := grenzKopie{kopie: map[*Cell]*Cell{}, offen: map[*Cell]bool{}}
   if c == nil || c.Type != MVALUES {
-    return copyTree("sandbox-eval", c, 0)
+    return g.zelle(c, 0)
   }
   vals := ValuesToSlice(c)
   kopie := make([]*Cell, len(vals))
   for i, v := range vals {
-    k, err := copyTree("sandbox-eval", v, 0)
+    k, err := g.zelle(v, 0)
     if err != nil {
       return nil, err
     }
     kopie[i] = k
   }
   return MakeValues(kopie), nil
+}
+
+// grenzKopie: kopie = Quelle → Kopie, offen = noch in Arbeit (Zyklus).
+type grenzKopie struct {
+  kopie map[*Cell]*Cell
+  offen map[*Cell]bool
+}
+
+const grenzName = "sandbox-eval"
+
+func (g *grenzKopie) zelle(c *Cell, tiefe int) (*Cell, error) {
+  if c == nil {
+    return nil, nil
+  }
+  switch c.Type {
+  case LIST, VECTOR, HASHTABLE:
+  default:
+    return c, nil
+  }
+  if g.offen[c] {
+    return nil, errZirkulaer(grenzName)
+  }
+  if k, ok := g.kopie[c]; ok {
+    return k, nil
+  }
+  if tiefe > maxTiefe {
+    return nil, errZuTief(grenzName)
+  }
+  switch c.Type {
+  case VECTOR:
+    return g.vektor(c, tiefe)
+  case HASHTABLE:
+    return g.tabelle(c, tiefe)
+  }
+  return g.liste(c, tiefe)
+}
+
+// liste: Cdr-Kette iterativ (lange Listen), Car über zelle.
+func (g *grenzKopie) liste(c *Cell, tiefe int) (*Cell, error) {
+  var kette []*Cell
+  defer func() {
+    for _, q := range kette {
+      delete(g.offen, q)
+    }
+  }()
+  var kopf, ende *Cell
+  p := c
+  for {
+    z := Cons(nil, MakeNil())
+    g.kopie[p], g.offen[p] = z, true
+    kette = append(kette, p)
+    if kopf == nil {
+      kopf = z
+    } else {
+      ende.Cdr = z
+    }
+    ende = z
+    car, err := g.zelle(p.Car, tiefe+1)
+    if err != nil {
+      return nil, err
+    }
+    z.Car = car
+    p = p.Cdr
+    if leer(p) {
+      return kopf, nil
+    }
+    if p.Type != LIST || g.kopie[p] != nil {
+      rest, err := g.zelle(p, tiefe+1) // Punktpaar oder geteilter Rest
+      if err != nil {
+        return nil, err
+      }
+      ende.Cdr = rest
+      return kopf, nil
+    }
+  }
+}
+
+func (g *grenzKopie) vektor(c *Cell, tiefe int) (*Cell, error) {
+  v := c.Env.(*Vector)
+  v.mu.RLock()
+  items := append([]*Cell(nil), v.items...)
+  v.mu.RUnlock()
+  neu := makeVector(make([]*Cell, len(items)))
+  g.kopie[c], g.offen[c] = neu, true
+  defer delete(g.offen, c)
+  for i, x := range items {
+    k, err := g.zelle(x, tiefe+1)
+    if err != nil {
+      return nil, err
+    }
+    neu.Env.(*Vector).items[i] = k
+  }
+  return neu, nil
+}
+
+func (g *grenzKopie) tabelle(c *Cell, tiefe int) (*Cell, error) {
+  ht := &HashTable{m: make(map[string]hashEntry), test: c.Ht.test}
+  neu := &Cell{Type: HASHTABLE, Ht: ht}
+  g.kopie[c], g.offen[c] = neu, true
+  defer delete(g.offen, c)
+  for _, e := range c.Ht.snapshot() {
+    k, err := g.zelle(e.key, tiefe+1)
+    if err != nil {
+      return nil, err
+    }
+    v, err := g.zelle(e.val, tiefe+1)
+    if err != nil {
+      return nil, err
+    }
+    // eql-Schlüssel einer Liste hängen an der Adresse: neu berechnen
+    schluessel, err := ht.keyOf(grenzName, k)
+    if err != nil {
+      return nil, err
+    }
+    ht.m[schluessel] = hashEntry{key: k, val: v}
+  }
+  return neu, nil
 }

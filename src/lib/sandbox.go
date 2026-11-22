@@ -31,7 +31,7 @@ var sandboxGruppen = []func(*Env){
   RegisterArith, RegisterStringFuncs, RegisterRegex, RegisterVector,
   RegisterSequence, RegisterHashtables, RegisterJSON, RegisterCellType,
   RegisterCLCompatPrims, RegisterFormat, RegisterCFormat, RegisterTime,
-  RegisterDynvar,
+  RegisterDynvar, RegisterConsMutation,
 }
 
 // sandboxNichtErlaubt: Ausnahmen in sandboxGruppen. fprintf schreibt Dateien.
@@ -250,7 +250,13 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
   _ = cancel
   inner := evalCtx{run: &runState{ctx: ctx}}
 
-  forms := List(args[1])
+  // Baumkopie an der Grenze (Spec 2026-11-22 §3.4): mit rplaca könnte die
+  // Sandbox sonst Host-Listen ändern — und umgekehrt über das Ergebnis.
+  form, err := sandboxKopie(args[1])
+  if err != nil {
+    return nil, err
+  }
+  forms := List(form)
   if args[1].Type == STRING {
     var err error
     if forms, err = ReadAll(args[1].Val); err != nil {
@@ -283,11 +289,33 @@ func fnSandboxEval(args []*Cell, ectx evalCtx) (*Cell, error) {
     if e.err != nil && context.Cause(ctx) == errZeitlimit {
       return nil, zeitlimitErr
     }
-    return e.res, e.err
+    if e.err != nil {
+      return nil, e.err
+    }
+    return sandboxKopie(e.res)
   case <-ctx.Done():
     if context.Cause(ctx) == errZeitlimit {
       return nil, zeitlimitErr
     }
     return nil, cancelledErr()
   }
+}
+
+// sandboxKopie: copy-tree über die Sandbox-Grenze, MVALUES wertweise.
+// Hash-Tabellen, Vektoren und Funktionen bleiben geteilt (copyTree kopiert
+// nur LIST-Cells).
+func sandboxKopie(c *Cell) (*Cell, error) {
+  if c == nil || c.Type != MVALUES {
+    return copyTree("sandbox-eval", c, 0)
+  }
+  vals := ValuesToSlice(c)
+  kopie := make([]*Cell, len(vals))
+  for i, v := range vals {
+    k, err := copyTree("sandbox-eval", v, 0)
+    if err != nil {
+      return nil, err
+    }
+    kopie[i] = k
+  }
+  return MakeValues(kopie), nil
 }

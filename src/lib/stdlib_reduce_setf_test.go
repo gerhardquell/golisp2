@@ -100,7 +100,7 @@ func TestSetfUnbound(t *testing.T) {
   evalStdlibEq(t, `(begin (define xs '(1 2 3)) (setf (nth 1 xs) 9) xs)`, "(1 9 3)")
 }
 
-// --- setf auf car/cdr-Place (Symbol-Rebind, keine CL-Aliasing-Semantik) ---
+// --- setf auf car/cdr-Place (ändert die Zelle, CL-Aliasing) ---
 
 func TestSetfCarCdr(t *testing.T) {
   // Basis-Fall
@@ -111,12 +111,11 @@ func TestSetfCarCdr(t *testing.T) {
   // Wert wird genau einmal ausgewertet
   evalStdlibEq(t, `(begin (define n 0) (define xs '(1 2))
                           (setf (car xs) (begin (setf n (+ n 1)) n)) n)`, "1")
-  // Rebind-statt-Mutation: ein Alias (zweites Symbol auf dieselbe Liste)
-  // sieht die Änderung NICHT — abweichend von CL-rplaca, wie dokumentiert.
-  evalStdlibEq(t, `(begin (define xs '(1 2 3)) (define ys xs) (setf (car xs) 9) ys)`, "(1 2 3)")
-  // Nicht-Symbol-Argument → Fehler (wie bei nth)
-  evalStdlibErr(t, `(setf (car (list 1 2)) 9)`)
-  evalStdlibErr(t, `(setf (cdr (list 1 2)) 9)`)
+  // Mutation (0.37.0, CL-rplaca): ein Alias sieht die Änderung
+  evalStdlibEq(t, `(begin (define xs (list 1 2 3)) (define ys xs) (setf (car xs) 9) ys)`, "(9 2 3)")
+  // beliebiger Ausdruck als Argument
+  evalStdlibEq(t, `(setf (car (list 1 2)) 9)`, "9")
+  evalStdlibEq(t, `(setf (cdr (list 1 2)) 9)`, "9")
   // nil ist keine Cons-Zelle → Fehler (CL: rplaca/rplacd auf nil)
   evalStdlibErr(t, `(let ((x nil)) (setf (car x) 1))`)
   evalStdlibErr(t, `(let ((x nil)) (setf (cdr x) 1))`)

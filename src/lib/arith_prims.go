@@ -366,7 +366,11 @@ func fnEqual(args []*Cell) (*Cell, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("equal?: 2 Argumente nötig")
 	}
-	if cellEqual(args[0], args[1]) {
+	gleich, err := cellEqual(args[0], args[1])
+	if err != nil {
+		return nil, err
+	}
+	if gleich {
 		return cellT, nil
 	}
 	return MakeNil(), nil
@@ -582,30 +586,41 @@ func (m roundMode) fn(args []*Cell) (*Cell, error) {
 	return MakeValues([]*Cell{MakeInt(q), MakeNum(x.Num - qf*y.Num)}), nil
 }
 
-// cellEqual: struktureller Vergleich zweier Cells (rekursiv)
-func cellEqual(a, b *Cell) bool {
-	if a == b { // CL: (equal x x) ist immer t — auch für Typen ohne eigenen case
-		return true
+// cellEqual: struktureller Vergleich zweier Cells (equal?). Cdr-Kette
+// iterativ mit Ring-Erkennung, Car rekursiv bis maxTiefe — zwei
+// verschiedene Ringlisten sind ein Fehler statt einer Endlosschleife.
+func cellEqual(a, b *Cell) (bool, error) { return cellEqualTiefe(a, b, 0) }
+
+func cellEqualTiefe(a, b *Cell, tiefe int) (bool, error) {
+	ring := neuerRing(a)
+	for {
+		if a == b { // CL: (equal x x) ist immer t — auch für Typen ohne eigenen case
+			return true, nil
+		}
+		if a == nil || b == nil || a.Type != b.Type {
+			return false, nil
+		}
+		switch a.Type {
+		case NIL:
+			return true, nil
+		case NUMBER:
+			return numEql(a, b), nil
+		case ATOM, STRING:
+			return a.Val == b.Val, nil
+		case LIST, LAMBDA, MACRO:
+			if tiefe > maxTiefe {
+				return false, errZuTief("equal?")
+			}
+			gleich, err := cellEqualTiefe(a.Car, b.Car, tiefe+1)
+			if err != nil || !gleich {
+				return false, err
+			}
+			a, b = a.Cdr, b.Cdr
+			if a != nil && a.Type == LIST && ring.zirkulaer(a) {
+				return false, errZirkulaer("equal?")
+			}
+			continue
+		}
+		return false, nil // VECTOR u. a.: CL equal nur bei Identität (a == b oben)
 	}
-	if a == nil || b == nil {
-		return false
-	}
-	if a.Type != b.Type {
-		return false
-	}
-	switch a.Type {
-	case NIL:
-		return true
-	case NUMBER:
-		return numEql(a, b)
-	case ATOM:
-		return a.Val == b.Val
-	case STRING:
-		return a.Val == b.Val
-	case LIST, LAMBDA, MACRO:
-		return cellEqual(a.Car, b.Car) && cellEqual(a.Cdr, b.Cdr)
-	case VECTOR:
-		return a == b // CL equal: Vektoren nur bei Identität
-	}
-	return false
 }

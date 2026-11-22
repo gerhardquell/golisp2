@@ -8,96 +8,209 @@
 // Charakterisierungstests vor dem Umbau auf echte Cons-Mutation
 // (setf/rplaca/rplacd/nconc, Zweig setf-mutation, Phase 1).
 //
-// TestHeute*: halten das HEUTIGE Verhalten fest, das Phase 2 umdreht.
-//   Jeder Fall nennt im Kommentar „Phase 2: …" die CL-Erwartung.
+// Phase 2 (0.37.0): die früheren TestHeute*-Fälle sind auf das neue
+// Verhalten umgedreht (setf ändert die Zelle, Aliase sehen es), dazu
+// rplaca/rplacd/nconc/nthcdr, defstruct-Identität, Sandbox-Kopie,
+// Ringlisten und Nebenläufigkeit.
 // TestBleibt*: Verhalten, das sich durch Mutation NICHT ändern darf.
-// Siehe auch TestSetfCarCdr (stdlib_reduce_setf_test.go) — dort stehen
-// Alias- und Nicht-Symbol-Fälle, die Phase 2 ebenfalls umdreht.
 //**********************************************************************
 package lib
 
 import "testing"
 
-// --- Heute: setf bindet die Variable neu, Aliase sehen nichts ---
+// --- Phase 2: setf ändert die Zelle, Aliase sehen es (CL) ---
 
-func TestHeuteSetfAliasSiehtNichts(t *testing.T) {
-  // Phase 2: ((9 2 3) (9 2 3))
+func TestSetfAliasSiehtAenderung(t *testing.T) {
   evalStdlibEq(t, `(begin (define l (list 1 2 3)) (define m l)
-                          (setf (car l) 9) (list l m))`, "((9 2 3) (1 2 3))")
-  // Phase 2: ((1 8 9) (1 8 9))
+                          (setf (car l) 9) (list l m))`, "((9 2 3) (9 2 3))")
   evalStdlibEq(t, `(begin (define l (list 1 2 3)) (define m l)
-                          (setf (cdr l) (list 8 9)) (list l m))`, "((1 8 9) (1 2 3))")
-  // Phase 2: ((1 99 3) (1 99 3))
+                          (setf (cdr l) (list 8 9)) (list l m))`, "((1 8 9) (1 8 9))")
   evalStdlibEq(t, `(begin (define l (list 1 2 3)) (define m l)
-                          (setf (nth 1 l) 99) (list l m))`, "((1 99 3) (1 2 3))")
-  // Phase 2: (0 9 3) — die Teilliste ist dieselbe Zelle
+                          (setf (nth 1 l) 99) (list l m))`, "((1 99 3) (1 99 3))")
+  // die Teilliste ist dieselbe Zelle
   evalStdlibEq(t, `(begin (define l (list 0 1 2 3)) (define r (cdr l))
-                          (setf (car r) 9) l)`, "(0 1 2 3)")
+                          (setf (car r) 9) l)`, "(0 9 2 3)")
 }
 
-func TestHeuteSetfFunktionSiehtNichts(t *testing.T) {
-  // Phase 2: (9 2) — das Argument ist dieselbe Zelle wie beim Aufrufer
+func TestSetfFunktionSiehtAenderung(t *testing.T) {
+  // das Argument ist dieselbe Zelle wie beim Aufrufer
   evalStdlibEq(t, `(begin (defun zz-mut (x) (setf (car x) 9) x)
-                          (define l (list 1 2)) (zz-mut l) l)`, "(1 2)")
+                          (define l (list 1 2)) (zz-mut l) l)`, "(9 2)")
 }
 
-func TestHeuteSetfVerschachteltFehler(t *testing.T) {
-  // Phase 2: (1 9 3)
-  evalStdlibErr(t, `(let ((l (list 1 2 3))) (setf (car (cdr l)) 9) l)`)
-  // Phase 2: ((1 2 3) (4 5 99))
-  evalStdlibErr(t, `(let ((m (list (list 1 2 3) (list 4 5 6))))
-                      (setf (nth 2 (nth 1 m)) 99) m)`)
-  // Phase 2: (1 9 3) — c[ad]+r-Places
-  evalStdlibErr(t, `(let ((l (list 1 2 3))) (setf (cadr l) 9) l)`)
-  evalStdlibErr(t, `(let ((l (list 1 2 3))) (setf (second l) 9) l)`)
+func TestSetfVerschachtelt(t *testing.T) {
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (car (cdr l)) 9) l)`, "(1 9 3)")
+  evalStdlibEq(t, `(let ((m (list (list 1 2 3) (list 4 5 6))))
+                      (setf (nth 2 (nth 1 m)) 99) m)`, "((1 2 3) (4 5 99))")
+  // c[ad]+r-Places und first … fourth, rest
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (cadr l) 9) l)`, "(1 9 3)")
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (second l) 9) l)`, "(1 9 3)")
+  evalStdlibEq(t, `(let ((l (list 1 2 3 4)))
+                     (setf (first l) 'a (third l) 'c (fourth l) 'd) l)`, "(a 2 c d)")
+  evalStdlibEq(t, `(let ((l (list 1 2 3 4))) (setf (caddr l) 'x (cadddr l) 'y) l)`, "(1 2 x y)")
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (cddr l) (list 7)) l)`, "(1 2 7)")
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (rest l) (list 7)) l)`, "(1 7)")
+  evalStdlibEq(t, `(let ((l (list (list 1 2) 3))) (setf (caar l) 'a (cdar l) 'b) l)`, "((a . b) 3)")
 }
 
-func TestHeuteRplacaNconcFehlen(t *testing.T) {
-  // Phase 2: (9 2), (1 . 9), (1 2 3 4); (rplaca '() 1) bleibt Fehler
-  evalStdlibErr(t, `(rplaca (list 1 2) 9)`)
-  evalStdlibErr(t, `(rplacd (list 1 2) 9)`)
-  evalStdlibErr(t, `(nconc (list 1 2) (list 3 4))`)
-  evalStdlibErr(t, `(nthcdr 1 (list 1 2))`)
+func TestSetfListenPlatzRegeln(t *testing.T) {
+  // Rückgabe ist der neue Wert, Auswertung links nach rechts, je einmal
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (setf (nth 1 l) 7))`, "7")
+  evalStdlibEq(t, `(let ((spur ()) (l (list 1 2 3)))
+                     (setf (nth (begin (push 'i spur) 1) (begin (push 'x spur) l))
+                           (begin (push 'v spur) 5))
+                     (list (reverse spur) l))`, "((i x v) (1 5 3))")
+  // Index jenseits des Endes, () und Nicht-Listen: keine Cons-Zelle
+  evalStdlibErr(t, `(let ((l (list 1 2))) (setf (nth 5 l) 9))`)
+  evalStdlibErr(t, `(setf (car ()) 1)`)
+  evalStdlibErr(t, `(setf (cdr 5) 1)`)
+  // incf/decf/pop auf Listen-Places mutieren ebenfalls
+  evalStdlibEq(t, `(begin (define l (list 1 2)) (define m l) (incf (nth 1 l) 10) (decf (car l)) m)`, "(0 12)")
+  evalStdlibEq(t, `(begin (define l (list 1 (list 2 3))) (define m l) (list (pop (cadr l)) m))`, "(2 (1 (3)))")
+  // set-nth bleibt die kopierende Funktion
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (list (set-nth l 1 9) l))`, "((1 9 3) (1 2 3))")
 }
 
-func TestHeuteStructSetfKopiert(t *testing.T) {
-  // defstruct ist eine Liste (tag v1 v2 …), setf über set-nth + Rebind.
-  // Phase 2 (Entscheidung offen): 9 — CL-Structs haben Identität.
+func TestRplacaRplacdNconcNthcdr(t *testing.T) {
+  evalStdlibEq(t, `(rplaca (list 1 2) 9)`, "(9 2)")
+  evalStdlibEq(t, `(rplacd (list 1 2) 9)`, "(1 . 9)")
+  evalStdlibEq(t, `(let ((c (list 1))) (eq (rplaca c 2) c))`, "t")
+  evalStdlibEq(t, `(nconc (list 1 2) (list 3 4))`, "(1 2 3 4)")
+  // nur Type == LIST wird geändert — (), Symbole, Zahlen, Funktionen nie
+  for _, form := range []string{
+    `(rplaca () 1)`, `(rplacd () 1)`, `(rplaca 'foo 1)`, `(rplaca 5 1)`,
+    `(rplaca "ab" 1)`, `(rplaca (lambda (a) a) 1)`, `(rplacd (values 1 2) 1)`, `(rplaca (list 1))`,
+  } {
+    evalStdlibErr(t, form)
+  }
+  // nconc: ()-Argumente übersprungen, letztes beliebig, Ergebnis = erste nicht-leere Liste
+  evalStdlibEq(t, `(let ((a (list 1)) (b (list 2))) (list (nconc () a () b 3) a (eq (nconc a) a)))`,
+    "((1 2 . 3) (1 2 . 3) t)")
+  evalStdlibEq(t, `(list (nconc) (nconc () ()) (nconc () 3))`, "(() () 3)")
+  evalStdlibErr(t, `(nconc 3 (list 1))`)
+  evalStdlibErr(t, `(nconc (cons 1 2) (list 1))`)
+  // Go-nil-Listenende (MakeValues) wie ()
+  evalStdlibEq(t, `(nconc (multiple-value-list (values 1 2)) (list 3))`, "(1 2 3)")
+  // nthcdr teilt, über das Ende → (), n muss Ganzzahl >= 0 sein
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (list (eq (nthcdr 1 l) (cdr l)) (nthcdr 0 l) (nthcdr 9 l)))`,
+    "(t (1 2 3) ())")
+  evalStdlibErr(t, `(nthcdr -1 (list 1))`)
+  evalStdlibErr(t, `(nthcdr 1.0 (list 1))`)
+  // %last-cons
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (list (%last-cons l) (eq (%last-cons l) (cddr l)) (%last-cons ())))`,
+    "((3) t ())")
+  evalStdlibEq(t, `(%last-cons (cdr (multiple-value-list (values 1 2))))`, "(2)")
+}
+
+func TestStructHatIdentitaet(t *testing.T) {
   evalStdlibEq(t, `(begin (defstruct zzpt x y) (define p (make-zzpt :x 1 :y 2))
-                          (define q p) (setf (zzpt-x p) 9) (list (zzpt-x p) (zzpt-x q)))`, "(9 1)")
+                          (define q p) (setf (zzpt-x p) 9) (list (zzpt-x p) (zzpt-x q)))`, "(9 9)")
+  // Setter liefern den Wert, beliebiger Ausdruck als Objekt
+  evalStdlibEq(t, `(begin (defstruct zzpt2 x) (define ps (list (make-zzpt2 :x 1)))
+                          (list (setf (zzpt2-x (car ps)) 5) (zzpt2-x (car ps)) (set-zzpt2-x (car ps) 6) ps))`,
+    "(5 5 6 ((zzpt2 6)))")
+  evalStdlibEq(t, `(begin (defstruct zzpt3 n) (define p (make-zzpt3 :n 1)) (incf (zzpt3-n p) 2) p)`, "(zzpt3 3)")
 }
 
-func TestHeutePushAufPlatzKopiert(t *testing.T) {
-  // push auf (cdr l) geht über setf → Rebind. Phase 2: ((1 0 2) (1 0 2))
+func TestPushAufPlatzMutiert(t *testing.T) {
   evalStdlibEq(t, `(begin (define l (list 1 2)) (define m l)
-                          (push 0 (cdr l)) (list l m))`, "((1 0 2) (1 2))")
+                          (push 0 (cdr l)) (list l m))`, "((1 0 2) (1 0 2))")
 }
 
-// --- Heute: Code ist erreichbar, aber (noch) unveränderbar ---
-
-func TestHeuteQuoteLiteralGeteilt(t *testing.T) {
+func TestQuoteLiteralWirdGeaendert(t *testing.T) {
   // quote liefert die Reader-Zelle des Funktionsrumpfs, jeder Aufruf dieselbe.
-  // Phase 2: (setf (car (zz-lit)) 9) ändert den Rumpf still → (zz-lit) = (9 2 3)
-  // (CL: undefiniert). Heute bleibt der Rumpf heil.
+  // Ändern ist undefiniert (CL) und ändert still den Rumpf — nur dokumentiert.
   evalStdlibEq(t, `(begin (defun zz-lit () '(1 2 3)) (eq (zz-lit) (zz-lit)))`, "t")
   evalStdlibEq(t, `(begin (defun zz-lit () '(1 2 3)) (define a (zz-lit))
-                          (setf (car a) 9) (zz-lit))`, "(1 2 3)")
+                          (setf (car a) 9) (zz-lit))`, "(9 2 3)")
 }
 
-func TestHeuteCarAufLambdaLiefertCode(t *testing.T) {
-  // car/cdr akzeptieren LAMBDA/MACRO: Parameterliste bzw. Rumpf.
-  // Phase 2: rplaca/rplacd darauf (und auf (car f)) würden Code ändern —
-  // Entscheidung offen.
+func TestCarAufLambdaLiefertCode(t *testing.T) {
+  // car/cdr akzeptieren LAMBDA/MACRO: Parameterliste bzw. Rumpf (Spec
+  // Entscheidung 5, bleibt). rplaca auf die Lambda selbst ist ein Fehler.
   evalStdlibEq(t, `(car (lambda (a b) (+ a b)))`, "(a b)")
   evalStdlibEq(t, `(cdr (lambda (a b) (+ a b)))`, "(+ a b)")
+  evalStdlibErr(t, `(rplaca (lambda (a b) (+ a b)) 1)`)
 }
 
-func TestHeuteSandboxTeiltFormMitHost(t *testing.T) {
-  // Eine Form als Cell (nicht String) geht ungeteilt in die Sandbox und
-  // das Ergebnis ungeteilt zurück. Phase 2: per rplaca könnte die Sandbox
-  // Host-Daten ändern — Entscheidung offen (Empfehlung: copy-tree an der Grenze).
+func TestSandboxKopiertAnDerGrenze(t *testing.T) {
+  // Form hinein und Ergebnis heraus gehen per Baumkopie
   evalStdlibEq(t, `(begin (define sb (make-sandbox)) (define l (list 1 2))
-                          (eq (sandbox-eval sb (list 'quote l)) l))`, "t")
+                          (eq (sandbox-eval sb (list 'quote l)) l))`, "()")
+  evalStdlibEq(t, `(begin (define sb (make-sandbox)) (define l (list 1 (list 2)))
+                          (list (equal? (sandbox-eval sb (list 'quote l)) l)
+                                (sandbox-eval sb (list 'rplaca (list 'quote l) 9)) l))`,
+    "(t (9 (2)) (1 (2)))")
+  // Ergebnis: die Sandbox behält ihre Liste, der Host bekommt eine Kopie
+  evalStdlibEq(t, `(begin (define sb (make-sandbox))
+                          (sandbox-eval sb "(define *zz-sb* (list 1 (list 2)))")
+                          (define r (sandbox-eval sb '*zz-sb*))
+                          (setf (car (cadr r)) 9)
+                          (list r (sandbox-eval sb '*zz-sb*)))`, "((1 (9)) (1 (2)))")
+  // Mehrfachwerte wertweise kopiert
+  evalStdlibEq(t, `(begin (define sb (make-sandbox))
+                          (multiple-value-list (sandbox-eval sb "(values (list 1) 2)")))`, "((1) 2)")
+  // Ringliste an der Grenze: laut
+  evalStdlibErr(t, `(begin (define sb (make-sandbox)) (define l (list 1 2)) (rplacd (cdr l) l)
+                           (sandbox-eval sb (list 'quote l)))`)
+  evalStdlibErr(t, `(begin (define sb (make-sandbox))
+                           (sandbox-eval sb "(let ((l (list 1 2))) (rplacd (cdr l) l) l)"))`)
+}
+
+// --- Ringlisten: kein Hänger, kein Absturz ---
+
+func TestRinglisten(t *testing.T) {
+  ring := `(define r (list 1 2 3)) (rplacd (cddr r) r)`
+  // Drucker bricht mit Markierung ab — auch über format und Car-Ring
+  evalStdlibEq(t, `(begin `+ring+` (format nil "~a" r))`, `"(1 2 3 1 2 3 …zirkulär)"`)
+  evalStdlibEq(t, `(begin (define c (list 1)) (rplacd c c) (format nil "~s" c))`, `"(1 …zirkulär)"`)
+  evalStdlibEq(t, `(begin (define a (list 1 2)) (rplaca a a)
+                          (> (length (format nil "~a" a)) 10000))`, "t")
+  // laute Fehler statt Endlosschleife
+  for _, form := range []string{
+    `(length r)`, `(copy-tree r)`,
+    `(let ((h (make-hash-table :test 'equal))) (puthash r h 1))`,
+    `(let ((h (make-hash-table :test 'equal))) (gethash r h))`,
+    `(append r (list 4))`, `(apply list r)`, `(%last-cons r)`, `(nconc r (list 4))`,
+    `(list->vector r)`,
+  } {
+    evalStdlibErr(t, `(begin `+ring+` `+form+`)`)
+  }
+  // zwei verschiedene Ringe gleichen Inhalts; derselbe Ring ist equal
+  evalStdlibErr(t, `(begin `+ring+` (define s (list 1 2 3)) (rplacd (cddr s) s) (equal? r s))`)
+  evalStdlibEq(t, `(begin `+ring+` (equal? r r))`, "t")
+  // Ring gegen endliche Liste: einfach ungleich
+  evalStdlibEq(t, `(begin `+ring+` (equal? r (list 1 2 3)))`, "()")
+  // Car-Ringe: equal? meldet statt Go-Stack-Overflow
+  evalStdlibErr(t, `(begin (define a (list 1)) (rplaca a a) (define b (list 1)) (rplaca b b) (equal? a b))`)
+  // eql-Hashtabelle nimmt den Ring nach Identität
+  evalStdlibEq(t, `(begin `+ring+` (let ((h (make-hash-table))) (puthash r h 1) (gethash r h)))`, "1")
+}
+
+func TestRingCellToSlicePanikWirdFehler(t *testing.T) {
+  r := Cons(MakeInt(1), MakeNil())
+  r.Cdr = r
+  defer func() {
+    if recover() == nil {
+      t.Error("CellToSlice auf Ringliste: panic erwartet")
+    }
+  }()
+  CellToSlice(r)
+}
+
+// --- Nebenläufigkeit: Mutation unter lock, -race sauber ---
+
+func TestRplacaUnterLockAusSpawns(t *testing.T) {
+  evalStdlibEq(t, `(begin
+    (define zz-l (list 0))
+    (define zz-m (lock-make))
+    (define zz-ch (chan-make 8))
+    (dotimes (i 8)
+      (spawn (lambda ()
+               (dotimes (j 50) (lock zz-m (rplaca zz-l (+ (car zz-l) 1))))
+               (chan-send zz-ch t))))
+    (dotimes (i 8) (chan-recv zz-ch))
+    (car zz-l))`, "400")
 }
 
 // --- Bleibt: darf sich durch Mutation nicht ändern ---

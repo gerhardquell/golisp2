@@ -124,6 +124,9 @@ func BaseEnv() *Env {
 	// Sequenzfunktionen für Listen und Vektoren
 	RegisterSequence(env)
 
+	// Cons-Mutation, copy-tree, Ringlisten-Schutz (cons_mutation.go)
+	RegisterConsMutation(env)
+
 	// Hashtables (CL)
 	RegisterHashtables(env)
 
@@ -368,8 +371,12 @@ func fnAppend(args []*Cell) (*Cell, error) {
 // sind ein Fehler — eine Schleife über LIST-Cells sähe sie still als ().
 func properList(name string, c *Cell) ([]*Cell, error) {
 	var items []*Cell
+	ring := neuerRing(c)
 	p := c
 	for ; p != nil && p.Type == LIST; p = p.Cdr {
+		if len(items) > 0 && ring.zirkulaer(p) {
+			return nil, errZirkulaer(name)
+		}
 		items = append(items, p.Car)
 	}
 	if p != nil && p.Type != NIL {

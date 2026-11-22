@@ -1208,10 +1208,55 @@ Flache Kopie.
 
 **Syntax:** `(copy-tree x)`
 
-Tiefe Kopie (rekursiv auch in Sublisten).
+Tiefe Kopie (rekursiv auch in Sublisten). Eine Ringliste ist ein Fehler.
 
 ```lisp
 (copy-tree '(1 (2 3)))
+```
+
+### rplaca / rplacd
+
+**Syntax:** `(rplaca zelle wert)`, `(rplacd zelle wert)`
+
+Ändert Car bzw. Cdr einer Cons-Zelle **in place** und liefert die Zelle.
+Alle, die dieselbe Zelle sehen, sehen die Änderung. `()` und Nicht-Listen
+sind ein Fehler. Ein gequotetes Literal so zu ändern ist undefiniert (CL) —
+für veränderbare Daten `(list …)` nehmen.
+
+```lisp
+(define l (list 1 2 3))
+(define m l)
+(rplaca l 9)
+m
+; => (9 2 3)
+(rplacd (list 1 2) 3)
+; => (1 . 3)
+```
+
+### nconc
+
+**Syntax:** `(nconc liste1 … listeN)`
+
+Hängt destruktiv an: der letzte Cdr jeder Liste zeigt auf die nächste.
+`()`-Argumente werden übersprungen, das letzte darf beliebig sein.
+Ergebnis ist die erste nicht-leere Liste (anders als `append`, das kopiert).
+
+```lisp
+(define a (list 1 2))
+(nconc a (list 3 4))
+a
+; => (1 2 3 4)
+```
+
+### nthcdr
+
+**Syntax:** `(nthcdr n liste)`
+
+Der n-te Rest der Liste ohne Kopie; über das Ende hinaus `()`.
+
+```lisp
+(nthcdr 2 (list 1 2 3 4))
+; => (3 4)
 ```
 
 ### make-list
@@ -1832,17 +1877,26 @@ Liefert den `:msg`-Slot einer Condition.
 
 **Syntax:** `(setf place wert)`
 
-Generalisierte Zuweisung. Places: Variablen, `(car lst)`, `(gethash key tbl)`, Struktur-Slots wie `(punkt-x p)`.
+Generalisierte Zuweisung. Places: Variablen, `(car lst)`, `(cdr lst)`, `(nth i lst)`,
+`cadr`/`second` & Co., `(gethash key tbl)`, Struktur-Slots wie `(punkt-x p)`.
+Listen-Places und Struktur-Slots ändern die Zelle selbst (wie `rplaca`):
+Aliase sehen die Änderung, verschachtelte Places gehen auch.
 
 ```lisp
 (define x 1)
 (setf x 9)
 ; => 9
 
-(define lst '(1 2 3))
+(define lst (list 1 2 3))
+(define alias lst)
 (setf (car lst) 99)
-lst
+alias
 ; => (99 2 3)
+
+(define m (list (list 1 2) (list 3 4)))
+(setf (nth 1 (nth 1 m)) 0)
+m
+; => ((1 2) (3 0))
 
 (define h (make-hash-table))
 (setf (gethash "k" h) 7)

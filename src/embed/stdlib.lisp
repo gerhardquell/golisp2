@@ -49,15 +49,12 @@
     (if (null l) acc (rev-acc (cdr l) (cons (car l) acc))))
   (rev-acc lst ()))
 
+;; Listen zählt %list-length (Go, cons_mutation.go): Ringliste → Fehler.
 (defun length (lst)
-  (define (len-acc l n)
-    (cond
-      ((atom l) (if (null l) n (error (format nil "length: keine echte Liste: ~s" lst))))
-      (t (len-acc (cdr l) (+ n 1)))))
   (case (%cell-type lst)
     (vector (%vector-length lst))
     (string (string-length lst))
-    ((null cons) (len-acc lst 0))
+    ((null cons) (%list-length lst))
     (t (error (format nil "length: Sequenz erwartet: ~s" lst)))))
 
 (defun last (lst)
@@ -291,25 +288,24 @@
   (set! *setf-mutators* (cons (cons accessor setter) *setf-mutators*)))
 
 ;; setf: generalisierte Zuweisung (CL-Compat).
-;; - Variable: (setf x 1) → (begin (set! x 1) 1)
-;; - gethash-Place: (setf (gethash k t) v) → (puthash k t v)
-;;   (mutiert die Tabelle direkt, kein register-setf-expander nötig)
-;; - nth-Place: (setf (nth i xs) v) → (set! xs (set-nth xs i v))
-;;   (immutable Cells: neue Liste, Symbol-Rebind statt In-Place-Mutation;
-;;   Index und Wert werden je genau einmal ausgewertet)
-;; - car/cdr-Place: (setf (car xs) v) → (set! xs (cons v (cdr xs)))
-;;   (setf (cdr xs) v) → (set! xs (cons (car xs) v))
-;;   Gleiches Rebind-statt-Mutation-Prinzip wie bei nth: KEINE CL-Aliasing-
-;;   Semantik — nur das Symbol xs sieht die Änderung, andere Referenzen auf
-;;   dieselbe (ursprüngliche) Liste nicht. Verschachtelte Places wie
-;;   (setf (car (cdr x)) v) sind bewusst nicht unterstützt (wie bei nth
-;;   auch), das xs-Argument muss ein Symbol sein. xs = nil → Fehler (CL:
-;;   rplaca/rplacd verlangen eine echte Cons-Zelle, nil zählt nicht,
-;;   obwohl (car nil)/(cdr nil) lesend erlaubt sind).
-;; - Accessor-Place mit Symbol-Argument: (setf (pt-x p) 9)
-;;   → (begin (set! p (set-pt-x p 9)) 9)
-;;   (erfordert, dass der Accessor via register-setf-expander registriert ist).
-;; Rückgabewert ist der zugewiesene Wert (wie Common-Lisp setf).
+;; - Variable: (setf x 1) → (setq x 1)
+;; - gethash-Place: (setf (gethash k t) v) → (puthash k t v),
+;;   aref-Place: (setf (aref v i) x) → (aset v i x)
+;; - Listen-Places ändern die Cons-Zelle selbst (rplaca/rplacd, CL):
+;;   (setf (car x) v)   → (car (rplaca x v))
+;;   (setf (cdr x) v)   → (cdr (rplacd x v))
+;;   (setf (nth i x) v) → (car (rplaca (nthcdr i x) v))
+;;   Aliase sehen die Änderung, x darf ein beliebiger Ausdruck sein, also
+;;   geht auch (setf (nth 2 (nth 1 m)) 99). cadr caddr cadddr cddr caar cdar
+;;   first second third fourth rest werden auf car/cdr umgeschrieben.
+;;   () bzw. ein Index jenseits des Endes ist keine Cons-Zelle → Fehler.
+;;   Ein gequotetes Literal zu ändern ist undefiniert (CL) — tatsächlich
+;;   ändert es still den Code, der es enthält.
+;; - Mutator-Place (defstruct, defclass): (setf (pt-x p) 9) → (set-pt-x p 9),
+;;   der Setter ändert das Objekt in place.
+;; - Expander-Place (register-setf-expander): (setf (acc x) v)
+;;   → (set! x (setter x v)), x muss ein Symbol sein.
+;; Auswertung links nach rechts, Rückgabewert ist der zugewiesene Wert (CL).
 ;; Symbol-Place → setq: ungebundenes Symbol wird CL-artig global
 ;; angelegt, mit Warnung (assignVar).
 ;; Multi-Place: (setf a 1 b 2 …) — je Paar eine setf-Form, sequenziell in
@@ -319,49 +315,44 @@
       `(begin (setf ,place ,val) (setf ,@more))
       (%setf-one place val)))
 
+;; *setf-cxr*: Listen-Accessor → (lesende Schritte, innen zuerst) und der
+;; letzte Schritt, der zum Place wird: (cadr x) = (car (cdr x)).
+(define *setf-cxr*
+  '((first () car) (second (cdr) car) (third (cdr cdr) car)
+    (fourth (cdr cdr cdr) car) (rest () cdr) (cadr (cdr) car)
+    (caddr (cdr cdr) car) (cadddr (cdr cdr cdr) car) (cddr (cdr) cdr)
+    (caar (car) car) (cdar (car) cdr)))
+
+(defun %setf-wrap (fs x)
+  (if (null fs) x (%setf-wrap (cdr fs) (list (car fs) x))))
+
 (defun %setf-one (place val)
-  (let ((v (gensym)))
-    (if (atom place)
-        `(setq ,place ,val)
-        (let ((accessor (car place))
-              (arg (cadr place)))
+  (if (atom place)
+      `(setq ,place ,val)
+      (let* ((accessor (car place))
+             (arg (cadr place))
+             (cxr (assoc accessor *setf-cxr*)))
+        (cond
           ;; (gethash k tab) → (puthash k tab v), (aref v i) → (aset v i x)
-          (if (or (equal? accessor 'gethash) (equal? accessor 'aref))
-              `(,(if (equal? accessor 'gethash) 'puthash 'aset) ,(cadr place) ,(caddr place) ,val)
-              (if (equal? accessor 'nth)
-                  (let ((i (gensym)))
-                    (if (not (atom (caddr place)))
-                        (error "setf: nth-Place-Argument muss ein Symbol sein")
-                        `(let ((,i ,(cadr place)) (,v ,val))
-                           (set! ,(caddr place) (set-nth ,(caddr place) ,i ,v))
-                           ,v)))
-                  (if (equal? accessor 'car)
-                      (if (not (atom arg))
-                          (error "setf: car-Place-Argument muss ein Symbol sein")
-                          `(let ((,v ,val))
-                             (if (null? ,arg)
-                                 (error "setf: (car nil) ist kein gueltiger Place (nil ist keine Cons-Zelle, CL: rplaca)")
-                                 (set! ,arg (cons ,v (cdr ,arg))))
-                             ,v))
-                      (if (equal? accessor 'cdr)
-                          (if (not (atom arg))
-                              (error "setf: cdr-Place-Argument muss ein Symbol sein")
-                              `(let ((,v ,val))
-                                 (if (null? ,arg)
-                                     (error "setf: (cdr nil) ist kein gueltiger Place (nil ist keine Cons-Zelle, CL: rplacd)")
-                                     (set! ,arg (cons (car ,arg) ,v)))
-                                 ,v))
-                          (let ((mut (assoc accessor *setf-mutators*)))
-                            (if mut
-                                `(,(cdr mut) ,arg ,val)
-                                (if (not (atom arg))
-                                    (error "setf: Place-Argument muss ein Symbol sein")
-                                    (let ((entry (assoc accessor *setf-expanders*)))
-                                      (if (null? entry)
-                                          (error "setf: unbekannter Place")
-                                          `(let ((,v ,val))
-                                             (set! ,arg (,(cdr entry) ,arg ,v))
-                                             ,v))))))))))))))
+          ((or (eq accessor 'gethash) (eq accessor 'aref))
+           `(,(if (eq accessor 'gethash) 'puthash 'aset) ,(cadr place) ,(caddr place) ,val))
+          ((eq accessor 'car) `(car (rplaca ,arg ,val)))
+          ((eq accessor 'cdr) `(cdr (rplacd ,arg ,val)))
+          ((eq accessor 'nth) `(car (rplaca (nthcdr ,arg ,(caddr place)) ,val)))
+          (cxr
+           (%setf-one (list (caddr cxr) (%setf-wrap (cadr cxr) arg)) val))
+          (t
+           (let ((mut (assoc accessor *setf-mutators*)))
+             (if mut
+                 `(,(cdr mut) ,arg ,val)
+                 (let ((entry (assoc accessor *setf-expanders*))
+                       (v (gensym)))
+                   (cond
+                     ((null? entry) (error "setf: unbekannter Place"))
+                     ((not (atom arg)) (error "setf: Place-Argument muss ein Symbol sein"))
+                     (t `(let ((,v ,val))
+                           (set! ,arg (,(cdr entry) ,arg ,v))
+                           ,v)))))))))))
 
 ;; === Fehlerbehandlung ============================================
 
@@ -401,6 +392,8 @@
 ;; Generiert: make-<name> (&key slot…), <name>-<slot> je Slot, <name>? Prädikat
 ;; (plus <name>-p als CL-Alias, gleiche Kollisionsvermeidung wie Accessoren),
 ;; sowie Setter-Funktionen set-<name>-<slot> und registriert sie für setf.
+;; Setter ändern das Objekt in place (Identität wie CL) und liefern den
+;; Wert: (setf (pt-x p) 9) sehen auch Aliase von p.
 ;; Kollisionsvermeidung: Ist der Primärname bereits gebunden, wird eine
 ;; freie Alternative mit zusätzlichem Bindestrich verwendet (z. B. set--difference).
 ;; Beim erneuten Laden desselben defstruct bleiben die Primärnamen erhalten,
@@ -443,8 +436,8 @@
                         ,@warn-acc
                         (defun ,acc-final (x) (nth ,idx x))
                         ,@warn-setter
-                        (defun ,setter-final (obj val) (set-nth obj ,idx val))
-                        (register-setf-expander ',acc-final ',setter-final))))
+                        (defun ,setter-final (obj val) (car (rplaca (nthcdr ,idx obj) val)))
+                        (register-setf-mutator ',acc-final ',setter-final))))
                  (zip slot-names (iota n)))
        ,@warn-pred-p
        (defun ,pred-p-final (x) (and (list? x) (equal? (car x) ',name)))
@@ -572,11 +565,7 @@
 (defun copy-list (lst)
   (if (null lst) () (cons (car lst) (copy-list (cdr lst)))))
 
-;; copy-tree: rekursiv über Cons-Struktur; Atome (inkl. nil) unverändert.
-(defun copy-tree (x)
-  (if (pair? x)
-      (cons (copy-tree (car x)) (copy-tree (cdr x)))
-      x))
+;; copy-tree: Go-Primitiv (cons_mutation.go), Ring-sicher, auch Sandbox-Grenze.
 
 (defun %make-list (n x acc)
   (if (<= n 0) acc (%make-list (- n 1) x (cons x acc))))

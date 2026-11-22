@@ -39,7 +39,7 @@ func multipartBody(t *testing.T, fieldname, filename, content string) (*bytes.Bu
 
 func TestHTTPUploadSingleFile(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
 
   evalCode(t, env, `(define *uploads* '())`)
   handler := evalCode(t, env, `(lambda (filename content)
@@ -76,7 +76,7 @@ func TestHTTPUploadSingleFile(t *testing.T) {
 
 func TestHTTPUploadMultipleFiles(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
 
   evalCode(t, env, `(define *count* 0)`)
   handler := evalCode(t, env, `(lambda (filename content) (setq *count* (+ *count* 1)))`)
@@ -121,7 +121,7 @@ func TestHTTPUploadMultipleFiles(t *testing.T) {
 
 func TestHTTPUploadWrongMethod(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   handler := evalCode(t, env, `(lambda (filename content) content)`)
   if _, err := fnHTTPUpload([]*Cell{srv, MakeStr("/upload"), handler}); err != nil {
     t.Fatalf("http-upload: %v", err)
@@ -140,7 +140,7 @@ func TestHTTPUploadWrongMethod(t *testing.T) {
 
 func TestHTTPUploadHandlerError(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   handler := evalCode(t, env, `(lambda (filename content) (error "kaputt"))`)
   if _, err := fnHTTPUpload([]*Cell{srv, MakeStr("/upload"), handler}); err != nil {
     t.Fatalf("http-upload: %v", err)
@@ -160,7 +160,7 @@ func TestHTTPUploadHandlerError(t *testing.T) {
 
 func TestHTTPUploadErrors(t *testing.T) {
   ws, env := wsTestServer(t)
-  srv := &Cell{Type: LIST, Env: ws}
+  srv := MakeForeign("webserver", ws)
   handler := evalCode(t, env, `(lambda (filename content) content)`)
 
   cases := []struct {

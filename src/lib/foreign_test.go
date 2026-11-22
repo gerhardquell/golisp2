@@ -61,3 +61,35 @@ func TestCellSize(t *testing.T) {
     t.Fatalf("unsafe.Sizeof(Cell{}) = %d, want 112", got)
   }
 }
+
+// pruefeHandle: Go-Handles (pg-connect, maxima-open, http-serve) sind
+// FOREIGN — type-of ohne Panic, Druckform #<foreign tag>, length lehnt ab.
+func pruefeHandle(t *testing.T, h *Cell, tag string) {
+  t.Helper()
+  env := BaseEnv()
+  if err := LoadStdlib(env); err != nil {
+    t.Fatalf("LoadStdlib: %v", err)
+  }
+  if err := env.Set("h", h); err != nil {
+    t.Fatalf("Set: %v", err)
+  }
+  if got, want := h.String(), "#<foreign "+tag+">"; got != want {
+    t.Errorf("Druckform = %q, want %q", got, want)
+  }
+  res, err := LoadString("(type-of h)", env)
+  if err != nil || res.String() != "foreign" {
+    t.Errorf("(type-of h) = %v, %v; want foreign", res, err)
+  }
+  if res, err := LoadString("(length h)", env); err == nil {
+    t.Errorf("(length h) = %v, want Fehler", res)
+  }
+  if res, err := LoadString("(funcall h)", env); err == nil {
+    t.Errorf("(funcall h) = %v, want Fehler", res)
+  }
+  if res, err := LoadString("(typep h 'function)", env); err != nil || res.Type != NIL {
+    t.Errorf("(typep h 'function) = %v, %v; want ()", res, err)
+  }
+}
+
+// keinHandle ist eine normale Liste, die die Handle-Funktionen ablehnen.
+var keinHandle = Cons(MakeInt(1), MakeNil())

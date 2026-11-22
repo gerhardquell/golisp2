@@ -517,6 +517,19 @@ neue Liste `(1 2 3)` (CL), beide gehen auf jeden `setf`-Place.
 Place-Teilformen werden wie bei `incf`/`decf` zweimal ausgewertet.
 `pushnew` gibt es nicht. `set!` selbst liefert weiter das Symbol (C5).
 
+### L6. Go-Handles als leere Liste oder Schein-Funktion  [FIXED 0.36.4]
+**Symptom:** `pg-connect`, `maxima-open` und `http-serve`/`webserv`
+lieferten eine LIST-Cell mit leerem Car/Cdr: Druckform `(NIL)`,
+`(length s)` → `1`, `(type-of s)` → Go-Panic in `%cons-type`.
+`chan-make`, `lock-make` und `ga-create` lieferten eine FUNC-Cell mit
+Platzhalter: `type-of` → `compiled-function`, `(funcall (chan-make))`
+→ rohes Go-nil.
+**Fix:** alle sechs über `MakeForeign`/`ForeignObj` (Tags
+`pg-connection`, `maxima-session`, `webserver`, `channel`, `mutex`,
+`ga`): `type-of` → `foreign`, Druckform `#<foreign channel>` usw.,
+`length`/`funcall` → Fehler. Die Port-Angabe in der Webserver-Druckform
+entfällt (`(http-port srv)`).
+
 ---
 
 *Pflegehinweis:* Neue Funde unten anfügen (Datum + Kapitel + Status).

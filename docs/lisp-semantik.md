@@ -758,7 +758,9 @@ Condition.
   'hash-table)` → `t t`. Druckform `#<schiff>` (nur der Name — Objekte
   dürfen zyklisch sein). Eine Tabelle mit `:class` → unregistriertes Symbol
   bleibt `hash-table` für `type-of`, druckt sich aber als `#<symbol>`.
-- Channels sind `compiled-function`; `macro` ist ein golisp2-eigener Typ.
+- Go-Handles (Channel, Lock, GA, Webserver, Maxima-Session,
+  pg-Verbindung, Sandbox) sind `foreign`, Druckform `#<foreign channel>`
+  usw.; `foreign` und `macro` sind golisp2-eigene Typen.
 - Keine Characters. Vektoren nur eindimensional, ohne Fill-Pointer. Das
   Literal `#(…)` wertet seine Elemente nicht aus und liefert bei jedem
   Lesen einen neuen Vektor; Vektoren sind selbstauswertend. `equal?`

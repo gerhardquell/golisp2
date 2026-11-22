@@ -489,3 +489,26 @@ func TestPoolMapFehler(t *testing.T) {
     evalStdlibErr(t, src)
   }
 }
+
+func TestChannelUndLockSindForeign(t *testing.T) {
+  ch, err := fnChanMake(nil)
+  if err != nil {
+    t.Fatal(err)
+  }
+  lk, err := fnLockMake(nil)
+  if err != nil {
+    t.Fatal(err)
+  }
+  pruefeHandle(t, ch, "channel")
+  pruefeHandle(t, lk, "mutex")
+  for _, c := range []*Cell{lk, keinHandle, MakeForeign("channel", nil)} {
+    if _, err := getChannel(c); err == nil || err.Error() != "kein Channel" {
+      t.Errorf("getChannel(%v): err = %v", c, err)
+    }
+  }
+  for _, c := range []*Cell{ch, keinHandle, MakeForeign("mutex", nil)} {
+    if _, err := getMutex(c); err == nil || err.Error() != "kein Mutex" {
+      t.Errorf("getMutex(%v): err = %v", c, err)
+    }
+  }
+}

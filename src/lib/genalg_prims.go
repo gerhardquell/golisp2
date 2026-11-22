@@ -25,24 +25,24 @@ type gaHandle struct {
 
 // makeGACell erzeugt einen opaken Handle fuer einen GA.
 func makeGACell(h *gaHandle) *Cell {
-  return &Cell{
-    Type: FUNC,
-    Val:  "ga",
-    Fn: func(_ []*Cell) (*Cell, error) {
-      return nil, fmt.Errorf("ga: Handle ist kein aufrufbares Objekt")
-    },
-    Env: h,
+  return MakeForeign("ga", h)
+}
+
+// getGAHandle extrahiert den Handle samt GA.
+func getGAHandle(c *Cell) (*gaHandle, error) {
+  obj, _ := ForeignObj(c, "ga")
+  h, ok := obj.(*gaHandle)
+  if !ok || h == nil || h.ga == nil {
+    return nil, fmt.Errorf("ga-*: GA-Handle erwartet")
   }
+  return h, nil
 }
 
 // getGA extrahiert den GA aus einem Handle.
 func getGA(c *Cell) (*GA, error) {
-  if c == nil || c.Type != FUNC || c.Val != "ga" {
-    return nil, fmt.Errorf("ga-*: GA-Handle erwartet")
-  }
-  h, ok := c.Env.(*gaHandle)
-  if !ok || h == nil || h.ga == nil {
-    return nil, fmt.Errorf("ga-*: GA-Handle erwartet")
+  h, err := getGAHandle(c)
+  if err != nil {
+    return nil, err
   }
   return h.ga, nil
 }
@@ -215,13 +215,13 @@ func fnGaCalc(args []*Cell, ectx evalCtx) (*Cell, error) {
   if len(args) != 1 {
     return nil, fmt.Errorf("ga-calc: 1 Argument erwartet")
   }
-  ga, err := getGA(args[0])
+  h, err := getGAHandle(args[0])
   if err != nil {
     return nil, err
   }
+  ga := h.ga
   // Gesetzt vor dem Start der Worker, gelöscht nach ihrem Ende (GaCalc
   // wartet); paralleles ga-calc auf denselben GA war schon vorher ein Race.
-  h := args[0].Env.(*gaHandle)
   h.dyn = ectx.dyn
   defer func() { h.dyn = nil }() // auch bei Panic im Worker
   if err := GaCalc(ga); err != nil {

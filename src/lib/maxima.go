@@ -80,7 +80,7 @@ func fnMaximaOpen(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("maxima-open: Init fehlgeschlagen: %w", err)
 	}
 
-	return &Cell{Type: LIST, Env: sess}, nil
+	return MakeForeign("maxima-session", sess), nil
 }
 
 // maxima-eval: (maxima-eval session "expr" [timeout-sekunden]) → String
@@ -138,10 +138,8 @@ func fnMaximaClose(args []*Cell) (*Cell, error) {
 }
 
 func asMaximaSession(c *Cell) (*maximaSession, error) {
-	if c == nil || c.Env == nil {
-		return nil, fmt.Errorf("ungültige Session")
-	}
-	sess, ok := c.Env.(*maximaSession)
+	obj, _ := ForeignObj(c, "maxima-session")
+	sess, ok := obj.(*maximaSession)
 	if !ok {
 		return nil, fmt.Errorf("keine Maxima-Session")
 	}

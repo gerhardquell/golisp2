@@ -56,46 +56,26 @@ type goMutex struct {
 
 // makeChannelCell erstellt eine Cell die einen Channel hält
 func makeChannelCell(size int) *Cell {
-  gc := &goChannel{ch: make(chan *Cell, size), done: make(chan struct{})}
-  return &Cell{
-    Type: FUNC,
-    Val:  "channel",
-    Fn: func(_ []*Cell) (*Cell, error) {
-      return (*Cell)(nil), nil  // Platzhalter
-    },
-    Env: gc,
-  }
+  return MakeForeign("channel", &goChannel{ch: make(chan *Cell, size), done: make(chan struct{})})
 }
 
-// makeLockelCell erstellt eine Cell die einen Mutex hält
+// makeMutexCell erstellt eine Cell die einen Mutex hält
 func makeMutexCell() *Cell {
-  gm := &goMutex{}
-  return &Cell{
-    Type: FUNC,
-    Val:  "mutex",
-    Fn: func(_ []*Cell) (*Cell, error) {
-      return (*Cell)(nil), nil
-    },
-    Env: gm,
-  }
+  return MakeForeign("mutex", &goMutex{})
 }
 
 // getChannel extrahiert goChannel aus einer Cell
 func getChannel(c *Cell) (*goChannel, error) {
-  if c == nil || c.Val != "channel" {
-    return nil, fmt.Errorf("kein Channel")
-  }
-  gc, ok := c.Env.(*goChannel)
+  obj, _ := ForeignObj(c, "channel")
+  gc, ok := obj.(*goChannel)
   if !ok { return nil, fmt.Errorf("kein Channel") }
   return gc, nil
 }
 
 // getMutex extrahiert goMutex aus einer Cell
 func getMutex(c *Cell) (*goMutex, error) {
-  if c == nil || c.Val != "mutex" {
-    return nil, fmt.Errorf("kein Mutex")
-  }
-  gm, ok := c.Env.(*goMutex)
+  obj, _ := ForeignObj(c, "mutex")
+  gm, ok := obj.(*goMutex)
   if !ok { return nil, fmt.Errorf("kein Mutex") }
   return gm, nil
 }

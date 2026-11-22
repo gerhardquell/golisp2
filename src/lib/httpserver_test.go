@@ -126,3 +126,16 @@ func TestHTTPServeErrors(t *testing.T) {
     })
   }
 }
+
+func TestHTTPServeIstForeign(t *testing.T) {
+  if _, err := fnHTTPPort([]*Cell{keinHandle}); err == nil ||
+    err.Error() != "http-port: kein Server-Objekt" {
+    t.Errorf("http-port mit Liste: err = %v", err)
+  }
+  srv, err := fnHTTPServe(BaseEnv(), []*Cell{MakeInt(0)})
+  if err != nil {
+    t.Fatalf("http-serve: %v", err)
+  }
+  t.Cleanup(func() { fnHTTPStop([]*Cell{srv}) }) //nolint:errcheck
+  pruefeHandle(t, srv, "webserver")
+}

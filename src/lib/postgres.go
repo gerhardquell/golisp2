@@ -49,9 +49,7 @@ func fnPgConnect(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("pg-connect: ping failed: %w", err)
 	}
 
-	// Speichere Connection im Cell.Env
-	conn := &pgConn{db: db}
-	return &Cell{Type: LIST, Env: conn}, nil
+	return MakeForeign("pg-connection", &pgConn{db: db}), nil
 }
 
 // pg-query: (pg-query conn "SELECT * FROM users WHERE id = $1" 42)
@@ -62,11 +60,7 @@ func fnPgQuery(args []*Cell, ectx evalCtx) (*Cell, error) {
 	}
 
 	// Extrahiere Connection
-	connCell := args[0]
-	if connCell.Env == nil {
-		return nil, fmt.Errorf("pg-query: invalid connection")
-	}
-	conn, ok := connCell.Env.(*pgConn)
+	conn, ok := asPgConn(args[0])
 	if !ok {
 		return nil, fmt.Errorf("pg-query: not a postgres connection")
 	}
@@ -137,11 +131,7 @@ func fnPgExec(args []*Cell, ectx evalCtx) (*Cell, error) {
 	}
 
 	// Extrahiere Connection
-	connCell := args[0]
-	if connCell.Env == nil {
-		return nil, fmt.Errorf("pg-exec: invalid connection")
-	}
-	conn, ok := connCell.Env.(*pgConn)
+	conn, ok := asPgConn(args[0])
 	if !ok {
 		return nil, fmt.Errorf("pg-exec: not a postgres connection")
 	}
@@ -194,11 +184,10 @@ func fnPgClose(args []*Cell) (*Cell, error) {
 		return nil, fmt.Errorf("pg-close: connection required")
 	}
 
-	connCell := args[0]
-	if connCell.Env == nil {
-		return MakeNil(), nil // Already closed or invalid
+	if obj, ok := ForeignObj(args[0], "pg-connection"); args[0].Type == NIL || ok && obj == nil {
+		return MakeNil(), nil // bereits geschlossen
 	}
-	conn, ok := connCell.Env.(*pgConn)
+	conn, ok := asPgConn(args[0])
 	if !ok {
 		return nil, fmt.Errorf("pg-close: not a postgres connection")
 	}
@@ -208,7 +197,7 @@ func fnPgClose(args []*Cell) (*Cell, error) {
 	}
 
 	// Markiere als geschlossen
-	connCell.Env = nil
+	args[0].Env = nil
 	return MakeAtom("t"), nil
 }
 
@@ -265,4 +254,13 @@ func interfaceToCell(v interface{}) *Cell {
 	default:
 		return MakeStr(fmt.Sprintf("%v", val))
 	}
+}
+
+func asPgConn(c *Cell) (*pgConn, bool) {
+	obj, ok := ForeignObj(c, "pg-connection")
+	if !ok {
+		return nil, false
+	}
+	conn, ok := obj.(*pgConn)
+	return conn, ok
 }

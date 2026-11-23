@@ -546,7 +546,6 @@
 
 (defun remove-if-not (pred lst) (filter pred lst))
 (defun remove-if (pred lst) (filter (lambda (x) (not (pred x))) lst))
-(defun remove (item lst) (filter (lambda (x) (not (equal? x item))) lst))
 
 ;; remove-duplicates: erstes Vorkommen je Wert bleibt, Reihenfolge erhalten.
 (defun remove-duplicates (lst)

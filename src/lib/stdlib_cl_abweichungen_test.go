@@ -47,3 +47,16 @@ func TestEveryMehrereSequenzen(t *testing.T) {
   evalStdlibErr(t, `(every #'evenp 5)`)
   evalStdlibErr(t, `(every #'evenp)`)
 }
+
+func TestMacroexpandVoll(t *testing.T) {
+  kette := `(defmacro mx-m2 (x) (list '+ x 1)) (defmacro mx-m1 (x) (list 'mx-m2 x)) `
+  evalStdlibEq(t, `(begin `+kette+`(macroexpand '(mx-m1 5)))`, "(+ 5 1)")
+  evalStdlibEq(t, `(begin `+kette+`(macroexpand-1 '(mx-m1 5)))`, "(mx-m2 5)")
+  evalStdlibEq(t, `(begin `+kette+`(multiple-value-list (macroexpand '(mx-m1 5))))`, "((+ 5 1) t)")
+  evalStdlibEq(t, `(begin `+kette+`(multiple-value-list (macroexpand-1 '(mx-m1 5))))`, "((mx-m2 5) t)")
+  evalStdlibEq(t, `(list (multiple-value-list (macroexpand '(+ 1 2))) (multiple-value-list (macroexpand-1 'x)))`,
+    "(((+ 1 2) ()) (x ()))")
+  evalStdlibErr(t, `(macroexpand-1)`)
+  // endlose Expansion ist kein Fehler, aber abbrechbar — hier nur Fehler im Makro
+  evalStdlibErr(t, `(begin (defmacro mx-kaputt () (error "nein")) (macroexpand '(mx-kaputt)))`)
+}

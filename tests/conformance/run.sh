@@ -49,7 +49,12 @@ for f in "$DIR"/cases/*.lisp; do
 
   # Formen (Kommentare/Leerzeilen weg) einmal durch einen Prozess jagen
   mapfile -t forms < <(sed 's/\r$//' "$f" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^;;' | grep -v '^$')
-  mapfile -t out < <(printf '%s\n' "${forms[@]}" | $GOLISP 2>&1 | grep -v "^WARN: ")  # Warnungen sind keine Ergebnisse
+  # Warnungen sind keine Ergebnisse; Fehlerort-Zeilen (lib.ErrorTrace: "  in …",
+  # "  aufgerufen von …", "  … N weitere Aufrufe") nur direkt nach "ERR:" entfernen
+  mapfile -t out < <(printf '%s\n' "${forms[@]}" | $GOLISP 2>&1 | grep -v "^WARN: " | awk '
+    /^ERR: /  { inerr = 1; print; next }
+    inerr && /^  (in |aufgerufen von |… [0-9]+ weitere Aufrufe$)/ { next }
+    { inerr = 0; print }')
   mapfile -t goldlines < "$gold"
 
   if [[ ${#out[@]} -ne ${#forms[@]} ]]; then

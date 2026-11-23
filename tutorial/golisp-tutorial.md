@@ -3785,6 +3785,30 @@ kürzesten.
 (every number? '(1 a 3))
 ```
 
+### notany
+
+**Syntax:** `(notany pred seq &rest weitere)`
+
+Gibt t zurück, wenn die Prädikatfunktion für kein Element wahr ist. Das ist
+`(not (some …))`; bei mehreren Sequenzen gilt dasselbe wie bei `some`.
+
+```lisp
+(notany #'oddp '(2 4 6))   ; → t
+(notany #'oddp '(1 4 6))   ; → ()
+```
+
+### notevery
+
+**Syntax:** `(notevery pred seq &rest weitere)`
+
+Gibt t zurück, wenn die Prädikatfunktion nicht für alle Elemente gilt. Das ist
+`(not (every …))`; bei mehreren Sequenzen gilt dasselbe wie bei `every`.
+
+```lisp
+(notevery #'evenp '(2 3))   ; → t
+(notevery #'evenp '(2 4))   ; → ()
+```
+
 ### flatten
 
 **Syntax:** `(flatten liste)`

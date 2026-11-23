@@ -48,6 +48,21 @@ func TestEveryMehrereSequenzen(t *testing.T) {
   evalStdlibErr(t, `(every #'evenp)`)
 }
 
+func TestNotanyNotevery(t *testing.T) {
+  evalStdlibEq(t, `(notany #'oddp '(2 4 6))`, "t") // CL-Beispiel
+  evalStdlibEq(t, `(notevery #'evenp '(2 3))`, "t") // CL-Beispiel
+  evalStdlibEq(t, `(list (notany #'oddp '(1 4)) (notevery #'evenp '(2 4)))`, "(() ())")
+  // mehrere Sequenzen, Ende bei der kürzesten
+  evalStdlibEq(t, `(list (notany #'< (list 1 2) (list 0 0 9)) (notany #'< (list 1 2) (list 9 0)))`, "(t ())")
+  evalStdlibEq(t, `(list (notevery #'< (list 1 2 99) (list 2 3)) (notevery #'< (list 1 5) (list 2 3)))`, "(() t)")
+  // leere Liste
+  evalStdlibEq(t, `(list (notany #'oddp ()) (notevery #'oddp ()))`, "(t ())")
+  // Vektoren
+  evalStdlibEq(t, `(list (notany #'evenp #(1 3)) (notevery #'evenp #(2 3)))`, "(t t)")
+  evalStdlibEq(t, `(notany #'number? (iota 200000))`, "()")
+  evalStdlibEq(t, `(notevery #'number? (iota 200000))`, "()")
+}
+
 func TestMacroexpandVoll(t *testing.T) {
   kette := `(defmacro mx-m2 (x) (list '+ x 1)) (defmacro mx-m1 (x) (list 'mx-m2 x)) `
   evalStdlibEq(t, `(begin `+kette+`(macroexpand '(mx-m1 5)))`, "(+ 5 1)")

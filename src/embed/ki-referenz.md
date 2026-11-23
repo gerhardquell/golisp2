@@ -179,7 +179,7 @@ Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgel
 
 ### Listen-Helfer
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen (`remove` auch Vektoren); `(remove x l &key test test-not key)` und `(member x l &key test test-not key)` vergleichen ohne `:test` mit `equal?`; `(butlast l [n])`; `(every p s1 s2 …)` über mehrere Sequenzen; `(make-list n :initial-element x)`; `(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen (`remove` auch Vektoren); `(remove x l &key test test-not key)` und `(member x l &key test test-not key)` vergleichen ohne `:test` mit `equal?`; `(butlast l [n])`; `(every p s1 s2 …)` über mehrere Sequenzen; `(notany p s…)` / `(notevery p s…)` = `not` von `some` bzw. `every` (Ergebnis t oder ()); `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Makros
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`

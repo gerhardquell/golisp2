@@ -60,3 +60,14 @@ func TestMacroexpandVoll(t *testing.T) {
   // endlose Expansion ist kein Fehler, aber abbrechbar — hier nur Fehler im Makro
   evalStdlibErr(t, `(begin (defmacro mx-kaputt () (error "nein")) (macroexpand '(mx-kaputt)))`)
 }
+
+func TestLoopBlockNil(t *testing.T) {
+  evalStdlibEq(t, `(loop (return 5))`, "5")
+  evalStdlibEq(t, `(let ((i 0)) (loop (set! i (+ i 1)) (when (> i 3) (return i))))`, "4")
+  evalStdlibEq(t, `(loop for x in (list 1 2 3 4) do (when (= x 3) (return (* x 10))))`, "30")
+  evalStdlibEq(t, `(loop for i from 1 to 3 collect i)`, "(1 2 3)")
+  evalStdlibEq(t, `(block aussen (loop (return-from aussen 'raus)))`, "raus")
+  evalStdlibEq(t, `(loop for i from 1 to 200000 do (when (= i 200000) (return i)))`, "200000")
+  evalStdlibErr(t, `(loop for i from 1 to 3 sammle i)`)
+  evalStdlibErr(t, `(loop (error "innen"))`)
+}

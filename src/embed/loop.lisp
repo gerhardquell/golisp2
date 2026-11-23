@@ -18,6 +18,8 @@
 ;;   (while test)   (until test)
 ;;   (when test klausel)  (unless test klausel)
 ;;   (collect e) (append e) (sum e) (count e) (maximize e) (minimize e)
+;;   (loop form …) — nur zusammengesetzte Formen: Endlosschleife (CL)
+;; Jede Expansion steht in (block nil …): (return x) beendet die Schleife.
 ;;
 ;; Einschränkungen gegenüber CL (bewusst, dokumentiert):
 ;;   - Eine Akkumulator-Familie pro loop:
@@ -216,7 +218,15 @@
 
 ;; --- Das Makro --------------------------------------------------------
 
+;; Jede Expansion liegt in (block nil …) wie CL, damit (return x) greift.
+;; Nur zusammengesetzte Formen (keine Schlüsselwörter) = einfache CL-Form:
+;; Endlosschleife über den Rumpf.
 (defmacro loop (&rest clauses)
+  (if (every pair? clauses)
+      `(block nil (while t ,@clauses))
+      `(block nil ,(%loop-expand clauses))))
+
+(defun %loop-expand (clauses)
   (let ((st (%loop-parse clauses '() '() '() '() '() '() '())))
     (let ((inits  (nth 0 st)) (guards (nth 1 st))
           (pres   (nth 2 st)) (acts   (nth 3 st))

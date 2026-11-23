@@ -18,7 +18,6 @@ package lib
 
 import (
   "fmt"
-  "strings"
   "sync"
 )
 
@@ -68,15 +67,33 @@ func vectorIndex(name string, c *Cell, n int) (int, error) {
   return i, nil
 }
 
-func vectorStr(c *Cell) string {
+// vektor druckt #(…) im Druckpfad d (types.go). Elemente unter dem Lock
+// kopiert, gedruckt ohne Lock — kein rekursives RLock.
+func (d *drucker) vektor(c *Cell, tiefe int) {
+  if tiefe > maxTiefe {
+    d.b.WriteString("…")
+    return
+  }
+  for _, o := range d.offen {
+    if o == c {
+      d.b.WriteString("#<…zirkulär>")
+      return
+    }
+  }
   v := c.Env.(*Vector)
   v.mu.RLock()
-  defer v.mu.RUnlock()
-  parts := make([]string, len(v.items))
-  for i, x := range v.items {
-    parts[i] = x.String()
+  items := append([]*Cell(nil), v.items...)
+  v.mu.RUnlock()
+  d.offen = append(d.offen, c)
+  d.b.WriteString("#(")
+  for i, x := range items {
+    if i > 0 {
+      d.b.WriteByte(' ')
+    }
+    d.elem(x, tiefe+1)
   }
-  return "#(" + strings.Join(parts, " ") + ")"
+  d.b.WriteByte(')')
+  d.offen = d.offen[:len(d.offen)-1]
 }
 
 // make-array: nur eindimensional; einziges Keyword :initial-element.

@@ -557,10 +557,11 @@
           (t                    (rd-acc (cdr l) (cons (car l) acc)))))
   (rd-acc lst ()))
 
-(defun butlast (lst)
-  (if (or (null lst) (null (cdr lst)))
-      ()
-      (cons (car lst) (butlast (cdr lst)))))
+;; butlast: CL (butlast list &optional (n 1)) — frische Liste, iterativ (take).
+(defun butlast (lst &optional (n 1))
+  (if (< (%ganzzahl-pruefen "butlast" n) 0)
+      (error (format nil "butlast: nicht-negative Ganzzahl erwartet, got ~a" n))
+      (take (- (length lst) n) lst)))
 
 ;; copy-list: Go-Primitiv (cons_mutation.go), iterativ und Ring-sicher.
 

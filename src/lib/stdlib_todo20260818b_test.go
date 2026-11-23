@@ -62,7 +62,7 @@ func TestBuchluecken20260818Eql(t *testing.T) {
 }
 
 func TestBuchluecken20260818Makros(t *testing.T) {
-  evalStdlibEq(t, `(assert (= 1 1))`, "t")
+  evalStdlibEq(t, `(assert (= 1 1))`, "()") // CL: assert liefert nil (0.38.0)
   evalStdlibErr(t, `(assert (= 1 2))`)
   evalStdlibEq(t, `(macroexpand-1 '(when t 1))`, "(if t (begin 1) ())")
 }

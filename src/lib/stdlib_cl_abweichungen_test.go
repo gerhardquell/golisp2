@@ -26,3 +26,12 @@ func TestButlastN(t *testing.T) {
   evalStdlibErr(t, `(butlast (list 1 2) 1.5)`)
   evalStdlibErr(t, `(butlast (list 1 2) 1 2)`)
 }
+
+func TestAssertDatum(t *testing.T) {
+  evalStdlibEq(t, `(assert (= 1 1))`, "()")
+  evalStdlibEq(t, `(trap (assert (= 1 2)) (lambda (e) e))`, `"assert failed: (= 1 2)"`)
+  // CL-Beispiel: places ignoriert, datum + args als Format
+  evalStdlibEq(t, `(let ((x 5)) (trap (assert (< x 3) (x) "x zu groß: ~a" x) (lambda (e) e)))`, `"x zu groß: 5"`)
+  evalStdlibEq(t, `(trap (assert nil () "fest") (lambda (e) e))`, `"fest"`)
+  evalStdlibEq(t, `(assert t (a b) "nie ~a" (error "args nur im Fehlerfall"))`, "()")
+}

@@ -596,12 +596,16 @@
 
 ;; --- Makros ---
 
-(defmacro assert (form)
-  `(if (not ,form) (error ,(format nil "assert failed: ~a" form)) t))
+;; assert: CL (assert test-form &optional places datum &rest args). places
+;; wird ignoriert (keine Restarts); datum ist ein Format-String.
+(defmacro assert (form &optional places datum &rest args)
+  `(if ,form
+       ()
+       (error ,(if datum
+                   `(format nil ,datum ,@args)
+                   (format nil "assert failed: ~a" form)))))
 
-;; macroexpand-1: reiner Namens-Alias — golisp2s macroexpand macht bereits
-;; genau eine Expansionsstufe (CLs macroexpand-1-Semantik).
-(defmacro macroexpand-1 (f) `(macroexpand ,f))
+;; macroexpand-1 ist Spezialform (eval_specialforms.go), wie macroexpand.
 
 ;; --- Strings ---
 

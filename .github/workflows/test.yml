@@ -28,3 +28,5 @@ jobs:
         run: go test ./... -count=1
       - name: Lisp-Testsuite
         run: ./build/golisp2 -t
+      - name: Konformitäts-Suite (gegen clisp-Gold)
+        run: ./tests/conformance/run.sh

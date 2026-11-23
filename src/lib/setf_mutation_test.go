@@ -328,3 +328,34 @@ func TestBleibtTCOTief(t *testing.T) {
   evalStdlibEq(t, `(begin (defun zz-tco (n acc) (if (= n 0) acc (zz-tco (- n 1) (cons n acc))))
                           (length (zz-tco 200000 ())))`, "200000")
 }
+
+// --- copy-list: Go-Primitiv, iterativ, Ring-sicher (0.37.1) ---
+
+func TestCopyListSemantik(t *testing.T) {
+  evalStdlibEq(t, `(copy-list ())`, "()")
+  evalStdlibEq(t, `(copy-list '(1 2 . 3))`, "(1 2 . 3)")
+  evalStdlibEq(t, `(length (copy-list (make-list 200000 :initial-element 1)))`, "200000")
+  // Cars geteilt, Zellen frisch
+  evalStdlibEq(t, `(let* ((x (list 1)) (l (list x 2)) (c (copy-list l)))
+                     (list (eq (car c) x) (eq c l) (eq (cdr c) (cdr l))))`, "(t () ())")
+  evalStdlibErr(t, `(copy-list 5)`)
+  evalStdlibErr(t, `(copy-list "abc")`)
+  evalStdlibEq(t, `(trap (copy-list 5) (lambda (e) e))`, `"copy-list: Liste erwartet, got 5"`)
+}
+
+func TestCopyListRinge(t *testing.T) {
+  ring := `(define r (list 1 2 3)) (rplacd (cddr r) r)`
+  evalStdlibEq(t, `(begin `+ring+` (trap (copy-list r) (lambda (e) e)))`, `"copy-list: zirkuläre Liste"`)
+  evalStdlibEq(t, `(begin (define c (list 1)) (rplacd c c) (trap (copy-list c) (lambda (e) e)))`,
+    `"copy-list: zirkuläre Liste"`)
+}
+
+func TestCopyListGoNilEnde(t *testing.T) {
+  c, err := fnCopyList([]*Cell{Cons(MakeInt(1), nil)})
+  if err != nil {
+    t.Fatalf("copy-list: %v", err)
+  }
+  if got := c.String(); got != "(1)" {
+    t.Errorf("copy-list = %q, want %q", got, "(1)")
+  }
+}

@@ -6,7 +6,7 @@
 //  Erstellt : 20261122
 //**********************************************************************
 // Echte Cons-Mutation (Spec 2026-11-22): rplaca, rplacd, nconc, nthcdr,
-// %last-cons — dazu copy-tree, %list-length und der Ringlisten-Schutz
+// %last-cons — dazu copy-list, copy-tree, %list-length und der Ringlisten-Schutz
 // (ringWaechter, maxTiefe), den Drucker, equal?, Hash-Schlüssel,
 // properList, CellToSlice und die Sandbox-Grenze teilen.
 //
@@ -59,6 +59,7 @@ func RegisterConsMutation(env *Env) {
   _ = env.Set("nthcdr", makeFn(fnNthcdr))
   _ = env.Set("%last-cons", makeFn(fnLastCons))
   _ = env.Set("%list-length", makeFn(fnListLength))
+  _ = env.Set("copy-list", makeFn(fnCopyList))
   _ = env.Set("copy-tree", makeFn(fnCopyTree))
 }
 
@@ -189,6 +190,42 @@ func fnListLength(args []*Cell) (*Cell, error) {
     return nil, fmt.Errorf("length: keine echte Liste: %s", args[0])
   }
   return MakeInt(int64(n)), nil
+}
+
+// copy-list: (copy-list l) — neue Cons-Zellen über die Cdr-Kette, Cars
+// geteilt, gepunktetes Ende bleibt; iterativ und Ring-sicher.
+func fnCopyList(args []*Cell) (*Cell, error) {
+  if len(args) != 1 {
+    return nil, fmt.Errorf("copy-list: 1 Argument nötig")
+  }
+  if leer(args[0]) {
+    return MakeNil(), nil
+  }
+  if args[0].Type != LIST {
+    return nil, fmt.Errorf("copy-list: Liste erwartet, got %s", args[0])
+  }
+  var kopf, ende *Cell
+  ring := neuerRing(args[0])
+  for p := args[0]; ; {
+    z := Cons(p.Car, MakeNil())
+    if kopf == nil {
+      kopf = z
+    } else {
+      ende.Cdr = z
+    }
+    ende = z
+    p = p.Cdr
+    if leer(p) {
+      return kopf, nil
+    }
+    if p.Type != LIST {
+      ende.Cdr = p
+      return kopf, nil
+    }
+    if ring.zirkulaer(p) {
+      return nil, errZirkulaer("copy-list")
+    }
+  }
 }
 
 // copy-tree: (copy-tree x) — neue Cons-Zellen bis in jede Tiefe; Atome,

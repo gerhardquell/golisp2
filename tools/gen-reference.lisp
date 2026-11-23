@@ -145,7 +145,7 @@
     (compose . "Funktion f(g(x))")
     (cons . "neues Cons (x vor Liste)")
     (constantly . "Funktion, die stets x zurueckgibt")
-    (copy-list . "flache Listenkopie")
+    (copy-list . "flache Listenkopie (iterativ); Ringliste ist ein Fehler")
     (copy-tree . "tiefe Kopie (rekursiv); Ringliste ist ein Fehler")
     (decf . "Makro: place um d (Default 1) vermindern")
     (defclass . "Klasse fuer Objekte mit Identitaet (Hashtabelle, setf in place)")

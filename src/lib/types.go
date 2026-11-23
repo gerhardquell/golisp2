@@ -266,10 +266,10 @@ func (c *Cell) String() string {
 		return "#<lambda>"
 	case MACRO:
 		return "#<macro>"
-	case LIST:
-		var b strings.Builder
-		writeList(&b, c, 0)
-		return b.String()
+	case LIST, VECTOR:
+		var d drucker
+		d.elem(c, 0)
+		return d.b.String()
 	case MVALUES:
 		// MV ist für Nicht-MV-Kontexte unsichtbar: Primärwert drucken
 		return Primary(c).String()
@@ -277,19 +277,29 @@ func (c *Cell) String() string {
 		return "#<" + c.Ht.printName() + ">"
 	case FOREIGN:
 		return "#<foreign " + c.Val + ">"
-	case VECTOR:
-		return vectorStr(c)
 	case SYMMACRO:
 		return "#<symbol-macro>"
 	}
 	return "?"
 }
 
-// writeList druckt eine LIST-Cell, (quote x) als 'x (CL-Printer). Ein
+// drucker: ein Druckpfad für Listen und Vektoren. offen hält die Vektoren,
+// die gerade gedruckt werden (betreten/verlassen, nicht global besucht):
+// ein Vektor auf dem eigenen Pfad wird zu #<…zirkulär>, ein geteilter,
+// nicht zirkulärer Vektor normal gedruckt. Hash-Tabellen druckt String nur
+// mit Namen, dort gibt es keinen Zyklus.
+type drucker struct {
+	b     strings.Builder
+	offen []*Cell
+}
+
+// liste druckt eine LIST-Cell, (quote x) als 'x (CL-Printer). Ein
 // Ring auf der Cdr-Kette endet mit „…zirkulär“ (Brent, erkannt nach
-// höchstens gut zwei Umläufen), Car-Tiefe über maxTiefe mit „…“ — sonst
-// liefe der Drucker endlos bzw. in einen Go-Stack-Overflow.
-func writeList(b *strings.Builder, c *Cell, tiefe int) {
+// höchstens gut zwei Umläufen), Car-Tiefe über maxTiefe — durch Listen
+// und Vektoren gezählt — mit „…“; sonst liefe der Drucker endlos bzw. in
+// einen Go-Stack-Overflow.
+func (d *drucker) liste(c *Cell, tiefe int) {
+	b := &d.b
 	if tiefe > maxTiefe {
 		b.WriteString("…")
 		return
@@ -298,13 +308,13 @@ func writeList(b *strings.Builder, c *Cell, tiefe int) {
 		c.Cdr != nil && c.Cdr.Type == LIST &&
 		(c.Cdr.Cdr == nil || c.Cdr.Cdr.Type == NIL) {
 		b.WriteByte('\'')
-		writeElem(b, c.Cdr.Car, tiefe+1)
+		d.elem(c.Cdr.Car, tiefe+1)
 		return
 	}
 	b.WriteByte('(')
 	ring := neuerRing(c)
 	for {
-		writeElem(b, c.Car, tiefe+1)
+		d.elem(c.Car, tiefe+1)
 		c = c.Cdr
 		if c == nil || c.Type == NIL {
 			break
@@ -312,7 +322,7 @@ func writeList(b *strings.Builder, c *Cell, tiefe int) {
 		if c.Type != LIST {
 			// Dotted pair: (a . b)
 			b.WriteString(" . ")
-			writeElem(b, c, tiefe+1)
+			d.elem(c, tiefe+1)
 			break
 		}
 		if ring.zirkulaer(c) {
@@ -324,12 +334,18 @@ func writeList(b *strings.Builder, c *Cell, tiefe int) {
 	b.WriteByte(')')
 }
 
-func writeElem(b *strings.Builder, c *Cell, tiefe int) {
-	if c != nil && c.Type == LIST {
-		writeList(b, c, tiefe)
-		return
+func (d *drucker) elem(c *Cell, tiefe int) {
+	if c != nil {
+		switch c.Type {
+		case LIST:
+			d.liste(c, tiefe)
+			return
+		case VECTOR:
+			d.vektor(c, tiefe)
+			return
+		}
 	}
-	b.WriteString(c.String())
+	d.b.WriteString(c.String())
 }
 
 // LispError: Lisp-Laufzeitfehler, von (error msg) ausgelöst

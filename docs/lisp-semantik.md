@@ -136,6 +136,14 @@ m                                  ; → (9 2 3)
   `(1 2 3 1 2 3 …zirkulär)`, Car-Tiefe über 10000 als `…` —, `length`,
   `equal?`, `copy-tree`, `append`/`apply` (`properList`), `equal`-Hash-Schlüssel
   melden laut `…: zirkuläre Liste`. Keine `#1=`-Notation.
+- **Zyklen über Vektoren und Hash-Tabellen** (0.38.2): ein Vektor auf dem
+  eigenen Druckpfad erscheint als `#<…zirkulär>` — `(aset v 0 v)` druckt
+  `#(#<…zirkulär> 0)`, auch gemischt `(1 #((1 #<…zirkulär>)))`. Geteilte,
+  nicht zirkuläre Vektoren druckt er normal. Die Car-Tiefe 10000 zählt durch
+  Listen und Vektoren. Hash-Tabellen druckt er nur als `#<hash-table>`, also
+  ohne Zyklus. `equal?` und `equal`-Hash-Schlüssel vergleichen Vektoren und
+  Hash-Tabellen nach Identität (CL `equal`) und betreten sie nicht.
+  `json-encode` bricht bei Tiefe 64 laut ab, `sandbox-eval` meldet den Zyklus.
 - **Sandbox:** `sandbox-eval` kopiert eine als Form übergebene Liste und das
   Ergebnis über die Grenze — Listen, Vektoren und Hash-Tabellen, geteilte
   Teilstrukturen bleiben geteilt (O(n)), ein Zyklus ist ein Fehler. Host und

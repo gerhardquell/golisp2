@@ -1,5 +1,31 @@
 # Retrospektive golisp2
 
+## 2026-11-23 (Nachmittag) — notany/notevery, Vektor-Zyklen, Conformance in CI, md2xhtml2 1.0.0, Lispbuch-Nacharbeit
+
+**Ergebnis:**
+- **golisp2:** zwei Releases, beide gemergt, gepusht und installiert.
+  - **0.38.1:** `notany` und `notevery`.
+  - **0.38.2:** Ein Vektor auf einem Zyklus druckt `#<…zirkulär>` statt `fatal error: stack overflow`. Bisher riss das den ganzen Prozess samt SWANK mit.
+- **Conformance:** Der Runner filtert jetzt die Fehlerort-Zeilen, und ein veralteter XPASS ist bereinigt. Ergebnis: 200 PASS. Die Suite läuft jetzt in CI, der GitHub-Lauf ist grün.
+- **md2xhtml2 1.0.0:** `--version`, `--help` und ein generator-meta-Tag, mit Tag `v1.0.0`. Installiert ist es nach `/usr/local/bin`.
+- **Lispbuch, lokal:**
+  - Kap. 3 korrigiert: Die Scheme-Kurzform geht, `compose` und `square` sind eingebaut.
+  - `tools/md2xhtml.py` erzeugt jetzt `<ol>`. Damit haben 38 Dateien echte nummerierte Listen.
+
+**Was gut lief**
+- **Den Auftrag am Code prüfen.** Der Agent für die Container-Zyklen fand heraus, dass nur der Drucker betroffen war. `equal?` und Hash-Schlüssel vergleichen Container nach Identität wie CL `equal`. Meine Vorgabe, dort laut zu werden, wäre falsch gewesen. Er hat das begründet abgelehnt statt blind gebaut. Meine eigene frühere Aussage „equal? hängt“ stammte ungeprüft aus einem Agentenbericht.
+- **Das Symptom eine Ebene tiefer gesucht.** Bei `02-let-lambda` lag kein Interpreter-Fehler vor. Der Runner erwartete eine Zeile pro Form, aber Fehler haben seit dem Fehlerort-Feature mehrere Zeilen. Eine Probe mit jeder Form einzeln zeigte das sofort.
+- **Stichproben gegen das Buch.** Beim Prüfen von Kap. 3 fiel nebenbei die falsche Aussage „golisp2 kennt keine `(define (f x) …)`-Kurzform“ auf.
+
+**Was schief lief / Lehren**
+- **Neuerzeugen kann Handarbeit vernichten.** Wir haben die lispbuch1-XHTML heute mehrfach neu erzeugt. Dabei gingen in 7 Dateien `<ol>`-Listen verloren, die nicht aus dem Generator stammten, sondern aus Sigil oder von Hand. Aufgefallen ist das erst beim dritten Lauf, durch einen aufmerksamen Agenten. Lehre: Vor dem ersten Neuerzeugen einen **Basis-Vergleich** machen, also Generator auf den alten Quellen gegen die committete Ausgabe. Jede Abweichung ist entweder veraltet oder Handarbeit, und das muss man vorher wissen.
+- **Fehlerort-Ausgabe hatte einen ungeprüften Verbraucher.** Das Feature, das Fehler mehrzeilig macht, hat die Conformance-Suite leise kaputtgemacht. Sie lief nicht in CI, deshalb fiel es niemandem auf. Jetzt läuft sie dort mit.
+- **Subagenten halten `./tmp` nicht zuverlässig ein.** Wieder einmal landete etwas unter `/tmp`, und einmal lagen 54 Sections im Repo-Root. Beides haben die Agenten selbst gemeldet und weggeräumt.
+
+**Offen**
+- Das md2html-Repo hat keinen Remote. Ob es lokal bleibt, ist noch nicht entschieden.
+- Die Sandbox meldet bei Vektor-Zyklen „zirkuläre Liste“ statt „zirkuläre Struktur“, das ist nur der Wortlaut.
+
 ## 2026-11-22/23 — Handles, Kleinkram, echte Cons-Mutation, CL-Angleichungen, Lispbuch
 
 **Ergebnis:** Fünf Releases, alle gemergt und gepusht, alle Subagent-Driven. Claude war Teamleiter, Opus und Haiku haben implementiert.

@@ -1,5 +1,59 @@
 # Retrospektive golisp2
 
+## 2026-11-22/23 — Handles, Kleinkram, echte Cons-Mutation, CL-Angleichungen, Lispbuch
+
+**Ergebnis:** Fünf Releases, alle gemergt und gepusht, alle Subagent-Driven. Claude war Teamleiter, Opus und Haiku haben implementiert.
+- **0.36.4:** Handles als FOREIGN.
+- **0.36.5:** `length`-Meldung, `(/ x)`, `(read "")` meldet end-of-file, `http-static :headers`.
+- **0.37.0:** echte Cons-Mutation:
+  - `rplaca`/`rplacd`/`nconc`/`nthcdr`; `setf` auf Listen-Places ändert die Zelle.
+  - defstruct-Setter mutieren.
+  - Ringlisten-Schutz.
+  - Sandbox-Grenze kopiert.
+- **0.37.1:** `copy-list` iterativ und Ring-sicher.
+- **0.38.0:** `butlast n`, `assert` mit Meldung, `every` mehrstellig, `macroexpand` voll, `block nil` in `loop`/`dotimes`/`dolist`, `member`/`remove` mit `:key`/`:test`.
+
+Daneben:
+- nexora an 0.37 angepasst.
+- Lispbuch (beide Bücher):
+  - auf 0.37 gebracht;
+  - rund 40 Dateien mit Altfehlern korrigiert;
+  - md2html liefert wohlgeformtes XHTML.
+
+Go-Tests 795 → 806, Lisp-Suite 180 grün.
+
+**Was gut lief**
+- **Phasen bei Breaking Changes.** Zuerst Charakterisierungstests, die das IST festhalten (Phase 1). Dann die Spec mit Gerhards Entscheidungen per Fragen mit Optionen. Erst danach der Umbau. Die `TestHeute…`-Tests zeigten beim Umdrehen genau, was sich ändert.
+- **Externe Suiten vor dem Install.**
+  - nexora brach unter 0.37.0, weil es defstruct-Setter funktional nutzte. Das fiel auf, bevor das neue Binary installiert war.
+  - Die Anpassung lief als eigener Agent parallel zum Sandbox-Fix.
+- **Messen statt vermuten.**
+  - Die Messung vorher/nachher bei `length` zeigte 40× schneller, beim Drucker 1200× schneller. Der Drucker hatte quadratisches `s +=`.
+  - Bei `dotimes` mit `block nil` zeigte sie keinen messbaren Unterschied.
+- **Agenten mit Urteilsvermögen.**
+  - Der Haiku-Agent committete nicht, als `xmllint` trotz Entity-Fix weiter scheiterte (`<hr>`). Er fragte nach, statt „wohlgeformt“ zu behaupten.
+  - Der Opus-Agent baute die Ablehnung von Funktionen an der Sandbox-Grenze nicht ein, weil dokumentiertes Verhalten dagegen stand, und legte die Entscheidung vor.
+- **Stichproben des Teamleiters fanden Zusatzfehler.** `copy-list` scheiterte nicht nur an Ringen, sondern schon an 200 000 Elementen; die Ursache war nicht-endrekursives Lisp. Der Fix behob beides.
+
+**Was schief lief / Lehren**
+- **Mutation macht aus geteiltem Code eine Angriffsfläche.** Ein automatischer Security-Review fand zwei Probleme an der Sandbox-Grenze:
+  - Eine in die Sandbox gereichte Host-Lambda ließ sich per `car` + `rplaca` umschreiben. Danach lief fremder Code mit vollen Rechten.
+  - Die Baumkopie ohne Memo blähte DAGs exponentiell auf, und das außerhalb des Zeitlimits.
+
+  Lehre: Wird etwas veränderlich, jede Vertrauensgrenze neu prüfen, vor allem auf Code, der als Daten erreichbar ist.
+- **Das Buch war weit schlechter als gemeldet.** Statt der gemeldeten rund 15 Punkte waren es etwa 40 Dateien mit Falschaussagen, z. B. „kein push“, „let sequenziell“, „eq für Zahlen“. lispbuch2 enthielt dazu ältere Fassungen mit denselben Fehlern. Das bestätigt die alte Regel: Lispbuch-Aussagen immer live prüfen.
+- **Den Generator erst finden, dann neu bauen.** Die Section-XHTML von lispbuch2 hielt der Agent für Handarbeit aus Sigil. Ein Neuerzeugen aus dem alten Commit mit `md2xhtml2` war aber für 51 von 54 Dateien byte-gleich, die drei übrigen waren veraltet. Fertig ist das Werkzeug damit erst, wenn es auffindbar ist; heute liegt es nur unter `/usr/local/bin` ohne Verweis im Repo.
+- **Nicht testen, während der Agent noch baut.** Eine Zwischenprüfung von md2html lief, während der Agent baute, und gab Fehlalarm (`<hr>` ungeschlossen). Auf den Bericht warten.
+- **Nutzungslimit mitten im Agenten.** Der Lispbuch-Agent brach in Kapitel 24 ab. Ein Fortsetzen per Nachricht nach dem Reset funktionierte, und die schon gemachten Commits blieben erhalten. Kleinere Commit-Schritte machen solche Abbrüche billig.
+- **Regeln für Subagenten bleiben Disziplin.** Zweimal legte ein Agent etwas unter `/tmp` an, obwohl die Vorgabe `./tmp/` war, und einmal versuchte einer `rm -rf`; der Hook blockierte es.
+
+**Offen**
+- `notany`/`notevery` fehlen.
+- Conformance `02-let-lambda` scheitert (alt).
+- Ringe über Vektoren/Hash-Tabellen hängen weiter.
+- Das neue md2xhtml2 ist noch nicht nach `/usr/local/bin` installiert.
+- Kap. 3 des Lispbuchs definiert `compose`/`square` neu (REDEF).
+
 ## 2026-10-03 — Lückenliste aus ai-vergleiche: coerce, Zeit, Shell, Strings, Verzeichnisse, JSON
 
 **Ergebnis:** Grundlage war `TODO-20261003-luecken.md`, entstanden bei

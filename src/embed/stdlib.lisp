@@ -111,11 +111,10 @@
     ((pred (car lst))    t)
     (t                   (any pred (cdr lst)))))
 
-(defun every (pred lst)
-  (cond
-    ((null lst)               t)
-    ((pred (car lst))         (every pred (cdr lst)))
-    (t                        ())))
+;; every: CL (every pred seq &rest more) über some (sequence.go): mehrere
+;; Sequenzen, Ende bei der kürzesten, iterativ.
+(defun every (pred seq &rest more)
+  (not (apply some (lambda (&rest xs) (not (apply pred xs))) seq more)))
 
 (defun flatten (lst)
   (cond

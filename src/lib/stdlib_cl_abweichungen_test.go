@@ -35,3 +35,15 @@ func TestAssertDatum(t *testing.T) {
   evalStdlibEq(t, `(trap (assert nil () "fest") (lambda (e) e))`, `"fest"`)
   evalStdlibEq(t, `(assert t (a b) "nie ~a" (error "args nur im Fehlerfall"))`, "()")
 }
+
+func TestEveryMehrereSequenzen(t *testing.T) {
+  evalStdlibEq(t, `(list (every #'evenp (list 2 4)) (every #'evenp (list 2 3)) (every #'evenp ()))`, "(t () t)")
+  evalStdlibEq(t, `(every #'evenp #(2 4))`, "t") // Vektoren über some
+  evalStdlibEq(t, `(list (every #'< (list 1 2) (list 2 3)) (every #'< (list 1 5) (list 2 3)))`, "(t ())")
+  // Ende bei der kürzesten Sequenz
+  evalStdlibEq(t, `(every #'< (list 1 2 99) (list 2 3))`, "t")
+  evalStdlibEq(t, `(every 'evenp (list 2 4))`, "t")
+  evalStdlibEq(t, `(every #'number? (iota 200000))`, "t")
+  evalStdlibErr(t, `(every #'evenp 5)`)
+  evalStdlibErr(t, `(every #'evenp)`)
+}

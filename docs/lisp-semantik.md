@@ -865,8 +865,8 @@ Laufzeitkosten gegenüber handgeschriebener Schleife.
 Jede Expansion steht wie in CL in `(block nil …)`: `(return x)` beendet
 die Schleife sofort mit `x`, `finally` läuft dann nicht. Sind alle
 Argumente zusammengesetzte Formen (keine Schlüsselwörter), ist `loop` die
-einfache CL-Endlosschleife über den Rumpf. `dolist`/`dotimes` haben
-(noch) kein `block nil`.
+einfache CL-Endlosschleife über den Rumpf. `dolist`/`dotimes` stehen
+ebenso in `(block nil …)` (seit 0.38.0).
 
 - Iteration: `repeat`, `for … from [to|below|downto] [by]`, `for … in`
 - Bedingungen: `when`/`unless` (je eine Folgeklausel), `while`/`until`

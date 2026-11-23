@@ -166,31 +166,34 @@
   (if (= b 0) (abs a) (gcd b (mod a b))))
 
 ;; === Iteratoren =================================================
+;; dotimes/dolist stehen wie CL in (block nil …): (return x) beendet sie.
 
 (defmacro dotimes (var-n . body)
   (let ((var (car  var-n))
         (n   (cadr var-n))
         (res (caddr var-n))
         (tmp (gensym)))
-    `(let ((,tmp (%ganzzahl-pruefen "dotimes" ,n))
-           (,var 0))
-       (while (< ,var ,tmp)
-         ,@body
-         (set! ,var (+ ,var 1)))
-       ,res)))
+    `(block nil
+       (let ((,tmp (%ganzzahl-pruefen "dotimes" ,n))
+             (,var 0))
+         (while (< ,var ,tmp)
+           ,@body
+           (set! ,var (+ ,var 1)))
+         ,res))))
 
 (defmacro dolist (var-lst . body)
   (let ((var (car  var-lst))
         (lst (cadr var-lst))
         (res (caddr var-lst))
         (tmp (gensym)))
-    `(let ((,tmp ,lst))
-       (while (not (null ,tmp))
-         (let ((,var (car ,tmp)))
-           ,@body)
-         (set! ,tmp (cdr ,tmp)))
-       (let ((,var ()))
-         ,res))))
+    `(block nil
+       (let ((,tmp ,lst))
+         (while (not (null ,tmp))
+           (let ((,var (car ,tmp)))
+             ,@body)
+           (set! ,tmp (cdr ,tmp)))
+         (let ((,var ()))
+           ,res)))))
 
 ;; === Datenstrukturen ============================================
 

@@ -3894,7 +3894,7 @@ Berechnet den größten gemeinsamen Teiler.
 
 **Syntax:** `(dotimes (var n) body ...)`
 
-Makro: wiederholt body für var von 0 bis n-1.
+Makro: wiederholt body für var von 0 bis n-1. Steht in `(block nil …)`: `(return x)` beendet die Schleife mit x.
 
 ```lisp
 (dotimes (i 3) (print i))
@@ -3905,7 +3905,7 @@ Makro: wiederholt body für var von 0 bis n-1.
 
 **Syntax:** `(dolist (var liste) body ...)`
 
-Makro: iteriert über eine Liste. Ergebnisform ist ().
+Makro: iteriert über eine Liste. Ergebnisform ist (). Steht in `(block nil …)`: `(return x)` beendet die Schleife mit x.
 
 ```lisp
 (dolist (x '(1 2 3)) (print x))

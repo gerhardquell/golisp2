@@ -123,6 +123,7 @@ Wichtige:
 
 (dotimes (var n) body...)         ; Zählschleife (Stdlib)
 (dolist (var lst) body...)        ; Listeniteration (Stdlib)
+                                  ; beide in (block nil …): (return x) beendet sie
 
 (block name body...)              ; Named-Block (lexikalisch)
 (return-from name value)          ; Nicht-lokaler Ausstieg

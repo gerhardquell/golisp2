@@ -195,7 +195,7 @@ implementation is the native special form from section 2
 
 ### Iterators
 `dotimes (var n) body` — `(dotimes (i 10) ...)`
-`dolist (var lst) body` — `(dolist (x xs) ...)`
+`dolist (var lst) body` — `(dolist (x xs) ...)`; both inside `(block nil …)`: `(return x)` ends them
 
 ### Structures
 `(defstruct name [doc] slot|(slot default) ...)` — generates: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)

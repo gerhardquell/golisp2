@@ -191,7 +191,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 迭代器
 `dotimes (var n) body` —— `(dotimes (i 10) ...)`
-`dolist (var lst) body` —— `(dolist (x xs) ...)`
+`dolist (var lst) body` —— `(dolist (x xs) ...)`；两者都包在 `(block nil …)` 中：`(return x)` 结束循环
 
 ### 结构体
 `(defstruct name [doc] slot|(slot default) ...)` —— 生成：`(make-name :slot v ...)`、`name-slot`、`name?`（+ `name-p`）

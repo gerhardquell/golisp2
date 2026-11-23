@@ -103,3 +103,15 @@ func TestRemoveKeyTest(t *testing.T) {
   evalStdlibErr(t, `(remove 1 5)`)
   evalStdlibErr(t, `(remove 1 (list 1) :test #'= :test-not #'=)`)
 }
+
+func TestDotimesDolistBlockNil(t *testing.T) {
+  evalStdlibEq(t, `(dotimes (i 5) (when (= i 2) (return i)))`, "2")
+  evalStdlibEq(t, `(dolist (x (list 1 2 3)) (return x))`, "1")
+  evalStdlibEq(t, `(list (dotimes (i 3) i) (dotimes (i 3 'fertig) i) (dolist (x (list 1 2) 'ende) x))`, "(() fertig ende)")
+  // return trifft die innerste Schleife, return-from den benannten Block
+  evalStdlibEq(t, `(dolist (x (list 1 2)) (dotimes (i 9) (return 'innen)) (return (list x 'aussen)))`, "(1 aussen)")
+  evalStdlibEq(t, `(block b (dolist (x (list 1 2)) (return-from b 'raus)) 'nie)`, "raus")
+  evalStdlibEq(t, `(dotimes (i 200000) (when (= i 199999) (return i)))`, "199999")
+  evalStdlibErr(t, `(dotimes (i 2.5) i)`)
+  evalStdlibErr(t, `(dolist (x (list 1)) (error "innen"))`)
+}

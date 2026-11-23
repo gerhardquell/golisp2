@@ -60,11 +60,7 @@
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))
 
-(defun member (x lst)
-  (cond
-    ((null lst)            ())
-    ((equal? x (car lst)) lst)
-    (t                    (member x (cdr lst)))))
+;; member, remove: Go (sequence.go, seqSearchFn) mit :test/:test-not/:key.
 
 (defun assoc (key lst)
   (cond

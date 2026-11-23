@@ -71,3 +71,35 @@ func TestLoopBlockNil(t *testing.T) {
   evalStdlibErr(t, `(loop for i from 1 to 3 sammle i)`)
   evalStdlibErr(t, `(loop (error "innen"))`)
 }
+
+func TestMemberKeyTest(t *testing.T) {
+  // Default-Vergleich bleibt equal? (CL wäre eql)
+  evalStdlibEq(t, `(list (member 2 (list 1 2 3)) (member "b" (list "a" "b")) (member (list 1) (list (list 1) 2)) (member 9 (list 1)))`,
+    `((2 3) ("b") ((1) 2) ())`)
+  evalStdlibEq(t, `(let ((l (list 1 2 3))) (eq (member 2 l) (cdr l)))`, "t")
+  // CL-Beispiele
+  evalStdlibEq(t, `(member 2 '((1 . 2) (3 . 4)) :test-not #'= :key #'cdr)`, "((3 . 4))")
+  evalStdlibEq(t, `(member 'e '(a b c d))`, "()")
+  evalStdlibEq(t, `(list (member 'b '((a 1) (b 2)) :key #'car) (member 'b '((a 1) (b 2)) :key 'car) (member 1 (list 1 2) :key nil))`,
+    "(((b 2)) ((b 2)) (1 2))")
+  evalStdlibEq(t, `(member 1 (list 1 2 3) :test #'<)`, "(2 3)")
+  evalStdlibEq(t, `(length (member 199999 (iota 200000)))`, "1")
+  evalStdlibErr(t, `(member 1 #(1 2))`)
+  evalStdlibErr(t, `(member 1 5)`)
+  evalStdlibErr(t, `(member 1 (list 1) :test #'= :test-not #'=)`)
+  evalStdlibErr(t, `(member 1 (list 1) :foo 1)`)
+  evalStdlibErr(t, `(member 1 (list 1) :key)`)
+}
+
+func TestRemoveKeyTest(t *testing.T) {
+  evalStdlibEq(t, `(list (remove 2 (list 1 2 3 2)) (remove "a" (list "a" "b")) (remove 9 ()))`, `((1 3) ("b") ())`)
+  // CL-Beispiele
+  evalStdlibEq(t, `(remove 4 '(1 3 4 5 9))`, "(1 3 5 9)")
+  evalStdlibEq(t, `(remove 3 '(1 2 4 1 3 4 5) :test #'>)`, "(4 3 4 5)")
+  evalStdlibEq(t, `(list (remove 'a '((a 1) (b 2)) :key #'car) (remove 1 (list 1 2 1) :test-not #'=))`, "(((b 2)) (1 1))")
+  evalStdlibEq(t, `(remove 1 #(1 2 1 3))`, "#(2 3)")
+  evalStdlibEq(t, `(let ((l (list 1 2))) (list (eq (remove 9 l) l) l))`, "(() (1 2))")
+  evalStdlibEq(t, `(length (remove 5 (iota 200000)))`, "199999")
+  evalStdlibErr(t, `(remove 1 5)`)
+  evalStdlibErr(t, `(remove 1 (list 1) :test #'= :test-not #'=)`)
+}

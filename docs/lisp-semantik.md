@@ -330,6 +330,11 @@ Das gilt für Printer, `~a` und `number->string` (`numberStr`/`FormatNumber`,
 - `eql` und `equal?` verlangen gleiche Zahlart **und** gleichen Wert:
   `(eql 1 1.0)` → `()`. Dem folgen `member`, `position`, `assoc`, `case`
   und die Tags von `catch`/`throw`.
+- **Abweichung von CL:** `member` und `remove` vergleichen ohne `:test`
+  mit `equal?` (strukturell: `(member "b" (list "a" "b"))` → `("b")`,
+  `(member (list 1) (list (list 1)))` trifft). CL nimmt `eql`; das
+  verlangt dort `:test #'equal`. `find`/`position`/`count` nehmen wie CL
+  `eql`. Bewusste Entscheidung (0.38.0), ein Wechsel wäre Breaking.
 - Hash-Tabellen: `1` und `1.0` sind zwei Schlüssel.
 - Ganzzahl gegen Ganzzahl ist exakt. Bei Ganzzahl gegen Float wird die
   Ganzzahl nach Float gewandelt. Über 2^53 ist das ungenau:

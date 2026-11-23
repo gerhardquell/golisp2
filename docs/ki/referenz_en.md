@@ -294,7 +294,7 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 | `(puthash k h v)` | table in 2nd position; prefer `(setf (gethash k h) v)` | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | missing → error „unbekanntes Symbol“ (unknown symbol); use `string?`, `(typep x 'cons)`, `equal?` | available |
 | pattern in `&optional`/`&key`/`&rest` (`destructuring-bind`, `defmacro`) | error — patterns only in required positions | allowed |
-| `(member x l)`, `(remove x l)` | without `:test` `equal?`: compares strings structurally | `eql` (strings only with `:test 'equal`) |
+| `(member x l)`, `(remove x l)` | default `equal?` instead of CL `eql` (deliberate): compares strings and lists structurally; `find`/`position`/`count` use `eql` | `eql` (strings only with `:test 'equal`) |
 | `(last l)` | returns the **element**, not the cell | last cons cell |
 | `(slurp)` | reads **stdin**; file → `(file-read path)` | – |
 | `(gets)` at end of input | error `gets: EOF`, not `nil` | `read-line` → `nil`/EOF value |

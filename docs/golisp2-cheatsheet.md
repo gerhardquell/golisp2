@@ -564,7 +564,7 @@ bei Start automatisch geladen.
 (length '(a b c))                 ; → 3
 (nth 1 '(a b c))                  ; → b
 (last '(a b c))                   ; → (c)
-(member 'b '(a b c))              ; → (b c)   Default-Vergleich equal?
+(member 'b '(a b c))              ; → (b c)   Default equal? — Abweichung von CL (eql)
 (member 'b '((a 1) (b 2)) :key #'car)   ; → ((b 2))   auch :test/:test-not
 (remove 3 '(1 2 4 1 3 4 5) :test #'>)   ; → (4 3 4 5)  auch :key/:test-not
 (butlast '(a b c d) 2)            ; → (a b)

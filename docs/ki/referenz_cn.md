@@ -290,7 +290,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | `(puthash k h v)` | 表在第 2 个位置；优先用 `(setf (gethash k h) v)` | Emacs Lisp：`(puthash k v h)` |
 | `stringp` `consp` `equal` | 不存在 → 报错 „unbekanntes Symbol“（未知符号）；改用 `string?`、`(typep x 'cons)`、`equal?` | 存在 |
 | `&optional`/`&key`/`&rest` 中的模式（`destructuring-bind`、`defmacro`） | 报错 —— 模式只能在必需位置 | 允许 |
-| `(member x l)`、`(remove x l)` | 不带 `:test` 时用 `equal?`：字符串按结构比较 | `eql`（字符串需 `:test 'equal`） |
+| `(member x l)`、`(remove x l)` | 默认用 `equal?` 而非 CL 的 `eql`（有意为之）：字符串和列表按结构比较；`find`/`position`/`count` 用 `eql` | `eql`（字符串需 `:test 'equal`） |
 | `(last l)` | 返回**元素**，不是 cons 单元 | 最后一个 cons 单元 |
 | `(slurp)` | 读取 **stdin**；读文件 → `(file-read path)` | – |
 | 输入结束时的 `(gets)` | 报错 `gets: EOF`，不是 `nil` | `read-line` → `nil`/EOF 值 |

@@ -179,7 +179,7 @@ Function argument: lambda, `#'f`, `f` or quoted symbol `'f` (resolved globally l
 
 ### List helpers
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — lists only (`remove` also vectors); `(remove x l &key test test-not key)` and `(member x l &key test test-not key)` compare with `equal?` without `:test`; `(butlast l [n])`; `(every p s1 s2 …)` over several sequences; `(make-list n :initial-element x)`; `(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — lists only (`remove` also vectors); `(remove x l &key test test-not key)` and `(member x l &key test test-not key)` compare with `equal?` without `:test`; `(butlast l [n])`; `(every p s1 s2 …)` over several sequences; `(notany p s…)` / `(notevery p s…)` = `not` of `some` resp. `every` (result t or ()); `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Macros
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`

@@ -176,7 +176,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 列表辅助函数
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` —— 仅限列表（`remove` 也支持向量）；`(remove x l &key test test-not key)` 和 `(member x l &key test test-not key)` 不带 `:test` 时用 `equal?` 比较；`(butlast l [n])`；`(every p s1 s2 …)` 支持多个序列；`(make-list n :initial-element x)`；`(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` —— 仅限列表（`remove` 也支持向量）；`(remove x l &key test test-not key)` 和 `(member x l &key test test-not key)` 不带 `:test` 时用 `equal?` 比较；`(butlast l [n])`；`(every p s1 s2 …)` 支持多个序列；`(notany p s…)` / `(notevery p s…)` 分别为 `some` / `every` 的 `not`（结果为 t 或 ()）；`(make-list n :initial-element x)`；`(getf plist key [default])`
 
 ### 宏
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`

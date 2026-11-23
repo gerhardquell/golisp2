@@ -256,6 +256,8 @@
     (mod . "Rest wie CL: abgerundet, Vorzeichen des Divisors ((mod -3 2) → 1)")
     (rem . "Rest Richtung Null wie CL, Vorzeichen des Dividenden ((rem -3 2) → -1)")
     (negative? . "t, wenn kleiner 0")
+    (notany . "(notany p s1 s2 …): t, wenn p fuer kein Element wahr ist; Ende bei der kuerzesten Sequenz")
+    (notevery . "(notevery p s1 s2 …): t, wenn p fuer nicht alle Elemente gilt; Ende bei der kuerzesten Sequenz")
     (now . "Unix-Sekunden (seit 1970) als Float")
     (nth . "n-tes Element (0-basiert); n muss eine Ganzzahl sein")
     (null . "t, wenn nil")

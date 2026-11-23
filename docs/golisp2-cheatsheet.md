@@ -577,6 +577,8 @@ bei Start automatisch geladen.
 (any number? '(a b 1))            ; → t
 (every number? '(1 2 3))          ; → t
 (every #'< '(1 2) '(2 3 0))       ; → t   mehrere Sequenzen, Ende bei der kürzesten
+(notany #'oddp '(2 4 6))          ; → t   = (not (some …))
+(notevery #'evenp '(2 3))         ; → t   = (not (every …))
 (flatten '(1 (2 (3) 4)))          ; → (1 2 3 4)
 (zip '(a b) '(1 2))               ; → ((a 1) (b 2))
 (list-tail '(1 2 3) 1)            ; → (2 3)

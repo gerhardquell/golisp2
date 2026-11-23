@@ -112,6 +112,13 @@
 (defun every (pred seq &rest more)
   (not (apply some (lambda (&rest xs) (not (apply pred xs))) seq more)))
 
+;; notany/notevery: CL, über some/every (Ergebnis t oder ())
+(defun notany (pred seq &rest more)
+  (not (apply some pred seq more)))
+
+(defun notevery (pred seq &rest more)
+  (not (apply every pred seq more)))
+
 (defun flatten (lst)
   (cond
     ((null lst)        ())

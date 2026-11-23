@@ -76,6 +76,7 @@ gibt es nur für Symbole, nicht Ausdrücke.
 ### B5. Keine `rplaca`/`rplacd` (immutable cells)  [FIXED 0.37.0]
 **Behoben 0.37.0:** `rplaca`, `rplacd`, `nconc`, `nthcdr` sind Primitiven
 (`src/lib/cons_mutation.go`), `setf` mutiert, defstruct-Objekte haben Identität.
+0.37.1: `copy-list` ist ebenfalls Go-Primitive (iterativ, Ring-sicher): Ringliste → „copy-list: zirkuläre Liste“, lange Listen (200000 Elemente) gehen.
 Bewusst offen (Spec 2026-11-22 §6): `car`/`cdr` auf LAMBDA/MACRO liefern die
 echte Parameterliste bzw. den Rumpf — `rplaca` auf `(car f)` ändert den Code und
 umgeht `checkLambdaList`. Darum sperrt `sandbox-eval` Funktionen in der

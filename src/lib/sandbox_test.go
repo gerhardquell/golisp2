@@ -258,7 +258,7 @@ func TestSandboxErlaubtListe(t *testing.T) {
     "/=", "<", "<=", "=", ">", ">=", "abs", "append", "apply", "aref", "arrayp", "aset",
     "ash", "atom", "atom?", "car", "cdr", "ceiling", "chan-close", "chan-closed?",
     "chan-make", "chan-recv", "chan-select", "chan-send", "chan-try-recv", "chan-try-send",
-    "clrhash", "concatenate", "cons", "copy-seq", "copy-tree", "count", "count-if", "defined-in",
+    "clrhash", "concatenate", "cons", "copy-list", "copy-seq", "copy-tree", "count", "count-if", "defined-in",
     "directory-files", "documentation", "drop", "elt", "env-symbols", "eq", "eq?", "eql",
     "equal?", "err-write", "error", "exp", "expt", "file-exists?", "file-read",
     "file-stat", "find", "find-if", "float", "floatp", "floor", "format", "format-time",

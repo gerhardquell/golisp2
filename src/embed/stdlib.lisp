@@ -562,8 +562,7 @@
       ()
       (cons (car lst) (butlast (cdr lst)))))
 
-(defun copy-list (lst)
-  (if (null lst) () (cons (car lst) (copy-list (cdr lst)))))
+;; copy-list: Go-Primitiv (cons_mutation.go), iterativ und Ring-sicher.
 
 ;; copy-tree: Go-Primitiv (cons_mutation.go), Ring-sicher, auch Sandbox-Grenze.
 

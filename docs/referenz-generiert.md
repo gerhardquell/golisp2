@@ -151,7 +151,7 @@
 | `concatenate` | Sequenzen verketten zu 'list oder 'vector |
 | `cons` | neues Cons (x vor Liste) |
 | `constantly` | Funktion, die stets x zurueckgibt |
-| `copy-list` | flache Listenkopie |
+| `copy-list` | flache Listenkopie (iterativ); Ringliste ist ein Fehler |
 | `copy-seq` | flache Kopie gleichen Typs |
 | `copy-tree` | tiefe Kopie (rekursiv); Ringliste ist ein Fehler |
 | `count` | Anzahl passender Elemente (:test :key) |

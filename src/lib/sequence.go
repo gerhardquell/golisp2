@@ -11,7 +11,9 @@
 //   (concatenate 'list|'vector s…)  (map 'list|'vector|nil f s…)
 //   (some p s…)  find/position/count x s &key test key
 //   find-if/position-if/count-if p s &key key
-// Alles nicht-destruktiv. Default-Test ist eql (arith_prims.go).
+//   member x liste / remove x s &key test test-not key
+// Alles nicht-destruktiv. Default-Test ist eql (arith_prims.go), bei
+// member/remove equal? (historisch, CL wäre eql).
 //**********************************************************************
 
 package lib
@@ -29,6 +31,8 @@ func RegisterSequence(env *Env) {
     _ = env.Set(name,         makeCtxFn(seqSearchFn(env, name, false)))
     _ = env.Set(name + "-if", makeCtxFn(seqSearchFn(env, name + "-if", true)))
   }
+  _ = env.Set("member", makeCtxFn(seqSearchFn(env, "member", false)))
+  _ = env.Set("remove", makeCtxFn(seqSearchFn(env, "remove", false)))
 }
 
 // seqItems: Elemente einer Liste (properList) oder eine Kopie der
@@ -213,19 +217,24 @@ func fnSome(args []*Cell, ectx evalCtx) (*Cell, error) {
   return MakeNil(), nil
 }
 
-// seqSearchFn baut find/position/count und ihre -if-Varianten. Das erste
-// Argument ist bei -if ein Prädikat, sonst das gesuchte Objekt (kann selbst
-// ein Symbol sein — daher kein withFnDesignator).
+// seqSearchFn baut find/position/count, ihre -if-Varianten sowie member
+// und remove. Das erste Argument ist bei -if ein Prädikat, sonst das
+// gesuchte Objekt (kann selbst ein Symbol sein — daher kein
+// withFnDesignator). :key nil heißt wie in CL: kein Schlüssel.
 func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
   return func(args []*Cell, ectx evalCtx) (*Cell, error) {
     if len(args) < 2 {
       return nil, fmt.Errorf("%s: mindestens 2 Argumente nötig", name)
     }
-    items, _, err := seqItems(name, args[1])
+    if name == "member" && args[1].Type == VECTOR {
+      return nil, fmt.Errorf("member: Liste erwartet, got %s", args[1])
+    }
+    items, isVec, err := seqItems(name, args[1])
     if err != nil {
       return nil, err
     }
     var test, key *Cell
+    testNot := false
     rest := args[2:]
     if len(rest)%2 != 0 {
       return nil, fmt.Errorf("%s: Keyword ohne Wert", name)
@@ -234,9 +243,15 @@ func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
       kw := rest[i]
       switch {
       case kw.Type == ATOM && kw.Val == ":key":
-        key = resolveFn(env, rest[i+1])
-      case kw.Type == ATOM && kw.Val == ":test" && !isIf:
+        if rest[i+1].Type != NIL {
+          key = resolveFn(env, rest[i+1])
+        }
+      case kw.Type == ATOM && (kw.Val == ":test" || kw.Val == ":test-not") && !isIf:
+        if test != nil {
+          return nil, fmt.Errorf("%s: :test und :test-not schließen sich aus", name)
+        }
         test = resolveFn(env, rest[i+1])
+        testNot = kw.Val == ":test-not"
       default:
         return nil, fmt.Errorf("%s: unbekanntes Keyword %s", name, kw)
       }
@@ -245,7 +260,9 @@ func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
     if isIf {
       test = resolveFn(env, item)
     }
+    listenSuche := name == "member" || name == "remove"
     count := 0
+    var behalten []*Cell
     for i, x := range items {
       k := x
       if key != nil {
@@ -268,14 +285,26 @@ func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
         if err != nil {
           return nil, err
         }
-        hit = IsTruthy(Primary(r))
+        hit = IsTruthy(Primary(r)) != testNot
+      case listenSuche:
+        if hit, err = cellEqual(item, k); err != nil {
+          return nil, err
+        }
       default:
         hit = eql(item, k)
+      }
+      if name == "remove" {
+        if !hit {
+          behalten = append(behalten, x)
+        }
+        continue
       }
       if !hit {
         continue
       }
       switch name {
+      case "member":
+        return dropCells(args[1], i)
       case "find", "find-if":
         return x, nil
       case "position", "position-if":
@@ -285,6 +314,9 @@ func seqSearchFn(env *Env, name string, isIf bool) ctxFn {
     }
     if name == "count" || name == "count-if" {
       return MakeInt(int64(count)), nil
+    }
+    if name == "remove" {
+      return makeSeq(behalten, isVec), nil
     }
     return MakeNil(), nil
   }

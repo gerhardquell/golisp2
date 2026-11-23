@@ -187,7 +187,8 @@ func evalWithCtx(expr *Cell, env *Env, ectx evalCtx) (res *Cell, err error) {
           return nil, fmt.Errorf("quote: Syntax: (quote x)")
         }
         return expr.Cdr.Car, nil
-      case "macroexpand":  return evalMacroexpand(expr.Cdr, env, ectx)
+      case "macroexpand":  return evalMacroexpand(expr.Cdr, env, ectx, false)
+      case "macroexpand-1": return evalMacroexpand(expr.Cdr, env, ectx, true)
       case "bound?":       return evalBound(expr.Cdr, env, ectx)
       case "makunbound":   return evalMakunbound(expr.Cdr, env, ectx)
       case "macroexpand-all": return evalMacroexpandAll(expr.Cdr, env, ectx)

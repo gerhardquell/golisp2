@@ -86,7 +86,8 @@
 | `(multiple-value-setq vars form)` | 赋值多值 | |
 | `(nth-value n form)` | 第 n 个值 | |
 | `(function fn)` | 函数字面量 | `#'` 读取器语法糖 |
-| `(macroexpand form)` | 展开宏 | 非尾调用 |
+| `(macroexpand form)` | 反复展开，直到不再是宏调用 → `(values form expanded-p)` | 非尾调用 |
+| `(macroexpand-1 form)` | 只展开一层 → `(values form expanded-p)` | 非尾调用 |
 | `(macroexpand-all form)` | 完全展开 | 非尾调用 |
 | `(bound? sym)` | 是否已绑定？ | sym 会被求值 |
 | `(makunbound sym)` | 删除绑定 | |
@@ -175,22 +176,22 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 
 ### 列表辅助函数
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` —— 仅限列表；`(remove x l)` 用 `equal?` 比较，**没有** `:test`/`:key`（→ 报错 „zu viele Argumente“（参数过多））；`(make-list n :initial-element x)`；`(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` —— 仅限列表（`remove` 也支持向量）；`(remove x l &key test test-not key)` 和 `(member x l &key test test-not key)` 不带 `:test` 时用 `equal?` 比较；`(butlast l [n])`；`(every p s1 s2 …)` 支持多个序列；`(make-list n :initial-element x)`；`(getf plist key [default])`
 
 ### 宏
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` 基于 `setf`；`defparameter` 总是覆盖，`defvar` 仅在未绑定时赋值
 - **动态变量**（CL `special`，自 0.33.0 起）：`defvar`/`defparameter` 使名字成为 special（不带 `*…*` → 报错，不绑定任何值）。`let`/`let*`/`progv`（因而 `dolist`/`dotimes`/`loop` 也是）对其动态绑定：被调用的函数、回调（`mapcar`、`sort` …）、`eval`/`load` 以及 `parfunc`/`spawn`/`pool-map` 的工作协程都能看到该绑定。`setq` 作用于最内层绑定；`let` 结束后恢复旧值。在 `let` 内 `defparameter` 设置该绑定；在其中 `makunbound` → 报错。若名字已被词法绑定（`defvar` 之前定义的参数），`let` 进行词法绑定。闭包不会记住该绑定。HTTP/WS/GUI 处理函数只看到全局值
 - `(ignore-errors . body)` → 值，出错时为 `()`（只有一个值，没有 condition 对象；`throw`/`return-from` 照常穿过）
-- `(assert form)` → `t` 或报错 `assert failed: form` —— 只接受一个参数，不能自定义信息
-- `macroexpand-1` = `macroexpand`（两者都只展开一层）
+- `(assert form [places datum args…])` → `()` 或报错 `assert failed: form`；给出 `datum` 时信息为 `(format nil datum args…)`，`places` 被忽略
+- `macroexpand-1` 只展开一层，`macroexpand` 一直展开到底
 
 **注意：** 这里列出 `let*` 只是照顾 CL 习惯——实际实现是第 2 节中的原生特殊形式
 （`src/embed/stdlib.lisp` 有意**不**定义它）。
 
 ### 迭代器
 `dotimes (var n) body` —— `(dotimes (i 10) ...)`
-`dolist (var lst) body` —— `(dolist (x xs) ...)`
+`dolist (var lst) body` —— `(dolist (x xs) ...)`；两者都包在 `(block nil …)` 中：`(return x)` 结束循环
 
 ### 结构体
 `(defstruct name [doc] slot|(slot default) ...)` —— 生成：`(make-name :slot v ...)`、`name-slot`、`name?`（+ `name-p`）
@@ -289,7 +290,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 | `(puthash k h v)` | 表在第 2 个位置；优先用 `(setf (gethash k h) v)` | Emacs Lisp：`(puthash k v h)` |
 | `stringp` `consp` `equal` | 不存在 → 报错 „unbekanntes Symbol“（未知符号）；改用 `string?`、`(typep x 'cons)`、`equal?` | 存在 |
 | `&optional`/`&key`/`&rest` 中的模式（`destructuring-bind`、`defmacro`） | 报错 —— 模式只能在必需位置 | 允许 |
-| `(member x l)` | 没有 `:test`；字符串按结构比较 | `eql`（字符串需 `:test 'equal`） |
+| `(member x l)`、`(remove x l)` | 默认用 `equal?` 而非 CL 的 `eql`（有意为之）：字符串和列表按结构比较；`find`/`position`/`count` 用 `eql` | `eql`（字符串需 `:test 'equal`） |
 | `(last l)` | 返回**元素**，不是 cons 单元 | 最后一个 cons 单元 |
 | `(slurp)` | 读取 **stdin**；读文件 → `(file-read path)` | – |
 | 输入结束时的 `(gets)` | 报错 `gets: EOF`，不是 `nil` | `read-line` → `nil`/EOF 值 |
@@ -360,7 +361,7 @@ case 分支立即返回或委托给 `eval*` 辅助函数（例如 `catch`、
 ### 10.12 LOOP 只有实用核心，没有 Series，没有 Iterate
 - `loop`：`for x in`/`from … to`/`below`/`by`、`repeat`、`while`/`until`、
   `when`/`unless`、`collect`/`sum`/`count`/`maximize`/`minimize`、`do`、
-  `finally`、`return`、`for x across vector`。不支持：解构、`named`。
+  `finally`、`for x across vector`。每个展开都包在 `(block nil …)` 中：`(return x)` 结束循环；不含关键字的 `(loop form…)` = 无限循环。不支持：解构、`named`。
 - 没有 `series`，没有 `iterate`。
 
 ### 10.13 带函数语法糖的 `define`

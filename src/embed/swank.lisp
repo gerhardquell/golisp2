@@ -384,21 +384,21 @@
           (list (list :return (list :ok (list al nil)) id))))))
 
 ;; swank:swank-macroexpand-1 (string) -> (:ok "<expanded>").
-;; C-c C-m. Eine Expansion via GoLisp macroexpand-Spezialform.
+;; C-c C-m. Eine Expansion via GoLisp macroexpand-1-Spezialform.
 (defun swank:macroexpand-1 (string id)
   (trap
     (let ((form (read string)))
-      (let ((expanded (macroexpand form)))
+      (let ((expanded (macroexpand-1 form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
       (list (list :return (list :abort (swank--fehler-text err)) id)))))
 
 ;; swank:swank-macroexpand / swank-expand (string) -> (:ok "<expanded>").
-;; Wiederhole macroexpand bis stabil auf Top-Level.
+;; macroexpand expandiert wie CL bis kein Makroaufruf mehr übrig ist.
 (defun swank:macroexpand-full (string id)
   (trap
     (let ((form (read string)))
-      (let ((expanded (swank--expand-top form)))
+      (let ((expanded (macroexpand form)))
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
       (list (list :return (list :abort (swank--fehler-text err)) id)))))
@@ -412,12 +412,6 @@
         (list (list :return (list :ok (swank--value-string expanded)) id))))
     (lambda (err)
       (list (list :return (list :abort (swank--fehler-text err)) id)))))
-
-(defun swank--expand-top (form)
-  (let ((expanded (macroexpand form)))
-    (if (equal? expanded form)
-        form
-        (swank--expand-top expanded))))
 
 ;; swank:load-file (filename) -> (:ok "<result>"). C-c C-l in Emacs.
 ;; Nutzt GoLisp load-Spezialform.

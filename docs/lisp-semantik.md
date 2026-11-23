@@ -330,6 +330,11 @@ Das gilt für Printer, `~a` und `number->string` (`numberStr`/`FormatNumber`,
 - `eql` und `equal?` verlangen gleiche Zahlart **und** gleichen Wert:
   `(eql 1 1.0)` → `()`. Dem folgen `member`, `position`, `assoc`, `case`
   und die Tags von `catch`/`throw`.
+- **Abweichung von CL:** `member` und `remove` vergleichen ohne `:test`
+  mit `equal?` (strukturell: `(member "b" (list "a" "b"))` → `("b")`,
+  `(member (list 1) (list (list 1)))` trifft). CL nimmt `eql`; das
+  verlangt dort `:test #'equal`. `find`/`position`/`count` nehmen wie CL
+  `eql`. Bewusste Entscheidung (0.38.0), ein Wechsel wäre Breaking.
 - Hash-Tabellen: `1` und `1.0` sind zwei Schlüssel.
 - Ganzzahl gegen Ganzzahl ist exakt. Bei Ganzzahl gegen Float wird die
   Ganzzahl nach Float gewandelt. Über 2^53 ist das ungenau:
@@ -858,7 +863,15 @@ Laufzeitkosten gegenüber handgeschriebener Schleife.
 (loop for x in '(3 9 1) maximize x)           ; → 9
 (loop for i from 1 to 10 until (> i 3) collect i)     ; → (1 2 3)
 (loop for i from 1 to 3 do (log i) finally (fertig))
+(loop for x in l do (when (bad? x) (return x)))   ; → erstes bad-Element
+(loop (setq n (+ n 1)) (when (> n 9) (return n))) ; einfache Form
 ```
+
+Jede Expansion steht wie in CL in `(block nil …)`: `(return x)` beendet
+die Schleife sofort mit `x`, `finally` läuft dann nicht. Sind alle
+Argumente zusammengesetzte Formen (keine Schlüsselwörter), ist `loop` die
+einfache CL-Endlosschleife über den Rumpf. `dolist`/`dotimes` stehen
+ebenso in `(block nil …)` (seit 0.38.0).
 
 - Iteration: `repeat`, `for … from [to|below|downto] [by]`, `for … in`
 - Bedingungen: `when`/`unless` (je eine Folgeklausel), `while`/`until`

@@ -88,7 +88,8 @@ Namen, 1 Implementierung), daher 60 Zweige aber 62 Namen.
 | `(multiple-value-setq vars form)` | Werte setzen | |
 | `(nth-value n form)` | n-ter Wert | |
 | `(function fn)` | Function-Literal | `#'` reader-sugar |
-| `(macroexpand form)` | Makro expandieren | Nicht-tail |
+| `(macroexpand form)` | Makro expandieren, bis kein Makroaufruf bleibt → `(values form expandiert-p)` | Nicht-tail |
+| `(macroexpand-1 form)` | genau eine Expansionsstufe → `(values form expandiert-p)` | Nicht-tail |
 | `(macroexpand-all form)` | Komplett expandieren | Nicht-tail |
 | `(bound? sym)` | Gebunden? | sym wird ausgewertet |
 | `(makunbound sym)` | Bindung entfernen | |
@@ -178,15 +179,15 @@ Funktionsargument: Lambda, `#'f`, `f` oder gequotetes Symbol `'f` (global aufgel
 
 ### Listen-Helfer
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen; `(remove x l)` vergleicht mit `equal?`, **kein** `:test`/`:key` (→ Fehler „zu viele Argumente“); `(make-list n :initial-element x)`; `(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — nur Listen (`remove` auch Vektoren); `(remove x l &key test test-not key)` und `(member x l &key test test-not key)` vergleichen ohne `:test` mit `equal?`; `(butlast l [n])`; `(every p s1 s2 …)` über mehrere Sequenzen; `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Makros
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` über `setf`; `defparameter` überschreibt immer, `defvar` nur wenn ungebunden
 - **Dynamische Variablen** (CL `special`, seit 0.33.0): `defvar`/`defparameter` machen den Namen special (ohne `*…*` → Fehler, nichts gebunden). `let`/`let*`/`progv` (damit auch `dolist`/`dotimes`/`loop`) binden ihn dynamisch: aufgerufene Funktionen, Callbacks (`mapcar`, `sort` …), `eval`/`load` und Worker von `parfunc`/`spawn`/`pool-map` sehen die Bindung. `setq` trifft die innerste Bindung; nach dem `let` gilt wieder der alte Wert. `defparameter` im `let` setzt die Bindung; `makunbound` darin → Fehler. Ist der Name schon lexikalisch gebunden (Parameter von vor dem `defvar`), bindet `let` lexikalisch. Closures merken sich die Bindung nicht. HTTP-/WS-/GUI-Handler sehen nur den globalen Wert
 - `(ignore-errors . body)` → Wert oder `()` bei Fehler (nur ein Wert, kein Condition-Objekt; `throw`/`return-from` laufen durch)
-- `(assert form)` → `t` oder Fehler `assert failed: form` — nur ein Argument, keine eigene Meldung
-- `macroexpand-1` = `macroexpand` (beide genau eine Stufe)
+- `(assert form [places datum args…])` → `()` oder Fehler `assert failed: form`; mit `datum` lautet die Meldung `(format nil datum args…)`, `places` wird ignoriert
+- `macroexpand-1` = eine Stufe, `macroexpand` expandiert bis zum Ende
 
 **Achtung:** `let*` steht hier nur als CL-Gewohnheits-Anker — die
 tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
@@ -194,7 +195,7 @@ tatsächliche Implementierung ist die native Spezialform aus Abschnitt 2
 
 ### Iteratoren
 `dotimes (var n) body` — `(dotimes (i 10) ...)`
-`dolist (var lst) body` — `(dolist (x xs) ...)`
+`dolist (var lst) body` — `(dolist (x xs) ...)`; beide in `(block nil …)`: `(return x)` beendet sie
 
 ### Strukturen
 `(defstruct name [doc] slot|(slot default) ...)` — erzeugt: `(make-name :slot v ...)`, `name-slot`, `name?` (+ `name-p`)
@@ -293,7 +294,7 @@ Typisch: `(exit (run-tests))` → Exit-Code = FAILs.
 | `(puthash k h v)` | Tabelle an 2. Stelle; `(setf (gethash k h) v)` bevorzugen | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | fehlen → Fehler „unbekanntes Symbol“; nutze `string?`, `(typep x 'cons)`, `equal?` | vorhanden |
 | Muster in `&optional`/`&key`/`&rest` (`destructuring-bind`, `defmacro`) | Fehler — Muster nur an Pflichtstellen | erlaubt |
-| `(member x l)` | kein `:test`; vergleicht Strings strukturell | `eql` (Strings nur mit `:test 'equal`) |
+| `(member x l)`, `(remove x l)` | Default `equal?` statt CL-`eql` (bewusst): vergleicht Strings und Listen strukturell; `find`/`position`/`count` nehmen `eql` | `eql` (Strings nur mit `:test 'equal`) |
 | `(last l)` | liefert das **Element**, nicht die Zelle | letzte Cons-Zelle |
 | `(slurp)` | liest **stdin**; Datei → `(file-read pfad)` | – |
 | `(gets)` am Eingabeende | Fehler `gets: EOF`, nicht `nil` | `read-line` → `nil`/EOF-Wert |
@@ -365,7 +366,7 @@ kennen, um nicht zu raten:
 ### 10.12 LOOP nur als Praxis-Kern, kein Series, kein Iterate
 - `loop`: `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`,
   `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`,
-  `finally`, `return`, `for x across vektor`. Nicht vorhanden: Destructuring, `named`.
+  `finally`, `for x across vektor`. Jede Expansion in `(block nil …)`: `(return x)` beendet sie; `(loop form…)` ohne Schlüsselwörter = Endlosschleife. Nicht vorhanden: Destructuring, `named`.
 - Kein `series`, kein `iterate`.
 
 ### 10.13 `define` mit Funktions-Zucker

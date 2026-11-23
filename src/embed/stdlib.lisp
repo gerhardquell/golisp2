@@ -60,11 +60,7 @@
 (defun last (lst)
   (if (null (cdr lst)) (car lst) (last (cdr lst))))
 
-(defun member (x lst)
-  (cond
-    ((null lst)            ())
-    ((equal? x (car lst)) lst)
-    (t                    (member x (cdr lst)))))
+;; member, remove: Go (sequence.go, seqSearchFn) mit :test/:test-not/:key.
 
 (defun assoc (key lst)
   (cond
@@ -111,11 +107,10 @@
     ((pred (car lst))    t)
     (t                   (any pred (cdr lst)))))
 
-(defun every (pred lst)
-  (cond
-    ((null lst)               t)
-    ((pred (car lst))         (every pred (cdr lst)))
-    (t                        ())))
+;; every: CL (every pred seq &rest more) über some (sequence.go): mehrere
+;; Sequenzen, Ende bei der kürzesten, iterativ.
+(defun every (pred seq &rest more)
+  (not (apply some (lambda (&rest xs) (not (apply pred xs))) seq more)))
 
 (defun flatten (lst)
   (cond
@@ -171,31 +166,34 @@
   (if (= b 0) (abs a) (gcd b (mod a b))))
 
 ;; === Iteratoren =================================================
+;; dotimes/dolist stehen wie CL in (block nil …): (return x) beendet sie.
 
 (defmacro dotimes (var-n . body)
   (let ((var (car  var-n))
         (n   (cadr var-n))
         (res (caddr var-n))
         (tmp (gensym)))
-    `(let ((,tmp (%ganzzahl-pruefen "dotimes" ,n))
-           (,var 0))
-       (while (< ,var ,tmp)
-         ,@body
-         (set! ,var (+ ,var 1)))
-       ,res)))
+    `(block nil
+       (let ((,tmp (%ganzzahl-pruefen "dotimes" ,n))
+             (,var 0))
+         (while (< ,var ,tmp)
+           ,@body
+           (set! ,var (+ ,var 1)))
+         ,res))))
 
 (defmacro dolist (var-lst . body)
   (let ((var (car  var-lst))
         (lst (cadr var-lst))
         (res (caddr var-lst))
         (tmp (gensym)))
-    `(let ((,tmp ,lst))
-       (while (not (null ,tmp))
-         (let ((,var (car ,tmp)))
-           ,@body)
-         (set! ,tmp (cdr ,tmp)))
-       (let ((,var ()))
-         ,res))))
+    `(block nil
+       (let ((,tmp ,lst))
+         (while (not (null ,tmp))
+           (let ((,var (car ,tmp)))
+             ,@body)
+           (set! ,tmp (cdr ,tmp)))
+         (let ((,var ()))
+           ,res)))))
 
 ;; === Datenstrukturen ============================================
 
@@ -547,7 +545,6 @@
 
 (defun remove-if-not (pred lst) (filter pred lst))
 (defun remove-if (pred lst) (filter (lambda (x) (not (pred x))) lst))
-(defun remove (item lst) (filter (lambda (x) (not (equal? x item))) lst))
 
 ;; remove-duplicates: erstes Vorkommen je Wert bleibt, Reihenfolge erhalten.
 (defun remove-duplicates (lst)
@@ -557,10 +554,11 @@
           (t                    (rd-acc (cdr l) (cons (car l) acc)))))
   (rd-acc lst ()))
 
-(defun butlast (lst)
-  (if (or (null lst) (null (cdr lst)))
-      ()
-      (cons (car lst) (butlast (cdr lst)))))
+;; butlast: CL (butlast list &optional (n 1)) — frische Liste, iterativ (take).
+(defun butlast (lst &optional (n 1))
+  (if (< (%ganzzahl-pruefen "butlast" n) 0)
+      (error (format nil "butlast: nicht-negative Ganzzahl erwartet, got ~a" n))
+      (take (- (length lst) n) lst)))
 
 ;; copy-list: Go-Primitiv (cons_mutation.go), iterativ und Ring-sicher.
 
@@ -595,12 +593,16 @@
 
 ;; --- Makros ---
 
-(defmacro assert (form)
-  `(if (not ,form) (error ,(format nil "assert failed: ~a" form)) t))
+;; assert: CL (assert test-form &optional places datum &rest args). places
+;; wird ignoriert (keine Restarts); datum ist ein Format-String.
+(defmacro assert (form &optional places datum &rest args)
+  `(if ,form
+       ()
+       (error ,(if datum
+                   `(format nil ,datum ,@args)
+                   (format nil "assert failed: ~a" form)))))
 
-;; macroexpand-1: reiner Namens-Alias — golisp2s macroexpand macht bereits
-;; genau eine Expansionsstufe (CLs macroexpand-1-Semantik).
-(defmacro macroexpand-1 (f) `(macroexpand ,f))
+;; macroexpand-1 ist Spezialform (eval_specialforms.go), wie macroexpand.
 
 ;; --- Strings ---
 

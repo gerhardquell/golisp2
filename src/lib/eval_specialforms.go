@@ -187,35 +187,34 @@ func evalMakunbound(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
   return sym, nil
 }
 
-// macroexpand: (macroexpand form) → expandiert Makros einmal, gibt Ergebnis zurück
-func evalMacroexpand(args *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+// macroexpand: (macroexpand form) → wie CL wiederholt expandieren, bis
+// form kein Makroaufruf mehr ist; macroexpand-1: genau eine Stufe. Beide
+// liefern (values expansion expanded-p).
+func evalMacroexpand(args *Cell, env *Env, ectx evalCtx, nurEinmal bool) (*Cell, error) {
+  name := "macroexpand"
+  if nurEinmal {
+    name = "macroexpand-1"
+  }
   if args == nil || args.Type != LIST || args.Car == nil {
-    return nil, fmt.Errorf("macroexpand: 1 Argument nötig")
+    return nil, fmt.Errorf("%s: 1 Argument nötig", name)
   }
   form, err := evalWithCtx(args.Car, env, ectx.child())
   if err != nil { return nil, err }
   form = Primary(form)
-
-  // Wenn es keine Liste ist, geben wir sie unverändert zurück
-  if form == nil || form.Type != LIST || form.Car == nil {
-    return form, nil
+  expandiert := false
+  for {
+    if err := ectx.check(); err != nil { return nil, err }
+    exp, ok, err := macroexpandStep(form, env, ectx)
+    if err != nil { return nil, err }
+    if !ok { break }
+    form, expandiert = exp, true
+    if nurEinmal { break }
   }
-
-  // Prüfe ob das erste Element ein Makro ist. form.Car kann eine
-  // Specialform (begin, if, ...) oder ein nicht gebundenes Symbol sein —
-  // dann kein Lookup-Fehler, sondern "nicht expandierbar" -> form zurück.
-  fn, err := evalWithCtx(form.Car, env, ectx.child())
-  if err != nil {
-    return form, nil
+  flag := MakeNil()
+  if expandiert {
+    flag = cellT
   }
-
-  // Wenn es ein Makro ist, expandieren wir es
-  if fn.Type == MACRO {
-    return applyLambda(fn, CellToSlice(form.Cdr), ectx)
-  }
-
-  // Kein Makro → Form unverändert zurückgeben
-  return form, nil
+  return MakeValues([]*Cell{form, flag}), nil
 }
 
 // macroexpand-all: (macroexpand-all form) → rekursiv alle Makros expandieren.
@@ -260,18 +259,22 @@ func macroexpandAll(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
 // macroexpandOnce: expandiert form einmal, falls car ein Makro ist.
 // Liefert form unverändert zurück, wenn kein Makro vorliegt.
 func macroexpandOnce(form *Cell, env *Env, ectx evalCtx) (*Cell, error) {
+  exp, _, err := macroexpandStep(form, env, ectx)
+  return exp, err
+}
+
+// macroexpandStep: eine Stufe; ok meldet, ob car ein Makro war. car kann
+// eine Spezialform oder ungebunden sein — dann kein Fehler, sondern ok=false.
+func macroexpandStep(form *Cell, env *Env, ectx evalCtx) (*Cell, bool, error) {
   if form == nil || form.Type != LIST || form.Car == nil {
-    return form, nil
+    return form, false, nil
   }
   fn, err := evalWithCtx(form.Car, env, ectx.child())
-  if err != nil {
-    return form, nil // Spezialform oder ungebunden
+  if err != nil || fn.Type != MACRO {
+    return form, false, nil
   }
-  if fn.Type == MACRO {
-    exp, err := applyLambda(fn, CellToSlice(form.Cdr), ectx)
-    return Primary(exp), err
-  }
-  return form, nil
+  exp, err := applyLambda(fn, CellToSlice(form.Cdr), ectx)
+  return Primary(exp), true, err
 }
 
 // wrapBegin: mehrere Body-Ausdrücke → (begin expr1 expr2 ...)

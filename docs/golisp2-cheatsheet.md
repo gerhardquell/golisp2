@@ -123,6 +123,7 @@ Wichtige:
 
 (dotimes (var n) body...)         ; Zählschleife (Stdlib)
 (dolist (var lst) body...)        ; Listeniteration (Stdlib)
+                                  ; beide in (block nil …): (return x) beendet sie
 
 (block name body...)              ; Named-Block (lexikalisch)
 (return-from name value)          ; Nicht-lokaler Ausstieg
@@ -163,7 +164,8 @@ Wichtige:
 ```lisp
 (the type form)                   ; Typ-Deklaration (Typ wird ignoriert!)
 (declare (type int x))            ; Deklaration (No-op)
-(macroexpand form)                ; Makro expandieren
+(macroexpand form)                ; Makro expandieren, bis kein Makroaufruf bleibt
+(macroexpand-1 form)              ; genau eine Stufe; beide → (values form expandiert-p)
 (macroexpand-all form)            ; Komplett expandieren
 (bound? sym)                      ; → t wenn gebunden, sonst nil
 (makunbound sym)                  ; Bindung entfernen
@@ -562,7 +564,10 @@ bei Start automatisch geladen.
 (length '(a b c))                 ; → 3
 (nth 1 '(a b c))                  ; → b
 (last '(a b c))                   ; → (c)
-(member 'b '(a b c))              ; → (b c)
+(member 'b '(a b c))              ; → (b c)   Default equal? — Abweichung von CL (eql)
+(member 'b '((a 1) (b 2)) :key #'car)   ; → ((b 2))   auch :test/:test-not
+(remove 3 '(1 2 4 1 3 4 5) :test #'>)   ; → (4 3 4 5)  auch :key/:test-not
+(butlast '(a b c d) 2)            ; → (a b)
 (assoc 'key '((a 1) (key 2)))      ; → (key 2)
 (filter number? '(1 a 2 b 3))      ; → (1 2 3)
 (drop 2 '(1 2 3 4))               ; → (3 4)
@@ -571,6 +576,7 @@ bei Start automatisch geladen.
 (for-each println '(1 2 3))
 (any number? '(a b 1))            ; → t
 (every number? '(1 2 3))          ; → t
+(every #'< '(1 2) '(2 3 0))       ; → t   mehrere Sequenzen, Ende bei der kürzesten
 (flatten '(1 (2 (3) 4)))          ; → (1 2 3 4)
 (zip '(a b) '(1 2))               ; → ((a 1) (b 2))
 (list-tail '(1 2 3) 1)            ; → (2 3)
@@ -694,6 +700,7 @@ wenn Pointer-Identität *explizit* gemeint ist.
 ### Macroexpand
 ```lisp
 (macroexpand '(when t 1 2))        ; → (if t (progn 1 2) nil)
+(macroexpand-1 '(m1 5))            ; nur eine Stufe, macroexpand expandiert weiter
 (macroexpand-all '`(a ,(+ 1 1)))   ; → (quasiquote (a 2))
 ```
 
@@ -926,13 +933,14 @@ nur über Goroutinen emulierbar.
 
 **Auswirkung:** Type-Checks nur manuell implementierbar.
 
-### 10.12 Kein LOOP, kein Series, kein Iterate
+### 10.12 LOOP nur als Praxis-Kern, kein Series, kein Iterate
 
-- Iteration nur über `dolist`, `dotimes`, `do`, `do*`, `mapcar`, `reduce`.
-- **Nicht vorhanden:** `loop`-Makro, `series`, `iterate`.
-
-**Auswirkung:** Komplexe Iterationen müssen über Rekursion oder `reduce`
-ausgedrückt werden.
+- `loop` kennt `for`/`repeat`/`while`/`until`/`when`/`unless`, `do`,
+  `finally` und die Akkumulation `collect`/`sum`/… (siehe
+  `docs/lisp-semantik.md`). Jede Expansion steht in `(block nil …)`:
+  `(return x)` beendet die Schleife. `(loop form…)` ohne Schlüsselwörter
+  ist die einfache CL-Endlosschleife.
+- **Nicht vorhanden:** Destructuring, `named`, `series`, `iterate`.
 
 ---
 

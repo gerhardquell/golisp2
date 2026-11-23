@@ -858,7 +858,15 @@ Laufzeitkosten gegenüber handgeschriebener Schleife.
 (loop for x in '(3 9 1) maximize x)           ; → 9
 (loop for i from 1 to 10 until (> i 3) collect i)     ; → (1 2 3)
 (loop for i from 1 to 3 do (log i) finally (fertig))
+(loop for x in l do (when (bad? x) (return x)))   ; → erstes bad-Element
+(loop (setq n (+ n 1)) (when (> n 9) (return n))) ; einfache Form
 ```
+
+Jede Expansion steht wie in CL in `(block nil …)`: `(return x)` beendet
+die Schleife sofort mit `x`, `finally` läuft dann nicht. Sind alle
+Argumente zusammengesetzte Formen (keine Schlüsselwörter), ist `loop` die
+einfache CL-Endlosschleife über den Rumpf. `dolist`/`dotimes` haben
+(noch) kein `block nil`.
 
 - Iteration: `repeat`, `for … from [to|below|downto] [by]`, `for … in`
 - Bedingungen: `when`/`unless` (je eine Folgeklausel), `while`/`until`

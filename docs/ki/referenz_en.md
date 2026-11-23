@@ -88,7 +88,8 @@ Counted directly from the `switch expr.Car.Val` in `eval_core.go` (as of
 | `(multiple-value-setq vars form)` | assign values | |
 | `(nth-value n form)` | n-th value | |
 | `(function fn)` | function literal | `#'` reader sugar |
-| `(macroexpand form)` | expand macro | non-tail |
+| `(macroexpand form)` | expand until no macro call is left → `(values form expanded-p)` | non-tail |
+| `(macroexpand-1 form)` | exactly one expansion step → `(values form expanded-p)` | non-tail |
 | `(macroexpand-all form)` | expand fully | non-tail |
 | `(bound? sym)` | bound? | sym is evaluated |
 | `(makunbound sym)` | remove binding | |
@@ -178,15 +179,15 @@ Function argument: lambda, `#'f`, `f` or quoted symbol `'f` (resolved globally l
 
 ### List helpers
 `alist-set alist-get union set-difference find-all set-nth`
-`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — lists only; `(remove x l)` compares with `equal?`, **no** `:test`/`:key` (→ error „zu viele Argumente“ (too many arguments)); `(make-list n :initial-element x)`; `(getf plist key [default])`
+`remove remove-if remove-if-not remove-duplicates butlast copy-list copy-tree make-list getf` — lists only (`remove` also vectors); `(remove x l &key test test-not key)` and `(member x l &key test test-not key)` compare with `equal?` without `:test`; `(butlast l [n])`; `(every p s1 s2 …)` over several sequences; `(make-list n :initial-element x)`; `(getf plist key [default])`
 
 ### Macros
 `when unless let* dotimes dolist push pop incf decf defvar defparameter setf defstruct defgeneric defmethod ignore-errors assert macroexpand-1`
 - `(incf place [d])`/`(decf place [d])` via `setf`; `defparameter` always overwrites, `defvar` only if unbound
 - **Dynamic variables** (CL `special`, since 0.33.0): `defvar`/`defparameter` make the name special (without `*…*` → error, nothing bound). `let`/`let*`/`progv` (hence also `dolist`/`dotimes`/`loop`) bind it dynamically: called functions, callbacks (`mapcar`, `sort` …), `eval`/`load` and workers of `parfunc`/`spawn`/`pool-map` see the binding. `setq` hits the innermost binding; after the `let` the old value is back. `defparameter` inside the `let` sets the binding; `makunbound` there → error. If the name is already bound lexically (parameter defined before the `defvar`), `let` binds lexically. Closures do not capture the binding. HTTP/WS/GUI handlers see only the global value
 - `(ignore-errors . body)` → value or `()` on error (one value only, no condition object; `throw`/`return-from` pass through)
-- `(assert form)` → `t` or error `assert failed: form` — one argument only, no custom message
-- `macroexpand-1` = `macroexpand` (both exactly one step)
+- `(assert form [places datum args…])` → `()` or error `assert failed: form`; with `datum` the message is `(format nil datum args…)`, `places` is ignored
+- `macroexpand-1` = one step, `macroexpand` expands to the end
 
 **Caution:** `let*` appears here only as a CL habit anchor — the actual
 implementation is the native special form from section 2
@@ -293,7 +294,7 @@ Typical: `(exit (run-tests))` → exit code = FAILs.
 | `(puthash k h v)` | table in 2nd position; prefer `(setf (gethash k h) v)` | Emacs Lisp: `(puthash k v h)` |
 | `stringp` `consp` `equal` | missing → error „unbekanntes Symbol“ (unknown symbol); use `string?`, `(typep x 'cons)`, `equal?` | available |
 | pattern in `&optional`/`&key`/`&rest` (`destructuring-bind`, `defmacro`) | error — patterns only in required positions | allowed |
-| `(member x l)` | no `:test`; compares strings structurally | `eql` (strings only with `:test 'equal`) |
+| `(member x l)`, `(remove x l)` | without `:test` `equal?`: compares strings structurally | `eql` (strings only with `:test 'equal`) |
 | `(last l)` | returns the **element**, not the cell | last cons cell |
 | `(slurp)` | reads **stdin**; file → `(file-read path)` | – |
 | `(gets)` at end of input | error `gets: EOF`, not `nil` | `read-line` → `nil`/EOF value |
@@ -365,7 +366,7 @@ so it does not guess:
 ### 10.12 LOOP only as a practical core, no Series, no Iterate
 - `loop`: `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`,
   `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`,
-  `finally`, `return`, `for x across vector`. Not available: destructuring, `named`.
+  `finally`, `for x across vector`. Every expansion sits in `(block nil …)`: `(return x)` ends it; `(loop form…)` without keywords = endless loop. Not available: destructuring, `named`.
 - No `series`, no `iterate`.
 
 ### 10.13 `define` with function sugar

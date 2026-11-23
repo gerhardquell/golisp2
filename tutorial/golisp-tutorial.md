@@ -161,7 +161,8 @@ Definiert ein Makro, das zur Expandierungszeit transformiert wird. Die Lambda-Li
 
 **Syntax:** `(macroexpand form)`
 
-Expandiert Makros einmal auf Top-Level und gibt das Ergebnis zurück.
+Expandiert wie CL so lange, bis die Form kein Makroaufruf mehr ist.
+Zweiter Rückgabewert: `t`, wenn expandiert wurde.
 
 ```lisp
 (defmacro doppelt (x) `(+ ,x ,x))
@@ -172,7 +173,7 @@ Expandiert Makros einmal auf Top-Level und gibt das Ergebnis zurück.
 
 **Syntax:** `(macroexpand-1 form)`
 
-Wie macroexpand – expandiert einen Expansionsschritt.
+Expandiert genau einen Schritt (zweiter Wert wie bei macroexpand).
 
 ```lisp
 (macroexpand-1 '(when t 1))
@@ -441,7 +442,7 @@ cd
 
 **Syntax:** `(loop klausel ...)`
 
-Iteration im Stil von CL-`loop` (Praxis-Kern): `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`, `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`, `finally`, `return`, `for x across vektor`. Wird zur Expansionszeit in `let` + `while` übersetzt. Nicht vorhanden: Destructuring, `named`.
+Iteration im Stil von CL-`loop` (Praxis-Kern): `for x in`/`from … to`/`below`/`by`, `repeat`, `while`/`until`, `when`/`unless`, `collect`/`sum`/`count`/`maximize`/`minimize`, `do`, `finally`, `for x across vektor`. Wird zur Expansionszeit in `let` + `while` übersetzt, umschlossen von `(block nil …)`: `(return x)` beendet die Schleife. `(loop form…)` ohne Schlüsselwörter ist eine Endlosschleife. Nicht vorhanden: Destructuring, `named`.
 
 ```lisp
 (loop for i from 1 to 5 collect (* i i))           ; => (1 4 9 16 25)
@@ -1086,9 +1087,9 @@ Liefert eine neue, nach vergleich sortierte Liste bzw. einen neuen Vektor. Das O
 
 ### remove
 
-**Syntax:** `(remove element liste)`
+**Syntax:** `(remove element sequenz &key test test-not key)`
 
-Entfernt alle Vorkommen von element (equal?-Vergleich).
+Entfernt alle Vorkommen von element (ohne :test equal?-Vergleich).
 
 ```lisp
 (remove 2 '(1 2 3 2))
@@ -1163,13 +1164,15 @@ Liefert alle Vorkommen von element in seq (Default-Test equal?).
 
 ### butlast
 
-**Syntax:** `(butlast liste)`
+**Syntax:** `(butlast liste [n])`
 
-Liefert die Liste ohne das letzte Element.
+Liefert eine neue Liste ohne die letzten n Elemente (Default 1).
 
 ```lisp
 (butlast '(1 2 3))
 ; => (1 2)
+(butlast '(a b c d) 2)
+; => (a b)
 ```
 
 ### take
@@ -1798,12 +1801,15 @@ Signalisiert einen Lisp-Laufzeitfehler, der von catch aufgefangen werden kann.
 
 ### assert
 
-**Syntax:** `(assert form)`
+**Syntax:** `(assert form [places datum args…])`
 
-Makro: signalisiert einen Fehler, wenn form nil ergibt.
+Makro: signalisiert einen Fehler, wenn form nil ergibt, sonst `()`.
+Mit datum lautet die Meldung `(format nil datum args…)`; places wird
+ignoriert (keine Restarts).
 
 ```lisp
 (assert (= 1 1))
+(assert (< x 3) (x) "x zu groß: ~a" x)
 ```
 
 ### warn
@@ -3687,12 +3693,14 @@ Liefert das letzte Element einer Liste.
 
 ### member
 
-**Syntax:** `(member x liste)`
+**Syntax:** `(member x liste &key test test-not key)`
 
-Sucht x in einer Liste und gibt die Restliste ab dem Treffer zurück.
+Sucht x in einer Liste und gibt die Restliste ab dem Treffer zurück
+(ohne :test equal?-Vergleich).
 
 ```lisp
 (member 'b '(a b c))
+(member 'b '((a 1) (b 2)) :key #'car)
 (member 'x '(a b c))
 ```
 
@@ -3766,9 +3774,11 @@ Gibt t zurück, wenn mindestens ein Element die Prädikatfunktion erfüllt.
 
 ### every
 
-**Syntax:** `(every pred liste)`
+**Syntax:** `(every pred seq &rest weitere)`
 
-Gibt t zurück, wenn alle Elemente die Prädikatfunktion erfüllen.
+Gibt t zurück, wenn alle Elemente die Prädikatfunktion erfüllen. Bei
+mehreren Sequenzen erhält pred je ein Element jeder Sequenz; Ende bei der
+kürzesten.
 
 ```lisp
 (every number? '(1 2 3))

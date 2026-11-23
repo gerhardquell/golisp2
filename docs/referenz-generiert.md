@@ -31,6 +31,7 @@
 | `%loop-acc` | Intern: loop-Akkumulator-Aktion + Familiencheck (loop.lisp) |
 | `%loop-acc-kw?` | Intern: loop-Akkumulations-Schluesselwort? (loop.lisp) |
 | `%loop-drop-nonkw` | Intern: loop-Parser: Formen bis Schluesselwort ueberspringen |
+| `%loop-expand` | Intern: loop-Expansion ohne block nil (loop.lisp) |
 | `%loop-for` | Intern: loop-Parser: for-Klausel (in/from) (loop.lisp) |
 | `%loop-from` | Intern: loop-Parser: for-from/to/below/downto/by (loop.lisp) |
 | `%loop-kw?` | Intern: loop-Klausel-Schluesselwort? (loop.lisp) |
@@ -120,12 +121,12 @@
 | `arrayp` | t, wenn Array (= Vektor, nur eindimensional) |
 | `aset` | Vektor-Element setzen, liefert den Wert; auch (setf (aref v i) x) |
 | `ash` | arithmetischer Shift: (ash x n) = x·2^n, negatives n schiebt nach rechts (floor) |
-| `assert` | Makro: signalisiert Fehler, wenn Form nil ergibt |
+| `assert` | Makro: (assert form [places datum args…]) Fehler, wenn form nil ergibt; datum als Format-String |
 | `assoc` | erstes (key . val)-Paar aus Assoziationsliste (equal?) |
 | `atom` | t, wenn x kein Cons ist |
 | `atom?` | Alias fuer atom |
 | `browser-open` | URL im Browser oeffnen (detached) |
-| `butlast` | Liste ohne letztes Element |
+| `butlast` | (butlast l [n]): Liste ohne die letzten n Elemente (Default 1) |
 | `caar` | (car (car x)) |
 | `cadddr` | (car (cdr (cdr (cdr x)))) |
 | `caddr` | (car (cdr (cdr x))) |
@@ -184,7 +185,7 @@
 | `error` | Laufzeitfehler signalisieren (faengbar mit catch) |
 | `etypecase` | wie typecase, ohne Treffer ein Fehler |
 | `evenp` | t wenn ganze Zahl n gerade ist (CL), sonst Fehler bei Nicht-Ganzzahl |
-| `every` | t, wenn alle Elemente das Praedikat erfuellen |
+| `every` | (every p s1 s2 …): t, wenn p fuer alle Elemente gilt; Ende bei der kuerzesten Sequenz |
 | `exit` | Prozess mit Exit-Code beenden (Default 0) |
 | `exp` | e hoch x |
 | `expt` | basis hoch exp, auch negativ und gebrochen; Ganzzahl hoch Ganzzahl ≥ 0 → Ganzzahl, sonst Float |
@@ -257,7 +258,6 @@
 | `lock-make` | Mutex fuer lock erzeugen |
 | `log` | natuerlicher Logarithmus, x > 0 |
 | `loop` | Iteration (CL-Praxis-Kern): for/repeat/when/collect/sum/... (loop.lisp) |
-| `macroexpand-1` | einen Makro-Expansionsschritt ausfuehren |
 | `make-array` | Vektor der Laenge n anlegen, :initial-element (Default ()) |
 | `make-hash-table` | thread-sichere Hash-Table erzeugen |
 | `make-list` | Liste mit n Elementen (:initial-element) |
@@ -269,7 +269,7 @@
 | `maxima-close` | Maxima-Session beenden (maxima-close session) |
 | `maxima-eval` | Ausdruck an Maxima-Session senden, Ergebnis als String (maxima-eval session expr [timeout]) |
 | `maxima-open` | Maxima-Session starten (externer Prozess, Zustand bleibt erhalten) |
-| `member` | Restliste ab erstem Treffer |
+| `member` | Restliste ab erstem Treffer, &key test test-not key (Default equal?) |
 | `memstats` | Go-Runtime-Memory-Statistiken als Assoziationsliste |
 | `min` | kleinste Zahl |
 | `minusp` | CL-Name fuer negative? |
@@ -321,7 +321,7 @@
 | `rem` | Rest Richtung Null wie CL, Vorzeichen des Dividenden ((rem -3 2) → -1) |
 | `remainder` | Scheme-Name fuer rem |
 | `remhash` | Hash-Eintrag entfernen |
-| `remove` | alle Vorkommen von item entfernen (equal?) |
+| `remove` | alle Vorkommen von item entfernen, &key test test-not key (Default equal?) |
 | `remove-duplicates` | Duplikate entfernen (erstes Vorkommen bleibt) |
 | `remove-if` | Elemente entfernen, fuer die Praedikat wahr ist |
 | `remove-if-not` | Elemente behalten, fuer die Praedikat wahr ist |

@@ -34,7 +34,7 @@ func TestMacroNoArgEval(t *testing.T) {
   evalEq(t, src, "(+ 1 2)")
 }
 
-// TestMacroExpand: macroexpand expandiert einmal, gibt Ergebnis zurück.
+// TestMacroExpand: macroexpand expandiert bis zum Ende, gibt Ergebnis zurück.
 func TestMacroExpand(t *testing.T) {
   src := `
     (defmacro square (x) (list '* x x))
